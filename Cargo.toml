@@ -1,0 +1,44 @@
+[package]
+name = "ignite_core"
+version = "0.1.0"
+edition = "2021"
+description = "Hochleistungs-Rust-Core für das Ignite Entzündungsdetektions-Projekt (Jugend forscht). Implementiert die vollständige Thermobild-Verarbeitungs-Pipeline ohne externe OpenCV-Abhängigkeit."
+authors = ["Ignite Team"]
+
+# Die Bibliothek wird als C-kompatible Shared-Library gebaut,
+# damit Python (über PyO3/maturin) sie als .pyd-Modul importieren kann.
+[lib]
+name = "ignite_core"
+crate-type = ["cdylib"]
+
+[dependencies]
+# PyO3: Rust↔Python FFI-Brücke. Feature "extension-module" aktiviert
+# den korrekten ABI-Linking-Modus für .pyd-Dateien.
+pyo3 = { version = "0.22", features = ["extension-module"] }
+
+# numpy-Crate: Stellt Zero-Copy-Schnittstellen für NumPy-Arrays bereit
+# (PyReadonlyArray2, PyArray2). Kompatibel mit numpy 2.x.
+numpy = "0.22"
+
+# ndarray: N-dimensionale Arrays für Rust (analog zu NumPy).
+# Wird für interne Berechnungen (Statistik, Maskenoperationen) genutzt.
+ndarray = { version = "0.16", features = ["rayon"] }
+
+# imageproc: Reine Rust-Bildverarbeitungsbibliothek (kein C/C++ nötig).
+# Implementiert Morphologie, Konturen, Distanztransformation in nativem Rust.
+imageproc = "0.25"
+
+# image: Rust-native Bild-Datentypen (Luma, Rgb, ImageBuffer).
+# imageproc arbeitet auf image::ImageBuffer.
+image = { version = "0.25", default-features = false, features = ["png"] }
+
+# Rayon: Data-Parallelismus-Framework für den CPU-Pfad.
+# Nutzt alle verfügbaren CPU-Kerne automatisch via Work-Stealing.
+rayon = "1.10"
+
+[profile.release]
+# Aggressivste Optimierungen für maximale Pipeline-Geschwindigkeit.
+opt-level = 3
+lto = true         # Link-Time Optimization: Eliminiert toten Code über Crate-Grenzen
+codegen-units = 1  # Monolithische Kompilierung für bessere Inlining-Chancen
+panic = "abort"    # Kein Stack-Unwinding bei Panic – reduziert .pyd-Größe

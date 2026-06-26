@@ -1,0 +1,16 @@
+[build-system]
+requires = ["maturin>=1.4,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "ignite_core"
+version = "0.1.0"
+description = "Rust-Native-Core für die Ignite Thermobild-Pipeline (Jugend forscht)"
+requires-python = ">=3.10"
+
+[tool.maturin]
+# Bindings-Typ: pyo3 (automatisches PyO3-Modul-Scaffolding)
+bindings = "pyo3"
+# module-name: Exakter Python-Modulname (muss mit dem #[pymodule] fn-Namen übereinstimmen)
+module-name = "ignite_core"
+# Kein python-source: Wir liefern nur das native .pyd-Modul, kein Python-Paket-Verzeichnis
