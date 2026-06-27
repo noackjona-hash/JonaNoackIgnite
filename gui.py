@@ -1,26 +1,20 @@
-"""gui.py – Tkinter-Frontend für das Ignite Entzündungsdetektions-System.
+"""gui.py – CustomTkinter-Frontend für das Ignite Entzündungsdetektions-System.
 
 Dieses Modul stellt das grafische Benutzer-Interface des Jugend-forscht-Projekts
 "Ignite" bereit. Die Bildverarbeitung wird vollständig an das native Rust-Core-Modul
-`ignite_core` delegiert (via `image_processing.run_rust_pipeline`).
+`ignite_core` oder die GPU-beschleunigte PyTorch-Pipeline delegiert.
 
 Architektur:
-    IgniteApp (Tkinter) → image_processing.py → ignite_core.pyd (Rust)
-
-Pipeline-Ergebnisse:
-    Panel 1: Originalbild (direkt aus Datei)
-    Panel 2: Body-Mask (via Rust: Distanztransformation)
-    Panel 3: Lokales Differenzbild (via Rust: Top-Hat-Transformation)
-    Panel 4: Hotspot-Overlay (via Rust: µ+2σ + Geometriefilter, rot markiert)
+    IgniteApp (CustomTkinter) → image_processing.py → ignite_core.pyd (Rust)
 """
 
+import os
 import tkinter as tk
 from tkinter import filedialog, messagebox
-import os
-
 import cv2
 import numpy as np
-from PIL import Image, ImageTk
+from PIL import Image
+import customtkinter as ctk
 
 import config
 import image_processing
@@ -30,81 +24,176 @@ import storage
 class IgniteApp:
     """Haupt-Anwendungsklasse für das Ignite Thermografie-Analyse-System.
 
-    Verwaltet das Tkinter-Hauptfenster, die vier Anzeige-Panels und den
-    vollständigen Verarbeitungs-Workflow von der Dateiauswahl bis zur
-    Pipeline-Ausführung und Ergebnisspeicherung.
-
-    Attributes:
-        root:             Tkinter-Hauptfenster.
-        current_filepath: Pfad zur aktuell geladenen Wärmebild-Datei.
-        panels:           Dictionary {Panel-Name → tk.Label} für die Bildanzeige.
-        status_lbl:       Statusleiste im oberen Frame.
+    Verwaltet das Hauptfenster unter Verwendung von CustomTkinter, die Seitenleiste
+    für Steuerelemente und Statistiken sowie die vier Bild-Anzeige-Panels.
     """
 
-    def __init__(self, root: tk.Tk) -> None:
+    def __init__(self, root: ctk.CTk) -> None:
         """Initialisiert die Ignite-Anwendung.
 
         Args:
-            root: Das Tkinter-Hauptfenster-Objekt.
+            root: Das CustomTkinter-Hauptfenster-Objekt.
         """
         self.root = root
-        self.root.title("Ignite – Entzündungsdetektion via Thermografie")
-        self.root.geometry("1000x750")
-        self.root.configure(bg="#f7fafc")
+        self.root.title("IGNITE // Jugend forscht – Entzündungsdetektion")
+        self.root.geometry("1200x800")
+        self.root.minsize(1050, 700)
 
         # Ausgabe-Verzeichnis für Jury-Dokumentation anlegen
         config.init_output_dir()
 
         self.current_filepath: str | None = None
+        self.panels: dict[str, ctk.CTkLabel] = {}
+        
         self.setup_ui()
+        
+        # Aktives Backend beim Start abfragen und formatieren
+        backend_info = image_processing.get_active_backend()
+        if "GPU (CUDA," in backend_info:
+            gpu_name = backend_info.split(",", 1)[1].strip().replace(")", "")
+            backend_disp = f"GPU: {gpu_name}"
+        else:
+            backend_disp = backend_info
+        self.backend_label.configure(text=f"Backend: {backend_disp}")
 
     def setup_ui(self) -> None:
-        """Erstellt und konfiguriert alle UI-Elemente des Hauptfensters.
+        """Erstellt und konfiguriert das moderne zweispaltige Layout (Sidebar + Grid)."""
+        # Konfiguration des Haupt-Grids
+        self.root.grid_columnconfigure(0, weight=0)  # Sidebar behält feste Breite
+        self.root.grid_columnconfigure(1, weight=1)  # Inhalt dehnt sich aus
+        self.root.grid_rowconfigure(0, weight=1)
 
-        Layout:
-            - Oberer Frame: Titelleiste, Lade-Button, Statusanzeige
-            - Unterer Bereich: 2×2-Grid mit vier Bildanzeige-Panels
-        """
-        # ── Oberer Frame (Titelleiste) ────────────────────────────────────
-        top_frame = tk.Frame(self.root, bg="#2d3748")
-        top_frame.pack(fill=tk.X, padx=0, pady=0, ipady=10)
+        # ── 1. LINKE SEITENLEISTE (Steuerung & Info) ─────────────────────────
+        sidebar_frame = ctk.CTkFrame(self.root, width=280, corner_radius=0, fg_color="#1E293B")
+        sidebar_frame.grid(row=0, column=0, sticky="nsew", padx=0, pady=0)
+        sidebar_frame.grid_propagate(False)
 
-        title_lbl = tk.Label(
-            top_frame,
-            text="IGNITE // Jugend forscht",
-            font=("Arial", 14, "bold"),
-            fg="#ffffff",
-            bg="#2d3748",
+        # App-Header
+        title_lbl = ctk.CTkLabel(
+            sidebar_frame,
+            text="IGNITE",
+            font=ctk.CTkFont(family="Arial", size=28, weight="bold"),
+            text_color="#60A5FA"
         )
-        title_lbl.pack(side=tk.LEFT, padx=15, pady=5)
+        title_lbl.pack(padx=20, pady=(30, 2), anchor="w")
 
-        load_btn = tk.Button(
-            top_frame,
+        subtitle_lbl = ctk.CTkLabel(
+            sidebar_frame,
+            text="Entzündungsdetektion via Thermografie",
+            font=ctk.CTkFont(family="Arial", size=12, slant="italic"),
+            text_color="#94A3B8"
+        )
+        subtitle_lbl.pack(padx=20, pady=(0, 25), anchor="w")
+
+        # Trennlinie
+        divider = ctk.CTkFrame(sidebar_frame, height=2, fg_color="#334155")
+        divider.pack(fill=ctk.X, padx=20, pady=(0, 25))
+
+        # Sektion: Steuerung
+        ctrl_title = ctk.CTkLabel(
+            sidebar_frame,
+            text="STEUERUNG",
+            font=ctk.CTkFont(family="Arial", size=11, weight="bold"),
+            text_color="#64748B"
+        )
+        ctrl_title.pack(padx=20, pady=(0, 8), anchor="w")
+
+        self.load_btn = ctk.CTkButton(
+            sidebar_frame,
             text="Wärmebild laden",
             command=self.load_file,
-            font=("Arial", 10, "bold"),
-            fg="#2d3748",
-            bg="#e2e8f0",
-            relief=tk.FLAT,
-            padx=10,
-            pady=5,
+            font=ctk.CTkFont(family="Arial", size=14, weight="bold"),
+            fg_color="#2563EB",
+            hover_color="#1D4ED8",
+            height=40,
+            corner_radius=8
         )
-        load_btn.pack(side=tk.LEFT, padx=20, pady=5)
+        self.load_btn.pack(fill=ctk.X, padx=20, pady=(0, 25))
 
-        self.status_lbl = tk.Label(
-            top_frame,
-            text="Bereit. Bitte Wärmebild einlesen.",
-            fg="#a0aec0",
-            bg="#2d3748",
-            font=("Arial", 10, "italic"),
+        # Sektion: Analyse-Info & Status
+        info_title = ctk.CTkLabel(
+            sidebar_frame,
+            text="ANALYSE-DETAILS",
+            font=ctk.CTkFont(family="Arial", size=11, weight="bold"),
+            text_color="#64748B"
         )
-        self.status_lbl.pack(side=tk.RIGHT, padx=15, pady=8)
+        info_title.pack(padx=20, pady=(0, 8), anchor="w")
 
-        # ── 2×2-Grid mit Bild-Panels ──────────────────────────────────────
-        self.display_frame = tk.Frame(self.root, bg="#f7fafc")
-        self.display_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+        # Informations-Karte
+        self.info_card = ctk.CTkFrame(sidebar_frame, fg_color="#0F172A", corner_radius=10, border_width=1, border_color="#334155")
+        self.info_card.pack(fill=ctk.X, padx=20, pady=(0, 20), ipady=8)
 
-        self.panels: dict[str, tk.Label] = {}
+        self.filename_label = ctk.CTkLabel(
+            self.info_card,
+            text="Datei: Keine",
+            font=ctk.CTkFont(family="Arial", size=13),
+            text_color="#E2E8F0",
+            anchor="w"
+        )
+        self.filename_label.pack(fill=ctk.X, padx=15, pady=(10, 4))
+
+        self.backend_label = ctk.CTkLabel(
+            self.info_card,
+            text="Backend: Erkennung...",
+            font=ctk.CTkFont(family="Arial", size=13),
+            text_color="#94A3B8",
+            anchor="w"
+        )
+        self.backend_label.pack(fill=ctk.X, padx=15, pady=4)
+
+        self.status_label = ctk.CTkLabel(
+            self.info_card,
+            text="Status: Bereit",
+            font=ctk.CTkFont(family="Arial", size=13, slant="italic"),
+            text_color="#A0AEC0",
+            anchor="w"
+        )
+        self.status_label.pack(fill=ctk.X, padx=15, pady=4)
+
+        self.hotspot_label = ctk.CTkLabel(
+            self.info_card,
+            text="Hotspots: --",
+            font=ctk.CTkFont(family="Arial", size=14, weight="bold"),
+            text_color="#94A3B8",
+            anchor="w"
+        )
+        self.hotspot_label.pack(fill=ctk.X, padx=15, pady=(4, 10))
+
+        # Dokumentations-Ordner-Button
+        self.open_dir_btn = ctk.CTkButton(
+            sidebar_frame,
+            text="Ergebnisordner öffnen",
+            command=self.open_output_dir,
+            font=ctk.CTkFont(family="Arial", size=13),
+            fg_color="transparent",
+            text_color="#60A5FA",
+            hover_color="#1E293B",
+            border_width=1,
+            border_color="#3B82F6",
+            height=35,
+            corner_radius=8
+        )
+        self.open_dir_btn.pack(fill=ctk.X, padx=20, pady=(0, 20))
+
+        # Footer
+        footer_lbl = ctk.CTkLabel(
+            sidebar_frame,
+            text="Jugend forscht 2026\nEntzündungsdetektion v0.1.0",
+            font=ctk.CTkFont(family="Arial", size=10),
+            text_color="#475569"
+        )
+        footer_lbl.pack(side=ctk.BOTTOM, pady=20)
+
+        # ── 2. RECHTER HAUPTBEREICH (Bild-Grid) ──────────────────────────────
+        content_frame = ctk.CTkFrame(self.root, fg_color="#0F172A", corner_radius=0)
+        content_frame.grid(row=0, column=1, sticky="nsew", padx=0, pady=0)
+
+        # 2x2 Grid-Gewichtung konfigurieren
+        content_frame.grid_columnconfigure(0, weight=1)
+        content_frame.grid_columnconfigure(1, weight=1)
+        content_frame.grid_rowconfigure(0, weight=1)
+        content_frame.grid_rowconfigure(1, weight=1)
+
         steps = [
             ("1. Originalbild",              0, 0),
             ("2. Hintergrund-Maske",         0, 1),
@@ -113,89 +202,79 @@ class IgniteApp:
         ]
 
         for name, row, col in steps:
-            frame = tk.LabelFrame(
-                self.display_frame,
-                text=name,
-                font=("Arial", 11, "bold"),
-                bg="#ffffff",
-                fg="#2d3748",
-                bd=1,
-                relief=tk.SOLID,
+            panel_frame = ctk.CTkFrame(
+                content_frame,
+                fg_color="#1E293B",
+                corner_radius=12,
+                border_width=1,
+                border_color="#334155"
             )
-            frame.grid(row=row, column=col, padx=15, pady=15, sticky="nsew")
+            panel_frame.grid(row=row, column=col, padx=15, pady=15, sticky="nsew")
 
-            lbl = tk.Label(
-                frame,
-                text="Warte auf Daten...",
-                bg="#edf2f7",
-                font=("Arial", 10),
-                fg="#718096",
+            title = ctk.CTkLabel(
+                panel_frame,
+                text=name,
+                font=ctk.CTkFont(family="Arial", size=14, weight="bold"),
+                text_color="#F8FAFC",
+                anchor="w"
             )
-            lbl.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+            title.pack(fill=ctk.X, padx=15, pady=(12, 5))
+
+            lbl = ctk.CTkLabel(
+                panel_frame,
+                text="Warte auf Bilddaten...",
+                font=ctk.CTkFont(family="Arial", size=13),
+                text_color="#64748B",
+                fg_color="#0F172A",
+                corner_radius=8
+            )
+            lbl.pack(fill=ctk.BOTH, expand=True, padx=15, pady=(0, 15))
             self.panels[name] = lbl
 
-        # Gleichmäßige Gewichtung der Grid-Zellen
-        self.display_frame.grid_columnconfigure(0, weight=1)
-        self.display_frame.grid_columnconfigure(1, weight=1)
-        self.display_frame.grid_rowconfigure(0, weight=1)
-        self.display_frame.grid_rowconfigure(1, weight=1)
+    def open_output_dir(self) -> None:
+        """Öffnet den Ausgabeordner mit den gespeicherten Schritten im Dateimanager."""
+        try:
+            abs_path = os.path.abspath(config.OUTPUT_DIR)
+            if not os.path.exists(abs_path):
+                config.init_output_dir()
+            os.startfile(abs_path)
+        except Exception as e:
+            messagebox.showerror("Fehler", f"Ausgabeordner konnte nicht geöffnet werden:\n{e}")
 
     def load_file(self) -> None:
-        """Öffnet einen Datei-Dialog und startet die Pipeline bei Dateiauswahl.
-
-        Unterstützte Formate: PNG, JPG/JPEG, BMP, TIFF/TIF.
-        Aktualisiert die Statusleiste mit dem gewählten Dateinamen.
-        """
+        """Öffnet einen Datei-Dialog und startet die Pipeline bei Dateiauswahl."""
         file_path = filedialog.askopenfilename(
             filetypes=[("Bilddateien", "*.png *.jpg *.jpeg *.bmp *.tiff *.tif")]
         )
         if file_path:
             self.current_filepath = file_path
-            self.status_lbl.config(
-                text=f"Datei: {os.path.basename(file_path)}", fg="#48bb78"
+            self.filename_label.configure(
+                text=f"Datei: {os.path.basename(file_path)}",
+                text_color="#60A5FA"
             )
             self.process_pipeline()
 
     def process_pipeline(self) -> None:
-        """Führt die vollständige Analyse-Pipeline aus und aktualisiert alle Panels.
-
-        Pipeline-Schritte:
-            1. Bild laden (load_thermal_image mit Umlaut-Workaround)
-            2. Rust-Core: Body-Mask + Differenzbild + Hotspot-Maske
-               (Features A–E: Distanz-Erosion, Top-Hat, µ+2σ, Geometriefilter)
-            3. Overlay-Visualisierung erstellen
-            4. Alle vier Panels aktualisieren
-            5. Alle Zwischenergebnisse für die Jury-Dokumentation speichern
-
-        Alle Fehler werden in einem Dialogfenster angezeigt ohne die Anwendung
-        zum Absturz zu bringen.
-
-        Notes:
-            Die Body-Mask wird für Panel 2 aus dem Rust-Core-internen Ergebnis
-            rekonstruiert, indem die Hotspot-Maske mit dem Differenzbild kombiniert
-            wird. Das genaue Body-Mask-Bild wird durch den Rust-Core berechnet.
-        """
+        """Führt die vollständige Analyse-Pipeline aus und aktualisiert alle Panels."""
         if not self.current_filepath:
             return
 
         try:
             # ── Schritt 1: Wärmebild laden ─────────────────────────────────
+            self.status_label.configure(text="Bild wird geladen...", text_color="#ED8936")
+            self.root.update_idletasks()
+
             img = image_processing.load_thermal_image(self.current_filepath)
             storage.save_image_step(img, "1", "original", self.current_filepath)
             storage.save_data_step(img, "1", "original", self.current_filepath)
 
-            # ── Schritt 2: Rust-Core Pipeline ausführen ────────────────────
-            # Delegiert an ignite_core.process_thermal_pipeline (Rust)
-            # Gibt zurück: (diff_img, hotspot_mask) als NumPy-Arrays
-            self.status_lbl.config(text="Rust-Pipeline läuft...", fg="#ed8936")
-            self.root.update_idletasks()  # GUI sofort aktualisieren
+            # ── Schritt 2: Pipeline ausführen (Rust-Core oder GPU) ─────────
+            self.status_label.configure(text="Pipeline läuft...", text_color="#ED8936")
+            self.root.update_idletasks()
 
             diff_img, hotspot_mask = image_processing.run_rust_pipeline(img)
 
             # ── Schritt 3: Body-Maske für Panel 2 ableiten ────────────────
-            # Die Body-Mask ist intern im Rust-Core, für die GUI-Darstellung
-            # leiten wir sie aus dem Differenzbild ab (Pixel > 0 = Körper).
-            # Dies ist ausreichend für die visuelle Panel-Anzeige.
             body_mask_vis = (diff_img > 0).astype(np.uint8) * 255
 
             # ── Schritt 4: Ergebnisse speichern (Jury-Dokumentation) ───────
@@ -217,45 +296,72 @@ class IgniteApp:
             overlay_img = image_processing.create_hotspot_overlay(img, hotspot_mask)
             overlay_rgb = cv2.cvtColor(overlay_img, cv2.COLOR_BGR2RGB)
             pil_img = Image.fromarray(overlay_rgb)
-            pil_img.thumbnail((450, 300))
-            img_tk = ImageTk.PhotoImage(image=pil_img)
+            
+            # Bild passend für Grid-Zelle skalieren (ca. 420x280)
+            pil_img.thumbnail((420, 280))
+            w, h = pil_img.size
+            img_tk = ctk.CTkImage(light_image=pil_img, dark_image=pil_img, size=(w, h))
 
-            self.panels["4. Erkannte Hotspots (Rust)"].config(image=img_tk, text="")
+            self.panels["4. Erkannte Hotspots (Rust)"].configure(image=img_tk, text="")
             self.panels["4. Erkannte Hotspots (Rust)"].image = img_tk  # Referenz halten!
 
-            # ── Schritt 7: Status aktualisieren ────────────────────────────
+            # ── Schritt 7: Status- & Statistik-Updates ─────────────────────
             hotspot_count = int(hotspot_mask.sum()) // 255
             backend_info = image_processing.get_active_backend()
 
-            self.status_lbl.config(
-                text=f"✓ Fertig – {hotspot_count} Hotspot-Pixel erkannt | {backend_info}",
-                fg="#48bb78",
+            # Backend-Anzeige formatieren
+            if "GPU (CUDA," in backend_info:
+                gpu_name = backend_info.split(",", 1)[1].strip().replace(")", "")
+                backend_disp = f"GPU: {gpu_name}"
+            else:
+                backend_disp = backend_info
+
+            self.backend_label.configure(
+                text=f"Backend: {backend_disp}",
+                text_color="#10B981"
             )
 
-            messagebox.showinfo(
-                "Pipeline Abgeschlossen",
-                f"Erfolg! Alle Schritte wurden im Ordner '{config.OUTPUT_DIR}' gesichert.\n\n"
-                f"Erkannte Hotspot-Pixel: {hotspot_count}\n"
-                f"Backend: {backend_info}",
+            # Hotspot-Zähler farblich hervorheben
+            if hotspot_count == 0:
+                hotspot_color = "#10B981"  # Grün = kein Entzündungsherd
+                hotspot_text = "0 Pixel (Keine Entzündung)"
+            elif hotspot_count < 150:
+                hotspot_color = "#F59E0B"  # Orange = kleiner Herd / Verdacht
+                hotspot_text = f"{hotspot_count} Pixel (Verdacht)"
+            else:
+                hotspot_color = "#EF4444"  # Rot = deutliche Entzündung
+                hotspot_text = f"{hotspot_count} Pixel (Entzündung)"
+
+            self.hotspot_label.configure(
+                text=f"Hotspots: {hotspot_text}",
+                text_color=hotspot_color
+            )
+
+            self.status_label.configure(
+                text="Status: ✓ Fertig",
+                text_color="#10B981"
             )
 
         except Exception as e:
-            self.status_lbl.config(text="Fehler aufgetreten!", fg="#fc8181")
+            self.status_label.configure(text="Status: Fehler!", text_color="#EF4444")
+            self.backend_label.configure(text="Backend: Fehler", text_color="#EF4444")
+            self.hotspot_label.configure(text="Hotspots: Fehler", text_color="#EF4444")
             messagebox.showerror("Fehler", f"Pipeline-Fehler:\n{e}")
 
     def display_image_in_panel(self, cv_img: np.ndarray, panel_name: str) -> None:
         """Zeigt ein Graustufen-OpenCV-Bild in einem Panel an.
 
-        Konvertiert von OpenCV-Graustufen (H, W) zu PIL-RGB für die Tkinter-Anzeige.
-        Skaliert das Bild auf maximal 450×300 Pixel (Seitenverhältnis erhalten).
-
-        Args:
-            cv_img:     OpenCV-Graustufen-Bild, shape (H, W), dtype=uint8.
-            panel_name: Schlüssel im `self.panels`-Dictionary.
+        Konvertiert das Bild in PIL, skaliert es und bettet es via CTkImage ein.
         """
         rgb_img = cv2.cvtColor(cv_img, cv2.COLOR_GRAY2RGB)
         pil_img = Image.fromarray(rgb_img)
-        pil_img.thumbnail((450, 300))
-        img_tk = ImageTk.PhotoImage(image=pil_img)
-        self.panels[panel_name].config(image=img_tk, text="")
-        self.panels[panel_name].image = img_tk  # Referenz halten, sonst GC!
+        
+        # Bild passend für Grid-Zelle skalieren (ca. 420x280)
+        pil_img.thumbnail((420, 280))
+        w, h = pil_img.size
+        
+        ctk_img = ctk.CTkImage(light_image=pil_img, dark_image=pil_img, size=(w, h))
+        
+        lbl = self.panels[panel_name]
+        lbl.configure(image=ctk_img, text="")
+        lbl.image = ctk_img  # Referenz halten!
