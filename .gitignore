@@ -1,1 +1,33 @@
-/__pycache__
+# Rust / Cargo
+/target/
+**/*.rs.bk
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+*.so
+.ipynb_checkpoints/
+.pytest_cache/
+
+# Virtual Environments
+.venv/
+venv/
+env/
+ENV/
+
+# Maturin & Build Artifacts
+/dist/
+*.egg-info/
+build/
+
+# Projekt-spezifische Ausgaben
+/ignite_steps_output/
+
+# IDEs & Systemdateien
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+desktop.ini
