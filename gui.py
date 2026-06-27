@@ -38,6 +38,7 @@ class IgniteApp:
         self.root.title("IGNITE // Jugend forscht – Entzündungsdetektion")
         self.root.geometry("1200x800")
         self.root.minsize(1050, 700)
+        self.root.configure(fg_color="#0B0F19")
 
         # Ausgabe-Verzeichnis für Jury-Dokumentation anlegen
         config.init_output_dir()
@@ -64,7 +65,7 @@ class IgniteApp:
         self.root.grid_rowconfigure(0, weight=1)
 
         # ── 1. LINKE SEITENLEISTE (Steuerung & Info) ─────────────────────────
-        sidebar_frame = ctk.CTkFrame(self.root, width=280, corner_radius=0, fg_color="#1E293B")
+        sidebar_frame = ctk.CTkFrame(self.root, width=280, corner_radius=0, fg_color="#0B0F19")
         sidebar_frame.grid(row=0, column=0, sticky="nsew", padx=0, pady=0)
         sidebar_frame.grid_propagate(False)
 
@@ -73,7 +74,7 @@ class IgniteApp:
             sidebar_frame,
             text="IGNITE",
             font=ctk.CTkFont(family="Arial", size=28, weight="bold"),
-            text_color="#60A5FA"
+            text_color="#0EA5E9"
         )
         title_lbl.pack(padx=20, pady=(30, 2), anchor="w")
 
@@ -81,12 +82,12 @@ class IgniteApp:
             sidebar_frame,
             text="Entzündungsdetektion via Thermografie",
             font=ctk.CTkFont(family="Arial", size=12, slant="italic"),
-            text_color="#94A3B8"
+            text_color="#E2E8F0"
         )
         subtitle_lbl.pack(padx=20, pady=(0, 25), anchor="w")
 
         # Trennlinie
-        divider = ctk.CTkFrame(sidebar_frame, height=2, fg_color="#334155")
+        divider = ctk.CTkFrame(sidebar_frame, height=2, fg_color="#1E293B")
         divider.pack(fill=ctk.X, padx=20, pady=(0, 25))
 
         # Sektion: Steuerung
@@ -94,7 +95,7 @@ class IgniteApp:
             sidebar_frame,
             text="STEUERUNG",
             font=ctk.CTkFont(family="Arial", size=11, weight="bold"),
-            text_color="#64748B"
+            text_color="#0EA5E9"
         )
         ctrl_title.pack(padx=20, pady=(0, 8), anchor="w")
 
@@ -103,8 +104,9 @@ class IgniteApp:
             text="Wärmebild laden",
             command=self.load_file,
             font=ctk.CTkFont(family="Arial", size=14, weight="bold"),
-            fg_color="#2563EB",
-            hover_color="#1D4ED8",
+            fg_color="#0EA5E9",
+            hover_color="#0284C7",
+            text_color="#0B0F19",
             height=40,
             corner_radius=8
         )
@@ -115,12 +117,12 @@ class IgniteApp:
             sidebar_frame,
             text="ANALYSE-DETAILS",
             font=ctk.CTkFont(family="Arial", size=11, weight="bold"),
-            text_color="#64748B"
+            text_color="#0EA5E9"
         )
         info_title.pack(padx=20, pady=(0, 8), anchor="w")
 
         # Informations-Karte
-        self.info_card = ctk.CTkFrame(sidebar_frame, fg_color="#0F172A", corner_radius=10, border_width=1, border_color="#334155")
+        self.info_card = ctk.CTkFrame(sidebar_frame, fg_color="#1E293B", corner_radius=10, border_width=1, border_color="#334155")
         self.info_card.pack(fill=ctk.X, padx=20, pady=(0, 20), ipady=8)
 
         self.filename_label = ctk.CTkLabel(
@@ -136,7 +138,7 @@ class IgniteApp:
             self.info_card,
             text="Backend: Erkennung...",
             font=ctk.CTkFont(family="Arial", size=13),
-            text_color="#94A3B8",
+            text_color="#E2E8F0",
             anchor="w"
         )
         self.backend_label.pack(fill=ctk.X, padx=15, pady=4)
@@ -145,7 +147,7 @@ class IgniteApp:
             self.info_card,
             text="Status: Bereit",
             font=ctk.CTkFont(family="Arial", size=13, slant="italic"),
-            text_color="#A0AEC0",
+            text_color="#E2E8F0",
             anchor="w"
         )
         self.status_label.pack(fill=ctk.X, padx=15, pady=4)
@@ -154,7 +156,7 @@ class IgniteApp:
             self.info_card,
             text="Hotspots: --",
             font=ctk.CTkFont(family="Arial", size=14, weight="bold"),
-            text_color="#94A3B8",
+            text_color="#E2E8F0",
             anchor="w"
         )
         self.hotspot_label.pack(fill=ctk.X, padx=15, pady=(4, 10))
@@ -166,10 +168,10 @@ class IgniteApp:
             command=self.open_output_dir,
             font=ctk.CTkFont(family="Arial", size=13),
             fg_color="transparent",
-            text_color="#60A5FA",
+            text_color="#0EA5E9",
             hover_color="#1E293B",
             border_width=1,
-            border_color="#3B82F6",
+            border_color="#0EA5E9",
             height=35,
             corner_radius=8
         )
@@ -185,7 +187,7 @@ class IgniteApp:
         footer_lbl.pack(side=ctk.BOTTOM, pady=20)
 
         # ── 2. RECHTER HAUPTBEREICH (Bild-Grid) ──────────────────────────────
-        content_frame = ctk.CTkFrame(self.root, fg_color="#0F172A", corner_radius=0)
+        content_frame = ctk.CTkFrame(self.root, fg_color="#0B0F19", corner_radius=0)
         content_frame.grid(row=0, column=1, sticky="nsew", padx=0, pady=0)
 
         # 2x2 Grid-Gewichtung konfigurieren
@@ -215,7 +217,7 @@ class IgniteApp:
                 panel_frame,
                 text=name,
                 font=ctk.CTkFont(family="Arial", size=14, weight="bold"),
-                text_color="#F8FAFC",
+                text_color="#E2E8F0",
                 anchor="w"
             )
             title.pack(fill=ctk.X, padx=15, pady=(12, 5))
@@ -224,8 +226,8 @@ class IgniteApp:
                 panel_frame,
                 text="Warte auf Bilddaten...",
                 font=ctk.CTkFont(family="Arial", size=13),
-                text_color="#64748B",
-                fg_color="#0F172A",
+                text_color="#94A3B8",
+                fg_color="#0B0F19",
                 corner_radius=8
             )
             lbl.pack(fill=ctk.BOTH, expand=True, padx=15, pady=(0, 15))
@@ -250,7 +252,7 @@ class IgniteApp:
             self.current_filepath = file_path
             self.filename_label.configure(
                 text=f"Datei: {os.path.basename(file_path)}",
-                text_color="#60A5FA"
+                text_color="#0EA5E9"
             )
             self.process_pipeline()
 
@@ -261,7 +263,7 @@ class IgniteApp:
 
         try:
             # ── Schritt 1: Wärmebild laden ─────────────────────────────────
-            self.status_label.configure(text="Bild wird geladen...", text_color="#ED8936")
+            self.status_label.configure(text="Bild wird geladen...", text_color="#0EA5E9")
             self.root.update_idletasks()
 
             img = image_processing.load_thermal_image(self.current_filepath)
@@ -269,7 +271,7 @@ class IgniteApp:
             storage.save_data_step(img, "1", "original", self.current_filepath)
 
             # ── Schritt 2: Pipeline ausführen (Rust-Core oder GPU) ─────────
-            self.status_label.configure(text="Pipeline läuft...", text_color="#ED8936")
+            self.status_label.configure(text="Pipeline läuft...", text_color="#0EA5E9")
             self.root.update_idletasks()
 
             diff_img, hotspot_mask = image_processing.run_rust_pipeline(img)
@@ -318,18 +320,18 @@ class IgniteApp:
 
             self.backend_label.configure(
                 text=f"Backend: {backend_disp}",
-                text_color="#10B981"
+                text_color="#0EA5E9"
             )
 
-            # Hotspot-Zähler farblich hervorheben
+            # Hotspot-Zähler farblich hervorheben (Pure Neon Red #FF0055)
             if hotspot_count == 0:
-                hotspot_color = "#10B981"  # Grün = kein Entzündungsherd
+                hotspot_color = "#E2E8F0"  # Weiß = keine Hotspots
                 hotspot_text = "0 Pixel (Keine Entzündung)"
             elif hotspot_count < 150:
-                hotspot_color = "#F59E0B"  # Orange = kleiner Herd / Verdacht
+                hotspot_color = "#FF5E8E"  # Hellrot = kleiner Herd / Verdacht
                 hotspot_text = f"{hotspot_count} Pixel (Verdacht)"
             else:
-                hotspot_color = "#EF4444"  # Rot = deutliche Entzündung
+                hotspot_color = "#FF0055"  # Pure Neon Red = deutliche Entzündung
                 hotspot_text = f"{hotspot_count} Pixel (Entzündung)"
 
             self.hotspot_label.configure(
@@ -339,7 +341,7 @@ class IgniteApp:
 
             self.status_label.configure(
                 text="Status: ✓ Fertig",
-                text_color="#10B981"
+                text_color="#0EA5E9"
             )
 
         except Exception as e:

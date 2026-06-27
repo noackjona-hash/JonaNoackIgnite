@@ -310,9 +310,9 @@ def create_hotspot_overlay(original_img: np.ndarray, hotspots_mask: np.ndarray) 
     # Graustufen → BGR für addWeighted-Kompatibilität
     color_img = cv2.cvtColor(original_img, cv2.COLOR_GRAY2BGR)
 
-    # Rotes Overlay-Bild (BGR: B=0, G=0, R=255)
+    # Neon-Rotes Overlay-Bild (BGR: B=85, G=0, R=255 für #FF0055)
     red_img = np.zeros_like(color_img)
-    red_img[:] = [0, 0, 255]
+    red_img[:] = [85, 0, 255]
 
     # 70 % Rot + 30 % Original für sichtbare, aber nicht überdeckende Markierung
     blended = cv2.addWeighted(color_img, 0.3, red_img, 0.7, 0)
