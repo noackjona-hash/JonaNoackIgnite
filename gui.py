@@ -21,6 +21,16 @@ import image_processing
 import storage
 
 
+def get_resource_path(relative_path: str) -> str:
+    """Gibt den absoluten Pfad zu einer Ressource zurück, passend für PyInstaller-EXEn."""
+    import sys
+    try:
+        base_path = sys._MEIPASS
+    except AttributeError:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
+
 class IgniteApp:
     """Haupt-Anwendungsklasse für das Ignite Thermografie-Analyse-System.
 
@@ -41,7 +51,7 @@ class IgniteApp:
         self.root.configure(fg_color="#0B0F19")
 
         # Setze das Anwendungs-Icon (Favicon)
-        icon_path = os.path.join("icon", "LogoRund.ico")
+        icon_path = get_resource_path(os.path.join("icon", "LogoRund.ico"))
         if os.path.exists(icon_path):
             try:
                 self.root.iconbitmap(icon_path)
@@ -78,7 +88,7 @@ class IgniteApp:
         sidebar_frame.grid_propagate(False)
 
         # App-Logo
-        icon_png_path = os.path.join("icon", "LogoRund.png")
+        icon_png_path = get_resource_path(os.path.join("icon", "LogoRund.png"))
         pady_title = (30, 2)
         if os.path.exists(icon_png_path):
             try:
