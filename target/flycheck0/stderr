@@ -1,0 +1,3335 @@
+   0.290804000s  INFO prepare_target{force=false package_id=ignite_core v0.1.0 (D:\Downloads\JonaNoackIgnite) target="ignite_core"}: cargo::core::compiler::fingerprint: fingerprint error for ignite_core v0.1.0 (D:\Downloads\JonaNoackIgnite)/Check { test: false }/TargetInner { ..: lib_target("ignite_core", ["cdylib"], "D:\\Downloads\\JonaNoackIgnite\\src\\lib.rs", Edition2021) }
+   0.292222000s  INFO prepare_target{force=false package_id=ignite_core v0.1.0 (D:\Downloads\JonaNoackIgnite) target="ignite_core"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\ignite_core-00db633dbe54c7f5\lib-ignite_core`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_libgit2_prerelease
+  12: <unknown>
+  13: <unknown>
+  14: <unknown>
+  15: <unknown>
+  16: git_midx_writer_dump
+  17: git_filter_source_repo
+  18: git_midx_writer_dump
+  19: BaseThreadInitThunk
+  20: RtlUserThreadStart
+   0.312886600s  INFO prepare_target{force=false package_id=image v0.25.10 target="image"}: cargo::core::compiler::fingerprint: fingerprint error for image v0.25.10/Check { test: false }/TargetInner { ..: lib_target("image", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\image-0.25.10\\src\\lib.rs", Edition2021) }
+   0.312921900s  INFO prepare_target{force=false package_id=image v0.25.10 target="image"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\image-26a651b9185fc1b8\lib-image`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_libgit2_prerelease
+  13: <unknown>
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: git_midx_writer_dump
+  18: git_filter_source_repo
+  19: git_midx_writer_dump
+  20: BaseThreadInitThunk
+  21: RtlUserThreadStart
+   0.314965700s  INFO prepare_target{force=false package_id=bytemuck v1.25.0 target="bytemuck"}: cargo::core::compiler::fingerprint: fingerprint error for bytemuck v1.25.0/Check { test: false }/TargetInner { ..: lib_target("bytemuck", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\bytemuck-1.25.0\\src\\lib.rs", Edition2018) }
+   0.314999800s  INFO prepare_target{force=false package_id=bytemuck v1.25.0 target="bytemuck"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\bytemuck-bb02f28bde35c4e1\lib-bytemuck`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_libgit2_prerelease
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: git_midx_writer_dump
+  19: git_filter_source_repo
+  20: git_midx_writer_dump
+  21: BaseThreadInitThunk
+  22: RtlUserThreadStart
+   0.315618700s  INFO prepare_target{force=false package_id=byteorder-lite v0.1.0 target="byteorder_lite"}: cargo::core::compiler::fingerprint: fingerprint error for byteorder-lite v0.1.0/Check { test: false }/TargetInner { name_inferred: true, benched: false, ..: lib_target("byteorder_lite", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\byteorder-lite-0.1.0\\src\\lib.rs", Edition2021) }
+   0.315883400s  INFO prepare_target{force=false package_id=byteorder-lite v0.1.0 target="byteorder_lite"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\byteorder-lite-f348c7c6555fac83\lib-byteorder_lite`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_libgit2_prerelease
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: git_midx_writer_dump
+  19: git_filter_source_repo
+  20: git_midx_writer_dump
+  21: BaseThreadInitThunk
+  22: RtlUserThreadStart
+   0.316468100s  INFO prepare_target{force=false package_id=color_quant v1.1.0 target="color_quant"}: cargo::core::compiler::fingerprint: fingerprint error for color_quant v1.1.0/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("color_quant", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\color_quant-1.1.0\\src\\lib.rs", Edition2015) }
+   0.316493400s  INFO prepare_target{force=false package_id=color_quant v1.1.0 target="color_quant"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\color_quant-a3251de1f60118ba\lib-color_quant`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_libgit2_prerelease
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: git_midx_writer_dump
+  19: git_filter_source_repo
+  20: git_midx_writer_dump
+  21: BaseThreadInitThunk
+  22: RtlUserThreadStart
+   0.317125900s  INFO prepare_target{force=false package_id=exr v1.74.0 target="exr"}: cargo::core::compiler::fingerprint: fingerprint error for exr v1.74.0/Check { test: false }/TargetInner { ..: lib_target("exr", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\exr-1.74.0\\src\\lib.rs", Edition2018) }
+   0.317151700s  INFO prepare_target{force=false package_id=exr v1.74.0 target="exr"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\exr-0e20c8e24c126eee\lib-exr`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_libgit2_prerelease
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: git_midx_writer_dump
+  19: git_filter_source_repo
+  20: git_midx_writer_dump
+  21: BaseThreadInitThunk
+  22: RtlUserThreadStart
+   0.317838200s  INFO prepare_target{force=false package_id=bit_field v0.10.3 target="bit_field"}: cargo::core::compiler::fingerprint: fingerprint error for bit_field v0.10.3/Check { test: false }/TargetInner { ..: lib_target("bit_field", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\bit_field-0.10.3\\src\\lib.rs", Edition2015) }
+   0.317862300s  INFO prepare_target{force=false package_id=bit_field v0.10.3 target="bit_field"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\bit_field-6b9da8cba044a0a6\lib-bit_field`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.318352400s  INFO prepare_target{force=false package_id=half v2.7.1 target="half"}: cargo::core::compiler::fingerprint: fingerprint error for half v2.7.1/Check { test: false }/TargetInner { ..: lib_target("half", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\half-2.7.1\\src\\lib.rs", Edition2021) }
+   0.318373100s  INFO prepare_target{force=false package_id=half v2.7.1 target="half"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\half-530cdee7cfa070b3\lib-half`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.319033200s  INFO prepare_target{force=false package_id=cfg-if v1.0.4 target="cfg_if"}: cargo::core::compiler::fingerprint: fingerprint error for cfg-if v1.0.4/Check { test: false }/TargetInner { ..: lib_target("cfg_if", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\cfg-if-1.0.4\\src\\lib.rs", Edition2018) }
+   0.319060900s  INFO prepare_target{force=false package_id=cfg-if v1.0.4 target="cfg_if"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\cfg-if-d0202b3c1f745d2b\lib-cfg_if`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_libgit2_prerelease
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: git_midx_writer_dump
+  21: git_filter_source_repo
+  22: git_midx_writer_dump
+  23: BaseThreadInitThunk
+  24: RtlUserThreadStart
+   0.320335800s  INFO prepare_target{force=false package_id=zerocopy v0.8.52 target="zerocopy"}: cargo::core::compiler::fingerprint: fingerprint error for zerocopy v0.8.52/Check { test: false }/TargetInner { ..: lib_target("zerocopy", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\zerocopy-0.8.52\\src\\lib.rs", Edition2021) }
+   0.320397900s  INFO prepare_target{force=false package_id=zerocopy v0.8.52 target="zerocopy"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\zerocopy-cf08e750a4acda74\lib-zerocopy`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_libgit2_prerelease
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: git_midx_writer_dump
+  21: git_filter_source_repo
+  22: git_midx_writer_dump
+  23: BaseThreadInitThunk
+  24: RtlUserThreadStart
+   0.325217100s  INFO prepare_target{force=false package_id=lebe v0.5.3 target="lebe"}: cargo::core::compiler::fingerprint: fingerprint error for lebe v0.5.3/Check { test: false }/TargetInner { ..: lib_target("lebe", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\lebe-0.5.3\\src\\lib.rs", Edition2018) }
+   0.325247900s  INFO prepare_target{force=false package_id=lebe v0.5.3 target="lebe"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\lebe-76a0f4c5e85e63a4\lib-lebe`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.328346200s  INFO prepare_target{force=false package_id=miniz_oxide v0.8.9 target="miniz_oxide"}: cargo::core::compiler::fingerprint: fingerprint error for miniz_oxide v0.8.9/Check { test: false }/TargetInner { ..: lib_target("miniz_oxide", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\miniz_oxide-0.8.9\\src\\lib.rs", Edition2021) }
+   0.328377100s  INFO prepare_target{force=false package_id=miniz_oxide v0.8.9 target="miniz_oxide"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\miniz_oxide-db8c87a2a9331611\lib-miniz_oxide`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.328978000s  INFO prepare_target{force=false package_id=adler2 v2.0.1 target="adler2"}: cargo::core::compiler::fingerprint: fingerprint error for adler2 v2.0.1/Check { test: false }/TargetInner { ..: lib_target("adler2", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\adler2-2.0.1\\src\\lib.rs", Edition2021) }
+   0.330660200s  INFO prepare_target{force=false package_id=adler2 v2.0.1 target="adler2"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\adler2-99e50a3f3d387414\lib-adler2`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_libgit2_prerelease
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: git_midx_writer_dump
+  21: git_filter_source_repo
+  22: git_midx_writer_dump
+  23: BaseThreadInitThunk
+  24: RtlUserThreadStart
+   0.331724100s  INFO prepare_target{force=false package_id=simd-adler32 v0.3.9 target="simd_adler32"}: cargo::core::compiler::fingerprint: fingerprint error for simd-adler32 v0.3.9/Check { test: false }/TargetInner { ..: lib_target("simd_adler32", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\simd-adler32-0.3.9\\src\\lib.rs", Edition2018) }
+   0.331755800s  INFO prepare_target{force=false package_id=simd-adler32 v0.3.9 target="simd_adler32"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\simd-adler32-110cd8ee56c0f10c\lib-simd_adler32`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_libgit2_prerelease
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: git_midx_writer_dump
+  21: git_filter_source_repo
+  22: git_midx_writer_dump
+  23: BaseThreadInitThunk
+  24: RtlUserThreadStart
+   0.332317100s  INFO prepare_target{force=false package_id=rayon-core v1.13.0 target="rayon_core"}: cargo::core::compiler::fingerprint: fingerprint error for rayon-core v1.13.0/Check { test: false }/TargetInner { ..: lib_target("rayon_core", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\rayon-core-1.13.0\\src\\lib.rs", Edition2021) }
+   0.332342200s  INFO prepare_target{force=false package_id=rayon-core v1.13.0 target="rayon_core"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\rayon-core-fe63f7016b761678\lib-rayon_core`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.332917300s  INFO prepare_target{force=false package_id=crossbeam-deque v0.8.6 target="crossbeam_deque"}: cargo::core::compiler::fingerprint: fingerprint error for crossbeam-deque v0.8.6/Check { test: false }/TargetInner { ..: lib_target("crossbeam_deque", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\crossbeam-deque-0.8.6\\src\\lib.rs", Edition2021) }
+   0.332941400s  INFO prepare_target{force=false package_id=crossbeam-deque v0.8.6 target="crossbeam_deque"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\crossbeam-deque-99761de7de3c84ca\lib-crossbeam_deque`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_libgit2_prerelease
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: git_midx_writer_dump
+  21: git_filter_source_repo
+  22: git_midx_writer_dump
+  23: BaseThreadInitThunk
+  24: RtlUserThreadStart
+   0.333500300s  INFO prepare_target{force=false package_id=crossbeam-epoch v0.9.18 target="crossbeam_epoch"}: cargo::core::compiler::fingerprint: fingerprint error for crossbeam-epoch v0.9.18/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("crossbeam_epoch", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\crossbeam-epoch-0.9.18\\src\\lib.rs", Edition2021) }
+   0.333523900s  INFO prepare_target{force=false package_id=crossbeam-epoch v0.9.18 target="crossbeam_epoch"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\crossbeam-epoch-18d34b505efabd7a\lib-crossbeam_epoch`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_filter_source_repo
+  16: git_libgit2_prerelease
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: <unknown>
+  21: git_midx_writer_dump
+  22: git_filter_source_repo
+  23: git_midx_writer_dump
+  24: BaseThreadInitThunk
+  25: RtlUserThreadStart
+   0.334218600s  INFO prepare_target{force=false package_id=crossbeam-utils v0.8.21 target="crossbeam_utils"}: cargo::core::compiler::fingerprint: fingerprint error for crossbeam-utils v0.8.21/Check { test: false }/TargetInner { ..: lib_target("crossbeam_utils", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\crossbeam-utils-0.8.21\\src\\lib.rs", Edition2021) }
+   0.334245900s  INFO prepare_target{force=false package_id=crossbeam-utils v0.8.21 target="crossbeam_utils"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\crossbeam-utils-0dfab09490f23c30\lib-crossbeam_utils`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_filter_source_repo
+  16: git_filter_source_repo
+  17: git_libgit2_prerelease
+  18: <unknown>
+  19: <unknown>
+  20: <unknown>
+  21: <unknown>
+  22: git_midx_writer_dump
+  23: git_filter_source_repo
+  24: git_midx_writer_dump
+  25: BaseThreadInitThunk
+  26: RtlUserThreadStart
+   0.336434300s  INFO prepare_target{force=false package_id=smallvec v1.15.2 target="smallvec"}: cargo::core::compiler::fingerprint: fingerprint error for smallvec v1.15.2/Check { test: false }/TargetInner { ..: lib_target("smallvec", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\smallvec-1.15.2\\src\\lib.rs", Edition2018) }
+   0.336463800s  INFO prepare_target{force=false package_id=smallvec v1.15.2 target="smallvec"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\smallvec-c2337e99b3c61734\lib-smallvec`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.336990500s  INFO prepare_target{force=false package_id=zune-inflate v0.2.54 target="zune_inflate"}: cargo::core::compiler::fingerprint: fingerprint error for zune-inflate v0.2.54/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("zune_inflate", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\zune-inflate-0.2.54\\src\\lib.rs", Edition2021) }
+   0.337014200s  INFO prepare_target{force=false package_id=zune-inflate v0.2.54 target="zune_inflate"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\zune-inflate-92a710acc4dfd9c8\lib-zune_inflate`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.337526300s  INFO prepare_target{force=false package_id=gif v0.14.2 target="gif"}: cargo::core::compiler::fingerprint: fingerprint error for gif v0.14.2/Check { test: false }/TargetInner { benched: false, ..: lib_target("gif", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\gif-0.14.2\\src\\lib.rs", Edition2021) }
+   0.337549400s  INFO prepare_target{force=false package_id=gif v0.14.2 target="gif"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\gif-8903df1821ddcdcd\lib-gif`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_libgit2_prerelease
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: git_midx_writer_dump
+  19: git_filter_source_repo
+  20: git_midx_writer_dump
+  21: BaseThreadInitThunk
+  22: RtlUserThreadStart
+   0.338197100s  INFO prepare_target{force=false package_id=weezl v0.1.12 target="weezl"}: cargo::core::compiler::fingerprint: fingerprint error for weezl v0.1.12/Check { test: false }/TargetInner { benched: false, ..: lib_target("weezl", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\weezl-0.1.12\\src\\lib.rs", Edition2018) }
+   0.338221700s  INFO prepare_target{force=false package_id=weezl v0.1.12 target="weezl"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\weezl-d4baa2d4732e0c13\lib-weezl`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.338786400s  INFO prepare_target{force=false package_id=image-webp v0.2.4 target="image_webp"}: cargo::core::compiler::fingerprint: fingerprint error for image-webp v0.2.4/Check { test: false }/TargetInner { ..: lib_target("image_webp", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\image-webp-0.2.4\\src\\lib.rs", Edition2021) }
+   0.338808200s  INFO prepare_target{force=false package_id=image-webp v0.2.4 target="image_webp"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\image-webp-dfe28990f037604f\lib-image_webp`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_libgit2_prerelease
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: git_midx_writer_dump
+  19: git_filter_source_repo
+  20: git_midx_writer_dump
+  21: BaseThreadInitThunk
+  22: RtlUserThreadStart
+   0.339323000s  INFO prepare_target{force=false package_id=quick-error v2.0.1 target="quick_error"}: cargo::core::compiler::fingerprint: fingerprint error for quick-error v2.0.1/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("quick_error", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\quick-error-2.0.1\\src\\lib.rs", Edition2018) }
+   0.339345500s  INFO prepare_target{force=false package_id=quick-error v2.0.1 target="quick_error"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\quick-error-29ed475a7aece23b\lib-quick_error`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.339850000s  INFO prepare_target{force=false package_id=moxcms v0.8.1 target="moxcms"}: cargo::core::compiler::fingerprint: fingerprint error for moxcms v0.8.1/Check { test: false }/TargetInner { ..: lib_target("moxcms", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\moxcms-0.8.1\\src\\lib.rs", Edition2024) }
+   0.339878200s  INFO prepare_target{force=false package_id=moxcms v0.8.1 target="moxcms"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\moxcms-1fc80edd0e73eae8\lib-moxcms`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_libgit2_prerelease
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: git_midx_writer_dump
+  19: git_filter_source_repo
+  20: git_midx_writer_dump
+  21: BaseThreadInitThunk
+  22: RtlUserThreadStart
+   0.340588700s  INFO prepare_target{force=false package_id=num-traits v0.2.19 target="num_traits"}: cargo::core::compiler::fingerprint: fingerprint error for num-traits v0.2.19/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("num_traits", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\num-traits-0.2.19\\src\\lib.rs", Edition2021) }
+   0.340618000s  INFO prepare_target{force=false package_id=num-traits v0.2.19 target="num_traits"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\num-traits-c5f136505c495d87\lib-num_traits`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.341352100s  INFO prepare_target{force=false package_id=libm v0.2.16 target="libm"}: cargo::core::compiler::fingerprint: fingerprint error for libm v0.2.16/Check { test: false }/TargetInner { ..: lib_target("libm", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\libm-0.2.16\\src\\lib.rs", Edition2021) }
+   0.341378400s  INFO prepare_target{force=false package_id=libm v0.2.16 target="libm"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\libm-d55d5dc9a9d919a7\lib-libm`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_libgit2_prerelease
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: git_midx_writer_dump
+  21: git_filter_source_repo
+  22: git_midx_writer_dump
+  23: BaseThreadInitThunk
+  24: RtlUserThreadStart
+   0.344599900s  INFO prepare_target{force=false package_id=pxfm v0.1.29 target="pxfm"}: cargo::core::compiler::fingerprint: fingerprint error for pxfm v0.1.29/Check { test: false }/TargetInner { ..: lib_target("pxfm", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\pxfm-0.1.29\\src\\lib.rs", Edition2024) }
+   0.344629200s  INFO prepare_target{force=false package_id=pxfm v0.1.29 target="pxfm"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\pxfm-3f5fc7bd49c4be76\lib-pxfm`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.345378700s  INFO prepare_target{force=false package_id=png v0.18.1 target="png"}: cargo::core::compiler::fingerprint: fingerprint error for png v0.18.1/Check { test: false }/TargetInner { ..: lib_target("png", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\png-0.18.1\\src\\lib.rs", Edition2021) }
+   0.345408700s  INFO prepare_target{force=false package_id=png v0.18.1 target="png"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\png-5b18b8ff41d9aac0\lib-png`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_libgit2_prerelease
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: git_midx_writer_dump
+  19: git_filter_source_repo
+  20: git_midx_writer_dump
+  21: BaseThreadInitThunk
+  22: RtlUserThreadStart
+   0.346567300s  INFO prepare_target{force=false package_id=bitflags v2.13.0 target="bitflags"}: cargo::core::compiler::fingerprint: fingerprint error for bitflags v2.13.0/Check { test: false }/TargetInner { ..: lib_target("bitflags", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\bitflags-2.13.0\\src\\lib.rs", Edition2021) }
+   0.346603400s  INFO prepare_target{force=false package_id=bitflags v2.13.0 target="bitflags"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\bitflags-694bdd794e8e80d7\lib-bitflags`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.347595900s  INFO prepare_target{force=false package_id=crc32fast v1.5.0 target="crc32fast"}: cargo::core::compiler::fingerprint: fingerprint error for crc32fast v1.5.0/Check { test: false }/TargetInner { ..: lib_target("crc32fast", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\crc32fast-1.5.0\\src\\lib.rs", Edition2021) }
+   0.347628200s  INFO prepare_target{force=false package_id=crc32fast v1.5.0 target="crc32fast"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\crc32fast-02dbb2cd1cbb8eb5\lib-crc32fast`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.349050700s  INFO prepare_target{force=false package_id=fdeflate v0.3.7 target="fdeflate"}: cargo::core::compiler::fingerprint: fingerprint error for fdeflate v0.3.7/Check { test: false }/TargetInner { ..: lib_target("fdeflate", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\fdeflate-0.3.7\\src\\lib.rs", Edition2021) }
+   0.349078700s  INFO prepare_target{force=false package_id=fdeflate v0.3.7 target="fdeflate"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\fdeflate-bb7579387b332d5a\lib-fdeflate`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.349727900s  INFO prepare_target{force=false package_id=flate2 v1.1.9 target="flate2"}: cargo::core::compiler::fingerprint: fingerprint error for flate2 v1.1.9/Check { test: false }/TargetInner { ..: lib_target("flate2", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\flate2-1.1.9\\src\\lib.rs", Edition2018) }
+   0.349754800s  INFO prepare_target{force=false package_id=flate2 v1.1.9 target="flate2"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\flate2-7dde8f5314ea1297\lib-flate2`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.350676600s  INFO prepare_target{force=false package_id=qoi v0.4.1 target="qoi"}: cargo::core::compiler::fingerprint: fingerprint error for qoi v0.4.1/Check { test: false }/TargetInner { doctest: false, ..: lib_target("qoi", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\qoi-0.4.1\\src\\lib.rs", Edition2021) }
+   0.350704300s  INFO prepare_target{force=false package_id=qoi v0.4.1 target="qoi"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\qoi-190c9c790cc5ffeb\lib-qoi`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_libgit2_prerelease
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: git_midx_writer_dump
+  19: git_filter_source_repo
+  20: git_midx_writer_dump
+  21: BaseThreadInitThunk
+  22: RtlUserThreadStart
+   0.351240900s  INFO prepare_target{force=false package_id=ravif v0.13.0 target="ravif"}: cargo::core::compiler::fingerprint: fingerprint error for ravif v0.13.0/Check { test: false }/TargetInner { ..: lib_target("ravif", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\ravif-0.13.0\\src\\lib.rs", Edition2024) }
+   0.351264100s  INFO prepare_target{force=false package_id=ravif v0.13.0 target="ravif"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\ravif-3094531c0acc9e5e\lib-ravif`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_libgit2_prerelease
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: git_midx_writer_dump
+  19: git_filter_source_repo
+  20: git_midx_writer_dump
+  21: BaseThreadInitThunk
+  22: RtlUserThreadStart
+   0.352091000s  INFO prepare_target{force=false package_id=avif-serialize v0.8.9 target="avif_serialize"}: cargo::core::compiler::fingerprint: fingerprint error for avif-serialize v0.8.9/Check { test: false }/TargetInner { ..: lib_target("avif_serialize", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\avif-serialize-0.8.9\\src\\lib.rs", Edition2024) }
+   0.352117900s  INFO prepare_target{force=false package_id=avif-serialize v0.8.9 target="avif_serialize"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\avif-serialize-f6211afde4e66ef9\lib-avif_serialize`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.352659400s  INFO prepare_target{force=false package_id=arrayvec v0.7.7 target="arrayvec"}: cargo::core::compiler::fingerprint: fingerprint error for arrayvec v0.7.7/Check { test: false }/TargetInner { ..: lib_target("arrayvec", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\arrayvec-0.7.7\\src\\lib.rs", Edition2018) }
+   0.352681800s  INFO prepare_target{force=false package_id=arrayvec v0.7.7 target="arrayvec"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\arrayvec-edc686eeb23dc9f0\lib-arrayvec`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_libgit2_prerelease
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: git_midx_writer_dump
+  21: git_filter_source_repo
+  22: git_midx_writer_dump
+  23: BaseThreadInitThunk
+  24: RtlUserThreadStart
+   0.353351000s  INFO prepare_target{force=false package_id=imgref v1.12.2 target="imgref"}: cargo::core::compiler::fingerprint: fingerprint error for imgref v1.12.2/Check { test: false }/TargetInner { ..: lib_target("imgref", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\imgref-1.12.2\\src\\lib.rs", Edition2021) }
+   0.353377800s  INFO prepare_target{force=false package_id=imgref v1.12.2 target="imgref"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\imgref-632c52fbeb3e686f\lib-imgref`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.353939400s  INFO prepare_target{force=false package_id=loop9 v0.1.5 target="loop9"}: cargo::core::compiler::fingerprint: fingerprint error for loop9 v0.1.5/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("loop9", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\loop9-0.1.5\\src\\lib.rs", Edition2021) }
+   0.353964400s  INFO prepare_target{force=false package_id=loop9 v0.1.5 target="loop9"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\loop9-1b4c09f1bd8fd389\lib-loop9`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.354487700s  INFO prepare_target{force=false package_id=rav1e v0.8.1 target="rav1e"}: cargo::core::compiler::fingerprint: fingerprint error for rav1e v0.8.1/Check { test: false }/TargetInner { benched: false, ..: lib_target("rav1e", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\rav1e-0.8.1\\src\\lib.rs", Edition2021) }
+   0.354509500s  INFO prepare_target{force=false package_id=rav1e v0.8.1 target="rav1e"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\rav1e-378544f8601973c5\lib-rav1e`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.355455400s  INFO prepare_target{force=false package_id=aligned-vec v0.6.4 target="aligned_vec"}: cargo::core::compiler::fingerprint: fingerprint error for aligned-vec v0.6.4/Check { test: false }/TargetInner { ..: lib_target("aligned_vec", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\aligned-vec-0.6.4\\src\\lib.rs", Edition2021) }
+   0.355480100s  INFO prepare_target{force=false package_id=aligned-vec v0.6.4 target="aligned_vec"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\aligned-vec-22855e4dbb546713\lib-aligned_vec`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_libgit2_prerelease
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: git_midx_writer_dump
+  21: git_filter_source_repo
+  22: git_midx_writer_dump
+  23: BaseThreadInitThunk
+  24: RtlUserThreadStart
+   0.356205400s  INFO prepare_target{force=false package_id=equator v0.4.2 target="equator"}: cargo::core::compiler::fingerprint: fingerprint error for equator v0.4.2/Check { test: false }/TargetInner { ..: lib_target("equator", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\equator-0.4.2\\src\\lib.rs", Edition2021) }
+   0.356232300s  INFO prepare_target{force=false package_id=equator v0.4.2 target="equator"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\equator-6a31583906190a64\lib-equator`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_filter_source_repo
+  16: git_libgit2_prerelease
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: <unknown>
+  21: git_midx_writer_dump
+  22: git_filter_source_repo
+  23: git_midx_writer_dump
+  24: BaseThreadInitThunk
+  25: RtlUserThreadStart
+   0.357525900s  INFO prepare_target{force=false package_id=av-scenechange v0.14.1 target="av_scenechange"}: cargo::core::compiler::fingerprint: fingerprint error for av-scenechange v0.14.1/Check { test: false }/TargetInner { ..: lib_target("av_scenechange", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\av-scenechange-0.14.1\\src\\lib.rs", Edition2021) }
+   0.357557600s  INFO prepare_target{force=false package_id=av-scenechange v0.14.1 target="av_scenechange"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\av-scenechange-ec6e9a22090f77cf\lib-av_scenechange`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_libgit2_prerelease
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: git_midx_writer_dump
+  21: git_filter_source_repo
+  22: git_midx_writer_dump
+  23: BaseThreadInitThunk
+  24: RtlUserThreadStart
+   0.358482700s  INFO prepare_target{force=false package_id=aligned v0.4.3 target="aligned"}: cargo::core::compiler::fingerprint: fingerprint error for aligned v0.4.3/Check { test: false }/TargetInner { ..: lib_target("aligned", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\aligned-0.4.3\\src\\lib.rs", Edition2024) }
+   0.358506100s  INFO prepare_target{force=false package_id=aligned v0.4.3 target="aligned"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\aligned-6d73662d20d909a0\lib-aligned`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_filter_source_repo
+  16: git_libgit2_prerelease
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: <unknown>
+  21: git_midx_writer_dump
+  22: git_filter_source_repo
+  23: git_midx_writer_dump
+  24: BaseThreadInitThunk
+  25: RtlUserThreadStart
+   0.359142400s  INFO prepare_target{force=false package_id=as-slice v0.2.1 target="as_slice"}: cargo::core::compiler::fingerprint: fingerprint error for as-slice v0.2.1/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("as_slice", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\as-slice-0.2.1\\src\\lib.rs", Edition2015) }
+   0.359193000s  INFO prepare_target{force=false package_id=as-slice v0.2.1 target="as_slice"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\as-slice-1bd3e7dbfc93a454\lib-as_slice`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_filter_source_repo
+  16: git_filter_source_repo
+  17: git_libgit2_prerelease
+  18: <unknown>
+  19: <unknown>
+  20: <unknown>
+  21: <unknown>
+  22: git_midx_writer_dump
+  23: git_filter_source_repo
+  24: git_midx_writer_dump
+  25: BaseThreadInitThunk
+  26: RtlUserThreadStart
+   0.360023500s  INFO prepare_target{force=false package_id=stable_deref_trait v1.2.1 target="stable_deref_trait"}: cargo::core::compiler::fingerprint: fingerprint error for stable_deref_trait v1.2.1/Check { test: false }/TargetInner { ..: lib_target("stable_deref_trait", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\stable_deref_trait-1.2.1\\src\\lib.rs", Edition2015) }
+   0.360050500s  INFO prepare_target{force=false package_id=stable_deref_trait v1.2.1 target="stable_deref_trait"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\stable_deref_trait-5d96c5f51b810482\lib-stable_deref_trait`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_filter_source_repo
+  16: git_filter_source_repo
+  17: git_filter_source_repo
+  18: git_libgit2_prerelease
+  19: <unknown>
+  20: <unknown>
+  21: <unknown>
+  22: <unknown>
+  23: git_midx_writer_dump
+  24: git_filter_source_repo
+  25: git_midx_writer_dump
+  26: BaseThreadInitThunk
+  27: RtlUserThreadStart
+   0.360611100s  INFO prepare_target{force=false package_id=anyhow v1.0.103 target="anyhow"}: cargo::core::compiler::fingerprint: fingerprint error for anyhow v1.0.103/Check { test: false }/TargetInner { ..: lib_target("anyhow", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\anyhow-1.0.103\\src\\lib.rs", Edition2021) }
+   0.360635700s  INFO prepare_target{force=false package_id=anyhow v1.0.103 target="anyhow"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\anyhow-3366b1d71419a59f\lib-anyhow`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_filter_source_repo
+  16: git_libgit2_prerelease
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: <unknown>
+  21: git_midx_writer_dump
+  22: git_filter_source_repo
+  23: git_midx_writer_dump
+  24: BaseThreadInitThunk
+  25: RtlUserThreadStart
+   0.363094400s  INFO prepare_target{force=false package_id=log v0.4.33 target="log"}: cargo::core::compiler::fingerprint: fingerprint error for log v0.4.33/Check { test: false }/TargetInner { ..: lib_target("log", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\log-0.4.33\\src\\lib.rs", Edition2021) }
+   0.363127900s  INFO prepare_target{force=false package_id=log v0.4.33 target="log"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\log-6a68c23101b2b7e3\lib-log`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_filter_source_repo
+  16: git_libgit2_prerelease
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: <unknown>
+  21: git_midx_writer_dump
+  22: git_filter_source_repo
+  23: git_midx_writer_dump
+  24: BaseThreadInitThunk
+  25: RtlUserThreadStart
+   0.363785700s  INFO prepare_target{force=false package_id=num-rational v0.4.2 target="num_rational"}: cargo::core::compiler::fingerprint: fingerprint error for num-rational v0.4.2/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("num_rational", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\num-rational-0.4.2\\src\\lib.rs", Edition2021) }
+   0.363817900s  INFO prepare_target{force=false package_id=num-rational v0.4.2 target="num_rational"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\num-rational-c84c876b9f528e3c\lib-num_rational`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_filter_source_repo
+  16: git_libgit2_prerelease
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: <unknown>
+  21: git_midx_writer_dump
+  22: git_filter_source_repo
+  23: git_midx_writer_dump
+  24: BaseThreadInitThunk
+  25: RtlUserThreadStart
+   0.365001800s  INFO prepare_target{force=false package_id=num-bigint v0.4.6 target="num_bigint"}: cargo::core::compiler::fingerprint: fingerprint error for num-bigint v0.4.6/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("num_bigint", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\num-bigint-0.4.6\\src\\lib.rs", Edition2021) }
+   0.365033600s  INFO prepare_target{force=false package_id=num-bigint v0.4.6 target="num_bigint"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\num-bigint-b69c810edb95b5b2\lib-num_bigint`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_filter_source_repo
+  16: git_filter_source_repo
+  17: git_libgit2_prerelease
+  18: <unknown>
+  19: <unknown>
+  20: <unknown>
+  21: <unknown>
+  22: git_midx_writer_dump
+  23: git_filter_source_repo
+  24: git_midx_writer_dump
+  25: BaseThreadInitThunk
+  26: RtlUserThreadStart
+   0.365666400s  INFO prepare_target{force=false package_id=num-integer v0.1.46 target="num_integer"}: cargo::core::compiler::fingerprint: fingerprint error for num-integer v0.1.46/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("num_integer", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\num-integer-0.1.46\\src\\lib.rs", Edition2018) }
+   0.365691000s  INFO prepare_target{force=false package_id=num-integer v0.1.46 target="num_integer"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\num-integer-9812e8851935d642\lib-num_integer`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_filter_source_repo
+  16: git_filter_source_repo
+  17: git_filter_source_repo
+  18: git_libgit2_prerelease
+  19: <unknown>
+  20: <unknown>
+  21: <unknown>
+  22: <unknown>
+  23: git_midx_writer_dump
+  24: git_filter_source_repo
+  25: git_midx_writer_dump
+  26: BaseThreadInitThunk
+  27: RtlUserThreadStart
+   0.366613600s  INFO prepare_target{force=false package_id=rayon v1.12.0 target="rayon"}: cargo::core::compiler::fingerprint: fingerprint error for rayon v1.12.0/Check { test: false }/TargetInner { ..: lib_target("rayon", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\rayon-1.12.0\\src\\lib.rs", Edition2021) }
+   0.366638800s  INFO prepare_target{force=false package_id=rayon v1.12.0 target="rayon"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\rayon-96a9a1257f8ab02d\lib-rayon`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_filter_source_repo
+  16: git_libgit2_prerelease
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: <unknown>
+  21: git_midx_writer_dump
+  22: git_filter_source_repo
+  23: git_midx_writer_dump
+  24: BaseThreadInitThunk
+  25: RtlUserThreadStart
+   0.367163400s  INFO prepare_target{force=false package_id=either v1.16.0 target="either"}: cargo::core::compiler::fingerprint: fingerprint error for either v1.16.0/Check { test: false }/TargetInner { ..: lib_target("either", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\either-1.16.0\\src\\lib.rs", Edition2021) }
+   0.367185800s  INFO prepare_target{force=false package_id=either v1.16.0 target="either"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\either-ccc0efa931cf7d3b\lib-either`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_filter_source_repo
+  16: git_filter_source_repo
+  17: git_libgit2_prerelease
+  18: <unknown>
+  19: <unknown>
+  20: <unknown>
+  21: <unknown>
+  22: git_midx_writer_dump
+  23: git_filter_source_repo
+  24: git_midx_writer_dump
+  25: BaseThreadInitThunk
+  26: RtlUserThreadStart
+   0.367937200s  INFO prepare_target{force=false package_id=thiserror v2.0.18 target="thiserror"}: cargo::core::compiler::fingerprint: fingerprint error for thiserror v2.0.18/Check { test: false }/TargetInner { ..: lib_target("thiserror", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\thiserror-2.0.18\\src\\lib.rs", Edition2021) }
+   0.367962400s  INFO prepare_target{force=false package_id=thiserror v2.0.18 target="thiserror"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\thiserror-4016d582f50b3e42\lib-thiserror`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_filter_source_repo
+  16: git_libgit2_prerelease
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: <unknown>
+  21: git_midx_writer_dump
+  22: git_filter_source_repo
+  23: git_midx_writer_dump
+  24: BaseThreadInitThunk
+  25: RtlUserThreadStart
+   0.369603900s  INFO prepare_target{force=false package_id=v_frame v0.3.9 target="v_frame"}: cargo::core::compiler::fingerprint: fingerprint error for v_frame v0.3.9/Check { test: false }/TargetInner { ..: lib_target("v_frame", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\v_frame-0.3.9\\src\\lib.rs", Edition2021) }
+   0.369631900s  INFO prepare_target{force=false package_id=v_frame v0.3.9 target="v_frame"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\v_frame-34448144052bb7d6\lib-v_frame`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_filter_source_repo
+  16: git_libgit2_prerelease
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: <unknown>
+  21: git_midx_writer_dump
+  22: git_filter_source_repo
+  23: git_midx_writer_dump
+  24: BaseThreadInitThunk
+  25: RtlUserThreadStart
+   0.370329900s  INFO prepare_target{force=false package_id=y4m v0.8.0 target="y4m"}: cargo::core::compiler::fingerprint: fingerprint error for y4m v0.8.0/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("y4m", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\y4m-0.8.0\\src\\lib.rs", Edition2015) }
+   0.370367800s  INFO prepare_target{force=false package_id=y4m v0.8.0 target="y4m"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\y4m-265bffbc8e892e7a\lib-y4m`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_filter_source_repo
+  16: git_libgit2_prerelease
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: <unknown>
+  21: git_midx_writer_dump
+  22: git_filter_source_repo
+  23: git_midx_writer_dump
+  24: BaseThreadInitThunk
+  25: RtlUserThreadStart
+   0.370995400s  INFO prepare_target{force=false package_id=av1-grain v0.2.5 target="av1_grain"}: cargo::core::compiler::fingerprint: fingerprint error for av1-grain v0.2.5/Check { test: false }/TargetInner { ..: lib_target("av1_grain", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\av1-grain-0.2.5\\src\\lib.rs", Edition2021) }
+   0.371020600s  INFO prepare_target{force=false package_id=av1-grain v0.2.5 target="av1_grain"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\av1-grain-9b41802099f2f132\lib-av1_grain`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_libgit2_prerelease
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: git_midx_writer_dump
+  21: git_filter_source_repo
+  22: git_midx_writer_dump
+  23: BaseThreadInitThunk
+  24: RtlUserThreadStart
+   0.372057100s  INFO prepare_target{force=false package_id=nom v8.0.0 target="nom"}: cargo::core::compiler::fingerprint: fingerprint error for nom v8.0.0/Check { test: false }/TargetInner { ..: lib_target("nom", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\nom-8.0.0\\src\\lib.rs", Edition2021) }
+   0.372087400s  INFO prepare_target{force=false package_id=nom v8.0.0 target="nom"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\nom-a8f31d42dbae61e9\lib-nom`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_filter_source_repo
+  16: git_libgit2_prerelease
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: <unknown>
+  21: git_midx_writer_dump
+  22: git_filter_source_repo
+  23: git_midx_writer_dump
+  24: BaseThreadInitThunk
+  25: RtlUserThreadStart
+   0.372736800s  INFO prepare_target{force=false package_id=memchr v2.8.2 target="memchr"}: cargo::core::compiler::fingerprint: fingerprint error for memchr v2.8.2/Check { test: false }/TargetInner { benched: false, ..: lib_target("memchr", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\memchr-2.8.2\\src\\lib.rs", Edition2021) }
+   0.372765900s  INFO prepare_target{force=false package_id=memchr v2.8.2 target="memchr"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\memchr-3c057147a14dbb62\lib-memchr`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_filter_source_repo
+  16: git_filter_source_repo
+  17: git_libgit2_prerelease
+  18: <unknown>
+  19: <unknown>
+  20: <unknown>
+  21: <unknown>
+  22: git_midx_writer_dump
+  23: git_filter_source_repo
+  24: git_midx_writer_dump
+  25: BaseThreadInitThunk
+  26: RtlUserThreadStart
+   0.373401500s  INFO prepare_target{force=false package_id=bitstream-io v4.10.0 target="bitstream_io"}: cargo::core::compiler::fingerprint: fingerprint error for bitstream-io v4.10.0/Check { test: false }/TargetInner { ..: lib_target("bitstream_io", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\bitstream-io-4.10.0\\src\\lib.rs", Edition2018) }
+   0.373431200s  INFO prepare_target{force=false package_id=bitstream-io v4.10.0 target="bitstream_io"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\bitstream-io-34a36bb68d5aadc8\lib-bitstream_io`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_libgit2_prerelease
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: git_midx_writer_dump
+  21: git_filter_source_repo
+  22: git_midx_writer_dump
+  23: BaseThreadInitThunk
+  24: RtlUserThreadStart
+   0.374196900s  INFO prepare_target{force=false package_id=no_std_io2 v0.9.4 target="no_std_io2"}: cargo::core::compiler::fingerprint: fingerprint error for no_std_io2 v0.9.4/Check { test: false }/TargetInner { ..: lib_target("no_std_io2", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\no_std_io2-0.9.4\\src\\lib.rs", Edition2021) }
+   0.374224200s  INFO prepare_target{force=false package_id=no_std_io2 v0.9.4 target="no_std_io2"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\no_std_io2-7b46155dfc4b1989\lib-no_std_io2`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_filter_source_repo
+  16: git_libgit2_prerelease
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: <unknown>
+  21: git_midx_writer_dump
+  22: git_filter_source_repo
+  23: git_midx_writer_dump
+  24: BaseThreadInitThunk
+  25: RtlUserThreadStart
+   0.374965400s  INFO prepare_target{force=false package_id=itertools v0.14.0 target="itertools"}: cargo::core::compiler::fingerprint: fingerprint error for itertools v0.14.0/Check { test: false }/TargetInner { tested: false, benched: false, ..: lib_target("itertools", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\itertools-0.14.0\\src\\lib.rs", Edition2018) }
+   0.374990300s  INFO prepare_target{force=false package_id=itertools v0.14.0 target="itertools"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\itertools-544a8c2a4235a8d6\lib-itertools`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_libgit2_prerelease
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: git_midx_writer_dump
+  21: git_filter_source_repo
+  22: git_midx_writer_dump
+  23: BaseThreadInitThunk
+  24: RtlUserThreadStart
+   0.375570600s  INFO prepare_target{force=false package_id=libc v0.2.186 target="libc"}: cargo::core::compiler::fingerprint: fingerprint error for libc v0.2.186/Check { test: false }/TargetInner { ..: lib_target("libc", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\libc-0.2.186\\src\\lib.rs", Edition2021) }
+   0.375594200s  INFO prepare_target{force=false package_id=libc v0.2.186 target="libc"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\libc-569ed3e1e05f48d7\lib-libc`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_libgit2_prerelease
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: git_midx_writer_dump
+  21: git_filter_source_repo
+  22: git_midx_writer_dump
+  23: BaseThreadInitThunk
+  24: RtlUserThreadStart
+   0.377063900s  INFO prepare_target{force=false package_id=maybe-rayon v0.1.1 target="maybe_rayon"}: cargo::core::compiler::fingerprint: fingerprint error for maybe-rayon v0.1.1/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("maybe_rayon", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\maybe-rayon-0.1.1\\src\\lib.rs", Edition2021) }
+   0.377092900s  INFO prepare_target{force=false package_id=maybe-rayon v0.1.1 target="maybe_rayon"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\maybe-rayon-7d1144172c599ff5\lib-maybe_rayon`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_libgit2_prerelease
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: git_midx_writer_dump
+  21: git_filter_source_repo
+  22: git_midx_writer_dump
+  23: BaseThreadInitThunk
+  24: RtlUserThreadStart
+   0.377677300s  INFO prepare_target{force=false package_id=new_debug_unreachable v1.0.6 target="debug_unreachable"}: cargo::core::compiler::fingerprint: fingerprint error for new_debug_unreachable v1.0.6/Check { test: false }/TargetInner { ..: lib_target("debug_unreachable", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\new_debug_unreachable-1.0.6\\src\\lib.rs", Edition2021) }
+   0.377699900s  INFO prepare_target{force=false package_id=new_debug_unreachable v1.0.6 target="debug_unreachable"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\new_debug_unreachable-50484d9efefac6dd\lib-debug_unreachable`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_libgit2_prerelease
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: git_midx_writer_dump
+  21: git_filter_source_repo
+  22: git_midx_writer_dump
+  23: BaseThreadInitThunk
+  24: RtlUserThreadStart
+   0.380103400s  INFO prepare_target{force=false package_id=profiling v1.0.18 target="profiling"}: cargo::core::compiler::fingerprint: fingerprint error for profiling v1.0.18/Check { test: false }/TargetInner { ..: lib_target("profiling", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\profiling-1.0.18\\src\\lib.rs", Edition2018) }
+   0.380168200s  INFO prepare_target{force=false package_id=profiling v1.0.18 target="profiling"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\profiling-bdd3fb413155de39\lib-profiling`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_libgit2_prerelease
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: git_midx_writer_dump
+  21: git_filter_source_repo
+  22: git_midx_writer_dump
+  23: BaseThreadInitThunk
+  24: RtlUserThreadStart
+   0.382328500s  INFO prepare_target{force=false package_id=rgb v0.8.53 target="rgb"}: cargo::core::compiler::fingerprint: fingerprint error for rgb v0.8.53/Check { test: false }/TargetInner { ..: lib_target("rgb", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\rgb-0.8.53\\src\\lib.rs", Edition2021) }
+   0.382360100s  INFO prepare_target{force=false package_id=rgb v0.8.53 target="rgb"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\rgb-ab8ebf17465e799c\lib-rgb`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.382911600s  INFO prepare_target{force=false package_id=tiff v0.11.3 target="tiff"}: cargo::core::compiler::fingerprint: fingerprint error for tiff v0.11.3/Check { test: false }/TargetInner { ..: lib_target("tiff", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\tiff-0.11.3\\src\\lib.rs", Edition2021) }
+   0.382933500s  INFO prepare_target{force=false package_id=tiff v0.11.3 target="tiff"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\tiff-6bc38dd86aa7af84\lib-tiff`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_libgit2_prerelease
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: git_midx_writer_dump
+  19: git_filter_source_repo
+  20: git_midx_writer_dump
+  21: BaseThreadInitThunk
+  22: RtlUserThreadStart
+   0.383703200s  INFO prepare_target{force=false package_id=fax v0.2.7 target="fax"}: cargo::core::compiler::fingerprint: fingerprint error for fax v0.2.7/Check { test: false }/TargetInner { ..: lib_target("fax", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\fax-0.2.7\\src\\lib.rs", Edition2018) }
+   0.383727600s  INFO prepare_target{force=false package_id=fax v0.2.7 target="fax"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\fax-e0869931df9be7be\lib-fax`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.384423900s  INFO prepare_target{force=false package_id=zune-jpeg v0.5.15 target="zune_jpeg"}: cargo::core::compiler::fingerprint: fingerprint error for zune-jpeg v0.5.15/Check { test: false }/TargetInner { ..: lib_target("zune_jpeg", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\zune-jpeg-0.5.15\\src\\lib.rs", Edition2021) }
+   0.384454200s  INFO prepare_target{force=false package_id=zune-jpeg v0.5.15 target="zune_jpeg"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\zune-jpeg-279e539709422a04\lib-zune_jpeg`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.385105600s  INFO prepare_target{force=false package_id=zune-core v0.5.1 target="zune_core"}: cargo::core::compiler::fingerprint: fingerprint error for zune-core v0.5.1/Check { test: false }/TargetInner { ..: lib_target("zune_core", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\zune-core-0.5.1\\src\\lib.rs", Edition2021) }
+   0.385127100s  INFO prepare_target{force=false package_id=zune-core v0.5.1 target="zune_core"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\zune-core-3376ada282dd4400\lib-zune_core`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_libgit2_prerelease
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: git_midx_writer_dump
+  21: git_filter_source_repo
+  22: git_midx_writer_dump
+  23: BaseThreadInitThunk
+  24: RtlUserThreadStart
+   0.385633200s  INFO prepare_target{force=false package_id=imageproc v0.25.1 target="imageproc"}: cargo::core::compiler::fingerprint: fingerprint error for imageproc v0.25.1/Check { test: false }/TargetInner { ..: lib_target("imageproc", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\imageproc-0.25.1\\src\\lib.rs", Edition2021) }
+   0.385655200s  INFO prepare_target{force=false package_id=imageproc v0.25.1 target="imageproc"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\imageproc-54f8bdf3da16cf23\lib-imageproc`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_libgit2_prerelease
+  13: <unknown>
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: git_midx_writer_dump
+  18: git_filter_source_repo
+  19: git_midx_writer_dump
+  20: BaseThreadInitThunk
+  21: RtlUserThreadStart
+   0.386480300s  INFO prepare_target{force=false package_id=ab_glyph v0.2.32 target="ab_glyph"}: cargo::core::compiler::fingerprint: fingerprint error for ab_glyph v0.2.32/Check { test: false }/TargetInner { ..: lib_target("ab_glyph", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\ab_glyph-0.2.32\\src\\lib.rs", Edition2021) }
+   0.386503400s  INFO prepare_target{force=false package_id=ab_glyph v0.2.32 target="ab_glyph"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\ab_glyph-dfbbc8099510d2b1\lib-ab_glyph`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_libgit2_prerelease
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: git_midx_writer_dump
+  19: git_filter_source_repo
+  20: git_midx_writer_dump
+  21: BaseThreadInitThunk
+  22: RtlUserThreadStart
+   0.387273800s  INFO prepare_target{force=false package_id=ab_glyph_rasterizer v0.1.10 target="ab_glyph_rasterizer"}: cargo::core::compiler::fingerprint: fingerprint error for ab_glyph_rasterizer v0.1.10/Check { test: false }/TargetInner { ..: lib_target("ab_glyph_rasterizer", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\ab_glyph_rasterizer-0.1.10\\src\\lib.rs", Edition2021) }
+   0.387300800s  INFO prepare_target{force=false package_id=ab_glyph_rasterizer v0.1.10 target="ab_glyph_rasterizer"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\ab_glyph_rasterizer-92cc9cbbb8ceb858\lib-ab_glyph_rasterizer`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.387815000s  INFO prepare_target{force=false package_id=owned_ttf_parser v0.25.1 target="owned_ttf_parser"}: cargo::core::compiler::fingerprint: fingerprint error for owned_ttf_parser v0.25.1/Check { test: false }/TargetInner { ..: lib_target("owned_ttf_parser", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\owned_ttf_parser-0.25.1\\src\\lib.rs", Edition2021) }
+   0.387837200s  INFO prepare_target{force=false package_id=owned_ttf_parser v0.25.1 target="owned_ttf_parser"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\owned_ttf_parser-a559a77236545d86\lib-owned_ttf_parser`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.388353900s  INFO prepare_target{force=false package_id=ttf-parser v0.25.1 target="ttf_parser"}: cargo::core::compiler::fingerprint: fingerprint error for ttf-parser v0.25.1/Check { test: false }/TargetInner { ..: lib_target("ttf_parser", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\ttf-parser-0.25.1\\src\\lib.rs", Edition2018) }
+   0.388375400s  INFO prepare_target{force=false package_id=ttf-parser v0.25.1 target="ttf_parser"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\ttf-parser-5cf67ac84f7f0152\lib-ttf_parser`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_libgit2_prerelease
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: git_midx_writer_dump
+  21: git_filter_source_repo
+  22: git_midx_writer_dump
+  23: BaseThreadInitThunk
+  24: RtlUserThreadStart
+   0.388859800s  INFO prepare_target{force=false package_id=approx v0.5.1 target="approx"}: cargo::core::compiler::fingerprint: fingerprint error for approx v0.5.1/Check { test: false }/TargetInner { ..: lib_target("approx", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\approx-0.5.1\\src\\lib.rs", Edition2015) }
+   0.388880400s  INFO prepare_target{force=false package_id=approx v0.5.1 target="approx"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\approx-2ee94c8b5dd0406d\lib-approx`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_libgit2_prerelease
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: git_midx_writer_dump
+  19: git_filter_source_repo
+  20: git_midx_writer_dump
+  21: BaseThreadInitThunk
+  22: RtlUserThreadStart
+   0.389515600s  INFO prepare_target{force=false package_id=itertools v0.12.1 target="itertools"}: cargo::core::compiler::fingerprint: fingerprint error for itertools v0.12.1/Check { test: false }/TargetInner { name_inferred: true, tested: false, benched: false, ..: lib_target("itertools", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\itertools-0.12.1\\src\\lib.rs", Edition2018) }
+   0.389540400s  INFO prepare_target{force=false package_id=itertools v0.12.1 target="itertools"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\itertools-8c5c7f5adf4e4686\lib-itertools`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_libgit2_prerelease
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: git_midx_writer_dump
+  19: git_filter_source_repo
+  20: git_midx_writer_dump
+  21: BaseThreadInitThunk
+  22: RtlUserThreadStart
+   0.390086200s  INFO prepare_target{force=false package_id=nalgebra v0.32.6 target="nalgebra"}: cargo::core::compiler::fingerprint: fingerprint error for nalgebra v0.32.6/Check { test: false }/TargetInner { ..: lib_target("nalgebra", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\nalgebra-0.32.6\\src\\lib.rs", Edition2018) }
+   0.390110500s  INFO prepare_target{force=false package_id=nalgebra v0.32.6 target="nalgebra"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\nalgebra-279d0156379a1e38\lib-nalgebra`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_libgit2_prerelease
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: git_midx_writer_dump
+  19: git_filter_source_repo
+  20: git_midx_writer_dump
+  21: BaseThreadInitThunk
+  22: RtlUserThreadStart
+   0.390810800s  INFO prepare_target{force=false package_id=matrixmultiply v0.3.10 target="matrixmultiply"}: cargo::core::compiler::fingerprint: fingerprint error for matrixmultiply v0.3.10/Check { test: false }/TargetInner { benched: false, ..: lib_target("matrixmultiply", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\matrixmultiply-0.3.10\\src\\lib.rs", Edition2018) }
+   0.390834600s  INFO prepare_target{force=false package_id=matrixmultiply v0.3.10 target="matrixmultiply"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\matrixmultiply-0a47a918983de905\lib-matrixmultiply`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.392362600s  INFO prepare_target{force=false package_id=rawpointer v0.2.1 target="rawpointer"}: cargo::core::compiler::fingerprint: fingerprint error for rawpointer v0.2.1/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("rawpointer", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\rawpointer-0.2.1\\src\\lib.rs", Edition2015) }
+   0.392390000s  INFO prepare_target{force=false package_id=rawpointer v0.2.1 target="rawpointer"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\rawpointer-3ba0c5978784295e\lib-rawpointer`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_libgit2_prerelease
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: git_midx_writer_dump
+  21: git_filter_source_repo
+  22: git_midx_writer_dump
+  23: BaseThreadInitThunk
+  24: RtlUserThreadStart
+   0.394414900s  INFO prepare_target{force=false package_id=num-complex v0.4.6 target="num_complex"}: cargo::core::compiler::fingerprint: fingerprint error for num-complex v0.4.6/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("num_complex", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\num-complex-0.4.6\\src\\lib.rs", Edition2021) }
+   0.394451300s  INFO prepare_target{force=false package_id=num-complex v0.4.6 target="num_complex"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\num-complex-a192713f6410d81d\lib-num_complex`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.395176000s  INFO prepare_target{force=false package_id=simba v0.8.1 target="simba"}: cargo::core::compiler::fingerprint: fingerprint error for simba v0.8.1/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("simba", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\simba-0.8.1\\src\\lib.rs", Edition2018) }
+   0.395200500s  INFO prepare_target{force=false package_id=simba v0.8.1 target="simba"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\simba-468b56f7b27442d7\lib-simba`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.396123000s  INFO prepare_target{force=false package_id=wide v0.7.33 target="wide"}: cargo::core::compiler::fingerprint: fingerprint error for wide v0.7.33/Check { test: false }/TargetInner { ..: lib_target("wide", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\wide-0.7.33\\src\\lib.rs", Edition2018) }
+   0.396155400s  INFO prepare_target{force=false package_id=wide v0.7.33 target="wide"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\wide-9a8984a94a595a2d\lib-wide`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_libgit2_prerelease
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: git_midx_writer_dump
+  21: git_filter_source_repo
+  22: git_midx_writer_dump
+  23: BaseThreadInitThunk
+  24: RtlUserThreadStart
+   0.396848000s  INFO prepare_target{force=false package_id=safe_arch v0.7.4 target="safe_arch"}: cargo::core::compiler::fingerprint: fingerprint error for safe_arch v0.7.4/Check { test: false }/TargetInner { ..: lib_target("safe_arch", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\safe_arch-0.7.4\\src\\lib.rs", Edition2018) }
+   0.396878400s  INFO prepare_target{force=false package_id=safe_arch v0.7.4 target="safe_arch"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\safe_arch-72016e0bbedf7c44\lib-safe_arch`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_filter_source_repo
+  16: git_libgit2_prerelease
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: <unknown>
+  21: git_midx_writer_dump
+  22: git_filter_source_repo
+  23: git_midx_writer_dump
+  24: BaseThreadInitThunk
+  25: RtlUserThreadStart
+   0.397649500s  INFO prepare_target{force=false package_id=typenum v1.20.1 target="typenum"}: cargo::core::compiler::fingerprint: fingerprint error for typenum v1.20.1/Check { test: false }/TargetInner { ..: lib_target("typenum", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\typenum-1.20.1\\src\\lib.rs", Edition2018) }
+   0.397680800s  INFO prepare_target{force=false package_id=typenum v1.20.1 target="typenum"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\typenum-90368bfc231befa9\lib-typenum`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.398253100s  INFO prepare_target{force=false package_id=num v0.4.3 target="num"}: cargo::core::compiler::fingerprint: fingerprint error for num v0.4.3/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("num", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\num-0.4.3\\src\\lib.rs", Edition2021) }
+   0.398278700s  INFO prepare_target{force=false package_id=num v0.4.3 target="num"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\num-16b5c45596df3408\lib-num`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_libgit2_prerelease
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: git_midx_writer_dump
+  19: git_filter_source_repo
+  20: git_midx_writer_dump
+  21: BaseThreadInitThunk
+  22: RtlUserThreadStart
+   0.399040900s  INFO prepare_target{force=false package_id=num-iter v0.1.45 target="num_iter"}: cargo::core::compiler::fingerprint: fingerprint error for num-iter v0.1.45/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("num_iter", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\num-iter-0.1.45\\src\\lib.rs", Edition2018) }
+   0.399066400s  INFO prepare_target{force=false package_id=num-iter v0.1.45 target="num_iter"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\num-iter-f759479d66a9d362\lib-num_iter`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.399607100s  INFO prepare_target{force=false package_id=rand v0.8.6 target="rand"}: cargo::core::compiler::fingerprint: fingerprint error for rand v0.8.6/Check { test: false }/TargetInner { ..: lib_target("rand", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\rand-0.8.6\\src\\lib.rs", Edition2018) }
+   0.399628100s  INFO prepare_target{force=false package_id=rand v0.8.6 target="rand"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\rand-26790fd02fdc4be5\lib-rand`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_libgit2_prerelease
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: git_midx_writer_dump
+  19: git_filter_source_repo
+  20: git_midx_writer_dump
+  21: BaseThreadInitThunk
+  22: RtlUserThreadStart
+   0.400385400s  INFO prepare_target{force=false package_id=rand_chacha v0.3.1 target="rand_chacha"}: cargo::core::compiler::fingerprint: fingerprint error for rand_chacha v0.3.1/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("rand_chacha", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\rand_chacha-0.3.1\\src\\lib.rs", Edition2018) }
+   0.400411700s  INFO prepare_target{force=false package_id=rand_chacha v0.3.1 target="rand_chacha"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\rand_chacha-19c80c381fb190f6\lib-rand_chacha`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.400980200s  INFO prepare_target{force=false package_id=ppv-lite86 v0.2.21 target="ppv_lite86"}: cargo::core::compiler::fingerprint: fingerprint error for ppv-lite86 v0.2.21/Check { test: false }/TargetInner { ..: lib_target("ppv_lite86", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\ppv-lite86-0.2.21\\src\\lib.rs", Edition2021) }
+   0.401002600s  INFO prepare_target{force=false package_id=ppv-lite86 v0.2.21 target="ppv_lite86"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\ppv-lite86-881b102cdaa2abe3\lib-ppv_lite86`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_libgit2_prerelease
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: git_midx_writer_dump
+  21: git_filter_source_repo
+  22: git_midx_writer_dump
+  23: BaseThreadInitThunk
+  24: RtlUserThreadStart
+   0.401525900s  INFO prepare_target{force=false package_id=rand_core v0.6.4 target="rand_core"}: cargo::core::compiler::fingerprint: fingerprint error for rand_core v0.6.4/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("rand_core", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\rand_core-0.6.4\\src\\lib.rs", Edition2018) }
+   0.401547300s  INFO prepare_target{force=false package_id=rand_core v0.6.4 target="rand_core"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\rand_core-04674d984767a381\lib-rand_core`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_libgit2_prerelease
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: git_midx_writer_dump
+  21: git_filter_source_repo
+  22: git_midx_writer_dump
+  23: BaseThreadInitThunk
+  24: RtlUserThreadStart
+   0.402039500s  INFO prepare_target{force=false package_id=getrandom v0.2.17 target="getrandom"}: cargo::core::compiler::fingerprint: fingerprint error for getrandom v0.2.17/Check { test: false }/TargetInner { ..: lib_target("getrandom", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\getrandom-0.2.17\\src\\lib.rs", Edition2018) }
+   0.402061000s  INFO prepare_target{force=false package_id=getrandom v0.2.17 target="getrandom"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\getrandom-82099f7f8c157c9e\lib-getrandom`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_filter_source_repo
+  16: git_libgit2_prerelease
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: <unknown>
+  21: git_midx_writer_dump
+  22: git_filter_source_repo
+  23: git_midx_writer_dump
+  24: BaseThreadInitThunk
+  25: RtlUserThreadStart
+   0.402953600s  INFO prepare_target{force=false package_id=rand_distr v0.4.3 target="rand_distr"}: cargo::core::compiler::fingerprint: fingerprint error for rand_distr v0.4.3/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("rand_distr", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\rand_distr-0.4.3\\src\\lib.rs", Edition2018) }
+   0.402984100s  INFO prepare_target{force=false package_id=rand_distr v0.4.3 target="rand_distr"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\rand_distr-8637b69900624d7c\lib-rand_distr`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_libgit2_prerelease
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: git_midx_writer_dump
+  19: git_filter_source_repo
+  20: git_midx_writer_dump
+  21: BaseThreadInitThunk
+  22: RtlUserThreadStart
+   0.403707700s  INFO prepare_target{force=false package_id=ndarray v0.16.1 target="ndarray"}: cargo::core::compiler::fingerprint: fingerprint error for ndarray v0.16.1/Check { test: false }/TargetInner { benched: false, ..: lib_target("ndarray", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\ndarray-0.16.1\\src\\lib.rs", Edition2018) }
+   0.403730800s  INFO prepare_target{force=false package_id=ndarray v0.16.1 target="ndarray"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\ndarray-cd8820f2b7dc4f3c\lib-ndarray`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_libgit2_prerelease
+  13: <unknown>
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: git_midx_writer_dump
+  18: git_filter_source_repo
+  19: git_midx_writer_dump
+  20: BaseThreadInitThunk
+  21: RtlUserThreadStart
+   0.404374700s  INFO prepare_target{force=false package_id=numpy v0.22.1 target="numpy"}: cargo::core::compiler::fingerprint: fingerprint error for numpy v0.22.1/Check { test: false }/TargetInner { ..: lib_target("numpy", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\numpy-0.22.1\\src\\lib.rs", Edition2021) }
+   0.404396400s  INFO prepare_target{force=false package_id=numpy v0.22.1 target="numpy"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\numpy-a46a0e7509aeb5ee\lib-numpy`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_libgit2_prerelease
+  13: <unknown>
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: git_midx_writer_dump
+  18: git_filter_source_repo
+  19: git_midx_writer_dump
+  20: BaseThreadInitThunk
+  21: RtlUserThreadStart
+   0.405028900s  INFO prepare_target{force=false package_id=pyo3 v0.22.6 target="pyo3"}: cargo::core::compiler::fingerprint: fingerprint error for pyo3 v0.22.6/Check { test: false }/TargetInner { ..: lib_target("pyo3", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\pyo3-0.22.6\\src\\lib.rs", Edition2021) }
+   0.405050200s  INFO prepare_target{force=false package_id=pyo3 v0.22.6 target="pyo3"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\pyo3-f92a7653741d203c\lib-pyo3`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_libgit2_prerelease
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: git_midx_writer_dump
+  19: git_filter_source_repo
+  20: git_midx_writer_dump
+  21: BaseThreadInitThunk
+  22: RtlUserThreadStart
+   0.406063300s  INFO prepare_target{force=false package_id=memoffset v0.9.1 target="memoffset"}: cargo::core::compiler::fingerprint: fingerprint error for memoffset v0.9.1/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("memoffset", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\memoffset-0.9.1\\src\\lib.rs", Edition2015) }
+   0.406088500s  INFO prepare_target{force=false package_id=memoffset v0.9.1 target="memoffset"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\memoffset-f558cc55603edb7d\lib-memoffset`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.407404600s  INFO prepare_target{force=false package_id=once_cell v1.21.4 target="once_cell"}: cargo::core::compiler::fingerprint: fingerprint error for once_cell v1.21.4/Check { test: false }/TargetInner { ..: lib_target("once_cell", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\once_cell-1.21.4\\src\\lib.rs", Edition2021) }
+   0.407429700s  INFO prepare_target{force=false package_id=once_cell v1.21.4 target="once_cell"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\once_cell-fb34a126ab7ea2f6\lib-once_cell`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.412174300s  INFO prepare_target{force=false package_id=pyo3-ffi v0.22.6 target="pyo3_ffi"}: cargo::core::compiler::fingerprint: fingerprint error for pyo3-ffi v0.22.6/Check { test: false }/TargetInner { ..: lib_target("pyo3_ffi", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\pyo3-ffi-0.22.6\\src\\lib.rs", Edition2021) }
+   0.412206500s  INFO prepare_target{force=false package_id=pyo3-ffi v0.22.6 target="pyo3_ffi"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\pyo3-ffi-bfcaee3bee8f89f1\lib-pyo3_ffi`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.415108800s  INFO prepare_target{force=false package_id=unindent v0.2.4 target="unindent"}: cargo::core::compiler::fingerprint: fingerprint error for unindent v0.2.4/Check { test: false }/TargetInner { ..: lib_target("unindent", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\unindent-0.2.4\\src\\lib.rs", Edition2021) }
+   0.415146800s  INFO prepare_target{force=false package_id=unindent v0.2.4 target="unindent"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\unindent-d56c495fb799251d\lib-unindent`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.415801400s  INFO prepare_target{force=false package_id=rustc-hash v1.1.0 target="rustc_hash"}: cargo::core::compiler::fingerprint: fingerprint error for rustc-hash v1.1.0/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("rustc_hash", ["lib"], "C:\\Users\\jonan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\rustc-hash-1.1.0\\src\\lib.rs", Edition2015) }
+   0.415828600s  INFO prepare_target{force=false package_id=rustc-hash v1.1.0 target="rustc_hash"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\rustc-hash-2c1109d3fddfa8b8\lib-rustc_hash`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_libgit2_prerelease
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: git_midx_writer_dump
+  19: git_filter_source_repo
+  20: git_midx_writer_dump
+  21: BaseThreadInitThunk
+  22: RtlUserThreadStart
+   0.416384600s  INFO prepare_target{force=false package_id=ignite_core v0.1.0 (D:\Downloads\JonaNoackIgnite) target="ignite_core"}: cargo::core::compiler::fingerprint: fingerprint error for ignite_core v0.1.0 (D:\Downloads\JonaNoackIgnite)/Check { test: true }/TargetInner { ..: lib_target("ignite_core", ["cdylib"], "D:\\Downloads\\JonaNoackIgnite\\src\\lib.rs", Edition2021) }
+   0.416407900s  INFO prepare_target{force=false package_id=ignite_core v0.1.0 (D:\Downloads\JonaNoackIgnite) target="ignite_core"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\Downloads\JonaNoackIgnite\target\debug\.fingerprint\ignite_core-1e645e756fd655ee\test-lib-ignite_core`
+
+Caused by:
+    Das System kann die angegebene Datei nicht finden. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_libgit2_prerelease
+  12: <unknown>
+  13: <unknown>
+  14: <unknown>
+  15: <unknown>
+  16: git_midx_writer_dump
+  17: git_filter_source_repo
+  18: git_midx_writer_dump
+  19: BaseThreadInitThunk
+  20: RtlUserThreadStart
+    Checking cfg-if v1.0.4
+    Checking libm v0.2.16
+    Checking crossbeam-utils v0.8.21
+    Checking either v1.16.0
+    Checking zerocopy v0.8.52
+    Checking simd-adler32 v0.3.9
+    Checking crossbeam-epoch v0.9.18
+    Checking equator v0.4.2
+    Checking crossbeam-deque v0.8.6
+    Checking num-traits v0.2.19
+    Checking rayon-core v1.13.0
+    Checking memchr v2.8.2
+    Checking rayon v1.12.0
+    Checking aligned-vec v0.6.4
+    Checking num-integer v0.1.46
+    Checking libc v0.2.186
+    Checking num-bigint v0.4.6
+    Checking adler2 v2.0.1
+    Checking stable_deref_trait v1.2.1
+    Checking arrayvec v0.7.7
+    Checking num-rational v0.4.2
+    Checking bytemuck v1.25.0
+    Checking as-slice v0.2.1
+    Checking miniz_oxide v0.8.9
+    Checking v_frame v0.3.9
+    Checking num-complex v0.4.6
+    Checking anyhow v1.0.103
+    Checking log v0.4.33
+    Checking thiserror v2.0.18
+    Checking aligned v0.4.3
+    Checking crc32fast v1.5.0
+    Checking nom v8.0.0
+    Checking no_std_io2 v0.9.4
+    Checking getrandom v0.2.17
+    Checking quick-error v2.0.1
+    Checking rawpointer v0.2.1
+    Checking y4m v0.8.0
+    Checking rand_core v0.6.4
+    Checking matrixmultiply v0.3.10
+    Checking bitstream-io v4.10.0
+    Checking av-scenechange v0.14.1
+    Checking profiling v1.0.18
+    Checking flate2 v1.1.9
+    Checking safe_arch v0.7.4
+    Checking ppv-lite86 v0.2.21
+    Checking half v2.7.1
+    Checking maybe-rayon v0.1.1
+    Checking itertools v0.14.0
+    Checking zune-core v0.5.1
+    Checking weezl v0.1.12
+    Checking imgref v1.12.2
+    Checking new_debug_unreachable v1.0.6
+    Checking loop9 v0.1.5
+    Checking zune-jpeg v0.5.15
+    Checking av1-grain v0.2.5
+    Checking rand_chacha v0.3.1
+    Checking wide v0.7.33
+    Checking avif-serialize v0.8.9
+    Checking rav1e v0.8.1
+    Checking approx v0.5.1
+    Checking zune-inflate v0.2.54
+    Checking fdeflate v0.3.7
+    Checking bitflags v2.13.0
+    Checking byteorder-lite v0.1.0
+    Checking ttf-parser v0.25.1
+    Checking lebe v0.5.3
+    Checking fax v0.2.7
+    Checking smallvec v1.15.2
+    Checking pxfm v0.1.29
+    Checking color_quant v1.1.0
+    Checking rgb v0.8.53
+    Checking bit_field v0.10.3
+    Checking owned_ttf_parser v0.25.1
+    Checking exr v1.74.0
+    Checking gif v0.14.2
+    Checking moxcms v0.8.1
+    Checking tiff v0.11.3
+    Checking ravif v0.13.0
+    Checking simba v0.8.1
+    Checking image-webp v0.2.4
+    Checking png v0.18.1
+    Checking rand v0.8.6
+    Checking memoffset v0.9.1
+    Checking pyo3-ffi v0.22.6
+    Checking qoi v0.4.1
+    Checking num-iter v0.1.45
+    Checking once_cell v1.21.4
+    Checking unindent v0.2.4
+    Checking ab_glyph_rasterizer v0.1.10
+    Checking typenum v1.20.1
+    Checking pyo3 v0.22.6
+    Checking num v0.4.3
+    Checking ab_glyph v0.2.32
+    Checking image v0.25.10
+    Checking rand_distr v0.4.3
+    Checking nalgebra v0.32.6
+    Checking ndarray v0.16.1
+    Checking itertools v0.12.1
+    Checking rustc-hash v1.1.0
+    Checking numpy v0.22.1
+    Checking imageproc v0.25.1
+    Checking ignite_core v0.1.0 (D:\Downloads\JonaNoackIgnite)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 17s
