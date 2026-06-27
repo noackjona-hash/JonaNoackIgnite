@@ -214,32 +214,51 @@ def _pytorch_gpu_pipeline(img: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     return diff_vis, final_mask
 
 
+FORCED_BACKEND = "auto"  # Kann auf "auto", "gpu", "rust" oder "python" gesetzt werden.
+
 def run_rust_pipeline(img: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """Führt die vollständige Bildverarbeitungs-Pipeline aus.
     
-    Nutzt vorzugsweise die PyTorch-CUDA GPU-Pipeline. Falls diese fehlschlägt oder
-    nicht verfügbar ist, wird das Rust-Core-Modul geladen. Als Letztes greift
-    der reine Python-CPU-Fallback.
+    Unterstützt das Erzwingen bestimmter Backends via globaler `FORCED_BACKEND`-Variable.
     """
-    if _GPU_AVAILABLE:
-        try:
+    global FORCED_BACKEND
+
+    # 1. Erzwingen: GPU (PyTorch CUDA)
+    if FORCED_BACKEND == "gpu":
+        if _GPU_AVAILABLE:
             return _pytorch_gpu_pipeline(img)
-        except Exception as e:
-            warnings.warn(
-                f"[image_processing] GPU-Pipeline fehlgeschlagen! Weiche auf Rust-CPU aus. Details: {e}",
-                RuntimeWarning,
-                stacklevel=2,
-            )
+        else:
+            raise RuntimeError("GPU-Backend (CUDA) ist nicht verfügbar oder PyTorch ist nicht installiert!")
 
-    if _RUST_BACKEND_AVAILABLE and _ignite_core is not None:
-        # ── Rust-Pfad ────────────────────────────────────────────────────────
-        img_contiguous = np.ascontiguousarray(img, dtype=np.uint8)
-        diff_img, hotspot_mask = _ignite_core.process_thermal_pipeline(img_contiguous)
-        return diff_img, hotspot_mask
+    # 2. Erzwingen: Rust CPU Core
+    elif FORCED_BACKEND == "rust":
+        if _RUST_BACKEND_AVAILABLE and _ignite_core is not None:
+            img_contiguous = np.ascontiguousarray(img, dtype=np.uint8)
+            return _ignite_core.process_thermal_pipeline(img_contiguous)
+        else:
+            raise RuntimeError("Natives Rust-Core-Modul (ignite_core) ist nicht verfügbar!")
 
-    else:
-        # ── Python-Fallback-Pfad ─────────────────────────────────────────────
+    # 3. Erzwingen: Python Fallback
+    elif FORCED_BACKEND == "python":
         return _python_fallback_pipeline(img)
+
+    # 4. Standard-Logik ("auto"): Versuche GPU -> Rust -> Python Fallback
+    else:
+        if _GPU_AVAILABLE:
+            try:
+                return _pytorch_gpu_pipeline(img)
+            except Exception as e:
+                warnings.warn(
+                    f"[image_processing] GPU-Pipeline fehlgeschlagen! Weiche auf Rust-CPU aus. Details: {e}",
+                    RuntimeWarning,
+                    stacklevel=2,
+                )
+
+        if _RUST_BACKEND_AVAILABLE and _ignite_core is not None:
+            img_contiguous = np.ascontiguousarray(img, dtype=np.uint8)
+            return _ignite_core.process_thermal_pipeline(img_contiguous)
+        else:
+            return _python_fallback_pipeline(img)
 
 
 def _python_fallback_pipeline(img: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
@@ -292,29 +311,34 @@ def _python_fallback_pipeline(img: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
 # FUNKTION 3: Visuelles Overlay (unverändert, reine Visualisierung)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def create_hotspot_overlay(original_img: np.ndarray, hotspots_mask: np.ndarray) -> np.ndarray:
-    """Erstellt ein visuelles Overlay: Originalbild mit leuchtend roten Hotspots.
+def create_hotspot_overlay(original_img: np.ndarray, hotspots_mask: np.ndarray, colormap_name: str = "Graustufen") -> np.ndarray:
+    """Erstellt ein visuelles Overlay: Originalbild mit gewähltem Colormap und leuchtend roten Hotspots.
 
-    Diese Funktion ist reine Visualisierung und benötigt keine Rust-Beschleunigung,
-    da sie einmalig pro Bild ausgeführt wird.
+    Diese Funktion ist reine Visualisierung und benötigt keine Rust-Beschleunigung.
 
     Args:
         original_img:  Graustufen-Originalbild, shape (H, W), dtype=uint8.
         hotspots_mask: Binäre Hotspot-Maske (0 oder 255), shape (H, W), dtype=uint8.
-                       Output von `run_rust_pipeline()`.
+        colormap_name: Name der gewählten Farbpalette.
 
     Returns:
         BGR-Farbbild mit rotem Overlay auf Hotspot-Regionen, shape (H, W, 3), dtype=uint8.
-        OpenCV-Konvention: BGR-Kanalreihenfolge.
     """
-    # Graustufen → BGR für addWeighted-Kompatibilität
-    color_img = cv2.cvtColor(original_img, cv2.COLOR_GRAY2BGR)
+    # Farb-Konvertierung des Originalbildes je nach gewählter Palette
+    if colormap_name == "Regenbogen (Jet)":
+        color_img = cv2.applyColorMap(original_img, cv2.COLORMAP_JET)
+    elif colormap_name == "Inferno":
+        color_img = cv2.applyColorMap(original_img, cv2.COLORMAP_INFERNO)
+    elif colormap_name == "Heiß (Hot)":
+        color_img = cv2.applyColorMap(original_img, cv2.COLORMAP_HOT)
+    else:  # Graustufen
+        color_img = cv2.cvtColor(original_img, cv2.COLOR_GRAY2BGR)
 
     # Neon-Rotes Overlay-Bild (BGR: B=85, G=0, R=255 für #FF0055)
     red_img = np.zeros_like(color_img)
     red_img[:] = [85, 0, 255]
 
-    # 70 % Rot + 30 % Original für sichtbare, aber nicht überdeckende Markierung
+    # 70 % Rot + 30 % Original für sichtbare Markierung
     blended = cv2.addWeighted(color_img, 0.3, red_img, 0.7, 0)
 
     # Overlay nur auf Hotspot-Pixel anwenden, Rest behält Originalfarbe

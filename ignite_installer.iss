@@ -11,6 +11,17 @@ AppPublisher=Jona Noack
 DefaultDirName={autopf}\Ignite
 DefaultGroupName=Ignite
 AllowNoIcons=yes
+PrivilegesRequired=lowest
+
+; 64-Bit System-Enforcement
+ArchitecturesAllowed=x64
+ArchitecturesInstallIn64BitMode=x64
+
+; Versionierung und Metadaten für die Installer-EXE
+VersionInfoVersion=0.1.0
+VersionInfoCompany=Jona Noack
+VersionInfoDescription=IGNITE Entzündungsdetektion via Thermografie
+
 ; Pfad zur Icon-Datei für den Installer selbst
 SetupIconFile=icon\LogoRund.ico
 ; Speicherort und Name des fertigen Installers
