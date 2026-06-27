@@ -40,6 +40,14 @@ class IgniteApp:
         self.root.minsize(1050, 700)
         self.root.configure(fg_color="#0B0F19")
 
+        # Setze das Anwendungs-Icon (Favicon)
+        icon_path = os.path.join("icon", "LogoRund.ico")
+        if os.path.exists(icon_path):
+            try:
+                self.root.iconbitmap(icon_path)
+            except Exception:
+                pass
+
         # Ausgabe-Verzeichnis für Jury-Dokumentation anlegen
         config.init_output_dir()
 
@@ -69,6 +77,19 @@ class IgniteApp:
         sidebar_frame.grid(row=0, column=0, sticky="nsew", padx=0, pady=0)
         sidebar_frame.grid_propagate(False)
 
+        # App-Logo
+        icon_png_path = os.path.join("icon", "LogoRund.png")
+        pady_title = (30, 2)
+        if os.path.exists(icon_png_path):
+            try:
+                logo_img = Image.open(icon_png_path)
+                logo_ctk = ctk.CTkImage(light_image=logo_img, dark_image=logo_img, size=(64, 64))
+                logo_lbl = ctk.CTkLabel(sidebar_frame, image=logo_ctk, text="")
+                logo_lbl.pack(padx=20, pady=(25, 5), anchor="w")
+                pady_title = (5, 2)
+            except Exception:
+                pass
+
         # App-Header
         title_lbl = ctk.CTkLabel(
             sidebar_frame,
@@ -76,7 +97,7 @@ class IgniteApp:
             font=ctk.CTkFont(family="Arial", size=28, weight="bold"),
             text_color="#0EA5E9"
         )
-        title_lbl.pack(padx=20, pady=(30, 2), anchor="w")
+        title_lbl.pack(padx=20, pady=pady_title, anchor="w")
 
         subtitle_lbl = ctk.CTkLabel(
             sidebar_frame,
