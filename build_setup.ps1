@@ -1,4 +1,4 @@
-# build_setup.ps1
+﻿# build_setup.ps1
 # ─────────────────────────────────────────────────────────────────────────────
 # Ignite – Build-Helfer für das native Rust-Erweiterungsmodul `ignite_core`
 #
@@ -38,19 +38,7 @@ Write-Host ""
 # ─────────────────────────────────────────────────────────────────────────────
 if ($Test) {
     Write-Host "Führe Smoke-Test aus..." -ForegroundColor Yellow
-    python -c @"
-import ignite_core
-import numpy as np
-print(f'ignite_core v{ignite_core.__version__}')
-print(f'Backend: {ignite_core.__backend__}')
-img = np.zeros((480, 640), dtype=np.uint8)
-img[100:380, 80:560] = 120
-img[150:230, 200:320] = 185
-diff, mask = ignite_core.process_thermal_pipeline(img)
-px = int(mask.sum()) // 255
-print(f'Hotspot-Pixel: {px}')
-print('OK' if px > 0 else 'HINWEIS: Kein Hotspot (normales Verhalten bei homogenem Testsignal)')
-"@
+    python verify_installation.py
     exit 0
 }
 
@@ -147,39 +135,7 @@ if ($wheel) {
 Write-Host ""
 Write-Host "[4/4] Verifikation..." -ForegroundColor Yellow
 
-python -c @"
-import sys
-try:
-    import ignite_core
-    print(f'  OK: ignite_core importiert')
-    print(f'  Version: {ignite_core.__version__}')
-    print(f'  Backend: {ignite_core.__backend__}')
-    
-    import numpy as np
-    # Synthetisches Testsignal: Körper-ähnliches Bild mit künstlichem Hotspot
-    img = np.zeros((480, 640), dtype=np.uint8)
-    img[100:380, 80:560] = 120   # Körper-Region (warm)
-    img[150:230, 200:320] = 185  # Großer Hotspot (muss erkannt werden)
-    
-    diff, mask = ignite_core.process_thermal_pipeline(img)
-    hotspot_px = int(mask.sum()) // 255
-    
-    print(f'  Differenzbild:  shape={diff.shape}, dtype={diff.dtype}')
-    print(f'  Hotspot-Maske:  shape={mask.shape}, dtype={mask.dtype}')
-    print(f'  Hotspot-Pixel:  {hotspot_px}')
-    
-    if hotspot_px > 0:
-        print('  ✓ ERFOLG: Pipeline erkennt künstlichen Hotspot korrekt!')
-    else:
-        print('  ⚠ HINWEIS: Kein Hotspot erkannt (Schwellenwert sehr adaptiv)')
-        
-except ImportError as e:
-    print(f'  FEHLER: {e}', file=sys.stderr)
-    sys.exit(1)
-except Exception as e:
-    print(f'  PIPELINE-FEHLER: {e}', file=sys.stderr)
-    sys.exit(1)
-"@
+python verify_installation.py
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Green

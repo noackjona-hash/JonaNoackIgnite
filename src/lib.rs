@@ -435,14 +435,19 @@ fn distance_transform_l2(binary_mask: &ImageMatrix) -> FloatMatrix {
 ///
 /// # Returns
 /// `Result<ImageMatrix, String>` – Binäre Body-Mask (0 oder 255)
-fn extract_body_mask(img: &ImageMatrix) -> Result<ImageMatrix, String> {
+fn extract_body_mask(
+    img: &ImageMatrix,
+    otsu_min: u8,
+    otsu_max: u8,
+    dist_erosion_factor: f64,
+) -> Result<ImageMatrix, String> {
     let (h, w) = img.dim();
 
     // Schritt 1: Otsu-Binarisierung mit adaptivem Fallback.
     // Ein reines Otsu schneidet kältere Extremitäten (wie Zehen) oft ab, wenn andere
     // Körperteile sehr warm sind. Wir begrenzen den Schwellenwert auf den Bereich [35, 50].
     let otsu_thresh = otsu_threshold(img);
-    let threshold = (otsu_thresh / 2).max(35).min(50);
+    let threshold = (otsu_thresh / 2).max(otsu_min).min(otsu_max);
     let mut otsu_mask = Array2::<u8>::zeros((h, w));
     otsu_mask.zip_mut_with(img, |out, &px| {
         *out = if px > threshold { 255 } else { 0 };
@@ -462,7 +467,7 @@ fn extract_body_mask(img: &ImageMatrix) -> Result<ImageMatrix, String> {
     // 5 % statt 15 % stellt sicher, dass dünnere Extremitäten wie Zehen im Maskenbild
     // erhalten bleiben, während Logo-Overlays und dünne Rauschartefakte am Rand
     // zuverlässig erodiert werden.
-    let erosion_threshold = 0.05 * max_dist;
+    let erosion_threshold = dist_erosion_factor * max_dist;
     let mut eroded_mask = Array2::<u8>::zeros((h, w));
     for y in 0..h {
         for x in 0..w {
@@ -747,6 +752,8 @@ fn filter_geometric(
     binary_mask: &ImageMatrix,
     body_mask: &ImageMatrix,
     kernel_size: usize,
+    min_area_factor: f64,
+    min_circularity: f64,
 ) -> Result<ImageMatrix, String> {
     // KEIN morphologisches Prefilter: Der morph_open/close-Schritt wuerde
     // die durch den µ+2σ-Schwellenwert bereits selektierten Hotspot-Cluster
@@ -758,7 +765,7 @@ fn filter_geometric(
     // plus relative Mindestfläche: 0.0005 * Körperfläche (0.05 %)
     // Das Maximum beider Bedingungen wird als Schwellenwert genutzt.
     let total_body_area = body_mask.iter().filter(|&&px| px > 0).count() as f64;
-    let min_area_rel = 0.0005 * total_body_area;
+    let min_area_rel = min_area_factor * total_body_area;
     let min_area = min_area_rel.max(10.0); // Mindestens 10 Pixel
 
     // Connected Components für die Filterung
@@ -785,7 +792,7 @@ fn filter_geometric(
                 return false;
             }
             let circularity = (4.0 * PI * area) / (perimeter * perimeter);
-            circularity >= 0.01
+            circularity >= min_circularity
         })
         .collect();
 
@@ -872,6 +879,13 @@ fn normalize_minmax(img: &ImageMatrix) -> ImageMatrix {
 fn process_thermal_pipeline<'py>(
     py: Python<'py>,
     gray_array: PyReadonlyArray2<u8>,
+    sigma_k: f64,
+    tophat_factor: f64,
+    min_area_factor: f64,
+    min_circularity: f64,
+    otsu_min: u8,
+    otsu_max: u8,
+    dist_erosion_factor: f64,
 ) -> PyResult<(Py<PyArray2<u8>>, Py<PyArray2<u8>>)> {
     // ── Schritt 0: Eingabe-Validierung ─────────────────────────────────────
     let array = gray_array.as_array();
@@ -901,7 +915,7 @@ fn process_thermal_pipeline<'py>(
             // Top-Hat-Kernel: 5 % der Bildbreite (passend zu realen Thermokameras
             // mit 160–320px Auflösung, wo Hotspots typisch 10–50 Pixel groß sind).
             // Bei 640px Breite: 5 % = 33px Kernel.
-            let kernel_large = compute_odd_kernel(width, 0.05);
+            let kernel_large = compute_odd_kernel(width, tophat_factor);
             // Geometriefilter-Referenzgröße (nicht für Morph-Ops genutzt, nur als Parameter)
             let kernel_small = compute_odd_kernel(width, 0.02).max(3);
 
@@ -911,7 +925,7 @@ fn process_thermal_pipeline<'py>(
             );
 
             // ── Feature B: Adaptive Body-Mask via Distanztransformation ──
-            let mask = extract_body_mask(&img)
+            let mask = extract_body_mask(&img, otsu_min, otsu_max, dist_erosion_factor)
                 .map_err(|e| format!("Body-Mask Fehler: {}", e))?;
 
             let body_pixel_count = mask.iter().filter(|&&px| px > 0).count();
@@ -929,7 +943,7 @@ fn process_thermal_pipeline<'py>(
                 .map_err(|e| format!("TopHat Fehler: {}", e))?;
 
             // ── Feature D: Statistischer Schwellenwert µ + 3.0σ + Absolutwert-Filter ──
-            let binary_raw = threshold_statistical(&img, &diff_img, &mask, 3.0)
+            let binary_raw = threshold_statistical(&img, &diff_img, &mask, sigma_k)
                 .map_err(|e| format!("Schwellenwert Fehler: {}", e))?;
 
             let raw_hotspot_count = binary_raw.iter().filter(|&&px| px > 0).count();
@@ -939,7 +953,7 @@ fn process_thermal_pipeline<'py>(
             );
 
             // ── Feature E: Geometrischer Rauschfilter ─────────────────────
-            let final_mask = filter_geometric(&binary_raw, &mask, kernel_small)
+            let final_mask = filter_geometric(&binary_raw, &mask, kernel_small, min_area_factor, min_circularity)
                 .map_err(|e| format!("Geometriefilter Fehler: {}", e))?;
 
             let final_hotspot_count = final_mask.iter().filter(|&&px| px > 0).count();
