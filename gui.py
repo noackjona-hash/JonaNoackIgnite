@@ -201,7 +201,7 @@ class IgniteApp:
         # Footer
         footer_lbl = ctk.CTkLabel(
             sidebar_frame,
-            text="Jugend forscht 2026\nEntzündungsdetektion v0.1.0",
+            text="Entwickelt von Jona Noack\nJugend forscht 2026 | v0.1.0",
             font=ctk.CTkFont(family="Arial", size=10),
             text_color="#475569"
         )
