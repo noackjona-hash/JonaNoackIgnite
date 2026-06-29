@@ -79,6 +79,7 @@ class IgniteApp:
         self.general_hotspots: list = []
         
         self.resize_job: str | None = None
+        self.pil_cache: dict[str, Image.Image] = {}
 
         self.setup_ui()
         self.setup_menu()
@@ -427,6 +428,22 @@ class IgniteApp:
             corner_radius=6
         )
         self.export_report_btn.pack(fill=ctk.X, pady=4)
+
+        # Bereinigen-Button
+        self.clean_dir_btn = ctk.CTkButton(
+            self.sidebar_scroll,
+            text="Ergebnisordner bereinigen",
+            command=self.clean_output_dir,
+            font=ctk.CTkFont(family="Arial", size=13),
+            fg_color="transparent",
+            text_color="#EF4444",
+            hover_color="#2D1A22",
+            border_width=1,
+            border_color="#451A22",
+            height=32,
+            corner_radius=6
+        )
+        self.clean_dir_btn.pack(fill=ctk.X, pady=4)
 
         # Footer
         footer_lbl = ctk.CTkLabel(
@@ -883,6 +900,64 @@ class IgniteApp:
         except Exception as e:
             messagebox.showerror("Fehler", f"Ausgabeordner konnte nicht geöffnet werden:\n{e}")
 
+    def clean_output_dir(self) -> None:
+        """Löscht alle generierten Dateien (.png, .npy, .html) aus dem Ausgabeordner und setzt die UI zurück."""
+        if not os.path.exists(config.OUTPUT_DIR):
+            messagebox.showinfo("Bereinigung", "Ausgabeordner existiert nicht. Keine Bereinigung notwendig.")
+            return
+
+        confirm = messagebox.askyesno(
+            "Ausgabeordner bereinigen",
+            "Möchten Sie wirklich alle exportierten Berichte und Zwischenschritte aus dem Ergebnisordner löschen?"
+        )
+        if not confirm:
+            return
+
+        try:
+            files_removed = 0
+            for item in os.listdir(config.OUTPUT_DIR):
+                item_path = os.path.join(config.OUTPUT_DIR, item)
+                if os.path.isfile(item_path):
+                    os.remove(item_path)
+                    files_removed += 1
+                elif os.path.isdir(item_path):
+                    for subitem in os.listdir(item_path):
+                        subitem_path = os.path.join(item_path, subitem)
+                        if os.path.isfile(subitem_path):
+                            os.remove(subitem_path)
+                            files_removed += 1
+                    try:
+                        os.rmdir(item_path)
+                    except Exception:
+                        pass
+
+            messagebox.showinfo("Bereinigung erfolgreich", f"Erfolgreich {files_removed} Dateien gelöscht.")
+            
+            # UI zurücksetzen
+            self.current_filepath = None
+            self.current_raw_original = None
+            self.current_raw_mask = None
+            self.current_images.clear()
+            self.pil_cache.clear()
+            
+            for name, lbl in self.panels.items():
+                lbl.configure(image="", text="Warte auf Bilddaten...")
+            for name, lbl in self.panels_full.items():
+                lbl.configure(image="", text="Warte auf Bilddaten...")
+                
+            self.filename_label.configure(text="Datei: Keine", text_color="#F4F4F5")
+            self.hotspot_label.configure(text="Hotspots: --", text_color="#F4F4F5")
+            self.pixel_info_label.configure(text="Pixel-Info: --", text_color="#71717A")
+            self.status_label.configure(text="Status: Bereit", text_color="#A1A1AA")
+            
+            for widget in self.hist_container.winfo_children():
+                widget.destroy()
+            
+            self.update_detail_tab()
+
+        except Exception as e:
+            messagebox.showerror("Fehler bei der Bereinigung", f"Ein Fehler ist aufgetreten:\n{e}")
+
     def load_file(self) -> None:
         """Öffnet einen Datei-Dialog und startet die Pipeline bei Dateiauswahl."""
         file_path = filedialog.askopenfilename(
@@ -1146,26 +1221,30 @@ class IgniteApp:
         if update_cache:
             self.current_images[panel_name] = cv_img
 
-        if panel_name == "1. Originalbild":
-            palette = self.palette_menu.get()
-            if palette == "Regenbogen (Jet)":
-                color_img = cv2.applyColorMap(cv_img, cv2.COLORMAP_JET)
-                rgb_img = cv2.cvtColor(color_img, cv2.COLOR_BGR2RGB)
-            elif palette == "Inferno":
-                color_img = cv2.applyColorMap(cv_img, cv2.COLORMAP_INFERNO)
-                rgb_img = cv2.cvtColor(color_img, cv2.COLOR_BGR2RGB)
-            elif palette == "Heiß (Hot)":
-                color_img = cv2.applyColorMap(cv_img, cv2.COLORMAP_HOT)
-                rgb_img = cv2.cvtColor(color_img, cv2.COLOR_BGR2RGB)
+            if panel_name == "1. Originalbild":
+                palette = self.palette_menu.get()
+                if palette == "Regenbogen (Jet)":
+                    color_img = cv2.applyColorMap(cv_img, cv2.COLORMAP_JET)
+                    rgb_img = cv2.cvtColor(color_img, cv2.COLOR_BGR2RGB)
+                elif palette == "Inferno":
+                    color_img = cv2.applyColorMap(cv_img, cv2.COLORMAP_INFERNO)
+                    rgb_img = cv2.cvtColor(color_img, cv2.COLOR_BGR2RGB)
+                elif palette == "Heiß (Hot)":
+                    color_img = cv2.applyColorMap(cv_img, cv2.COLORMAP_HOT)
+                    rgb_img = cv2.cvtColor(color_img, cv2.COLOR_BGR2RGB)
+                else:
+                    rgb_img = cv2.cvtColor(cv_img, cv2.COLOR_GRAY2RGB)
             else:
-                rgb_img = cv2.cvtColor(cv_img, cv2.COLOR_GRAY2RGB)
-        else:
-            if len(cv_img.shape) == 2:
-                rgb_img = cv2.cvtColor(cv_img, cv2.COLOR_GRAY2RGB)
-            else:
-                rgb_img = cv_img
+                if len(cv_img.shape) == 2:
+                    rgb_img = cv2.cvtColor(cv_img, cv2.COLOR_GRAY2RGB)
+                else:
+                    rgb_img = cv_img
 
-        pil_img = Image.fromarray(rgb_img)
+            self.pil_cache[panel_name] = Image.fromarray(rgb_img)
+
+        pil_img = self.pil_cache.get(panel_name)
+        if pil_img is None:
+            return
 
         # 1. Grid Panel
         lbl_grid = self.panels[panel_name]
