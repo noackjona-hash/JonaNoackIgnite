@@ -737,11 +737,14 @@ fn connected_components(binary: &ImageMatrix) -> (Array2<u32>, u32) {
 ///
 /// # Returns
 /// Vec<(f64, f64)> – Index i = Label i+1: (Fläche, Perimeter)
-fn compute_region_stats(labels: &Array2<u32>, max_label: u32) -> Vec<(f64, f64)> {
+fn compute_region_stats(labels: &Array2<u32>, max_label: u32) -> Vec<(f64, f64, bool)> {
     let (h, w) = labels.dim();
     let n = max_label as usize;
     let mut areas = vec![0.0f64; n + 1];
     let mut perimeters = vec![0.0f64; n + 1];
+    let mut touches_border = vec![false; n + 1];
+
+    let border_margin = 8usize;
 
     for y in 0..h {
         for x in 0..w {
@@ -750,6 +753,10 @@ fn compute_region_stats(labels: &Array2<u32>, max_label: u32) -> Vec<(f64, f64)>
                 continue;
             }
             areas[lbl] += 1.0;
+
+            if x <= border_margin || y <= border_margin || x >= w - 1 - border_margin || y >= h - 1 - border_margin {
+                touches_border[lbl] = true;
+            }
 
             // Perimeter: Pixel ist Randpixel wenn ein Nachbar != lbl oder Bildrand
             let is_border = y == 0
@@ -768,7 +775,11 @@ fn compute_region_stats(labels: &Array2<u32>, max_label: u32) -> Vec<(f64, f64)>
     }
 
     // Index 0 = Hintergrund (ignorieren), Index 1..=max_label = Komponenten
-    areas[1..].iter().zip(perimeters[1..].iter()).map(|(&a, &p)| (a, p)).collect()
+    areas[1..].iter()
+        .zip(perimeters[1..].iter())
+        .zip(touches_border[1..].iter())
+        .map(|((&a, &p), &t)| (a, p, t))
+        .collect()
 }
 
 /// Filtert die Hotspot-Rohmaske via geometrische Struktur-Analyse.
@@ -825,7 +836,10 @@ fn filter_geometric(
 
     let keep_flags: Vec<bool> = stats
         .par_iter()
-        .map(|&(area, perimeter)| {
+        .map(|&(area, perimeter, touches_b)| {
+            if touches_b {
+                return false; // Hotspots am Bildrand verwerfen
+            }
             // Bedingung 1: Mindestfläche (absolut >= 10 Pixel, relativ >= 0.05 % Körperfläche)
             if area < min_area {
                 return false;

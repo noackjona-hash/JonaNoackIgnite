@@ -156,9 +156,21 @@ def _pytorch_gpu_pipeline(
     num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(binary_raw_np)
     final_mask = np.zeros_like(binary_raw_np)
     
+    border_margin = 8
+    h_img, w_img = binary_raw_np.shape[:2]
+    
     for i in range(1, num_labels):
         area = stats[i, cv2.CC_STAT_AREA]
         if area < min_area:
+            continue
+            
+        x = stats[i, cv2.CC_STAT_LEFT]
+        y = stats[i, cv2.CC_STAT_TOP]
+        w_box = stats[i, cv2.CC_STAT_WIDTH]
+        h_box = stats[i, cv2.CC_STAT_HEIGHT]
+        
+        # Border clearing: Hotspots am Bildrand (Margin 8px) als Artefakte ausschließen
+        if x <= border_margin or y <= border_margin or (x + w_box) >= (w_img - border_margin) or (y + h_box) >= (h_img - border_margin):
             continue
         contours, _ = cv2.findContours(
             (labels == i).astype(np.uint8) * 255, 
@@ -236,9 +248,21 @@ def _python_fallback_pipeline(
     num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(binary_raw)
     final_mask = np.zeros_like(binary_raw)
     
+    border_margin = 8
+    h_img, w_img = binary_raw.shape[:2]
+    
     for i in range(1, num_labels):
         area = stats[i, cv2.CC_STAT_AREA]
         if area < min_area:
+            continue
+            
+        x = stats[i, cv2.CC_STAT_LEFT]
+        y = stats[i, cv2.CC_STAT_TOP]
+        w_box = stats[i, cv2.CC_STAT_WIDTH]
+        h_box = stats[i, cv2.CC_STAT_HEIGHT]
+        
+        # Border clearing: Hotspots am Bildrand (Margin 8px) als Artefakte ausschließen
+        if x <= border_margin or y <= border_margin or (x + w_box) >= (w_img - border_margin) or (y + h_box) >= (h_img - border_margin):
             continue
         contours, _ = cv2.findContours(
             (labels == i).astype(np.uint8) * 255,
