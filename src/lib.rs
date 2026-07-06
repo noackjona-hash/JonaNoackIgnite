@@ -737,15 +737,16 @@ fn compute_region_stats(
     labels: &Array2<u32>,
     max_label: u32,
     dist_map: &FloatMatrix,
-) -> Vec<(f64, f64, bool, f64)> {
+) -> Vec<(f64, f64, bool, f64, f64)> {
     let (h, w) = labels.dim();
     let n = max_label as usize;
     let mut areas = vec![0.0f64; n + 1];
     let mut perimeters = vec![0.0f64; n + 1];
     let mut touches_border = vec![false; n + 1];
     let mut max_dists = vec![0.0f64; n + 1];
+    let mut sum_y = vec![0.0f64; n + 1];
 
-    let border_margin = 20usize;
+    let border_margin = 10usize;
 
     for y in 0..h {
         for x in 0..w {
@@ -754,6 +755,7 @@ fn compute_region_stats(
                 continue;
             }
             areas[lbl] += 1.0;
+            sum_y[lbl] += y as f64;
 
             // Maximale Distanz zum Maskenrand pro Komponente tracken
             let d = dist_map[[y, x]];
@@ -784,7 +786,11 @@ fn compute_region_stats(
         .zip(perimeters[1..].iter())
         .zip(touches_border[1..].iter())
         .zip(max_dists[1..].iter())
-        .map(|(((&a, &p), &t), &md)| (a, p, t, md))
+        .zip(sum_y[1..].iter())
+        .map(|((((&a, &p), &t), &md), &sy)| {
+            let cy = if a > 0.0 { sy / a } else { 0.0 };
+            (a, p, t, md, cy)
+        })
         .collect()
 }
 
@@ -826,17 +832,26 @@ fn filter_geometric(
     let min_area_rel = min_area_factor * total_body_area;
     let min_area = min_area_rel.max(10.0);
 
+    let (h, _w) = closed.dim();
+    let y_threshold = h as f64 * 0.65;
+
+    // Connected Components für die Filterung
     let (labels, max_label) = connected_components(&closed);
     if max_label == 0 {
         return Ok(closed.clone());
     }
 
-    // Erweiterte Geometrie-Analyse inkl. maximaler Distanz zum Maskenrand
+    // Erweiterte Geometrie-Analyse inkl. maximaler Distanz zum Maskenrand und Y-Centroid
     let stats = compute_region_stats(&labels, max_label, dist_map);
 
     let keep_flags: Vec<bool> = stats
         .par_iter()
-        .map(|&(area, perimeter, touches_b, max_dist_component)| {
+        .map(|&(area, perimeter, touches_b, max_dist_component, centroid_y)| {
+            // Anatomische Einschränkung: Hotspots am Knöchel/Ferse/Hosenbein liegen
+            // anatomisch im unteren 35% Bildbereich. Entzündeter Zeh liegt weit oben.
+            if centroid_y > y_threshold {
+                return false;
+            }
             // Bedingung 0: Bildrand-Berührung
             if touches_b {
                 return false;
