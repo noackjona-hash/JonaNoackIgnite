@@ -101,6 +101,29 @@
           </ul>
         </div>
       </div>
+
+      <!-- Interactive Before/After Comparison Slider -->
+      <div class="comparison-title-row">
+        <h3>Interaktiver Vorher-Nachher-Vergleich</h3>
+        <p>Ziehe den Regler nach links und rechts, um das originale Wärmebild direkt mit den segmentierten Hotspots der IGNITE-Pipeline zu vergleichen.</p>
+      </div>
+
+      <div class="comparison-slider-wrapper">
+        <div class="slider-container">
+          <!-- Vorher (Original) -->
+          <div class="image-before">
+            <img src="/images/step1.png" alt="Original Infrarotbild">
+            <span class="image-label label-before">1. Originales Wärmebild</span>
+          </div>
+          <!-- Nachher (Hotspots) -->
+          <div class="image-after">
+            <img src="/images/step4.png" alt="Detektierte Hotspots">
+            <span class="image-label label-after">4. Segmentierte Hotspots (IGNITE)</span>
+          </div>
+          <!-- Slider-Handle -->
+          <div class="slider-handle" id="slider-handle"></div>
+        </div>
+      </div>
     </div>
   </section>
 

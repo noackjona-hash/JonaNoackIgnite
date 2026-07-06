@@ -104,4 +104,59 @@ document.addEventListener('DOMContentLoaded', () => {
       navbar.style.boxShadow = 'none';
     }
   });
+
+  // Interactive Before/After Slider Logic
+  const sliderContainer = document.querySelector('.slider-container');
+  if (sliderContainer) {
+    const afterImage = sliderContainer.querySelector('.image-after');
+    const handle = sliderContainer.querySelector('.slider-handle');
+    let isDragging = false;
+
+    const moveSlider = (clientX) => {
+      const rect = sliderContainer.getBoundingClientRect();
+      const x = clientX - rect.left;
+      let percentage = (x / rect.width) * 100;
+      
+      // Keep boundary limits
+      if (percentage < 0) percentage = 0;
+      if (percentage > 100) percentage = 100;
+
+      // Update layout width and handle position
+      afterImage.style.width = `${percentage}%`;
+      handle.style.left = `${percentage}%`;
+    };
+
+    const startDrag = (e) => {
+      isDragging = true;
+      e.preventDefault();
+    };
+
+    const stopDrag = () => {
+      isDragging = false;
+    };
+
+    // Desktop Mouse Events
+    handle.addEventListener('mousedown', startDrag);
+    window.addEventListener('mouseup', stopDrag);
+    window.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      moveSlider(e.clientX);
+    });
+
+    // Mobile/Tablet Touch Events
+    handle.addEventListener('touchstart', startDrag);
+    window.addEventListener('touchend', stopDrag);
+    window.addEventListener('touchmove', (e) => {
+      if (!isDragging) return;
+      if (e.touches && e.touches.length > 0) {
+        moveSlider(e.touches[0].clientX);
+      }
+    });
+
+    // Clicking the container to jump to position
+    sliderContainer.addEventListener('click', (e) => {
+      if (e.target === handle) return;
+      moveSlider(e.clientX);
+    });
+  }
 });
