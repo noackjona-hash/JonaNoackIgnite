@@ -380,14 +380,35 @@ class IgniteApp:
 
         self.roi_stats_frame = ctk.CTkFrame(self.roi_card, fg_color="transparent")
 
-        # ── Celsius-Kalibrierungskarte ──────────────────────────────────────
-        calib_card = ctk.CTkFrame(self.sidebar_scroll, fg_color=COLOR_BG_CARD, corner_radius=8, border_width=1, border_color=COLOR_BORDER_CARD)
-        calib_card.pack(fill=ctk.X, pady=(0, 15), ipady=4)
 
-        ctk.CTkLabel(calib_card, text="KAMERA-KALIBRIERUNG", font=ctk.CTkFont(size=10, weight="bold"), text_color=COLOR_PRIMARY_ACCENT).pack(padx=12, pady=(8, 4), anchor="w")
 
-        calib_row = ctk.CTkFrame(calib_card, fg_color="transparent")
-        calib_row.pack(fill=ctk.X, padx=12, pady=(0, 4))
+        # ── Systemeinstellungen-Karte (standardmäßig eingeklappt) ────────────
+        self.settings_visible = False  # Standardmäßig EINGEKLAPPT für cleane UI
+        self.settings_card = ctk.CTkFrame(self.sidebar_scroll, fg_color=COLOR_BG_CARD, corner_radius=8, border_width=1, border_color=COLOR_BORDER_CARD)
+        self.settings_card.pack(fill=ctk.X, pady=(0, 15), ipady=6)
+
+        self.toggle_settings_btn = ctk.CTkButton(
+            self.settings_card,
+            text="⚙️ Erweiterte Einstellungen [▶]",
+            command=self.toggle_settings_visibility,
+            font=ctk.CTkFont(size=11, weight="bold"),
+            fg_color="transparent",
+            text_color=COLOR_TEXT_SECONDARY,
+            hover_color=COLOR_BORDER_CARD,
+            height=32,
+            anchor="w",
+            corner_radius=8
+        )
+        self.toggle_settings_btn.pack(fill=ctk.X, padx=4, pady=4)
+
+        self.settings_boxes_frame = ctk.CTkFrame(self.settings_card, fg_color="transparent")
+        # Standardmäßig NICHT gepackt → eingeklappt
+
+        # Kamera-Kalibrierung (jetzt in Systemeinstellungen)
+        ctk.CTkLabel(self.settings_boxes_frame, text="KAMERA-KALIBRIERUNG", font=ctk.CTkFont(size=10, weight="bold"), text_color=COLOR_PRIMARY_ACCENT).pack(anchor="w", pady=(8, 2), padx=4)
+
+        calib_row = ctk.CTkFrame(self.settings_boxes_frame, fg_color="transparent")
+        calib_row.pack(fill=ctk.X, padx=4, pady=(0, 6))
         calib_row.grid_columnconfigure(0, weight=1)
         calib_row.grid_columnconfigure(1, weight=1)
 
@@ -408,34 +429,12 @@ class IgniteApp:
 
         resolution = (config.DEFAULT_TEMP_MAX - config.DEFAULT_TEMP_MIN) / 255.0
         self.calib_status_lbl = ctk.CTkLabel(
-            calib_card,
-            text=f"Bereich: {config.DEFAULT_TEMP_MIN:.1f}°C – {config.DEFAULT_TEMP_MAX:.1f}°C  |  Auflösung: {resolution:.3f}°C/px",
+            self.settings_boxes_frame,
+            text=f"{config.DEFAULT_TEMP_MIN:.1f}°C – {config.DEFAULT_TEMP_MAX:.1f}°C  |  {resolution:.3f}°C/px",
             font=ctk.CTkFont(size=9),
             text_color=COLOR_TEXT_MUTED, anchor="w"
         )
-        self.calib_status_lbl.pack(fill=ctk.X, padx=12, pady=(0, 8))
-
-        # ── Systemeinstellungen-Karte ──────────────────────────────────────
-        self.settings_visible = True
-        self.settings_card = ctk.CTkFrame(self.sidebar_scroll, fg_color=COLOR_BG_CARD, corner_radius=8, border_width=1, border_color=COLOR_BORDER_CARD)
-        self.settings_card.pack(fill=ctk.X, pady=(0, 15), ipady=6)
-
-        self.toggle_settings_btn = ctk.CTkButton(
-            self.settings_card,
-            text="⚙️ Systemeinstellungen [▼]",
-            command=self.toggle_settings_visibility,
-            font=ctk.CTkFont(size=11, weight="bold"),
-            fg_color="transparent",
-            text_color=COLOR_PRIMARY_ACCENT,
-            hover_color=COLOR_BORDER_CARD,
-            height=32,
-            anchor="w",
-            corner_radius=8
-        )
-        self.toggle_settings_btn.pack(fill=ctk.X, padx=4, pady=4)
-
-        self.settings_boxes_frame = ctk.CTkFrame(self.settings_card, fg_color="transparent")
-        self.settings_boxes_frame.pack(fill=ctk.X, padx=12, pady=(4, 8))
+        self.calib_status_lbl.pack(fill=ctk.X, padx=4, pady=(0, 8))
 
         # Einheit
         ctk.CTkLabel(self.settings_boxes_frame, text="Temperatureinheit", font=ctk.CTkFont(size=10, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w", pady=(2, 2))
@@ -677,11 +676,11 @@ class IgniteApp:
         )
         disclaimer_lbl.pack(side=ctk.BOTTOM, pady=(0, 2))
 
-        # ── 2. RECHTER HAUPTBEREICH (Tabview) ─────────────────────────────────
+        # ── 2. RECHTER HAUPTBEREICH (Tabview & Willkommensbildschirm) ──────────
         content_frame = ctk.CTkFrame(self.root, fg_color=COLOR_BG_MAIN, corner_radius=0)
         content_frame.grid(row=0, column=1, sticky="nsew", padx=0, pady=0)
 
-        # CTkTabview erstellen und konfigurieren
+        # CTkTabview erstellen und konfigurieren (wird erst nach Laden eines Bildes gepackt)
         self.tabview = ctk.CTkTabview(
             content_frame,
             fg_color="transparent",
@@ -691,7 +690,99 @@ class IgniteApp:
             segmented_button_unselected_hover_color=COLOR_BORDER_CARD,
             text_color=COLOR_TEXT_PRIMARY
         )
-        self.tabview.pack(fill=ctk.BOTH, expand=True, padx=15, pady=15)
+
+        # Willkommensbildschirm (Welcome Screen) erstellen
+        self.welcome_frame = ctk.CTkFrame(content_frame, fg_color="transparent")
+        
+        # Zentrierter Container
+        center_container = ctk.CTkFrame(
+            self.welcome_frame,
+            width=720,
+            height=540,
+            fg_color=COLOR_BG_CARD,
+            corner_radius=12,
+            border_width=1,
+            border_color=COLOR_BORDER_CARD
+        )
+        center_container.place(relx=0.5, rely=0.5, anchor="center")
+        center_container.pack_propagate(False)
+
+        # Logo
+        welcome_logo_path = get_resource_path(os.path.join("icon", "LogoRund.png"))
+        if os.path.exists(welcome_logo_path):
+            try:
+                logo_img = Image.open(welcome_logo_path)
+                logo_ctk = ctk.CTkImage(light_image=logo_img, dark_image=logo_img, size=(100, 100))
+                logo_lbl = ctk.CTkLabel(center_container, image=logo_ctk, text="")
+                logo_lbl.pack(pady=(45, 12))
+            except Exception:
+                ctk.CTkLabel(center_container, text="", height=110).pack()
+        else:
+            ctk.CTkLabel(center_container, text="", height=110).pack()
+
+        # Titel & Beschreibung
+        ctk.CTkLabel(
+            center_container,
+            text="Willkommen bei IGNITE",
+            font=ctk.CTkFont(family="Arial", size=34, weight="bold"),
+            text_color=COLOR_TEXT_PRIMARY
+        ).pack(pady=4)
+
+        ctk.CTkLabel(
+            center_container,
+            text="Medical Imaging Suite  ·  Jugend forscht 2026",
+            font=ctk.CTkFont(family="Arial", size=13),
+            text_color=COLOR_TEXT_SECONDARY
+        ).pack(pady=(0, 6))
+
+        ctk.CTkLabel(
+            center_container,
+            text="Ein intelligentes System zur automatischen Erkennung thermischer Anomalien\nund Entzündungsprozessen an Füßen und Gelenken.",
+            font=ctk.CTkFont(family="Arial", size=12),
+            text_color=COLOR_TEXT_SECONDARY,
+            justify="center"
+        ).pack(pady=(0, 30))
+
+        # Laden-Button
+        welcome_load_btn = ctk.CTkButton(
+            center_container,
+            text="Wärmebild laden und analysieren",
+            command=self.load_file,
+            font=ctk.CTkFont(family="Arial", size=15, weight="bold"),
+            fg_color=COLOR_PRIMARY_ACCENT,
+            hover_color=COLOR_HOVER_ACCENT,
+            text_color=COLOR_BG_MAIN,
+            height=44,
+            width=320,
+            corner_radius=8
+        )
+        welcome_load_btn.pack(pady=10)
+
+        # Schritte-Erklärung
+        steps_frame = ctk.CTkFrame(center_container, fg_color="transparent")
+        steps_frame.pack(fill=ctk.X, padx=40, pady=(35, 20))
+        steps_frame.grid_columnconfigure(0, weight=1)
+        steps_frame.grid_columnconfigure(1, weight=1)
+        steps_frame.grid_columnconfigure(2, weight=1)
+
+        features = [
+            ("📁 1. Bild laden", "Wähle ein Infrarotbild aus."),
+            ("⚡ 2. Analyse", "Erkennung via Rust & GPU."),
+            ("📊 3. Statistik", "Symmetrie & ROI-Prüfung.")
+        ]
+
+        for idx, (f_title, f_desc) in enumerate(features):
+            box = ctk.CTkFrame(
+                steps_frame,
+                fg_color=COLOR_BG_MAIN,
+                corner_radius=6,
+                border_width=1,
+                border_color=COLOR_BORDER_CARD
+            )
+            box.grid(row=0, column=idx, padx=8, sticky="nsew")
+            
+            ctk.CTkLabel(box, text=f_title, font=ctk.CTkFont(size=12, weight="bold"), text_color=COLOR_PRIMARY_ACCENT).pack(pady=(8, 2), padx=8)
+            ctk.CTkLabel(box, text=f_desc, font=ctk.CTkFont(size=10), text_color=COLOR_TEXT_SECONDARY, wraplength=170, justify="center").pack(pady=(0, 8), padx=8)
 
         # Register Tabs
         self.tabview.add("Gesamtübersicht")
@@ -739,9 +830,9 @@ class IgniteApp:
 
             lbl = ctk.CTkLabel(
                 panel_frame,
-                text="Warte auf Bilddaten...",
-                font=ctk.CTkFont(family="Arial", size=12),
-                text_color=COLOR_TEXT_SECONDARY,
+                text="\n🌡️\n\nKein Bild geladen\n",
+                font=ctk.CTkFont(family="Arial", size=13),
+                text_color=COLOR_TEXT_MUTED,
                 fg_color=COLOR_BG_MAIN,
                 corner_radius=6
             )
@@ -786,9 +877,9 @@ class IgniteApp:
 
             lbl = ctk.CTkLabel(
                 panel_frame,
-                text="Warte auf Bilddaten...",
+                text="\n\n🌡️\n\nNoch kein Wärmebild geladen.\n\nBitte lade ein Bild über die Seitenleiste.\n",
                 font=ctk.CTkFont(family="Arial", size=14),
-                text_color=COLOR_TEXT_SECONDARY,
+                text_color=COLOR_TEXT_MUTED,
                 fg_color=COLOR_BG_MAIN,
                 corner_radius=6
             )
@@ -923,6 +1014,19 @@ class IgniteApp:
 
         # Initialen Inhalt zeichnen
         self.update_detail_tab()
+
+        # Willkommensseite initial anzeigen
+        self.show_welcome_screen()
+
+    def show_welcome_screen(self) -> None:
+        """Blendet die Analyse-Tabs aus und zeigt einen ansprechenden Willkommensbildschirm."""
+        self.tabview.pack_forget()
+        self.welcome_frame.pack(fill=ctk.BOTH, expand=True, padx=20, pady=20)
+
+    def hide_welcome_screen(self) -> None:
+        """Blendet den Willkommensbildschirm aus und zeigt die Analyse-Tabs."""
+        self.welcome_frame.pack_forget()
+        self.tabview.pack(fill=ctk.BOTH, expand=True, padx=15, pady=15)
 
     def on_analysis_mode_changed(self, mode: str) -> None:
         """Wird aufgerufen, wenn der Analysemodus gewechselt wird."""
@@ -1184,9 +1288,9 @@ class IgniteApp:
             self.pil_cache.clear()
             
             for name, lbl in self.panels.items():
-                lbl.configure(image="", text="Warte auf Bilddaten...")
+                lbl.configure(image="", text="\n🌡️\n\nKein Bild geladen\n")
             for name, lbl in self.panels_full.items():
-                lbl.configure(image="", text="Warte auf Bilddaten...")
+                lbl.configure(image="", text="\n\n🌡️\n\nNoch kein Wärmebild geladen.\n\nBitte lade ein Bild über die Seitenleiste.\n")
                 
             self.filename_label.configure(text="Datei: Keine", text_color="#F4F4F5")
             self.hotspot_label.configure(text="Hotspots: --", text_color="#F4F4F5")
@@ -1197,6 +1301,7 @@ class IgniteApp:
                 widget.destroy()
             
             self.update_detail_tab()
+            self.show_welcome_screen()
 
         except Exception as e:
             messagebox.showerror("Fehler bei der Bereinigung", f"Ein Fehler ist aufgetreten:\n{e}")
@@ -1207,6 +1312,7 @@ class IgniteApp:
             filetypes=[("Bilddateien", "*.png *.jpg *.jpeg *.bmp *.tiff *.tif")]
         )
         if file_path:
+            self.hide_welcome_screen()
             self.current_filepath = file_path
             self.filename_label.configure(
                 text=f"Datei: {os.path.basename(file_path)}",
@@ -1402,11 +1508,11 @@ class IgniteApp:
         """Blendet die Systemeinstellungen in der Seitenleiste ein oder aus."""
         if self.settings_visible:
             self.settings_boxes_frame.pack_forget()
-            self.toggle_settings_btn.configure(text="⚙️ Systemeinstellungen [▶]")
+            self.toggle_settings_btn.configure(text="⚙️ Erweiterte Einstellungen [▶]")
             self.settings_visible = False
         else:
             self.settings_boxes_frame.pack(fill=ctk.X, padx=12, pady=(4, 8))
-            self.toggle_settings_btn.configure(text="⚙️ Systemeinstellungen [▼]")
+            self.toggle_settings_btn.configure(text="⚙️ Erweiterte Einstellungen [▼]")
             self.settings_visible = True
 
 
