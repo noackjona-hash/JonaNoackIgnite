@@ -157,12 +157,12 @@ def _pytorch_gpu_pipeline(
     # Hotspots am Maskenrand (Knöchel, Fersen) haben kleine Distanzwerte,
     # echter Entzündungs-Hotspot liegt im Inneren (große Distanzwerte).
     dist_map = cv2.distanceTransform(mask_cpu, cv2.DIST_L2, 5)
-    min_dist_from_border = max(10.0, binary_raw_np.shape[1] * 0.015)
+    min_dist_from_border = max(12.0, binary_raw_np.shape[1] * 0.022)
     
     num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(binary_raw_np)
     final_mask = np.zeros_like(binary_raw_np)
     
-    border_margin = 8
+    border_margin = 20
     h_img, w_img = binary_raw_np.shape[:2]
     
     for i in range(1, num_labels):
@@ -260,12 +260,12 @@ def _python_fallback_pipeline(
     
     # Distanztransformation der Body-Maske für Rand-Artefakt-Filter
     dist_map = cv2.distanceTransform(mask, cv2.DIST_L2, 5)
-    min_dist_from_border = max(10.0, img.shape[1] * 0.015)
+    min_dist_from_border = max(12.0, img.shape[1] * 0.022)
     
     num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(binary_raw)
     final_mask = np.zeros_like(binary_raw)
     
-    border_margin = 8
+    border_margin = 20
     h_img, w_img = binary_raw.shape[:2]
     
     for i in range(1, num_labels):

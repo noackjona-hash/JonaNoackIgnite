@@ -745,7 +745,7 @@ fn compute_region_stats(
     let mut touches_border = vec![false; n + 1];
     let mut max_dists = vec![0.0f64; n + 1];
 
-    let border_margin = 8usize;
+    let border_margin = 20usize;
 
     for y in 0..h {
         for x in 0..w {
@@ -1024,7 +1024,7 @@ fn process_thermal_pipeline<'py>(
             // Bildbreite vom Maskenrand entfernt sein. Rand-Artefakte (Knöchel, Fersen)
             // liegen direkt an der Körper-Hintergrund-Grenze (dist ≈ 0-8px).
             // Echter entzündeter Zeh liegt im Inneren des Zehenbereichs (dist > 12px).
-            let min_dist_from_border = (width as f64 * 0.015).max(10.0);
+            let min_dist_from_border = (width as f64 * 0.022).max(12.0);
             let final_mask = filter_geometric(
                 &binary_raw, &mask, &dist_map, kernel_small,
                 min_area_factor, min_circularity, min_dist_from_border
