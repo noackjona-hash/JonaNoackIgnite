@@ -349,129 +349,7 @@ class IgniteApp:
         )
         self.analysis_mode_opt.pack(fill=ctk.X, padx=12, pady=(4, 8))
 
-        # Sektion: Patienten-Daten
-        patient_card = ctk.CTkFrame(self.sidebar_scroll, fg_color=COLOR_BG_CARD, corner_radius=8, border_width=1, border_color=COLOR_BORDER_CARD)
-        patient_card.pack(fill=ctk.X, pady=(0, 15), ipady=6)
 
-        patient_title = ctk.CTkLabel(patient_card, text="PATIENTENDATEN", font=ctk.CTkFont(size=10, weight="bold"), text_color=COLOR_PRIMARY_ACCENT)
-        patient_title.pack(padx=12, pady=(8, 4), anchor="w")
-
-        self.patient_name_entry = ctk.CTkEntry(patient_card, placeholder_text="Name / Patient-ID", font=ctk.CTkFont(size=12), fg_color=COLOR_BG_INPUT, border_color=COLOR_BORDER_INPUT, text_color=COLOR_TEXT_PRIMARY, height=28)
-        self.patient_name_entry.pack(fill=ctk.X, padx=12, pady=4)
-
-        self.patient_dob_entry = ctk.CTkEntry(patient_card, placeholder_text="Geburtsdatum (z.B. 12.04.1980)", font=ctk.CTkFont(size=12), fg_color=COLOR_BG_INPUT, border_color=COLOR_BORDER_INPUT, text_color=COLOR_TEXT_PRIMARY, height=28)
-        self.patient_dob_entry.pack(fill=ctk.X, padx=12, pady=4)
-
-        self.patient_age_entry = ctk.CTkEntry(patient_card, placeholder_text="Alter (Jahre)", font=ctk.CTkFont(size=12), fg_color=COLOR_BG_INPUT, border_color=COLOR_BORDER_INPUT, text_color=COLOR_TEXT_PRIMARY, height=28)
-        self.patient_age_entry.pack(fill=ctk.X, padx=12, pady=4)
-
-        self.patient_diabetes_opt = ctk.CTkOptionMenu(
-            patient_card,
-            values=["Kein Diabetes", "Diabetes mellitus Typ 1", "Diabetes mellitus Typ 2"],
-            font=ctk.CTkFont(size=12),
-            fg_color=COLOR_BG_INPUT,
-            button_color=COLOR_PRIMARY_ACCENT,
-            button_hover_color=COLOR_HOVER_ACCENT,
-            text_color=COLOR_TEXT_PRIMARY,
-            height=28
-        )
-        # Nicht packen da Allgemeine Analyse der Standard ist
-
-        self.patient_notes_entry = ctk.CTkEntry(patient_card, placeholder_text="Klinische Notizen", font=ctk.CTkFont(size=12), fg_color=COLOR_BG_INPUT, border_color=COLOR_BORDER_INPUT, text_color=COLOR_TEXT_PRIMARY, height=28)
-        self.patient_notes_entry.pack(fill=ctk.X, padx=12, pady=4)
-
-        self.patient_icd_entry = ctk.CTkEntry(patient_card, placeholder_text="ICD-10 Verdacht (z.B. E11.74)", font=ctk.CTkFont(size=12), fg_color=COLOR_BG_INPUT, border_color=COLOR_BORDER_INPUT, text_color=COLOR_TEXT_PRIMARY, height=28)
-        self.patient_icd_entry.pack(fill=ctk.X, padx=12, pady=4)
-
-        self.operator_entry = ctk.CTkEntry(patient_card, placeholder_text="Untersuchender (Kürzel)", font=ctk.CTkFont(size=12), fg_color=COLOR_BG_INPUT, border_color=COLOR_BORDER_INPUT, text_color=COLOR_TEXT_PRIMARY, height=28)
-        self.operator_entry.pack(fill=ctk.X, padx=12, pady=4)
-
-        # DSGVO-Pseudonymisierungs-Schalter
-        dsgvo_row = ctk.CTkFrame(patient_card, fg_color="transparent")
-        dsgvo_row.pack(fill=ctk.X, padx=12, pady=(6, 4))
-        ctk.CTkLabel(dsgvo_row, text="DSGVO-Pseudonymisierung", font=ctk.CTkFont(size=11, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(side=ctk.LEFT)
-        self.dsgvo_switch = ctk.CTkSwitch(
-            dsgvo_row, text="",
-            command=self.on_dsgvo_toggle,
-            onvalue=True, offvalue=False,
-            progress_color=COLOR_PRIMARY_ACCENT,
-            button_color="#FAF5FF",
-            width=40, height=20
-        )
-        self.dsgvo_switch.pack(side=ctk.RIGHT)
-        self.dsgvo_info_lbl = ctk.CTkLabel(
-            patient_card,
-            text="Klarnamen werden NICHT in Dateien gespeichert.",
-            font=ctk.CTkFont(size=9),
-            text_color=COLOR_TEXT_MUTED, anchor="w", wraplength=250
-        )
-        self.dsgvo_info_lbl.pack(fill=ctk.X, padx=12, pady=(0, 8))
-
-        # Klinische Checkliste (einklappbare Karte direkt in der Sidebar)
-        self.checklist_visible = True
-        self.checklist_card = ctk.CTkFrame(self.sidebar_scroll, fg_color=COLOR_BG_CARD, corner_radius=8, border_width=1, border_color=COLOR_BORDER_CARD)
-        self.checklist_card.pack(fill=ctk.X, pady=(0, 15), ipady=6)
-
-        self.toggle_checklist_btn = ctk.CTkButton(
-            self.checklist_card,
-            text="📋 Vorbereitungsprotokoll [▼]",
-            command=self.toggle_checklist_visibility,
-            font=ctk.CTkFont(size=11, weight="bold"),
-            fg_color="transparent",
-            text_color=COLOR_PRIMARY_ACCENT,
-            hover_color=COLOR_BORDER_CARD,
-            height=32,
-            anchor="w",
-            corner_radius=8
-        )
-        self.toggle_checklist_btn.pack(fill=ctk.X, padx=4, pady=4)
-
-        self.checklist_boxes_frame = ctk.CTkFrame(self.checklist_card, fg_color="transparent")
-        self.checklist_boxes_frame.pack(fill=ctk.X, padx=12, pady=(4, 8))
-
-        self.chk_temp = ctk.CTkCheckBox(
-            self.checklist_boxes_frame, text="Raumtemp. 20–22°C?",
-            command=self.update_checklist_status,
-            font=ctk.CTkFont(size=11), text_color=COLOR_TEXT_PRIMARY,
-            fg_color=COLOR_PRIMARY_ACCENT, hover_color=COLOR_HOVER_ACCENT,
-            checkmark_color=COLOR_BG_MAIN, border_color=COLOR_BORDER_INPUT
-        )
-        self.chk_temp.pack(fill=ctk.X, pady=3)
-
-        self.chk_draft = ctk.CTkCheckBox(
-            self.checklist_boxes_frame, text="Keine Sonne / Zugluft?",
-            command=self.update_checklist_status,
-            font=ctk.CTkFont(size=11), text_color=COLOR_TEXT_PRIMARY,
-            fg_color=COLOR_PRIMARY_ACCENT, hover_color=COLOR_HOVER_ACCENT,
-            checkmark_color=COLOR_BG_MAIN, border_color=COLOR_BORDER_INPUT
-        )
-        self.chk_draft.pack(fill=ctk.X, pady=3)
-
-        self.chk_acclim = ctk.CTkCheckBox(
-            self.checklist_boxes_frame, text="15–20 Min. Akklimatisation?",
-            command=self.update_checklist_status,
-            font=ctk.CTkFont(size=11), text_color=COLOR_TEXT_PRIMARY,
-            fg_color=COLOR_PRIMARY_ACCENT, hover_color=COLOR_HOVER_ACCENT,
-            checkmark_color=COLOR_BG_MAIN, border_color=COLOR_BORDER_INPUT
-        )
-        self.chk_acclim.pack(fill=ctk.X, pady=3)
-
-        self.chk_creams = ctk.CTkCheckBox(
-            self.checklist_boxes_frame, text="Kein(e) Koffein/Nikotin/Cremes?",
-            command=self.update_checklist_status,
-            font=ctk.CTkFont(size=11), text_color=COLOR_TEXT_PRIMARY,
-            fg_color=COLOR_PRIMARY_ACCENT, hover_color=COLOR_HOVER_ACCENT,
-            checkmark_color=COLOR_BG_MAIN, border_color=COLOR_BORDER_INPUT
-        )
-        self.chk_creams.pack(fill=ctk.X, pady=3)
-
-        self.checklist_status_lbl = ctk.CTkLabel(
-            self.checklist_boxes_frame,
-            text="Protokoll: 0/4 Bedingungen erfüllt",
-            font=ctk.CTkFont(size=10, weight="bold"),
-            text_color=COLOR_TEXT_SECONDARY, anchor="w"
-        )
-        self.checklist_status_lbl.pack(fill=ctk.X, pady=(4, 4))
 
         # ── Celsius-Kalibrierungskarte ──────────────────────────────────────
         calib_card = ctk.CTkFrame(self.sidebar_scroll, fg_color=COLOR_BG_CARD, corner_radius=8, border_width=1, border_color=COLOR_BORDER_CARD)
@@ -1009,24 +887,7 @@ class IgniteApp:
 
     def on_analysis_mode_changed(self, mode: str) -> None:
         """Wird aufgerufen, wenn der Analysemodus gewechselt wird."""
-        # Unpack all to ensure correct ordering
-        self.patient_name_entry.pack_forget()
-        self.patient_dob_entry.pack_forget()
-        self.patient_age_entry.pack_forget()
-        self.patient_diabetes_opt.pack_forget()
-        self.patient_notes_entry.pack_forget()
-        self.patient_icd_entry.pack_forget()
-        self.operator_entry.pack_forget()
 
-        # Repack in correct order
-        self.patient_name_entry.pack(fill=ctk.X, padx=12, pady=4)
-        self.patient_dob_entry.pack(fill=ctk.X, padx=12, pady=4)
-        self.patient_age_entry.pack(fill=ctk.X, padx=12, pady=4)
-        if mode == "Podologische Symmetrieanalyse":
-            self.patient_diabetes_opt.pack(fill=ctk.X, padx=12, pady=4)
-        self.patient_notes_entry.pack(fill=ctk.X, padx=12, pady=4)
-        self.patient_icd_entry.pack(fill=ctk.X, padx=12, pady=4)
-        self.operator_entry.pack(fill=ctk.X, padx=12, pady=4)
 
         # Titel im Histogramm-Tab anpassen
         if mode == "Podologische Symmetrieanalyse":
@@ -1374,19 +1235,7 @@ class IgniteApp:
                 text="⚠ Ungültige Eingabe (nur Zahlen erlaubt)", text_color="#EF4444"
             )
 
-    def on_dsgvo_toggle(self) -> None:
-        """Aktiviert/Deaktiviert die DSGVO-Pseudonymisierung."""
-        self.dsgvo_anonymize = bool(self.dsgvo_switch.get())
-        if self.dsgvo_anonymize:
-            self.dsgvo_info_lbl.configure(
-                text="✓ Aktiv: Klarnamen werden NICHT in Dateien gespeichert.",
-                text_color="#10B981"
-            )
-        else:
-            self.dsgvo_info_lbl.configure(
-                text="Klarnamen werden NICHT in Dateien gespeichert.",
-                text_color="#3F3F46"
-            )
+
 
     def convert_celsius_to_unit(self, val_c: float) -> float:
         """Konvertiert einen Celsius-Wert unter Berücksichtigung von Emissionsgrad in die Ziel-Einheit."""
@@ -1521,35 +1370,7 @@ class IgniteApp:
             self.toggle_settings_btn.configure(text="⚙️ Systemeinstellungen [▼]")
             self.settings_visible = True
 
-    def toggle_checklist_visibility(self) -> None:
-        """Blendet das Vorbereitungsprotokoll (Checkliste) in der Seitenleiste ein oder aus."""
-        if self.checklist_visible:
-            self.checklist_boxes_frame.pack_forget()
-            self.toggle_checklist_btn.configure(text="📋 Vorbereitungsprotokoll [▶]")
-            self.checklist_visible = False
-        else:
-            self.checklist_boxes_frame.pack(fill=ctk.X, padx=12, pady=(4, 8))
-            self.toggle_checklist_btn.configure(text="📋 Vorbereitungsprotokoll [▼]")
-            self.checklist_visible = True
 
-    def update_checklist_status(self) -> None:
-        """Aktualisiert das Status-Label der Vorbereitungs-Checkliste."""
-        checked_count = sum([
-            self.chk_temp.get(),
-            self.chk_draft.get(),
-            self.chk_acclim.get(),
-            self.chk_creams.get()
-        ])
-        if checked_count == 4:
-            self.checklist_status_lbl.configure(
-                text="✓ Protokoll vollständig erfüllt",
-                text_color="#10B981"
-            )
-        else:
-            self.checklist_status_lbl.configure(
-                text=f"Protokoll: {checked_count}/4 Bedingungen erfüllt",
-                text_color="#FFA500" if checked_count > 0 else "#A1A1AA"
-            )
 
     def draw_foot_annotations(self, img: np.ndarray, body_mask: np.ndarray, hotspots_mask: np.ndarray) -> np.ndarray:
         """Erzeugt anatomische Bounding-Boxen und 3-Zonen-Unterteilung."""
@@ -1684,24 +1505,7 @@ class IgniteApp:
             er = self.erosion_slider.get()
             to = self.temp_offset_slider.get()
 
-            # Protokollprüfung vor Durchführung
-            checked_count = sum([
-                self.chk_temp.get(),
-                self.chk_draft.get(),
-                self.chk_acclim.get(),
-                self.chk_creams.get()
-            ])
-            if checked_count < 4:
-                confirm = messagebox.askyesno(
-                    "Vorbereitungsprotokoll unvollständig",
-                    "Achtung: Das klinische Vorbereitungsprotokoll ist unvollständig "
-                    f"({checked_count}/4 Bedingungen erfüllt).\n"
-                    "Dies kann zu verfälschten Messergebnissen führen.\n\n"
-                    "Möchten Sie die Analyse trotzdem fortsetzen?"
-                )
-                if not confirm:
-                    self.status_label.configure(text="Status: Abgebrochen", text_color="#A1A1AA")
-                    return
+
 
             # Bild laden und kalibrieren (Offset addieren in Celsius -> in Raw-Pixel transformiert)
             img = image_processing.load_thermal_image(self.current_filepath)
@@ -1779,19 +1583,12 @@ class IgniteApp:
 
             # ── Audit-Trail Eintrag schreiben ──────────────────────────────────
             try:
-                p_name_raw = self.patient_name_entry.get().strip() or "Unbekannt"
-                p_dob_raw = self.patient_dob_entry.get().strip()
-                operator = self.operator_entry.get().strip() or "n.a."
-                if self.dsgvo_anonymize and p_name_raw != "Unbekannt":
-                    pid = pseudonymize_patient(p_name_raw, p_dob_raw)
-                else:
-                    pid = p_name_raw
                 # Max-Temperatur in Celsius
                 max_px_val = float(np.max(calibrated_img[hotspot_mask > 0])) if np.any(hotspot_mask > 0) else 0.0
                 max_temp_c = pixel_to_celsius(max_px_val, self.t_min_celsius, self.t_max_celsius)
                 write_audit_entry({
                     "Zeitstempel": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    "Patienten-ID": pid,
+                    "Patienten-ID": "n.a.",
                     "Analysemodus": self.analysis_mode_opt.get(),
                     "Bilddatei": os.path.basename(self.current_filepath),
                     "sigma_k": round(self.sigma_k_slider.get(), 2),
@@ -1804,7 +1601,7 @@ class IgniteApp:
                         abs(self.zonal_stats.get("left", {}).get("fore", 0.0) -
                             self.zonal_stats.get("right", {}).get("fore", 0.0)), 2
                     ) if self.analysis_mode_opt.get() == "Podologische Symmetrieanalyse" else "n.a.",
-                    "Operator": operator,
+                    "Operator": "Jugend forscht",
                 })
             except Exception as audit_err:
                 print(f"[AUDIT] Fehler: {audit_err}")
@@ -2305,27 +2102,8 @@ class IgniteApp:
                     sym_status = "NORMAL (Temperatursymmetrisch)"
                     sym_color = "#10B981"
             
-            # Patient Info auslesen (mit DSGVO-Pseudonymisierung)
-            p_name_raw = self.patient_name_entry.get().strip() or "Unbekannt"
-            p_age = self.patient_age_entry.get().strip() or "Unbekannt"
-            p_diab = self.patient_diabetes_opt.get()
-            p_notes = self.patient_notes_entry.get().strip() or "Keine Notizen"
-            p_icd = self.patient_icd_entry.get().strip() or "—"
-            operator = self.operator_entry.get().strip() or "Nicht angegeben"
-
-            p_dob_raw = self.patient_dob_entry.get().strip()
-            if self.dsgvo_anonymize and p_name_raw != "Unbekannt":
-                p_name = pseudonymize_patient(p_name_raw, p_dob_raw)
-                report_filename = f"report_{p_name}_{base_name}.html"
-                messagebox.showinfo(
-                    "DSGVO-Pseudonymisierung",
-                    "Achtung: Der Bericht wird pseudonymisiert unter der ID "
-                    f"'{p_name}' exportiert. Bitte bewahren Sie den Zuordnungsschlüssel "
-                    "(Name -> ID) sicher und getrennt auf."
-                )
-            else:
-                p_name = p_name_raw
-                report_filename = f"report_{base_name}.html"
+            # Dateiname für Bericht festlegen (ohne Patientendaten)
+            report_filename = f"report_{base_name}.html"
             report_filepath = os.path.join(config.OUTPUT_DIR, report_filename)
 
             backend_info = image_processing.get_active_backend()
@@ -2366,8 +2144,8 @@ class IgniteApp:
                 report_filepath, base_name, os.path.basename(self.current_filepath), mean_val_disp, std_disp,
                 threshold_disp, hotspot_count, len(pixels), mean_l_disp, mean_r_disp, delta_disp, sym_status, sym_color,
                 l_f, r_f, l_m, r_m, l_h, r_h, df_disp, dm_disp, dh_disp,
-                p_name, p_age, p_diab, p_notes, backend_info, self.analysis_mode_opt.get(),
-                p_icd=p_icd, operator=operator,
+                "n.a.", "n.a.", "n.a.", "n.a.", backend_info, self.analysis_mode_opt.get(),
+                p_icd="—", operator="Jugend forscht",
                 t_min_c=self.t_min_celsius, t_max_c=self.t_max_celsius, unit_str=unit_str
             )
             
@@ -2713,32 +2491,6 @@ class IgniteApp:
 <body>
     <div class="container">
         <h1>{h1_title}</h1>
-        
-        <h2>Patientendaten</h2>
-        <div class="metadata-grid">
-            <div class="meta-item">
-                <div class="meta-label">Patienten-Name / ID</div>
-                <div class="meta-value" style="font-weight: bold; color: #EF4444;">{p_name}</div>
-            </div>
-            <div class="meta-item">
-                <div class="meta-label">Alter</div>
-                <div class="meta-value">{p_age} Jahre</div>
-            </div>
-            {diabetes_html}
-            {gdpr_badge}
-            <div class="meta-item">
-                <div class="meta-label">ICD-10 Verdachtsdiagnose</div>
-                <div class="meta-value" style="font-style: italic;">{p_icd}</div>
-            </div>
-            <div class="meta-item">
-                <div class="meta-label">Untersuchender</div>
-                <div class="meta-value">{operator}</div>
-            </div>
-            <div class="meta-item">
-                <div class="meta-label">Klinische Notizen</div>
-                <div class="meta-value">{p_notes}</div>
-            </div>
-        </div>
 
         <h2>Diagnostische Parameter &amp; Globale Statistik</h2>
         <div class="metadata-grid">
@@ -2797,44 +2549,11 @@ class IgniteApp:
             </div>
         </div>
 
-        <h2>Befundbestätigung &amp; Ärztliche Signatur</h2>
-        <div style="background: #18181B; border: 1px solid #27272A; border-radius: 10px; padding: 24px 28px; margin: 0 0 24px 0;">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
-                <div>
-                    <div style="color: #71717A; font-size: 12px; margin-bottom: 4px;">Untersuchender / Kürzel</div>
-                    <div style="color: #F4F4F5; font-size: 14px;">{operator}</div>
-                </div>
-                <div>
-                    <div style="color: #71717A; font-size: 12px; margin-bottom: 4px;">Datum der Untersuchung</div>
-                    <div style="color: #F4F4F5; font-size: 14px;">{__import__('datetime').datetime.now().strftime('%d.%m.%Y')}</div>
-                </div>
-                <div>
-                    <div style="color: #71717A; font-size: 12px; margin-bottom: 4px;">ICD-10 Verdachtsdiagnose</div>
-                    <div style="color: #F4F4F5; font-size: 14px; font-style: italic;">{p_icd}</div>
-                </div>
-                <div>
-                    <div style="color: #71717A; font-size: 12px; margin-bottom: 4px;">Befundstatus</div>
-                    <div><span class="status-badge" style="{get_badge_style(sym_color)}">{sym_status}</span></div>
-                </div>
-            </div>
-            <div style="border-top: 1px solid #27272A; padding-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
-                <div>
-                    <div style="color: #3F3F46; font-size: 10px; margin-bottom: 32px;">Unterschrift Untersuchender</div>
-                    <div style="border-top: 1px solid #3F3F46; padding-top: 6px; color: #52525B; font-size: 10px;">Datum &amp; Stempel</div>
-                </div>
-                <div>
-                    <div style="color: #3F3F46; font-size: 10px; margin-bottom: 32px;">Gegenzeichnung (Arzt / Ärztin)</div>
-                    <div style="border-top: 1px solid #3F3F46; padding-top: 6px; color: #52525B; font-size: 10px;">Facharztqualifikation</div>
-                </div>
-            </div>
-            <div style="margin-top: 16px; padding: 12px; background: rgba(239,68,68,0.05); border: 1px solid rgba(239,68,68,0.15); border-radius: 6px;">
-                <p style="color: #71717A; font-size: 11px; margin: 0; line-height: 1.6;">
-                    <strong style="color: #EF4444;">⚠ Wichtiger Hinweis:</strong>
-                    Dieser automatisch generierte Analysebericht dient ausschließlich der wissenschaftlichen Forschung und Dokumentation. 
-                    Er stellt keine Diagnose im Sinne des Medizinproduktegesetzes (MPG/MDR) dar und ersetzt keine qualifizierte ärztliche Beurteilung.
-                    Vor therapeutischen Entscheidungen ist eine Validierung durch einen Facharzt zwingend erforderlich.
-                </p>
-            </div>
+        <div style="margin-top: 16px; padding: 12px; background: rgba(239,68,68,0.05); border: 1px solid rgba(239,68,68,0.15); border-radius: 6px;">
+            <p style="color: #71717A; font-size: 11px; margin: 0; line-height: 1.6;">
+                <strong style="color: #EF4444;">Hinweis:</strong>
+                Dieser automatisch generierte Analysebericht dient ausschließlich der wissenschaftlichen Forschung und Dokumentation im Rahmen von Jugend forscht.
+            </p>
         </div>
 
         <div class="footer">
