@@ -1767,18 +1767,9 @@ class IgniteApp:
                 storage.save_image_step(hotspot_mask, "4", "dynamic_hotspots", params["file_path"])
                 storage.save_data_step(hotspot_mask, "4", "dynamic_hotspots_raw", params["file_path"])
 
-                # 4. Overlays zeichnen
-                self.root.after(0, lambda: self.update_loading_progress(0.95, "Rendere Auswertungsoverlays und Statistiken..."))
-                if params["mode"] == "Podologische Symmetrieanalyse":
-                    annotated_overlay = self.draw_foot_annotations(calibrated_img, body_mask_vis, hotspot_mask)
-                else:
-                    annotated_overlay = self.draw_general_annotations(calibrated_img, body_mask_vis, hotspot_mask)
-                    
-                overlay_rgb = cv2.cvtColor(annotated_overlay, cv2.COLOR_BGR2RGB)
-
                 # Auf Hauptthread abschließen
                 self.root.after(0, lambda: self.on_pipeline_done(
-                    calibrated_img, body_mask_vis, diff_img, hotspot_mask, overlay_rgb, params
+                    calibrated_img, body_mask_vis, diff_img, hotspot_mask, params
                 ))
 
             except Exception as e:
@@ -1787,9 +1778,18 @@ class IgniteApp:
         t = threading.Thread(target=worker, daemon=True)
         t.start()
 
-    def on_pipeline_done(self, calibrated_img, body_mask_vis, diff_img, hotspot_mask, overlay_rgb, params):
+    def on_pipeline_done(self, calibrated_img, body_mask_vis, diff_img, hotspot_mask, params):
         self.current_raw_original = calibrated_img
         self.current_raw_mask = hotspot_mask
+
+        # 4. Overlays zeichnen (sicher auf dem Hauptthread)
+        self.update_loading_progress(0.90, "Rendere Auswertungsoverlays und Statistiken...")
+        if params["mode"] == "Podologische Symmetrieanalyse":
+            annotated_overlay = self.draw_foot_annotations(calibrated_img, body_mask_vis, hotspot_mask)
+        else:
+            annotated_overlay = self.draw_general_annotations(calibrated_img, body_mask_vis, hotspot_mask)
+            
+        overlay_rgb = cv2.cvtColor(annotated_overlay, cv2.COLOR_BGR2RGB)
 
         # Panels aktualisieren
         self.display_image_in_panel(calibrated_img, "1. Originalbild")
@@ -1799,6 +1799,9 @@ class IgniteApp:
 
         # Histogramm & Zonal Update
         self.draw_histogram()
+        
+        # Detail-Tab updaten (stellt sicher, dass die Tabelle befüllt wird!)
+        self.update_detail_tab()
 
         # Hotspot Count & UI Label
         hotspot_count = int(hotspot_mask.sum()) // 255
