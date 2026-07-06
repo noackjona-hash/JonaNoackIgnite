@@ -1971,9 +1971,9 @@ class IgniteApp:
         val_mean = float(np.mean(roi_patch))
         val_std = float(np.std(roi_patch))
         
-        temp_min = image_processing.pixel_to_celsius(val_min, self.t_min_celsius, self.t_max_celsius)
-        temp_max = image_processing.pixel_to_celsius(val_max, self.t_min_celsius, self.t_max_celsius)
-        temp_mean = image_processing.pixel_to_celsius(val_mean, self.t_min_celsius, self.t_max_celsius)
+        temp_min = pixel_to_celsius(val_min, self.t_min_celsius, self.t_max_celsius)
+        temp_max = pixel_to_celsius(val_max, self.t_min_celsius, self.t_max_celsius)
+        temp_mean = pixel_to_celsius(val_mean, self.t_min_celsius, self.t_max_celsius)
         temp_std = (val_std / 255.0) * (self.t_max_celsius - self.t_min_celsius)
         
         hotspot_px = 0

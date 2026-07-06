@@ -45,6 +45,42 @@ type ImageMatrix = Array2<u8>;
 /// Interne Gleitkomma-Matrix für Zwischenberechnungen (Distanzkarte, Statistik).
 type FloatMatrix = Array2<f64>;
 
+/// Rauschunterdrückung via 3x3 Box-Blur.
+/// Glättet das Bild parallel über Zeilen mittels Rayon, um hochfrequentes Sensorrauschen
+/// zu minimieren, was die Qualität der Hotspot-Erkennung und der Visualisierung steigert.
+fn box_blur_3x3(img: &ImageMatrix) -> ImageMatrix {
+    let (h, w) = img.dim();
+    let mut output = Array2::<u8>::zeros((h, w));
+    
+    // Parallelisierung über Zeilen
+    output.rows_mut().into_par_iter().enumerate().for_each(|(y, mut row)| {
+        if y == 0 || y == h - 1 {
+            for x in 0..w {
+                row[x] = img[[y, x]];
+            }
+            return;
+        }
+        
+        row[0] = img[[y, 0]];
+        row[w - 1] = img[[y, w - 1]];
+        
+        for x in 1..w - 1 {
+            let sum = img[[y - 1, x - 1]] as u32
+                + img[[y - 1, x]] as u32
+                + img[[y - 1, x + 1]] as u32
+                + img[[y, x - 1]] as u32
+                + img[[y, x]] as u32
+                + img[[y, x + 1]] as u32
+                + img[[y + 1, x - 1]] as u32
+                + img[[y + 1, x]] as u32
+                + img[[y + 1, x + 1]] as u32;
+            row[x] = (sum / 9) as u8;
+        }
+    });
+    
+    output
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // ABSCHNITT 2: FEATURE A – DYNAMISCHE KERNEL-BERECHNUNG
 // ─────────────────────────────────────────────────────────────────────────────
@@ -539,54 +575,64 @@ fn threshold_statistical(
     mask: &ImageMatrix,
     k: f64,
 ) -> Result<ImageMatrix, String> {
-    // Sammle alle Pixelwerte (Top-Hat-Diff und Originalwert) innerhalb der Body-Mask
     let (h, w) = diff_img.dim();
-    let masked_pixels: Vec<(f64, f64)> = (0..h)
-        .into_par_iter()
-        .flat_map(|y| {
-            (0..w)
-                .filter_map(|x| {
-                    if mask[[y, x]] > 0 {
-                        Some((diff_img[[y, x]] as f64, original_img[[y, x]] as f64))
-                    } else {
-                        None
-                    }
-                })
-                .collect::<Vec<_>>()
-        })
-        .collect();
 
-    if masked_pixels.is_empty() {
+    // Zero-Allocation Parallel Reduction via Rayon
+    // Berechnet die Summen und Quadratsummen parallel über Zeilen hinweg
+    let (sum_diff, sum_orig, sum_sq_diff, count) = (0..h)
+        .into_par_iter()
+        .map(|y| {
+            let mut local_sum_diff = 0.0;
+            let mut local_sum_orig = 0.0;
+            let mut local_sum_sq_diff = 0.0;
+            let mut local_count = 0.0;
+            for x in 0..w {
+                if mask[[y, x]] > 0 {
+                    let d = diff_img[[y, x]] as f64;
+                    let o = original_img[[y, x]] as f64;
+                    local_sum_diff += d;
+                    local_sum_orig += o;
+                    local_sum_sq_diff += d * d;
+                    local_count += 1.0;
+                }
+            }
+            (local_sum_diff, local_sum_orig, local_sum_sq_diff, local_count)
+        })
+        .reduce(
+            || (0.0, 0.0, 0.0, 0.0),
+            |a, b| (a.0 + b.0, a.1 + b.1, a.2 + b.2, a.3 + b.3)
+        );
+
+    if count < 1.0 {
         return Err("Body-Mask ist leer – keine Körper-Pixel für Statistik gefunden.".to_string());
     }
 
-    let n = masked_pixels.len() as f64;
+    let n = count;
 
     // Mittelwerte µ für Top-Hat-Differenz und Originalbild
-    let sum_diff: f64 = masked_pixels.iter().map(|(d, _)| d).sum();
-    let sum_orig: f64 = masked_pixels.iter().map(|(_, o)| o).sum();
     let mu_diff = sum_diff / n;
     let mu_orig = sum_orig / n;
 
-    // Standardabweichung σ für Top-Hat-Differenz
-    let variance_diff: f64 = masked_pixels.iter().map(|&(d, _)| (d - mu_diff).powi(2)).sum::<f64>() / n;
-    let sigma_diff = variance_diff.sqrt();
+    // Standardabweichung σ für Top-Hat-Differenz: Var(X) = E[X^2] - (E[X])^2
+    let variance_diff = (sum_sq_diff / n) - mu_diff.powi(2);
+    // Float-Rundungsfehler abfangen (Varianz darf nicht negativ sein)
+    let sigma_diff = variance_diff.max(0.0).sqrt();
 
     // Adaptiver relativer Schwellenwert T = µ + k·σ, geklemmt auf [0, 254]
     let threshold_diff = (mu_diff + k * sigma_diff).clamp(0.0, 254.0);
 
     let mut binary = Array2::<u8>::zeros((h, w));
-    for y in 0..h {
+    
+    // Binarisierung parallel über Zeilen
+    binary.rows_mut().into_par_iter().enumerate().for_each(|(y, mut row)| {
         for x in 0..w {
             let diff_val = diff_img[[y, x]] as f64;
             let orig_val = original_img[[y, x]] as f64;
-            // Pixel ist ein Hotspot, wenn die lokale Erwärmung groß ist (Top-Hat > T)
-            // UND die absolute Temperatur über dem Durchschnitt des Fußes liegt (Vermeidung kalter Zehen)
             if diff_val > threshold_diff && orig_val > mu_orig {
-                binary[[y, x]] = 255;
+                row[x] = 255;
             }
         }
-    }
+    });
 
     Ok(binary)
 }
@@ -910,6 +956,9 @@ fn process_thermal_pipeline<'py>(
         .allow_threads(|| -> Result<(ImageMatrix, ImageMatrix), String> {
             // Owned copy erzeugen (nötig da ArrayView2 nicht Send-sicher über thread boundaries)
             let img: ImageMatrix = img_view.to_owned();
+
+            // ── Feature A-0: Rauschunterdrückung (Box-Blur-Vorfilter) ──────
+            let img = box_blur_3x3(&img);
 
             // ── Feature A: Dynamische Kernel-Größen ──────────────────────
             // Top-Hat-Kernel: 5 % der Bildbreite (passend zu realen Thermokameras
