@@ -476,12 +476,10 @@ fn extract_body_mask(
     otsu_min: u8,
     otsu_max: u8,
     dist_erosion_factor: f64,
-) -> Result<ImageMatrix, String> {
+) -> Result<(ImageMatrix, FloatMatrix), String> {
     let (h, w) = img.dim();
 
     // Schritt 1: Otsu-Binarisierung mit adaptivem Fallback.
-    // Ein reines Otsu schneidet kältere Extremitäten (wie Zehen) oft ab, wenn andere
-    // Körperteile sehr warm sind. Wir begrenzen den Schwellenwert auf den Bereich [35, 50].
     let otsu_thresh = otsu_threshold(img);
     let threshold = (otsu_thresh / 2).max(otsu_min).min(otsu_max);
     let mut otsu_mask = Array2::<u8>::zeros((h, w));
@@ -489,20 +487,18 @@ fn extract_body_mask(
         *out = if px > threshold { 255 } else { 0 };
     });
 
-    // Schritt 2: Distanztransformation
+    // Schritt 2: Distanztransformation (wird auch an filter_geometric weitergegeben)
     let dist_map = distance_transform_l2(&otsu_mask);
 
     // Maximum der Distanzkarte (für relative Schwellenwertierung)
     let max_dist = dist_map.iter().cloned().fold(0.0_f64, f64::max);
     if max_dist < 1e-10 {
-        // Bild ist komplett Vordergrund oder Hintergrund – leere Maske zurückgeben
-        return Ok(Array2::<u8>::zeros((h, w)));
+        let empty_mask = Array2::<u8>::zeros((h, w));
+        let empty_dist = Array2::<f64>::zeros((h, w));
+        return Ok((empty_mask, empty_dist));
     }
 
-    // Schritt 3: Adaptive Erosion via 5 % der maximalen Distanz als Mindestabstand.
-    // 5 % statt 15 % stellt sicher, dass dünnere Extremitäten wie Zehen im Maskenbild
-    // erhalten bleiben, während Logo-Overlays und dünne Rauschartefakte am Rand
-    // zuverlässig erodiert werden.
+    // Schritt 3: Adaptive Erosion
     let erosion_threshold = dist_erosion_factor * max_dist;
     let mut eroded_mask = Array2::<u8>::zeros((h, w));
     for y in 0..h {
@@ -513,7 +509,7 @@ fn extract_body_mask(
         }
     }
 
-    Ok(eroded_mask)
+    Ok((eroded_mask, dist_map))
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -737,12 +733,17 @@ fn connected_components(binary: &ImageMatrix) -> (Array2<u32>, u32) {
 ///
 /// # Returns
 /// Vec<(f64, f64)> – Index i = Label i+1: (Fläche, Perimeter)
-fn compute_region_stats(labels: &Array2<u32>, max_label: u32) -> Vec<(f64, f64, bool)> {
+fn compute_region_stats(
+    labels: &Array2<u32>,
+    max_label: u32,
+    dist_map: &FloatMatrix,
+) -> Vec<(f64, f64, bool, f64)> {
     let (h, w) = labels.dim();
     let n = max_label as usize;
     let mut areas = vec![0.0f64; n + 1];
     let mut perimeters = vec![0.0f64; n + 1];
     let mut touches_border = vec![false; n + 1];
+    let mut max_dists = vec![0.0f64; n + 1];
 
     let border_margin = 8usize;
 
@@ -754,11 +755,16 @@ fn compute_region_stats(labels: &Array2<u32>, max_label: u32) -> Vec<(f64, f64, 
             }
             areas[lbl] += 1.0;
 
+            // Maximale Distanz zum Maskenrand pro Komponente tracken
+            let d = dist_map[[y, x]];
+            if d > max_dists[lbl] {
+                max_dists[lbl] = d;
+            }
+
             if x <= border_margin || y <= border_margin || x >= w - 1 - border_margin || y >= h - 1 - border_margin {
                 touches_border[lbl] = true;
             }
 
-            // Perimeter: Pixel ist Randpixel wenn ein Nachbar != lbl oder Bildrand
             let is_border = y == 0
                 || y == h - 1
                 || x == 0
@@ -774,11 +780,11 @@ fn compute_region_stats(labels: &Array2<u32>, max_label: u32) -> Vec<(f64, f64, 
         }
     }
 
-    // Index 0 = Hintergrund (ignorieren), Index 1..=max_label = Komponenten
     areas[1..].iter()
         .zip(perimeters[1..].iter())
         .zip(touches_border[1..].iter())
-        .map(|((&a, &p), &t)| (a, p, t))
+        .zip(max_dists[1..].iter())
+        .map(|(((&a, &p), &t), &md)| (a, p, t, md))
         .collect()
 }
 
@@ -808,46 +814,44 @@ fn compute_region_stats(labels: &Array2<u32>, max_label: u32) -> Vec<(f64, f64, 
 fn filter_geometric(
     binary_mask: &ImageMatrix,
     body_mask: &ImageMatrix,
+    dist_map: &FloatMatrix,
     kernel_size: usize,
     min_area_factor: f64,
     min_circularity: f64,
+    min_dist_from_border: f64,
 ) -> Result<ImageMatrix, String> {
-    // KEIN morphologisches Prefilter: Der morph_open/close-Schritt wuerde
-    // die durch den µ+2σ-Schwellenwert bereits selektierten Hotspot-Cluster
-    // in Kleinstcluster fragmentieren, die dann die Mindestfläche verfehlen.
-    // Der Geometriefilter arbeitet direkt auf der binären Rohmaske.
     let closed = binary_mask;
 
-    // Absolut-Mindestfläche: 10 Pixel (eliminiert nur einzelne Streupixel)
-    // plus relative Mindestfläche: 0.0005 * Körperfläche (0.05 %)
-    // Das Maximum beider Bedingungen wird als Schwellenwert genutzt.
     let total_body_area = body_mask.iter().filter(|&&px| px > 0).count() as f64;
     let min_area_rel = min_area_factor * total_body_area;
-    let min_area = min_area_rel.max(10.0); // Mindestens 10 Pixel
+    let min_area = min_area_rel.max(10.0);
 
-    // Connected Components für die Filterung
     let (labels, max_label) = connected_components(&closed);
     if max_label == 0 {
-        return Ok(closed.clone()); // Keine Komponenten → leere Maske zurückgeben
+        return Ok(closed.clone());
     }
 
-    // Parallelisierte Geometrie-Analyse via rayon
-    let stats = compute_region_stats(&labels, max_label);
+    // Erweiterte Geometrie-Analyse inkl. maximaler Distanz zum Maskenrand
+    let stats = compute_region_stats(&labels, max_label, dist_map);
 
     let keep_flags: Vec<bool> = stats
         .par_iter()
-        .map(|&(area, perimeter, touches_b)| {
+        .map(|&(area, perimeter, touches_b, max_dist_component)| {
+            // Bedingung 0: Bildrand-Berührung
             if touches_b {
-                return false; // Hotspots am Bildrand verwerfen
+                return false;
             }
-            // Bedingung 1: Mindestfläche (absolut >= 10 Pixel, relativ >= 0.05 % Körperfläche)
+            // Bedingung 1: Distanztransformation – Hotspot muss tief genug im
+            // Körperinneren liegen. Rand-Artefakte (Knöchel, Fersen) liegen
+            // am Übergang Körper→Hintergrund (kleine Distanzwerte).
+            if max_dist_component < min_dist_from_border {
+                return false;
+            }
+            // Bedingung 2: Mindestfläche
             if area < min_area {
                 return false;
             }
-            // Bedingung 2: Circularity C = 4π * A / P²
-            // Schwellenwert 0.01: Eliminiert nur absolute Linien-Artefakte (C ≈ 0).
-            // Die diskrete Pixel-Perimeter-Approximation ist bei fragmentierten
-            // Clustern ungenau – daher sehr liberaler Schwellenwert.
+            // Bedingung 3: Circularity
             if perimeter < 1.0 {
                 return false;
             }
@@ -856,7 +860,6 @@ fn filter_geometric(
         })
         .collect();
 
-    // Gefilterte Maske aufbauen
     let (h, w) = closed.dim();
     let mut final_mask = Array2::<u8>::zeros((h, w));
     for y in 0..h {
@@ -988,7 +991,8 @@ fn process_thermal_pipeline<'py>(
             );
 
             // ── Feature B: Adaptive Body-Mask via Distanztransformation ──
-            let mask = extract_body_mask(&img, otsu_min, otsu_max, dist_erosion_factor)
+            // Gibt nun auch die Distanzkarte zurück (für Rand-Hotspot-Filter)
+            let (mask, dist_map) = extract_body_mask(&img, otsu_min, otsu_max, dist_erosion_factor)
                 .map_err(|e| format!("Body-Mask Fehler: {}", e))?;
 
             let body_pixel_count = mask.iter().filter(|&&px| px > 0).count();
@@ -1005,7 +1009,7 @@ fn process_thermal_pipeline<'py>(
             let diff_img = calculate_tophat_difference(&img, &mask, kernel_large)
                 .map_err(|e| format!("TopHat Fehler: {}", e))?;
 
-            // ── Feature D: Statistischer Schwellenwert µ + 3.0σ + Absolutwert-Filter ──
+            // ── Feature D: Statistischer Schwellenwert µ + k·σ ───────────
             let binary_raw = threshold_statistical(&img, &diff_img, &mask, sigma_k)
                 .map_err(|e| format!("Schwellenwert Fehler: {}", e))?;
 
@@ -1016,8 +1020,16 @@ fn process_thermal_pipeline<'py>(
             );
 
             // ── Feature E: Geometrischer Rauschfilter ─────────────────────
-            let final_mask = filter_geometric(&binary_raw, &mask, kernel_small, min_area_factor, min_circularity)
-                .map_err(|e| format!("Geometriefilter Fehler: {}", e))?;
+            // min_dist_from_border: Hotspot-Komponenten müssen mindestens 0.8% der
+            // Bildbreite vom Maskenrand entfernt sein. Rand-Artefakte (Knöchel, Fersen)
+            // liegen direkt an der Körper-Hintergrund-Grenze (dist ≈ 0-8px).
+            // Echter entzündeter Zeh liegt im Inneren des Zehenbereichs (dist > 12px).
+            let min_dist_from_border = (width as f64 * 0.008).max(8.0);
+            let final_mask = filter_geometric(
+                &binary_raw, &mask, &dist_map, kernel_small,
+                min_area_factor, min_circularity, min_dist_from_border
+            )
+            .map_err(|e| format!("Geometriefilter Fehler: {}", e))?;
 
             let final_hotspot_count = final_mask.iter().filter(|&&px| px > 0).count();
             println!(

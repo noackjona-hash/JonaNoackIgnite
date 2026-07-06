@@ -153,6 +153,12 @@ def _pytorch_gpu_pipeline(
     total_body_area = np.sum(mask_cpu == 255)
     min_area = max(10, min_area_factor * total_body_area)
     
+    # Distanztransformation der Body-Maske:
+    # Hotspots am Maskenrand (Knöchel, Fersen) haben kleine Distanzwerte,
+    # echter Entzündungs-Hotspot liegt im Inneren (große Distanzwerte).
+    dist_map = cv2.distanceTransform(mask_cpu, cv2.DIST_L2, 5)
+    min_dist_from_border = max(8.0, binary_raw_np.shape[1] * 0.008)
+    
     num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(binary_raw_np)
     final_mask = np.zeros_like(binary_raw_np)
     
@@ -169,8 +175,14 @@ def _pytorch_gpu_pipeline(
         w_box = stats[i, cv2.CC_STAT_WIDTH]
         h_box = stats[i, cv2.CC_STAT_HEIGHT]
         
-        # Border clearing: Hotspots am Bildrand (Margin 8px) als Artefakte ausschließen
+        # Bildrand-Ausschluss
         if x <= border_margin or y <= border_margin or (x + w_box) >= (w_img - border_margin) or (y + h_box) >= (h_img - border_margin):
+            continue
+        
+        # Distanztransformations-Filter: Komponente verwerfen, wenn sie zu nah am Maskenrand
+        component_mask = (labels == i)
+        max_dist = float(np.max(dist_map[component_mask])) if np.sum(component_mask) > 0 else 0.0
+        if max_dist < min_dist_from_border:
             continue
         contours, _ = cv2.findContours(
             (labels == i).astype(np.uint8) * 255, 
@@ -243,8 +255,13 @@ def _python_fallback_pipeline(
     
     binary_raw = ((diff_img > T_rel) & (img > mu_orig)).astype(np.uint8) * 255
     
-    # 4. Connected Components
+    # 4. Connected Components mit Distanztransformations-Filter
     min_area = max(10, min_area_factor * total_body_area)
+    
+    # Distanztransformation der Body-Maske für Rand-Artefakt-Filter
+    dist_map = cv2.distanceTransform(mask, cv2.DIST_L2, 5)
+    min_dist_from_border = max(8.0, img.shape[1] * 0.008)
+    
     num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(binary_raw)
     final_mask = np.zeros_like(binary_raw)
     
@@ -261,8 +278,14 @@ def _python_fallback_pipeline(
         w_box = stats[i, cv2.CC_STAT_WIDTH]
         h_box = stats[i, cv2.CC_STAT_HEIGHT]
         
-        # Border clearing: Hotspots am Bildrand (Margin 8px) als Artefakte ausschließen
+        # Bildrand-Ausschluss
         if x <= border_margin or y <= border_margin or (x + w_box) >= (w_img - border_margin) or (y + h_box) >= (h_img - border_margin):
+            continue
+        
+        # Distanztransformations-Filter
+        component_mask = (labels == i)
+        max_dist = float(np.max(dist_map[component_mask])) if np.sum(component_mask) > 0 else 0.0
+        if max_dist < min_dist_from_border:
             continue
         contours, _ = cv2.findContours(
             (labels == i).astype(np.uint8) * 255,
