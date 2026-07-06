@@ -179,79 +179,14 @@ class IgniteApp:
         self.roi_end_x: int = 0
         self.roi_end_y: int = 0
 
+        self.backend_var = tk.StringVar(value="auto")
         self.setup_ui()
-        self.setup_menu()
 
         # Bind-Event für dynamische Skalierung bei Fenster-Größenänderungen (Debounced)
         self.root.bind("<Configure>", self.on_window_configure)
 
         # Aktives Backend beim Start abfragen
         self.update_backend_label()
-
-    def setup_menu(self) -> None:
-        """Erstellt und konfiguriert die obere Menüleiste (Datei, Optionen, Hilfe)."""
-        menubar = tk.Menu(self.root)
-
-        # ── DATEI-MENÜ ────────────────────────────────────────────────────────
-        file_menu = tk.Menu(menubar, tearoff=0)
-        file_menu.add_command(label="Wärmebild laden...", command=self.load_file)
-        file_menu.add_command(label="Ordner-Stapelverarbeitung...", command=self.run_batch_processing)
-        file_menu.add_command(label="Aktive Ansicht exportieren...", command=self.save_active_view)
-        file_menu.add_command(label="HTML-Bericht exportieren", command=self.export_html_report)
-        file_menu.add_command(label="Ergebnisordner öffnen", command=self.open_output_dir)
-        file_menu.add_separator()
-        file_menu.add_command(label="Beenden", command=self.root.destroy)
-        menubar.add_cascade(label="Datei", menu=file_menu)
-
-        # ── OPTIONEN-MENÜ ─────────────────────────────────────────────────────
-        options_menu = tk.Menu(menubar, tearoff=0)
-        
-        # Design-Umschalter
-        options_menu.add_command(
-            label="Design wechseln (Light/Dark)", 
-            command=self.toggle_appearance_mode
-        )
-        options_menu.add_separator()
-
-        # Backend-Erzwingungs-Untermenü
-        self.backend_var = tk.StringVar(value="auto")
-        backend_menu = tk.Menu(options_menu, tearoff=0)
-        backend_menu.add_radiobutton(
-            label="Automatisch (Schnellstes)", 
-            variable=self.backend_var, 
-            value="auto", 
-            command=self.on_backend_changed
-        )
-        backend_menu.add_radiobutton(
-            label="Erzwinge Rust-CPU-Core", 
-            variable=self.backend_var, 
-            value="rust", 
-            command=self.on_backend_changed
-        )
-        backend_menu.add_radiobutton(
-            label="Erzwinge PyTorch-GPU", 
-            variable=self.backend_var, 
-            value="gpu", 
-            command=self.on_backend_changed
-        )
-        backend_menu.add_radiobutton(
-            label="Erzwinge Python-Fallback", 
-            variable=self.backend_var, 
-            value="python", 
-            command=self.on_backend_changed
-        )
-        
-        options_menu.add_cascade(label="Berechnungs-Backend", menu=backend_menu)
-        menubar.add_cascade(label="Optionen", menu=options_menu)
-
-        # ── HILFE-MENÜ ────────────────────────────────────────────────────────
-        help_menu = tk.Menu(menubar, tearoff=0)
-        help_menu.add_command(label="Funktionsweise...", command=self.show_info_window)
-        help_menu.add_command(label="Über Ignite...", command=self.show_about_window)
-        menubar.add_cascade(label="Hilfe", menu=help_menu)
-
-        # Menüleiste im Hauptfenster registrieren
-        self.root.config(menu=menubar)
 
     def make_slider(self, master, label_text, from_, to, default_val, resolution=0.01):
         """Erstellt ein Steuerelement mit Slider und dynamischer Werteanzeige."""
@@ -498,6 +433,37 @@ class IgniteApp:
         )
         self.export_browse_btn.pack(side=ctk.RIGHT, padx=(4, 0))
 
+        # Berechnungs-Backend
+        ctk.CTkLabel(self.settings_boxes_frame, text="Berechnungs-Backend", font=ctk.CTkFont(size=10, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w", pady=(8, 2))
+        self.backend_opt = ctk.CTkOptionMenu(
+            self.settings_boxes_frame,
+            values=["Automatisch (Schnellstes)", "Erzwinge Rust-CPU-Core", "Erzwinge PyTorch-GPU", "Erzwinge Python-Fallback"],
+            command=self.on_backend_ui_changed,
+            font=ctk.CTkFont(size=12),
+            fg_color=COLOR_BG_INPUT,
+            button_color=COLOR_PRIMARY_ACCENT,
+            button_hover_color=COLOR_HOVER_ACCENT,
+            text_color=COLOR_TEXT_PRIMARY,
+            height=28
+        )
+        self.backend_opt.pack(fill=ctk.X, pady=(0, 8))
+
+        # Design-Umschalter
+        self.theme_btn = ctk.CTkButton(
+            self.settings_boxes_frame,
+            text="Design wechseln (Dunkel / Hell)",
+            command=self.toggle_appearance_mode,
+            font=ctk.CTkFont(size=11, weight="bold"),
+            fg_color="transparent",
+            text_color=COLOR_PRIMARY_ACCENT,
+            hover_color=COLOR_BG_CARD,
+            border_width=1,
+            border_color=COLOR_PRIMARY_ACCENT,
+            height=30,
+            corner_radius=6
+        )
+        self.theme_btn.pack(fill=ctk.X, pady=(8, 4))
+
         # Sektion: Haupt-Steuerung
         self.load_btn = ctk.CTkButton(
             self.sidebar_scroll,
@@ -679,22 +645,53 @@ class IgniteApp:
         )
         self.clean_dir_btn.pack(fill=ctk.X, pady=4)
 
-        # Footer
-        footer_lbl = ctk.CTkLabel(
-            sidebar_frame,
-            text="© 2026 Jona Noack · Jugend forscht",
-            font=ctk.CTkFont(family="Arial", size=10),
-            text_color=COLOR_TEXT_MUTED
-        )
-        footer_lbl.pack(side=ctk.BOTTOM, pady=(4, 15))
-
+        # Footer & Hilfe
         disclaimer_lbl = ctk.CTkLabel(
             sidebar_frame,
             text="Kein Ersatz für ärztliche Diagnose",
             font=ctk.CTkFont(family="Arial", size=9),
             text_color=COLOR_TEXT_MUTED
         )
-        disclaimer_lbl.pack(side=ctk.BOTTOM, pady=(0, 2))
+        disclaimer_lbl.pack(side=ctk.BOTTOM, pady=(0, 10))
+
+        footer_lbl = ctk.CTkLabel(
+            sidebar_frame,
+            text="© 2026 Jona Noack · Jugend forscht",
+            font=ctk.CTkFont(family="Arial", size=10),
+            text_color=COLOR_TEXT_MUTED
+        )
+        footer_lbl.pack(side=ctk.BOTTOM, pady=(0, 2))
+
+        help_row = ctk.CTkFrame(sidebar_frame, fg_color="transparent")
+        help_row.pack(side=ctk.BOTTOM, pady=(0, 10))
+
+        self.info_btn = ctk.CTkButton(
+            help_row,
+            text="📖 Anleitung",
+            command=self.show_info_window,
+            font=ctk.CTkFont(size=11),
+            fg_color="transparent",
+            text_color=COLOR_TEXT_SECONDARY,
+            hover_color=COLOR_BG_CARD,
+            width=110,
+            height=26,
+            corner_radius=4
+        )
+        self.info_btn.pack(side=ctk.LEFT, padx=4)
+
+        self.about_btn = ctk.CTkButton(
+            help_row,
+            text="ℹ️ Über Ignite",
+            command=self.show_about_window,
+            font=ctk.CTkFont(size=11),
+            fg_color="transparent",
+            text_color=COLOR_TEXT_SECONDARY,
+            hover_color=COLOR_BG_CARD,
+            width=100,
+            height=26,
+            corner_radius=4
+        )
+        self.about_btn.pack(side=ctk.LEFT, padx=4)
 
         # ── 2. RECHTER HAUPTBEREICH (Tabview & Willkommensbildschirm) ──────────
         content_frame = ctk.CTkFrame(self.root, fg_color=COLOR_BG_MAIN, corner_radius=0)
@@ -1999,6 +1996,18 @@ class IgniteApp:
 
         if self.current_filepath:
             self.process_pipeline()
+
+    def on_backend_ui_changed(self, choice: str) -> None:
+        """Wird aufgerufen, wenn das Berechnungs-Backend im UI-Dropdown geändert wird."""
+        mapping = {
+            "Automatisch (Schnellstes)": "auto",
+            "Erzwinge Rust-CPU-Core": "rust",
+            "Erzwinge PyTorch-GPU": "gpu",
+            "Erzwinge Python-Fallback": "python"
+        }
+        val = mapping.get(choice, "auto")
+        self.backend_var.set(val)
+        self.on_backend_changed()
 
     def on_palette_changed(self, value: str) -> None:
         """Wird ausgelöst, wenn die Falschfarbenpalette geändert wird."""
