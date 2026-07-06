@@ -11,6 +11,7 @@ import csv
 import hashlib
 import datetime
 import tkinter as tk
+import threading
 from tkinter import filedialog, messagebox
 import cv2
 import numpy as np
@@ -784,6 +785,48 @@ class IgniteApp:
             ctk.CTkLabel(box, text=f_title, font=ctk.CTkFont(size=12, weight="bold"), text_color=COLOR_PRIMARY_ACCENT).pack(pady=(8, 2), padx=8)
             ctk.CTkLabel(box, text=f_desc, font=ctk.CTkFont(size=10), text_color=COLOR_TEXT_SECONDARY, wraplength=170, justify="center").pack(pady=(0, 8), padx=8)
 
+        # Loading Overlay (für Hintergrund-Verarbeitung)
+        self.loading_overlay = ctk.CTkFrame(content_frame, fg_color="transparent")
+        
+        loading_card = ctk.CTkFrame(
+            self.loading_overlay,
+            width=500,
+            height=300,
+            fg_color=COLOR_BG_CARD,
+            corner_radius=12,
+            border_width=1,
+            border_color=COLOR_BORDER_CARD
+        )
+        loading_card.place(relx=0.5, rely=0.5, anchor="center")
+        loading_card.pack_propagate(False)
+        
+        self.loading_title_lbl = ctk.CTkLabel(
+            loading_card,
+            text="IGNITE-Pipeline läuft...",
+            font=ctk.CTkFont(family="Arial", size=20, weight="bold"),
+            text_color=COLOR_PRIMARY_ACCENT
+        )
+        self.loading_title_lbl.pack(pady=(45, 10))
+        
+        self.loading_step_lbl = ctk.CTkLabel(
+            loading_card,
+            text="Initialisiere Berechnungen...",
+            font=ctk.CTkFont(family="Arial", size=13),
+            text_color=COLOR_TEXT_SECONDARY
+        )
+        self.loading_step_lbl.pack(pady=5)
+        
+        self.loading_pbar = ctk.CTkProgressBar(
+            loading_card,
+            width=360,
+            height=5,
+            fg_color=COLOR_BG_MAIN,
+            progress_color=COLOR_PRIMARY_ACCENT,
+            corner_radius=2
+        )
+        self.loading_pbar.set(0.0)
+        self.loading_pbar.pack(pady=25)
+
         # Register Tabs
         self.tabview.add("Gesamtübersicht")
         self.tabview.add("1. Originalbild")
@@ -1332,7 +1375,7 @@ class IgniteApp:
             self.parameters_visible = True
 
     def update_params(self, event=None) -> None:
-        """Sammelt alle Slider-Werte und startet die Pipeline neu."""
+        """Sammelt alle Slider-Werte und startet die Pipeline neu (debounced)."""
         sk = self.sigma_k_slider.get()
         th = self.tophat_slider.get()
         ma = self.min_area_slider.get()
@@ -1353,7 +1396,11 @@ class IgniteApp:
         self.temp_offset_val.configure(text=f"{to:+.1f}")
         
         if self.current_filepath:
-            self.process_pipeline()
+            # Slider-Bewegungen debouncen: Falls ein altes Update aussteht, abbrechen
+            if hasattr(self, "_param_update_job") and self._param_update_job:
+                self.root.after_cancel(self._param_update_job)
+            # Neues Update nach 180ms Inaktivität planen
+            self._param_update_job = self.root.after(180, self.process_pipeline)
 
     def on_calibration_changed(self, event=None) -> None:
         """Wird aufgerufen, wenn die Kamera-Kalibrierungswerte geändert werden."""
@@ -1631,131 +1678,190 @@ class IgniteApp:
 
         return annotated
 
+    def show_loading_overlay(self) -> None:
+        """Zeigt das Lade-Overlay über dem Hauptbereich."""
+        self.welcome_frame.pack_forget()
+        self.tabview.pack_forget()
+        self.loading_overlay.pack(fill=ctk.BOTH, expand=True, padx=20, pady=20)
+        self.root.update_idletasks()
+
+    def hide_loading_overlay(self) -> None:
+        """Blendet das Lade-Overlay aus und stellt den korrekten Hauptbereich wieder her."""
+        self.loading_overlay.pack_forget()
+        if self.current_filepath:
+            self.tabview.pack(fill=ctk.BOTH, expand=True, padx=15, pady=15)
+        else:
+            self.welcome_frame.pack(fill=ctk.BOTH, expand=True, padx=20, pady=20)
+        self.root.update_idletasks()
+
+    def update_loading_progress(self, val: float, msg: str) -> None:
+        """Aktualisiert die Fortschrittsanzeige im Overlay."""
+        self.loading_pbar.set(val)
+        self.loading_step_lbl.configure(text=msg)
+        self.root.update_idletasks()
+
     def process_pipeline(self) -> None:
-        """Führt die Analyse-Pipeline aus und aktualisiert alle Panels in allen Tabs."""
+        """Führt die Analyse-Pipeline asynchron im Hintergrund aus, um die GUI flüssig zu halten."""
         if not self.current_filepath:
             return
 
-        try:
-            self.status_label.configure(text="Pipeline läuft...", text_color=COLOR_PRIMARY_ACCENT)
-            self.root.update_idletasks()
+        # Wenn bereits ein Job läuft, flaggen wir eine anschließende Neuberechnung
+        if hasattr(self, "_pipeline_running") and self._pipeline_running:
+            self._pipeline_needs_rerun = True
+            return
 
-            # Parameter laden
-            sk = self.sigma_k_slider.get()
-            th = self.tophat_slider.get()
-            ma = self.min_area_slider.get()
-            mc = self.min_circ_slider.get()
-            omin = int(self.otsu_min_slider.get())
-            omax = int(self.otsu_max_slider.get())
-            er = self.erosion_slider.get()
-            to = self.temp_offset_slider.get()
+        self._pipeline_running = True
+        self._pipeline_needs_rerun = False
 
+        self.show_loading_overlay()
+        self.update_loading_progress(0.15, "Lade thermografische Rohdaten...")
 
+        # Parameter lokal kopieren
+        params = {
+            "file_path": self.current_filepath,
+            "sk": self.sigma_k_slider.get(),
+            "th": self.tophat_slider.get(),
+            "ma": self.min_area_slider.get(),
+            "mc": self.min_circ_slider.get(),
+            "omin": int(self.otsu_min_slider.get()),
+            "omax": int(self.otsu_max_slider.get()),
+            "er": self.erosion_slider.get(),
+            "to": self.temp_offset_slider.get(),
+            "t_min": self.t_min_celsius,
+            "t_max": self.t_max_celsius,
+            "mode": self.analysis_mode_opt.get()
+        }
 
-            # Bild laden und kalibrieren (Offset addieren in Celsius -> in Raw-Pixel transformiert)
-            img = image_processing.load_thermal_image(self.current_filepath)
-            
-            range_c = self.t_max_celsius - self.t_min_celsius
-            if range_c <= 0:
-                range_c = 20.0
-            raw_offset = int(round(to * 255.0 / range_c))
-            
-            calibrated_img = np.clip(img.astype(np.int16) + raw_offset, 0, 255).astype(np.uint8)
-            self.current_raw_original = calibrated_img
-
-            storage.save_image_step(calibrated_img, "1", "original", self.current_filepath)
-            storage.save_data_step(calibrated_img, "1", "original", self.current_filepath)
-
-            # Pipeline ausführen
-            diff_img, hotspot_mask = image_processing.run_rust_pipeline(
-                calibrated_img, sk, th, ma, mc, omin, omax, er
-            )
-            self.current_raw_mask = hotspot_mask
-
-            # Body-Maske ableiten
-            body_mask_vis = (diff_img > 0).astype(np.uint8) * 255
-
-            # Ergebnisse speichern
-            storage.save_image_step(body_mask_vis, "2", "mask", self.current_filepath)
-            storage.save_data_step(body_mask_vis, "2", "mask", self.current_filepath)
-
-            storage.save_image_step(diff_img, "3", "local_heat_diff", self.current_filepath)
-            storage.save_data_step(diff_img, "3", "local_heat_diff_raw", self.current_filepath)
-
-            storage.save_image_step(hotspot_mask, "4", "dynamic_hotspots", self.current_filepath)
-            storage.save_data_step(hotspot_mask, "4", "dynamic_hotspots_raw", self.current_filepath)
-
-            # Panels 1-3 aktualisieren
-            self.display_image_in_panel(calibrated_img, "1. Originalbild")
-            self.display_image_in_panel(body_mask_vis, "2. Hintergrund-Maske")
-            self.display_image_in_panel(diff_img, "3. Lokale Hitze-Differenz")
-
-            # Panel 4: Annotiertes overlay mit BBoxes & Zonen
-            if self.analysis_mode_opt.get() == "Podologische Symmetrieanalyse":
-                annotated_overlay = self.draw_foot_annotations(calibrated_img, body_mask_vis, hotspot_mask)
-            else:
-                annotated_overlay = self.draw_general_annotations(calibrated_img, body_mask_vis, hotspot_mask)
-                
-            overlay_rgb = cv2.cvtColor(annotated_overlay, cv2.COLOR_BGR2RGB)
-            self.display_image_in_panel(overlay_rgb, "4. Erkannte Hotspots (Rust)")
-
-            # Histogramm & Zonal Update
-            self.draw_histogram()
-
-            # Hotspot Count & UI Label
-            hotspot_count = int(hotspot_mask.sum()) // 255
-            self.update_backend_label()
-
-            if hotspot_count == 0:
-                hotspot_color = "#F1F5F9"
-                hotspot_text = "0 Pixel (Normal)"
-            elif hotspot_count < 150:
-                hotspot_color = "#FFA500"
-                hotspot_text = f"{hotspot_count} Pixel (Verdacht)"
-            else:
-                hotspot_color = "#FF0055"
-                hotspot_text = f"{hotspot_count} Pixel (Entzündung)"
-
-            self.hotspot_label.configure(
-                text=f"Hotspots: {hotspot_text}",
-                text_color=hotspot_color
-            )
-
-            self.status_label.configure(
-                text="Status: ✓ Berechnet",
-                text_color=COLOR_PRIMARY_ACCENT
-            )
-
-            # ── Audit-Trail Eintrag schreiben ──────────────────────────────────
+        def worker():
             try:
-                # Max-Temperatur in Celsius
-                max_px_val = float(np.max(calibrated_img[hotspot_mask > 0])) if np.any(hotspot_mask > 0) else 0.0
-                max_temp_c = pixel_to_celsius(max_px_val, self.t_min_celsius, self.t_max_celsius)
-                write_audit_entry({
-                    "Zeitstempel": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    "Patienten-ID": "n.a.",
-                    "Analysemodus": self.analysis_mode_opt.get(),
-                    "Bilddatei": os.path.basename(self.current_filepath),
-                    "sigma_k": round(self.sigma_k_slider.get(), 2),
-                    "tophat_factor": round(self.tophat_slider.get(), 4),
-                    "T_min_C": self.t_min_celsius,
-                    "T_max_C": self.t_max_celsius,
-                    "Hotspot_Pixel": hotspot_count,
-                    "Max_Temp_C": round(max_temp_c, 2),
-                    "Symmetrie_Delta": round(
-                        abs(self.zonal_stats.get("left", {}).get("fore", 0.0) -
-                            self.zonal_stats.get("right", {}).get("fore", 0.0)), 2
-                    ) if self.analysis_mode_opt.get() == "Podologische Symmetrieanalyse" else "n.a.",
-                    "Operator": "Jugend forscht",
-                })
-            except Exception as audit_err:
-                print(f"[AUDIT] Fehler: {audit_err}")
+                # 1. Kalibrierung
+                self.root.after(0, lambda: self.update_loading_progress(0.35, "Applikation der Kalibrierung (Temp-Offset)..."))
+                img = image_processing.load_thermal_image(params["file_path"])
+                
+                range_c = params["t_max"] - params["t_min"]
+                if range_c <= 0:
+                    range_c = 20.0
+                raw_offset = int(round(params["to"] * 255.0 / range_c))
+                
+                calibrated_img = np.clip(img.astype(np.int16) + raw_offset, 0, 255).astype(np.uint8)
+                
+                storage.save_image_step(calibrated_img, "1", "original", params["file_path"])
+                storage.save_data_step(calibrated_img, "1", "original", params["file_path"])
 
-        except Exception as e:
-            self.status_label.configure(text="Status: Fehler!", text_color="#EF4444")
-            self.backend_label.configure(text="Backend: Fehler", text_color="#EF4444")
-            self.hotspot_label.configure(text="Hotspots: Fehler", text_color="#EF4444")
-            messagebox.showerror("Fehler", f"Pipeline-Fehler:\n{e}")
+                # 2. Rust/GPU Pipeline ausführen
+                self.root.after(0, lambda: self.update_loading_progress(0.60, "Suche Hotspots (Denoising & Top-Hat Differenz)..."))
+                diff_img, hotspot_mask = image_processing.run_rust_pipeline(
+                    calibrated_img, params["sk"], params["th"], params["ma"], params["mc"], params["omin"], params["omax"], params["er"]
+                )
+
+                # 3. Maske und Speicherung
+                self.root.after(0, lambda: self.update_loading_progress(0.80, "Speichere Analyseergebnisse und Zwischenbilder..."))
+                body_mask_vis = (diff_img > 0).astype(np.uint8) * 255
+
+                storage.save_image_step(body_mask_vis, "2", "mask", params["file_path"])
+                storage.save_data_step(body_mask_vis, "2", "mask", params["file_path"])
+
+                storage.save_image_step(diff_img, "3", "local_heat_diff", params["file_path"])
+                storage.save_data_step(diff_img, "3", "local_heat_diff_raw", params["file_path"])
+
+                storage.save_image_step(hotspot_mask, "4", "dynamic_hotspots", params["file_path"])
+                storage.save_data_step(hotspot_mask, "4", "dynamic_hotspots_raw", params["file_path"])
+
+                # 4. Overlays zeichnen
+                self.root.after(0, lambda: self.update_loading_progress(0.95, "Rendere Auswertungsoverlays und Statistiken..."))
+                if params["mode"] == "Podologische Symmetrieanalyse":
+                    annotated_overlay = self.draw_foot_annotations(calibrated_img, body_mask_vis, hotspot_mask)
+                else:
+                    annotated_overlay = self.draw_general_annotations(calibrated_img, body_mask_vis, hotspot_mask)
+                    
+                overlay_rgb = cv2.cvtColor(annotated_overlay, cv2.COLOR_BGR2RGB)
+
+                # Auf Hauptthread abschließen
+                self.root.after(0, lambda: self.on_pipeline_done(
+                    calibrated_img, body_mask_vis, diff_img, hotspot_mask, overlay_rgb, params
+                ))
+
+            except Exception as e:
+                self.root.after(0, lambda: self.on_pipeline_failed(e))
+
+        t = threading.Thread(target=worker, daemon=True)
+        t.start()
+
+    def on_pipeline_done(self, calibrated_img, body_mask_vis, diff_img, hotspot_mask, overlay_rgb, params):
+        self.current_raw_original = calibrated_img
+        self.current_raw_mask = hotspot_mask
+
+        # Panels aktualisieren
+        self.display_image_in_panel(calibrated_img, "1. Originalbild")
+        self.display_image_in_panel(body_mask_vis, "2. Hintergrund-Maske")
+        self.display_image_in_panel(diff_img, "3. Lokale Hitze-Differenz")
+        self.display_image_in_panel(overlay_rgb, "4. Erkannte Hotspots (Rust)")
+
+        # Histogramm & Zonal Update
+        self.draw_histogram()
+
+        # Hotspot Count & UI Label
+        hotspot_count = int(hotspot_mask.sum()) // 255
+        self.update_backend_label()
+
+        if hotspot_count == 0:
+            hotspot_color = "#F1F5F9"
+            hotspot_text = "0 Pixel (Normal)"
+        elif hotspot_count < 150:
+            hotspot_color = "#FFA500"
+            hotspot_text = f"{hotspot_count} Pixel (Verdacht)"
+        else:
+            hotspot_color = "#FF0055"
+            hotspot_text = f"{hotspot_count} Pixel (Entzündung)"
+
+        self.hotspot_label.configure(
+            text=f"Hotspots: {hotspot_text}",
+            text_color=hotspot_color
+        )
+
+        self.status_label.configure(
+            text="Status: ✓ Berechnet",
+            text_color=COLOR_PRIMARY_ACCENT
+        )
+
+        # Audit-Trail Eintrag schreiben
+        try:
+            max_px_val = float(np.max(calibrated_img[hotspot_mask > 0])) if np.any(hotspot_mask > 0) else 0.0
+            max_temp_c = pixel_to_celsius(max_px_val, params["t_min"], params["t_max"])
+            write_audit_entry({
+                "Zeitstempel": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "Patienten-ID": "n.a.",
+                "Analysemodus": params["mode"],
+                "Bilddatei": os.path.basename(params["file_path"]),
+                "sigma_k": round(params["sk"], 2),
+                "tophat_factor": round(params["th"], 4),
+                "T_min_C": params["t_min"],
+                "T_max_C": params["t_max"],
+                "Hotspot_Pixel": hotspot_count,
+                "Max_Temp_C": round(max_temp_c, 2),
+                "Symmetrie_Delta": round(
+                    abs(self.zonal_stats.get("left", {}).get("fore", 0.0) -
+                        self.zonal_stats.get("right", {}).get("fore", 0.0)), 2
+                ) if params["mode"] == "Podologische Symmetrieanalyse" else "n.a.",
+                "Operator": "Jugend forscht",
+            })
+        except Exception as audit_err:
+            print(f"[AUDIT] Fehler: {audit_err}")
+
+        # Loading-Screen ausblenden
+        self.hide_loading_overlay()
+
+        self._pipeline_running = False
+        if self._pipeline_needs_rerun:
+            self.process_pipeline()
+
+    def on_pipeline_failed(self, error):
+        self.hide_loading_overlay()
+        self._pipeline_running = False
+        self.status_label.configure(text="Status: Fehler!", text_color="#EF4444")
+        self.backend_label.configure(text="Backend: Fehler", text_color="#EF4444")
+        self.hotspot_label.configure(text="Hotspots: Fehler", text_color="#EF4444")
+        messagebox.showerror("Fehler", f"Pipeline-Fehler:\n{error}")
 
     def update_backend_label(self) -> None:
         """Fragt das aktive Backend ab und formatiert die Labelanzeige in der GUI."""
