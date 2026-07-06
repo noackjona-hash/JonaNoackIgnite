@@ -53,7 +53,7 @@ fn box_blur_3x3(img: &ImageMatrix) -> ImageMatrix {
     let mut output = Array2::<u8>::zeros((h, w));
     
     // Parallelisierung über Zeilen
-    output.rows_mut().into_par_iter().enumerate().for_each(|(y, mut row)| {
+    output.axis_iter_mut(ndarray::Axis(0)).into_par_iter().enumerate().for_each(|(y, mut row)| {
         if y == 0 || y == h - 1 {
             for x in 0..w {
                 row[x] = img[[y, x]];
@@ -624,7 +624,7 @@ fn threshold_statistical(
     let mut binary = Array2::<u8>::zeros((h, w));
     
     // Binarisierung parallel über Zeilen
-    binary.rows_mut().into_par_iter().enumerate().for_each(|(y, mut row)| {
+    binary.axis_iter_mut(ndarray::Axis(0)).into_par_iter().enumerate().for_each(|(y, mut row)| {
         for x in 0..w {
             let diff_val = diff_img[[y, x]] as f64;
             let orig_val = original_img[[y, x]] as f64;
