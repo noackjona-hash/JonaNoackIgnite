@@ -4,8 +4,8 @@ build-backend = "maturin"
 
 [project]
 name = "ignite_core"
-version = "0.1.0"
-description = "Rust-Native-Core für die Ignite Thermobild-Pipeline (Jugend forscht)"
+version = "1.0.0"
+description = "Ignite – Hochleistungs-Rust-Core für die thermografische Entzündungsdetektions-Pipeline"
 requires-python = ">=3.10"
 
 [tool.maturin]

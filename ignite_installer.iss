@@ -1,15 +1,17 @@
 ; ignite_installer.iss
-; Inno Setup Skript für das Jugend-forscht-Projekt "Ignite" (Entzündungsdetektion)
+; Inno Setup Skript für "IGNITE Medical Imaging Suite"
 ; Entwickelt von Jona Noack
 
 [Setup]
-; Einzigartige AppId (Generiert für das Projekt)
+; Einzigartige AppId
 AppId={{928C6EFA-C40C-46C4-AE4B-0FEA0388B2A6}}
-AppName=Ignite - Entzündungsdetektion
-AppVersion=0.1.0
+AppName=IGNITE Medical Imaging Suite
+AppVersion=1.0.0
 AppPublisher=Jona Noack
-DefaultDirName={autopf}\Ignite
-DefaultGroupName=Ignite
+AppPublisherURL=https://github.com/JonaNoack/ignite
+AppSupportURL=https://github.com/JonaNoack/ignite/issues
+DefaultDirName={autopf}\IGNITE Medical Imaging
+DefaultGroupName=IGNITE Medical Imaging
 AllowNoIcons=yes
 PrivilegesRequired=lowest
 
@@ -18,15 +20,18 @@ ArchitecturesAllowed=x64
 ArchitecturesInstallIn64BitMode=x64
 
 ; Versionierung und Metadaten für die Installer-EXE
-VersionInfoVersion=0.1.0
+VersionInfoVersion=1.0.0
 VersionInfoCompany=Jona Noack
-VersionInfoDescription=IGNITE Entzündungsdetektion via Thermografie
+VersionInfoDescription=IGNITE Medical Imaging Suite – Thermografische Entzündungsdetektion
+VersionInfoCopyright=Copyright (C) 2026 Jona Noack
+VersionInfoProductName=IGNITE Medical Imaging Suite
+VersionInfoProductVersion=1.0.0
 
 ; Pfad zur Icon-Datei für den Installer selbst
 SetupIconFile=icon\LogoRund.ico
 ; Speicherort und Name des fertigen Installers
 OutputDir=.
-OutputBaseFilename=Ignite_Setup_v0.1.0
+OutputBaseFilename=IGNITE_Setup_v1.0.0
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern

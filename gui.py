@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
-"""gui.py – CustomTkinter-Frontend für das Ignite Entzündungsdetektions-System.
+"""gui.py – CustomTkinter-Frontend für die IGNITE Medical Imaging Suite.
 
-Dieses Modul stellt das grafische Benutzer-Interface des Jugend-forscht-Projekts
-"Ignite" bereit. Die Bildverarbeitung wird vollständig an das native Rust-Core-Modul
-`ignite_core` oder die GPU-beschleunigte PyTorch-Pipeline delegiert.
+Dieses Modul stellt das grafische Benutzer-Interface bereit. Die Bildverarbeitung
+wird vollständig an das native Rust-Core-Modul `ignite_core` oder die
+GPU-beschleunigte PyTorch-Pipeline delegiert.
 """
 
 import os
+import csv
+import hashlib
+import datetime
 import tkinter as tk
 from tkinter import filedialog, messagebox
 import cv2
@@ -25,6 +28,80 @@ import image_processing
 import storage
 
 
+# ─── COLOR TOKENS FÜR DYNAMISCHES DESIGN (LIGHT / DARK MODE) ──────────────────
+COLOR_BG_MAIN = ("#FAFAFA", "#09090B")
+COLOR_BG_CARD = ("#F4F4F5", "#18181B")
+COLOR_BORDER_CARD = ("#E4E4E7", "#27272A")
+COLOR_TEXT_PRIMARY = ("#09090B", "#FAF5FF")
+COLOR_TEXT_SECONDARY = ("#71717A", "#A1A1AA")
+COLOR_TEXT_MUTED = ("#A1A1AA", "#3F3F46")
+COLOR_BG_INPUT = ("#FFFFFF", "#09090B")
+COLOR_BORDER_INPUT = ("#E4E4E7", "#27272A")
+COLOR_PRIMARY_ACCENT = "#EF4444"
+COLOR_HOVER_ACCENT = "#DC2626" 
+
+
+# ─── KLINISCHE HILFSFUNKTIONEN ────────────────────────────────────────────────
+
+def pixel_to_celsius(pixel_value: float, t_min: float, t_max: float) -> float:
+    """Konvertiert einen 8-Bit Pixelwert (0-255) in Grad Celsius.
+
+    Lineare Abbildung: T(x) = T_min + x * (T_max - T_min) / 255
+
+    Args:
+        pixel_value: Rohwert aus dem Thermobild (0–255).
+        t_min: Minimaler Temperaturbereich der Kamera in °C.
+        t_max: Maximaler Temperaturbereich der Kamera in °C.
+
+    Returns:
+        Temperatur in Grad Celsius.
+    """
+    return t_min + (pixel_value / 255.0) * (t_max - t_min)
+
+
+def pseudonymize_patient(name: str, dob: str = "") -> str:
+    """Erzeugt eine DSGVO-konforme Pseudonym-ID via SHA-256.
+
+    Args:
+        name: Klartextname des Patienten.
+        dob: Optionales Geburtsdatum zur Erhöhung der Eindeutigkeit.
+
+    Returns:
+        12-stellige alphanumerische Patienten-ID (Präfix 'ANON-').
+    """
+    raw = f"{name.strip().lower()}|{dob.strip()}"
+    digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()
+    return f"ANON-{digest[:12].upper()}"
+
+
+AUDIT_LOG_FILE = config.AUDIT_TRAIL_PATH
+AUDIT_LOG_HEADER = [
+    "Zeitstempel", "Patienten-ID", "Analysemodus", "Bilddatei",
+    "sigma_k", "tophat_factor", "T_min_C", "T_max_C",
+    "Hotspot_Pixel", "Max_Temp_C", "Symmetrie_Delta", "Operator"
+]
+
+
+def write_audit_entry(entry: dict) -> None:
+    """Schreibt einen Eintrag in den klinischen Audit-Trail (CSV).
+
+    Erstellt die Datei mit Header, falls noch nicht vorhanden.
+    Appended jeweils eine neue Zeile.
+
+    Args:
+        entry: Dictionary mit den Audit-Feldern.
+    """
+    file_exists = os.path.exists(AUDIT_LOG_FILE)
+    try:
+        with open(AUDIT_LOG_FILE, "a", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=AUDIT_LOG_HEADER)
+            if not file_exists:
+                writer.writeheader()
+            writer.writerow(entry)
+    except Exception as e:
+        print(f"[AUDIT] Fehler beim Schreiben des Audit-Trails: {e}")
+
+
 def get_resource_path(relative_path: str) -> str:
     """Gibt den absoluten Pfad zu einer Ressource zurück, passend für PyInstaller-EXEn."""
     import sys
@@ -35,25 +112,28 @@ def get_resource_path(relative_path: str) -> str:
     return os.path.join(base_path, relative_path)
 
 
+APP_VERSION = "1.0.0"
+
+
 class IgniteApp:
-    """Haupt-Anwendungsklasse für das Ignite Thermografie-Analyse-System.
+    """Haupt-Anwendungsklasse für das IGNITE Thermografie-Analyse-System v1.0.
 
     Verwaltet das Hauptfenster unter Verwendung von CustomTkinter, die Seitenleiste
-    für Steuerelemente und Statistiken sowie die fünf Bild-Anzeige-Tabs und das
+    für Steuerelemente und Statistiken sowie die sechs Analyse-Tabs und das
     Temperatur-Histogramm-Tab.
     """
 
     def __init__(self, root: ctk.CTk) -> None:
-        """Initialisiert die Ignite-Anwendung.
+        """Initialisiert die IGNITE-Anwendung.
 
         Args:
             root: Das CustomTkinter-Hauptfenster-Objekt.
         """
         self.root = root
-        self.root.title("IGNITE // Entzündungsdetektion")
-        self.root.geometry("1300x850")
-        self.root.minsize(1100, 750)
-        self.root.configure(fg_color="#09090B")
+        self.root.title(f"IGNITE Medical Imaging Suite v{APP_VERSION} – Thermografische Analyse")
+        self.root.geometry("1400x900")
+        self.root.minsize(1200, 780)
+        self.root.configure(fg_color=COLOR_BG_MAIN)
 
         # Setze das Anwendungs-Icon (Favicon)
         icon_path = get_resource_path(os.path.join("icon", "LogoRund.ico"))
@@ -63,21 +143,27 @@ class IgniteApp:
             except Exception:
                 pass
 
-        # Ausgabe-Verzeichnis für Jury-Dokumentation anlegen
+        # Ausgabe-Verzeichnis anlegen
         config.init_output_dir()
 
         # State-Variablen für Bilder und Fenster-Resizing
         self.current_filepath: str | None = None
         self.panels: dict[str, ctk.CTkLabel] = {}
         self.panels_full: dict[str, ctk.CTkLabel] = {}
-        
+
         # Raw-Bilder für Pixel-Inspektor, Farbpaletten-Umschaltung, Histogramm & Symmetrievergleich
         self.current_raw_original: np.ndarray | None = None
         self.current_raw_mask: np.ndarray | None = None
         self.current_images: dict[str, np.ndarray] = {}
         self.zonal_stats: dict = {}
         self.general_hotspots: list = []
-        
+
+        # Klinische Kalibrierungs-State-Variablen
+        self.t_min_celsius: float = config.DEFAULT_TEMP_MIN   # Kamera-Minimumtemperatur in °C
+        self.t_max_celsius: float = config.DEFAULT_TEMP_MAX   # Kamera-Maximumtemperatur in °C
+        self.dsgvo_anonymize: bool = False  # DSGVO-Pseudonymisierung aktiv?
+        self.emissivity: float = 0.98       # Standard-Emissionsgrad für Haut
+
         self.resize_job: str | None = None
         self.pil_cache: dict[str, Image.Image] = {}
 
@@ -163,10 +249,10 @@ class IgniteApp:
         top_row = ctk.CTkFrame(frame, fg_color="transparent")
         top_row.pack(fill=ctk.X)
         
-        lbl_title = ctk.CTkLabel(top_row, text=label_text, font=ctk.CTkFont(size=11, weight="bold"), text_color="#71717A")
+        lbl_title = ctk.CTkLabel(top_row, text=label_text, font=ctk.CTkFont(size=11, weight="bold"), text_color=COLOR_TEXT_SECONDARY)
         lbl_title.pack(side=ctk.LEFT)
         
-        val_lbl = ctk.CTkLabel(top_row, text=str(default_val), font=ctk.CTkFont(size=11), text_color="#06B6D4")
+        val_lbl = ctk.CTkLabel(top_row, text=str(default_val), font=ctk.CTkFont(size=11), text_color=COLOR_PRIMARY_ACCENT)
         val_lbl.pack(side=ctk.RIGHT)
         
         slider = ctk.CTkSlider(
@@ -174,10 +260,10 @@ class IgniteApp:
             from_=from_, 
             to=to, 
             number_of_steps=int((to - from_)/resolution), 
-            fg_color="#27272A", 
-            progress_color="#06B6D4", 
-            button_color="#06B6D4",
-            button_hover_color="#0891B2"
+            fg_color=COLOR_BORDER_CARD, 
+            progress_color=COLOR_PRIMARY_ACCENT, 
+            button_color=COLOR_PRIMARY_ACCENT,
+            button_hover_color=COLOR_HOVER_ACCENT
         )
         slider.set(default_val)
         slider.pack(fill=ctk.X, pady=2)
@@ -192,7 +278,7 @@ class IgniteApp:
         self.root.grid_rowconfigure(0, weight=1)
 
         # ── 1. LINKE SEITENLEISTE ─────────────────────────────────────────────
-        sidebar_frame = ctk.CTkFrame(self.root, width=320, corner_radius=0, fg_color="#09090B")
+        sidebar_frame = ctk.CTkFrame(self.root, width=320, corner_radius=0, fg_color=COLOR_BG_MAIN)
         sidebar_frame.grid(row=0, column=0, sticky="nsew", padx=0, pady=0)
         sidebar_frame.grid_propagate(False)
 
@@ -214,17 +300,25 @@ class IgniteApp:
             sidebar_frame,
             text="IGNITE",
             font=ctk.CTkFont(family="Arial", size=26, weight="bold"),
-            text_color="#FAF5FF"
+            text_color=COLOR_TEXT_PRIMARY
         )
         title_lbl.pack(padx=20, pady=pady_title, anchor="w")
 
         subtitle_lbl = ctk.CTkLabel(
             sidebar_frame,
-            text="Entzündungsdetektion via Thermografie",
+            text="Medical Imaging Suite  ·  v1.0",
             font=ctk.CTkFont(family="Arial", size=11),
-            text_color="#71717A"
+            text_color=COLOR_TEXT_SECONDARY
         )
-        subtitle_lbl.pack(padx=20, pady=(0, 20), anchor="w")
+        subtitle_lbl.pack(padx=20, pady=(0, 4), anchor="w")
+
+        sub2_lbl = ctk.CTkLabel(
+            sidebar_frame,
+            text="Thermografische Entzündungsdetektion",
+            font=ctk.CTkFont(family="Arial", size=10),
+            text_color=COLOR_TEXT_MUTED
+        )
+        sub2_lbl.pack(padx=20, pady=(0, 20), anchor="w")
 
         # Scrollbare Steuerleiste für Parameter
         self.sidebar_scroll = ctk.CTkScrollableFrame(
@@ -236,52 +330,266 @@ class IgniteApp:
         self.sidebar_scroll.pack(fill=ctk.BOTH, expand=True, padx=10, pady=5)
 
         # Sektion: Analyse-Modus
-        mode_card = ctk.CTkFrame(self.sidebar_scroll, fg_color="#18181B", corner_radius=8, border_width=1, border_color="#27272A")
+        mode_card = ctk.CTkFrame(self.sidebar_scroll, fg_color=COLOR_BG_CARD, corner_radius=8, border_width=1, border_color=COLOR_BORDER_CARD)
         mode_card.pack(fill=ctk.X, pady=(0, 15), ipady=6)
 
-        mode_title = ctk.CTkLabel(mode_card, text="🔍 ANALYSEMODUS", font=ctk.CTkFont(size=10, weight="bold"), text_color="#06B6D4")
+        mode_title = ctk.CTkLabel(mode_card, text="ANALYSEMODUS", font=ctk.CTkFont(size=10, weight="bold"), text_color=COLOR_PRIMARY_ACCENT)
         mode_title.pack(padx=12, pady=(8, 4), anchor="w")
 
         self.analysis_mode_opt = ctk.CTkOptionMenu(
-            mode_card, 
-            values=["Allgemeine Analyse", "Fuß-Symmetrieanalyse"], 
+            mode_card,
+            values=["Klinische Allgemeinanalyse", "Podologische Symmetrieanalyse"],
             command=self.on_analysis_mode_changed,
             font=ctk.CTkFont(size=12), 
-            fg_color="#09090B", 
-            button_color="#06B6D4", 
-            button_hover_color="#0891B2", 
-            text_color="#F4F4F5", 
+            fg_color=COLOR_BG_INPUT, 
+            button_color=COLOR_PRIMARY_ACCENT, 
+            button_hover_color=COLOR_HOVER_ACCENT, 
+            text_color=COLOR_TEXT_PRIMARY, 
             height=28
         )
         self.analysis_mode_opt.pack(fill=ctk.X, padx=12, pady=(4, 8))
 
         # Sektion: Patienten-Daten
-        patient_card = ctk.CTkFrame(self.sidebar_scroll, fg_color="#18181B", corner_radius=8, border_width=1, border_color="#27272A")
+        patient_card = ctk.CTkFrame(self.sidebar_scroll, fg_color=COLOR_BG_CARD, corner_radius=8, border_width=1, border_color=COLOR_BORDER_CARD)
         patient_card.pack(fill=ctk.X, pady=(0, 15), ipady=6)
 
-        patient_title = ctk.CTkLabel(patient_card, text="👤 PATIENTEN-DATEN", font=ctk.CTkFont(size=10, weight="bold"), text_color="#06B6D4")
+        patient_title = ctk.CTkLabel(patient_card, text="PATIENTENDATEN", font=ctk.CTkFont(size=10, weight="bold"), text_color=COLOR_PRIMARY_ACCENT)
         patient_title.pack(padx=12, pady=(8, 4), anchor="w")
 
-        self.patient_name_entry = ctk.CTkEntry(patient_card, placeholder_text="Name / Patient-ID", font=ctk.CTkFont(size=12), fg_color="#09090B", border_color="#27272A", text_color="#F4F4F5", height=28)
+        self.patient_name_entry = ctk.CTkEntry(patient_card, placeholder_text="Name / Patient-ID", font=ctk.CTkFont(size=12), fg_color=COLOR_BG_INPUT, border_color=COLOR_BORDER_INPUT, text_color=COLOR_TEXT_PRIMARY, height=28)
         self.patient_name_entry.pack(fill=ctk.X, padx=12, pady=4)
 
-        self.patient_age_entry = ctk.CTkEntry(patient_card, placeholder_text="Alter (Jahre)", font=ctk.CTkFont(size=12), fg_color="#09090B", border_color="#27272A", text_color="#F4F4F5", height=28)
+        self.patient_dob_entry = ctk.CTkEntry(patient_card, placeholder_text="Geburtsdatum (z.B. 12.04.1980)", font=ctk.CTkFont(size=12), fg_color=COLOR_BG_INPUT, border_color=COLOR_BORDER_INPUT, text_color=COLOR_TEXT_PRIMARY, height=28)
+        self.patient_dob_entry.pack(fill=ctk.X, padx=12, pady=4)
+
+        self.patient_age_entry = ctk.CTkEntry(patient_card, placeholder_text="Alter (Jahre)", font=ctk.CTkFont(size=12), fg_color=COLOR_BG_INPUT, border_color=COLOR_BORDER_INPUT, text_color=COLOR_TEXT_PRIMARY, height=28)
         self.patient_age_entry.pack(fill=ctk.X, padx=12, pady=4)
 
         self.patient_diabetes_opt = ctk.CTkOptionMenu(
-            patient_card, 
-            values=["Kein Diabetes", "Diabetes Typ 1", "Diabetes Typ 2"], 
-            font=ctk.CTkFont(size=12), 
-            fg_color="#09090B", 
-            button_color="#06B6D4", 
-            button_hover_color="#0891B2", 
-            text_color="#F4F4F5", 
+            patient_card,
+            values=["Kein Diabetes", "Diabetes mellitus Typ 1", "Diabetes mellitus Typ 2"],
+            font=ctk.CTkFont(size=12),
+            fg_color=COLOR_BG_INPUT,
+            button_color=COLOR_PRIMARY_ACCENT,
+            button_hover_color=COLOR_HOVER_ACCENT,
+            text_color=COLOR_TEXT_PRIMARY,
             height=28
         )
         # Nicht packen da Allgemeine Analyse der Standard ist
 
-        self.patient_notes_entry = ctk.CTkEntry(patient_card, placeholder_text="Klinische Notizen", font=ctk.CTkFont(size=12), fg_color="#09090B", border_color="#27272A", text_color="#F4F4F5", height=28)
-        self.patient_notes_entry.pack(fill=ctk.X, padx=12, pady=(4, 8))
+        self.patient_notes_entry = ctk.CTkEntry(patient_card, placeholder_text="Klinische Notizen", font=ctk.CTkFont(size=12), fg_color=COLOR_BG_INPUT, border_color=COLOR_BORDER_INPUT, text_color=COLOR_TEXT_PRIMARY, height=28)
+        self.patient_notes_entry.pack(fill=ctk.X, padx=12, pady=4)
+
+        self.patient_icd_entry = ctk.CTkEntry(patient_card, placeholder_text="ICD-10 Verdacht (z.B. E11.74)", font=ctk.CTkFont(size=12), fg_color=COLOR_BG_INPUT, border_color=COLOR_BORDER_INPUT, text_color=COLOR_TEXT_PRIMARY, height=28)
+        self.patient_icd_entry.pack(fill=ctk.X, padx=12, pady=4)
+
+        self.operator_entry = ctk.CTkEntry(patient_card, placeholder_text="Untersuchender (Kürzel)", font=ctk.CTkFont(size=12), fg_color=COLOR_BG_INPUT, border_color=COLOR_BORDER_INPUT, text_color=COLOR_TEXT_PRIMARY, height=28)
+        self.operator_entry.pack(fill=ctk.X, padx=12, pady=4)
+
+        # DSGVO-Pseudonymisierungs-Schalter
+        dsgvo_row = ctk.CTkFrame(patient_card, fg_color="transparent")
+        dsgvo_row.pack(fill=ctk.X, padx=12, pady=(6, 4))
+        ctk.CTkLabel(dsgvo_row, text="DSGVO-Pseudonymisierung", font=ctk.CTkFont(size=11, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(side=ctk.LEFT)
+        self.dsgvo_switch = ctk.CTkSwitch(
+            dsgvo_row, text="",
+            command=self.on_dsgvo_toggle,
+            onvalue=True, offvalue=False,
+            progress_color=COLOR_PRIMARY_ACCENT,
+            button_color="#FAF5FF",
+            width=40, height=20
+        )
+        self.dsgvo_switch.pack(side=ctk.RIGHT)
+        self.dsgvo_info_lbl = ctk.CTkLabel(
+            patient_card,
+            text="Klarnamen werden NICHT in Dateien gespeichert.",
+            font=ctk.CTkFont(size=9),
+            text_color=COLOR_TEXT_MUTED, anchor="w", wraplength=250
+        )
+        self.dsgvo_info_lbl.pack(fill=ctk.X, padx=12, pady=(0, 8))
+
+        # Klinische Checkliste (einklappbare Karte direkt in der Sidebar)
+        self.checklist_visible = True
+        self.checklist_card = ctk.CTkFrame(self.sidebar_scroll, fg_color=COLOR_BG_CARD, corner_radius=8, border_width=1, border_color=COLOR_BORDER_CARD)
+        self.checklist_card.pack(fill=ctk.X, pady=(0, 15), ipady=6)
+
+        self.toggle_checklist_btn = ctk.CTkButton(
+            self.checklist_card,
+            text="📋 Vorbereitungsprotokoll [▼]",
+            command=self.toggle_checklist_visibility,
+            font=ctk.CTkFont(size=11, weight="bold"),
+            fg_color="transparent",
+            text_color=COLOR_PRIMARY_ACCENT,
+            hover_color=COLOR_BORDER_CARD,
+            height=32,
+            anchor="w",
+            corner_radius=8
+        )
+        self.toggle_checklist_btn.pack(fill=ctk.X, padx=4, pady=4)
+
+        self.checklist_boxes_frame = ctk.CTkFrame(self.checklist_card, fg_color="transparent")
+        self.checklist_boxes_frame.pack(fill=ctk.X, padx=12, pady=(4, 8))
+
+        self.chk_temp = ctk.CTkCheckBox(
+            self.checklist_boxes_frame, text="Raumtemp. 20–22°C?",
+            command=self.update_checklist_status,
+            font=ctk.CTkFont(size=11), text_color=COLOR_TEXT_PRIMARY,
+            fg_color=COLOR_PRIMARY_ACCENT, hover_color=COLOR_HOVER_ACCENT,
+            checkmark_color=COLOR_BG_MAIN, border_color=COLOR_BORDER_INPUT
+        )
+        self.chk_temp.pack(fill=ctk.X, pady=3)
+
+        self.chk_draft = ctk.CTkCheckBox(
+            self.checklist_boxes_frame, text="Keine Sonne / Zugluft?",
+            command=self.update_checklist_status,
+            font=ctk.CTkFont(size=11), text_color=COLOR_TEXT_PRIMARY,
+            fg_color=COLOR_PRIMARY_ACCENT, hover_color=COLOR_HOVER_ACCENT,
+            checkmark_color=COLOR_BG_MAIN, border_color=COLOR_BORDER_INPUT
+        )
+        self.chk_draft.pack(fill=ctk.X, pady=3)
+
+        self.chk_acclim = ctk.CTkCheckBox(
+            self.checklist_boxes_frame, text="15–20 Min. Akklimatisation?",
+            command=self.update_checklist_status,
+            font=ctk.CTkFont(size=11), text_color=COLOR_TEXT_PRIMARY,
+            fg_color=COLOR_PRIMARY_ACCENT, hover_color=COLOR_HOVER_ACCENT,
+            checkmark_color=COLOR_BG_MAIN, border_color=COLOR_BORDER_INPUT
+        )
+        self.chk_acclim.pack(fill=ctk.X, pady=3)
+
+        self.chk_creams = ctk.CTkCheckBox(
+            self.checklist_boxes_frame, text="Kein(e) Koffein/Nikotin/Cremes?",
+            command=self.update_checklist_status,
+            font=ctk.CTkFont(size=11), text_color=COLOR_TEXT_PRIMARY,
+            fg_color=COLOR_PRIMARY_ACCENT, hover_color=COLOR_HOVER_ACCENT,
+            checkmark_color=COLOR_BG_MAIN, border_color=COLOR_BORDER_INPUT
+        )
+        self.chk_creams.pack(fill=ctk.X, pady=3)
+
+        self.checklist_status_lbl = ctk.CTkLabel(
+            self.checklist_boxes_frame,
+            text="Protokoll: 0/4 Bedingungen erfüllt",
+            font=ctk.CTkFont(size=10, weight="bold"),
+            text_color=COLOR_TEXT_SECONDARY, anchor="w"
+        )
+        self.checklist_status_lbl.pack(fill=ctk.X, pady=(4, 4))
+
+        # ── Celsius-Kalibrierungskarte ──────────────────────────────────────
+        calib_card = ctk.CTkFrame(self.sidebar_scroll, fg_color=COLOR_BG_CARD, corner_radius=8, border_width=1, border_color=COLOR_BORDER_CARD)
+        calib_card.pack(fill=ctk.X, pady=(0, 15), ipady=4)
+
+        ctk.CTkLabel(calib_card, text="KAMERA-KALIBRIERUNG", font=ctk.CTkFont(size=10, weight="bold"), text_color=COLOR_PRIMARY_ACCENT).pack(padx=12, pady=(8, 4), anchor="w")
+
+        calib_row = ctk.CTkFrame(calib_card, fg_color="transparent")
+        calib_row.pack(fill=ctk.X, padx=12, pady=(0, 4))
+        calib_row.grid_columnconfigure(0, weight=1)
+        calib_row.grid_columnconfigure(1, weight=1)
+
+        ctk.CTkLabel(calib_row, text="T-Min", font=ctk.CTkFont(size=10), text_color=COLOR_TEXT_SECONDARY).grid(row=0, column=0, sticky="w")
+        ctk.CTkLabel(calib_row, text="T-Max", font=ctk.CTkFont(size=10), text_color=COLOR_TEXT_SECONDARY).grid(row=0, column=1, sticky="w", padx=(8, 0))
+
+        self.t_min_entry = ctk.CTkEntry(calib_row, placeholder_text=str(config.DEFAULT_TEMP_MIN), font=ctk.CTkFont(size=12), fg_color=COLOR_BG_INPUT, border_color=COLOR_BORDER_INPUT, text_color=COLOR_TEXT_PRIMARY, height=28, width=80)
+        self.t_min_entry.insert(0, str(config.DEFAULT_TEMP_MIN))
+        self.t_min_entry.grid(row=1, column=0, sticky="ew", pady=4)
+        self.t_min_entry.bind("<FocusOut>", self.on_calibration_changed)
+        self.t_min_entry.bind("<Return>", self.on_calibration_changed)
+
+        self.t_max_entry = ctk.CTkEntry(calib_row, placeholder_text=str(config.DEFAULT_TEMP_MAX), font=ctk.CTkFont(size=12), fg_color=COLOR_BG_INPUT, border_color=COLOR_BORDER_INPUT, text_color=COLOR_TEXT_PRIMARY, height=28, width=80)
+        self.t_max_entry.insert(0, str(config.DEFAULT_TEMP_MAX))
+        self.t_max_entry.grid(row=1, column=1, sticky="ew", pady=4, padx=(8, 0))
+        self.t_max_entry.bind("<FocusOut>", self.on_calibration_changed)
+        self.t_max_entry.bind("<Return>", self.on_calibration_changed)
+
+        resolution = (config.DEFAULT_TEMP_MAX - config.DEFAULT_TEMP_MIN) / 255.0
+        self.calib_status_lbl = ctk.CTkLabel(
+            calib_card,
+            text=f"Bereich: {config.DEFAULT_TEMP_MIN:.1f}°C – {config.DEFAULT_TEMP_MAX:.1f}°C  |  Auflösung: {resolution:.3f}°C/px",
+            font=ctk.CTkFont(size=9),
+            text_color=COLOR_TEXT_MUTED, anchor="w"
+        )
+        self.calib_status_lbl.pack(fill=ctk.X, padx=12, pady=(0, 8))
+
+        # ── Systemeinstellungen-Karte ──────────────────────────────────────
+        self.settings_visible = True
+        self.settings_card = ctk.CTkFrame(self.sidebar_scroll, fg_color=COLOR_BG_CARD, corner_radius=8, border_width=1, border_color=COLOR_BORDER_CARD)
+        self.settings_card.pack(fill=ctk.X, pady=(0, 15), ipady=6)
+
+        self.toggle_settings_btn = ctk.CTkButton(
+            self.settings_card,
+            text="⚙️ Systemeinstellungen [▼]",
+            command=self.toggle_settings_visibility,
+            font=ctk.CTkFont(size=11, weight="bold"),
+            fg_color="transparent",
+            text_color=COLOR_PRIMARY_ACCENT,
+            hover_color=COLOR_BORDER_CARD,
+            height=32,
+            anchor="w",
+            corner_radius=8
+        )
+        self.toggle_settings_btn.pack(fill=ctk.X, padx=4, pady=4)
+
+        self.settings_boxes_frame = ctk.CTkFrame(self.settings_card, fg_color="transparent")
+        self.settings_boxes_frame.pack(fill=ctk.X, padx=12, pady=(4, 8))
+
+        # Einheit
+        ctk.CTkLabel(self.settings_boxes_frame, text="Temperatureinheit", font=ctk.CTkFont(size=10, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w", pady=(2, 2))
+        self.temp_unit_opt = ctk.CTkOptionMenu(
+            self.settings_boxes_frame,
+            values=["Celsius (°C)", "Fahrenheit (°F)", "Kelvin (K)"],
+            command=self.on_temp_unit_changed,
+            font=ctk.CTkFont(size=12),
+            fg_color=COLOR_BG_INPUT,
+            button_color=COLOR_PRIMARY_ACCENT,
+            button_hover_color=COLOR_HOVER_ACCENT,
+            text_color=COLOR_TEXT_PRIMARY,
+            height=28
+        )
+        self.temp_unit_opt.pack(fill=ctk.X, pady=(0, 8))
+
+        # Emissionsgrad
+        ctk.CTkLabel(self.settings_boxes_frame, text="Emissionsgrad (ε)", font=ctk.CTkFont(size=10, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w", pady=(2, 2))
+        self.emissivity_entry = ctk.CTkEntry(
+            self.settings_boxes_frame,
+            placeholder_text="0.98",
+            font=ctk.CTkFont(size=12),
+            fg_color=COLOR_BG_INPUT,
+            border_color=COLOR_BORDER_INPUT,
+            text_color=COLOR_TEXT_PRIMARY,
+            height=28
+        )
+        self.emissivity_entry.insert(0, "0.98")
+        self.emissivity_entry.pack(fill=ctk.X, pady=(0, 8))
+        self.emissivity_entry.bind("<FocusOut>", self.on_emissivity_changed)
+        self.emissivity_entry.bind("<Return>", self.on_emissivity_changed)
+
+        # Exportordner
+        ctk.CTkLabel(self.settings_boxes_frame, text="Export-Verzeichnis", font=ctk.CTkFont(size=10, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w", pady=(2, 2))
+        export_row = ctk.CTkFrame(self.settings_boxes_frame, fg_color="transparent")
+        export_row.pack(fill=ctk.X, pady=(0, 4))
+        self.export_path_entry = ctk.CTkEntry(
+            export_row,
+            placeholder_text="Export-Pfad",
+            font=ctk.CTkFont(size=11),
+            fg_color=COLOR_BG_INPUT,
+            border_color=COLOR_BORDER_INPUT,
+            text_color=COLOR_TEXT_PRIMARY,
+            height=28
+        )
+        self.export_path_entry.insert(0, config.OUTPUT_DIR)
+        self.export_path_entry.pack(side=ctk.LEFT, fill=ctk.X, expand=True)
+        self.export_path_entry.bind("<FocusOut>", self.on_export_path_changed)
+        self.export_path_entry.bind("<Return>", self.on_export_path_changed)
+
+        self.export_browse_btn = ctk.CTkButton(
+            export_row,
+            text="...",
+            width=28,
+            height=28,
+            command=self.browse_export_path,
+            fg_color=COLOR_PRIMARY_ACCENT,
+            hover_color=COLOR_HOVER_ACCENT,
+            text_color=COLOR_BG_MAIN
+        )
+        self.export_browse_btn.pack(side=ctk.RIGHT, padx=(4, 0))
 
         # Sektion: Steuerung Buttons
         ctrl_card = ctk.CTkFrame(self.sidebar_scroll, fg_color="transparent")
@@ -292,9 +600,9 @@ class IgniteApp:
             text="Wärmebild laden",
             command=self.load_file,
             font=ctk.CTkFont(family="Arial", size=14, weight="bold"),
-            fg_color="#06B6D4",
-            hover_color="#0891B2",
-            text_color="#09090B",
+            fg_color=COLOR_PRIMARY_ACCENT,
+            hover_color=COLOR_HOVER_ACCENT,
+            text_color=COLOR_BG_MAIN,
             height=38,
             corner_radius=6
         )
@@ -306,10 +614,10 @@ class IgniteApp:
             command=self.run_batch_processing,
             font=ctk.CTkFont(family="Arial", size=13, weight="bold"),
             fg_color="transparent",
-            text_color="#06B6D4",
-            hover_color="#18181B",
+            text_color=COLOR_PRIMARY_ACCENT,
+            hover_color=COLOR_BG_CARD,
             border_width=1,
-            border_color="#06B6D4",
+            border_color=COLOR_PRIMARY_ACCENT,
             height=34,
             corner_radius=6
         )
@@ -320,7 +628,7 @@ class IgniteApp:
             self.sidebar_scroll,
             text="FARBPALETTE",
             font=ctk.CTkFont(family="Arial", size=10, weight="bold"),
-            text_color="#06B6D4"
+            text_color=COLOR_PRIMARY_ACCENT
         )
         palette_lbl.pack(padx=5, pady=(5, 2), anchor="w")
         
@@ -329,17 +637,17 @@ class IgniteApp:
             values=["Graustufen", "Regenbogen (Jet)", "Inferno", "Heiß (Hot)"],
             command=self.on_palette_changed,
             font=ctk.CTkFont(family="Arial", size=13),
-            fg_color="#18181B",
-            button_color="#06B6D4",
-            button_hover_color="#0891B2",
-            text_color="#F4F4F5",
+            fg_color=COLOR_BG_CARD,
+            button_color=COLOR_PRIMARY_ACCENT,
+            button_hover_color=COLOR_HOVER_ACCENT,
+            text_color=COLOR_TEXT_PRIMARY,
             height=32,
             corner_radius=6
         )
         self.palette_menu.pack(fill=ctk.X, pady=(0, 15))
 
         # Sektion: Pipeline Parameter (Einklappbar)
-        self.param_card = ctk.CTkFrame(self.sidebar_scroll, fg_color="#18181B", corner_radius=8, border_width=1, border_color="#27272A")
+        self.param_card = ctk.CTkFrame(self.sidebar_scroll, fg_color=COLOR_BG_CARD, corner_radius=8, border_width=1, border_color=COLOR_BORDER_CARD)
         self.param_card.pack(fill=ctk.X, pady=(0, 15))
 
         self.toggle_param_btn = ctk.CTkButton(
@@ -348,8 +656,8 @@ class IgniteApp:
             command=self.toggle_pipeline_parameters,
             font=ctk.CTkFont(size=11, weight="bold"),
             fg_color="transparent",
-            text_color="#06B6D4",
-            hover_color="#27272A",
+            text_color=COLOR_PRIMARY_ACCENT,
+            hover_color=COLOR_BORDER_CARD,
             height=32,
             anchor="w",
             corner_radius=8
@@ -379,22 +687,22 @@ class IgniteApp:
         self.temp_offset_slider.configure(command=self.update_params)
 
         # Sektion: Analyse-Info & Status
-        self.info_card = ctk.CTkFrame(self.sidebar_scroll, fg_color="#18181B", corner_radius=8, border_width=1, border_color="#27272A")
+        self.info_card = ctk.CTkFrame(self.sidebar_scroll, fg_color=COLOR_BG_CARD, corner_radius=8, border_width=1, border_color=COLOR_BORDER_CARD)
         self.info_card.pack(fill=ctk.X, pady=(0, 15), ipady=8)
 
-        self.filename_label = ctk.CTkLabel(self.info_card, text="Datei: Keine", font=ctk.CTkFont(size=12), text_color="#F4F4F5", anchor="w")
+        self.filename_label = ctk.CTkLabel(self.info_card, text="Datei: Keine", font=ctk.CTkFont(size=12), text_color=COLOR_TEXT_PRIMARY, anchor="w")
         self.filename_label.pack(fill=ctk.X, padx=15, pady=(10, 4))
 
-        self.backend_label = ctk.CTkLabel(self.info_card, text="Backend: Erkennung...", font=ctk.CTkFont(size=12), text_color="#F4F4F5", anchor="w")
+        self.backend_label = ctk.CTkLabel(self.info_card, text="Backend: Erkennung...", font=ctk.CTkFont(size=12), text_color=COLOR_TEXT_PRIMARY, anchor="w")
         self.backend_label.pack(fill=ctk.X, padx=15, pady=4)
 
-        self.status_label = ctk.CTkLabel(self.info_card, text="Status: Bereit", font=ctk.CTkFont(size=12, slant="italic"), text_color="#A1A1AA", anchor="w")
+        self.status_label = ctk.CTkLabel(self.info_card, text="Status: Bereit", font=ctk.CTkFont(size=12, slant="italic"), text_color=COLOR_TEXT_SECONDARY, anchor="w")
         self.status_label.pack(fill=ctk.X, padx=15, pady=4)
 
-        self.hotspot_label = ctk.CTkLabel(self.info_card, text="Hotspots: --", font=ctk.CTkFont(size=13, weight="bold"), text_color="#F4F4F5", anchor="w")
+        self.hotspot_label = ctk.CTkLabel(self.info_card, text="Hotspots: --", font=ctk.CTkFont(size=13, weight="bold"), text_color=COLOR_TEXT_PRIMARY, anchor="w")
         self.hotspot_label.pack(fill=ctk.X, padx=15, pady=4)
 
-        self.pixel_info_label = ctk.CTkLabel(self.info_card, text="Pixel-Info: --", font=ctk.CTkFont(size=11, slant="italic"), text_color="#71717A", anchor="w", justify="left")
+        self.pixel_info_label = ctk.CTkLabel(self.info_card, text="Pixel-Info: --", font=ctk.CTkFont(size=11, slant="italic"), text_color=COLOR_TEXT_SECONDARY, anchor="w", justify="left")
         self.pixel_info_label.pack(fill=ctk.X, padx=15, pady=(4, 10))
 
         # Dokumentations-Ordner-Button
@@ -404,10 +712,10 @@ class IgniteApp:
             command=self.open_output_dir,
             font=ctk.CTkFont(family="Arial", size=13),
             fg_color="transparent",
-            text_color="#06B6D4",
-            hover_color="#18181B",
+            text_color=COLOR_PRIMARY_ACCENT,
+            hover_color=COLOR_BG_CARD,
             border_width=1,
-            border_color="#27272A",
+            border_color=COLOR_BORDER_CARD,
             height=32,
             corner_radius=6
         )
@@ -420,10 +728,10 @@ class IgniteApp:
             command=self.export_html_report,
             font=ctk.CTkFont(family="Arial", size=13),
             fg_color="transparent",
-            text_color="#06B6D4",
-            hover_color="#18181B",
+            text_color=COLOR_PRIMARY_ACCENT,
+            hover_color=COLOR_BG_CARD,
             border_width=1,
-            border_color="#27272A",
+            border_color=COLOR_BORDER_CARD,
             height=32,
             corner_radius=6
         )
@@ -437,9 +745,9 @@ class IgniteApp:
             font=ctk.CTkFont(family="Arial", size=13),
             fg_color="transparent",
             text_color="#EF4444",
-            hover_color="#2D1A22",
+            hover_color=("#FEE2E2", "#2D1A22"),
             border_width=1,
-            border_color="#451A22",
+            border_color=("#FCA5A5", "#451A22"),
             height=32,
             corner_radius=6
         )
@@ -448,25 +756,33 @@ class IgniteApp:
         # Footer
         footer_lbl = ctk.CTkLabel(
             sidebar_frame,
-            text="Jona Noack | Jugend forscht 2026",
+            text="© 2026 Jona Noack · Jugend forscht",
             font=ctk.CTkFont(family="Arial", size=10),
-            text_color="#52525B"
+            text_color=COLOR_TEXT_MUTED
         )
-        footer_lbl.pack(side=ctk.BOTTOM, pady=15)
+        footer_lbl.pack(side=ctk.BOTTOM, pady=(4, 15))
+
+        disclaimer_lbl = ctk.CTkLabel(
+            sidebar_frame,
+            text="Kein Ersatz für ärztliche Diagnose",
+            font=ctk.CTkFont(family="Arial", size=9),
+            text_color=COLOR_TEXT_MUTED
+        )
+        disclaimer_lbl.pack(side=ctk.BOTTOM, pady=(0, 2))
 
         # ── 2. RECHTER HAUPTBEREICH (Tabview) ─────────────────────────────────
-        content_frame = ctk.CTkFrame(self.root, fg_color="#09090B", corner_radius=0)
+        content_frame = ctk.CTkFrame(self.root, fg_color=COLOR_BG_MAIN, corner_radius=0)
         content_frame.grid(row=0, column=1, sticky="nsew", padx=0, pady=0)
 
         # CTkTabview erstellen und konfigurieren
         self.tabview = ctk.CTkTabview(
             content_frame,
             fg_color="transparent",
-            segmented_button_selected_color="#06B6D4",
-            segmented_button_selected_hover_color="#0891B2",
-            segmented_button_unselected_color="#18181B",
-            segmented_button_unselected_hover_color="#27272A",
-            text_color="#F4F4F5"
+            segmented_button_selected_color=COLOR_PRIMARY_ACCENT,
+            segmented_button_selected_hover_color=COLOR_HOVER_ACCENT,
+            segmented_button_unselected_color=COLOR_BG_CARD,
+            segmented_button_unselected_hover_color=COLOR_BORDER_CARD,
+            text_color=COLOR_TEXT_PRIMARY
         )
         self.tabview.pack(fill=ctk.BOTH, expand=True, padx=15, pady=15)
 
@@ -498,10 +814,10 @@ class IgniteApp:
         for name, row, col in steps:
             panel_frame = ctk.CTkFrame(
                 grid_frame,
-                fg_color="#18181B",
+                fg_color=COLOR_BG_CARD,
                 corner_radius=8,
                 border_width=1,
-                border_color="#27272A"
+                border_color=COLOR_BORDER_CARD
             )
             panel_frame.grid(row=row, column=col, padx=10, pady=10, sticky="nsew")
 
@@ -509,7 +825,7 @@ class IgniteApp:
                 panel_frame,
                 text=name,
                 font=ctk.CTkFont(family="Arial", size=13, weight="bold"),
-                text_color="#F4F4F5",
+                text_color=COLOR_TEXT_PRIMARY,
                 anchor="w"
             )
             title.pack(fill=ctk.X, padx=15, pady=(10, 2))
@@ -518,8 +834,8 @@ class IgniteApp:
                 panel_frame,
                 text="Warte auf Bilddaten...",
                 font=ctk.CTkFont(family="Arial", size=12),
-                text_color="#71717A",
-                fg_color="#09090B",
+                text_color=COLOR_TEXT_SECONDARY,
+                fg_color=COLOR_BG_MAIN,
                 corner_radius=6
             )
             lbl.pack(fill=ctk.BOTH, expand=True, padx=15, pady=(0, 15))
@@ -540,10 +856,10 @@ class IgniteApp:
         for step_name, tab_name in tab_mapping.items():
             panel_frame = ctk.CTkFrame(
                 self.tabview.tab(tab_name),
-                fg_color="#18181B",
+                fg_color=COLOR_BG_CARD,
                 corner_radius=8,
                 border_width=1,
-                border_color="#27272A"
+                border_color=COLOR_BORDER_CARD
             )
             panel_frame.pack(fill=ctk.BOTH, expand=True, padx=5, pady=5)
 
@@ -551,7 +867,7 @@ class IgniteApp:
                 panel_frame,
                 text=step_name,
                 font=ctk.CTkFont(family="Arial", size=15, weight="bold"),
-                text_color="#F4F4F5",
+                text_color=COLOR_TEXT_PRIMARY,
                 anchor="w"
             )
             title.pack(fill=ctk.X, padx=20, pady=(15, 5))
@@ -560,8 +876,8 @@ class IgniteApp:
                 panel_frame,
                 text="Warte auf Bilddaten...",
                 font=ctk.CTkFont(family="Arial", size=14),
-                text_color="#71717A",
-                fg_color="#09090B",
+                text_color=COLOR_TEXT_SECONDARY,
+                fg_color=COLOR_BG_MAIN,
                 corner_radius=6
             )
             lbl.pack(fill=ctk.BOTH, expand=True, padx=20, pady=(0, 20))
@@ -580,10 +896,10 @@ class IgniteApp:
         # Histogramm-Zeichenfläche
         canvas_panel = ctk.CTkFrame(
             hist_tab,
-            fg_color="#18181B",
+            fg_color=COLOR_BG_CARD,
             corner_radius=8,
             border_width=1,
-            border_color="#27272A"
+            border_color=COLOR_BORDER_CARD
         )
         canvas_panel.grid(row=0, column=0, padx=10, pady=5, sticky="nsew")
 
@@ -591,21 +907,21 @@ class IgniteApp:
             canvas_panel,
             text="Statistisches Intensitätshistogramm",
             font=ctk.CTkFont(family="Arial", size=14, weight="bold"),
-            text_color="#F4F4F5",
+            text_color=COLOR_TEXT_PRIMARY,
             anchor="w"
         )
         self.title_hist.pack(fill=ctk.X, padx=20, pady=(15, 5))
 
-        self.hist_container = ctk.CTkFrame(canvas_panel, fg_color="#09090B", corner_radius=6)
+        self.hist_container = ctk.CTkFrame(canvas_panel, fg_color=COLOR_BG_MAIN, corner_radius=6)
         self.hist_container.pack(fill=ctk.BOTH, expand=True, padx=20, pady=(0, 20))
 
         # Statistiken-Seitenleiste im Tab
         stats_panel = ctk.CTkFrame(
             hist_tab,
-            fg_color="#18181B",
+            fg_color=COLOR_BG_CARD,
             corner_radius=8,
             border_width=1,
-            border_color="#27272A"
+            border_color=COLOR_BORDER_CARD
         )
         stats_panel.grid(row=0, column=1, padx=10, pady=5, sticky="nsew")
 
@@ -613,7 +929,7 @@ class IgniteApp:
             stats_panel,
             text="MESSWERTE & STATISTIK",
             font=ctk.CTkFont(family="Arial", size=13, weight="bold"),
-            text_color="#06B6D4",
+            text_color=COLOR_PRIMARY_ACCENT,
             anchor="w"
         )
         title_stats.pack(fill=ctk.X, padx=15, pady=(15, 10))
@@ -645,7 +961,7 @@ class IgniteApp:
                     stats_panel,
                     text="KLINISCHE SYMMETRIE (L/R)",
                     font=ctk.CTkFont(family="Arial", size=11, weight="bold"),
-                    text_color="#06B6D4",
+                    text_color=COLOR_PRIMARY_ACCENT,
                     anchor="w"
                 )
                 self.stats_divider_label.pack(fill=ctk.X, padx=15, pady=(15, 2))
@@ -655,7 +971,7 @@ class IgniteApp:
                 stats_panel,
                 text=display_name,
                 font=ctk.CTkFont(family="Arial", size=10, weight="bold"),
-                text_color="#71717A",
+                text_color=COLOR_TEXT_SECONDARY,
                 anchor="w"
             )
             lbl_title.pack(fill=ctk.X, padx=15, pady=(6, 1))
@@ -665,7 +981,7 @@ class IgniteApp:
                 stats_panel,
                 text="--",
                 font=ctk.CTkFont(family="Arial", size=13, weight="bold"),
-                text_color="#F4F4F5",
+                text_color=COLOR_TEXT_PRIMARY,
                 anchor="w"
             )
             lbl_val.pack(fill=ctk.X, padx=15, pady=(0, 6))
@@ -673,19 +989,19 @@ class IgniteApp:
 
         # ── TAB 6: Detail-Analyse ──────────────────────────────────────────
         detail_tab = self.tabview.tab("6. Detail-Analyse")
-        self.detail_panel = ctk.CTkFrame(detail_tab, fg_color="#18181B", corner_radius=8, border_width=1, border_color="#27272A")
+        self.detail_panel = ctk.CTkFrame(detail_tab, fg_color=COLOR_BG_CARD, corner_radius=8, border_width=1, border_color=COLOR_BORDER_CARD)
         self.detail_panel.pack(fill=ctk.BOTH, expand=True, padx=10, pady=10)
 
         self.detail_title = ctk.CTkLabel(
             self.detail_panel,
             text="Detail-Analyse der Messergebnisse",
             font=ctk.CTkFont(family="Arial", size=15, weight="bold"),
-            text_color="#F4F4F5",
+            text_color=COLOR_TEXT_PRIMARY,
             anchor="w"
         )
         self.detail_title.pack(fill=ctk.X, padx=20, pady=(20, 10))
 
-        self.detail_content_frame = ctk.CTkFrame(self.detail_panel, fg_color="#09090B", corner_radius=6)
+        self.detail_content_frame = ctk.CTkFrame(self.detail_panel, fg_color=COLOR_BG_MAIN, corner_radius=6)
         self.detail_content_frame.pack(fill=ctk.BOTH, expand=True, padx=20, pady=(0, 20))
 
         # Initialen Inhalt zeichnen
@@ -693,16 +1009,27 @@ class IgniteApp:
 
     def on_analysis_mode_changed(self, mode: str) -> None:
         """Wird aufgerufen, wenn der Analysemodus gewechselt wird."""
-        if mode == "Fuß-Symmetrieanalyse":
-            # Diabetes-Dropdown wieder einblenden (vor den Notizen)
-            self.patient_notes_entry.pack_forget()
+        # Unpack all to ensure correct ordering
+        self.patient_name_entry.pack_forget()
+        self.patient_dob_entry.pack_forget()
+        self.patient_age_entry.pack_forget()
+        self.patient_diabetes_opt.pack_forget()
+        self.patient_notes_entry.pack_forget()
+        self.patient_icd_entry.pack_forget()
+        self.operator_entry.pack_forget()
+
+        # Repack in correct order
+        self.patient_name_entry.pack(fill=ctk.X, padx=12, pady=4)
+        self.patient_dob_entry.pack(fill=ctk.X, padx=12, pady=4)
+        self.patient_age_entry.pack(fill=ctk.X, padx=12, pady=4)
+        if mode == "Podologische Symmetrieanalyse":
             self.patient_diabetes_opt.pack(fill=ctk.X, padx=12, pady=4)
-            self.patient_notes_entry.pack(fill=ctk.X, padx=12, pady=(4, 8))
-        else:
-            self.patient_diabetes_opt.pack_forget()
+        self.patient_notes_entry.pack(fill=ctk.X, padx=12, pady=4)
+        self.patient_icd_entry.pack(fill=ctk.X, padx=12, pady=4)
+        self.operator_entry.pack(fill=ctk.X, padx=12, pady=4)
 
         # Titel im Histogramm-Tab anpassen
-        if mode == "Fuß-Symmetrieanalyse":
+        if mode == "Podologische Symmetrieanalyse":
             self.title_hist.configure(text="Statistisches Intensitätshistogramm (Exklusiv über Fußoberfläche)")
         else:
             self.title_hist.configure(text="Statistisches Intensitätshistogramm (Analysierte Oberfläche)")
@@ -722,7 +1049,15 @@ class IgniteApp:
 
         mode = self.analysis_mode_opt.get()
 
-        if mode == "Fuß-Symmetrieanalyse":
+        # Einheit bestimmen
+        unit = self.temp_unit_opt.get() if hasattr(self, "temp_unit_opt") else "Celsius (°C)"
+        unit_str = "°C"
+        if "Fahrenheit" in unit:
+            unit_str = "°F"
+        elif "Kelvin" in unit:
+            unit_str = "K"
+
+        if mode == "Podologische Symmetrieanalyse":
             self.detail_title.configure(text="Detaillierter Zonen-Symmetrie-Vergleich (3-Zonen-Modell)")
 
             # Spalten konfigurieren
@@ -738,7 +1073,7 @@ class IgniteApp:
                     self.detail_content_frame, 
                     text=text, 
                     font=ctk.CTkFont(family="Arial", size=12, weight="bold"), 
-                    text_color="#00B4D8"
+                    text_color=COLOR_PRIMARY_ACCENT
                 )
                 lbl.grid(row=0, column=col_idx, padx=10, pady=12, sticky="w" if col_idx==0 or col_idx==4 else "")
 
@@ -746,19 +1081,19 @@ class IgniteApp:
             self.zonal_row_labels = {}
             zones = [("Vorfuß (Zehen / Ballen)", "fore"), ("Mittelfuß (Gewölbe)", "mid"), ("Ferse (Rückfuß)", "heel")]
             for row_idx, (display_name, key) in enumerate(zones, start=1):
-                lbl_name = ctk.CTkLabel(self.detail_content_frame, text=display_name, font=ctk.CTkFont(family="Arial", size=12, weight="bold"), text_color="#F1F5F9")
+                lbl_name = ctk.CTkLabel(self.detail_content_frame, text=display_name, font=ctk.CTkFont(family="Arial", size=12, weight="bold"), text_color=COLOR_TEXT_PRIMARY)
                 lbl_name.grid(row=row_idx, column=0, padx=10, pady=12, sticky="w")
                 
-                lbl_l = ctk.CTkLabel(self.detail_content_frame, text="--", font=ctk.CTkFont(family="Arial", size=12), text_color="#F1F5F9")
+                lbl_l = ctk.CTkLabel(self.detail_content_frame, text="--", font=ctk.CTkFont(family="Arial", size=12), text_color=COLOR_TEXT_PRIMARY)
                 lbl_l.grid(row=row_idx, column=1, padx=10, pady=12, sticky="")
                 
-                lbl_r = ctk.CTkLabel(self.detail_content_frame, text="--", font=ctk.CTkFont(family="Arial", size=12), text_color="#F1F5F9")
+                lbl_r = ctk.CTkLabel(self.detail_content_frame, text="--", font=ctk.CTkFont(family="Arial", size=12), text_color=COLOR_TEXT_PRIMARY)
                 lbl_r.grid(row=row_idx, column=2, padx=10, pady=12, sticky="")
                 
-                lbl_d = ctk.CTkLabel(self.detail_content_frame, text="--", font=ctk.CTkFont(family="Arial", size=12, weight="bold"), text_color="#F1F5F9")
+                lbl_d = ctk.CTkLabel(self.detail_content_frame, text="--", font=ctk.CTkFont(family="Arial", size=12, weight="bold"), text_color=COLOR_TEXT_PRIMARY)
                 lbl_d.grid(row=row_idx, column=3, padx=10, pady=12, sticky="")
                 
-                lbl_diag = ctk.CTkLabel(self.detail_content_frame, text="Keine Daten", font=ctk.CTkFont(family="Arial", size=12, weight="bold"), text_color="#94A3B8")
+                lbl_diag = ctk.CTkLabel(self.detail_content_frame, text="Keine Messdaten vorhanden", font=ctk.CTkFont(family="Arial", size=12, weight="bold"), text_color=COLOR_TEXT_SECONDARY)
                 lbl_diag.grid(row=row_idx, column=4, padx=10, pady=12, sticky="w")
                 
                 self.zonal_row_labels[key] = {"l": lbl_l, "r": lbl_r, "d": lbl_d, "diag": lbl_diag}
@@ -770,19 +1105,23 @@ class IgniteApp:
                     r_v = self.zonal_stats["right"][key]
                     d_v = abs(l_v - r_v)
                     
+                    l_v_str = self.to_temp_str(l_v)
+                    r_v_str = self.to_temp_str(r_v)
+                    d_v_str = self.to_delta_str(d_v)
+                    
                     if d_v >= 15.0:
-                        z_diag = "Asymmetrisch (Auffällig)"
+                        z_diag = "Asymmetrie detektiert \u2013 Abkl\u00e4rung empfohlen"
                         z_color = "#FF0055"
                     elif d_v >= 10.0:
-                        z_diag = "Leichte Abweichung"
+                        z_diag = "Grenzwert \u2013 Verlaufsbeobachtung"
                         z_color = "#FFA500"
                     else:
-                        z_diag = "Normal (Symmetrisch)"
+                        z_diag = "Symmetrisch \u2013 Unauff\u00e4llig"
                         z_color = "#10B981"
                         
-                    self.zonal_row_labels[key]["l"].configure(text=f"{l_v:.2f}")
-                    self.zonal_row_labels[key]["r"].configure(text=f"{r_v:.2f}")
-                    self.zonal_row_labels[key]["d"].configure(text=f"{d_v:.2f}", text_color=z_color)
+                    self.zonal_row_labels[key]["l"].configure(text=l_v_str)
+                    self.zonal_row_labels[key]["r"].configure(text=r_v_str)
+                    self.zonal_row_labels[key]["d"].configure(text=d_v_str, text_color=z_color)
                     self.zonal_row_labels[key]["diag"].configure(text=z_diag, text_color=z_color)
 
         else:
@@ -798,13 +1137,13 @@ class IgniteApp:
             scroll_frame.grid_columnconfigure(3, weight=2)
             scroll_frame.grid_columnconfigure(4, weight=3)
 
-            headers = ["Hotspot ID", "Fläche (Pixel)", "Mittelwert Hitze", "Maximalwert Hitze", "Klinischer Befund"]
+            headers = ["Hotspot ID", "Fläche (Pixel)", f"Mittelwert Hitze ({unit_str})", f"Maximalwert Hitze ({unit_str})", "Klinischer Befund"]
             for col_idx, text in enumerate(headers):
                 lbl = ctk.CTkLabel(
-                    scroll_frame, 
-                    text=text, 
-                    font=ctk.CTkFont(family="Arial", size=12, weight="bold"), 
-                    text_color="#00B4D8"
+                     scroll_frame, 
+                     text=text, 
+                     font=ctk.CTkFont(family="Arial", size=12, weight="bold"), 
+                     text_color=COLOR_PRIMARY_ACCENT
                 )
                 lbl.grid(row=0, column=col_idx, padx=10, pady=12, sticky="w" if col_idx==0 or col_idx==4 else "")
 
@@ -814,24 +1153,28 @@ class IgniteApp:
                 for idx, hs in enumerate(hotspots, start=1):
                     area = hs["area"]
                     mean_temp = hs["mean_temp"]
+                    max_temp = hs["max_temp"]
+                    
+                    mean_temp_str = self.to_temp_str(mean_temp)
+                    max_temp_str = self.to_temp_str(max_temp)
                     
                     if area >= 150 or mean_temp >= 180:
-                        diag_text = "Akut entzündlich (Kritisch)"
+                        diag_text = "Klinisch relevant \u2013 Abkl\u00e4rung empfohlen"
                         diag_color = "#FF0055"
                     elif area >= 50 or mean_temp >= 140:
-                        diag_text = "Grenzwertig (Beobachtung)"
+                        diag_text = "Grenzwertig \u2013 Verlaufsbeobachtung"
                         diag_color = "#FFA500"
                     else:
                         diag_text = "Geringfügig (Unbedenklich)"
                         diag_color = "#10B981"
 
-                    ctk.CTkLabel(scroll_frame, text=f"H#{hs['index']}", font=ctk.CTkFont(size=12, weight="bold"), text_color="#F1F5F9").grid(row=idx, column=0, padx=10, pady=8, sticky="w")
-                    ctk.CTkLabel(scroll_frame, text=f"{area:,} px", font=ctk.CTkFont(size=12), text_color="#F1F5F9").grid(row=idx, column=1, padx=10, pady=8)
-                    ctk.CTkLabel(scroll_frame, text=f"{mean_temp:.2f}", font=ctk.CTkFont(size=12), text_color="#F1F5F9").grid(row=idx, column=2, padx=10, pady=8)
-                    ctk.CTkLabel(scroll_frame, text=f"{hs['max_temp']:.0f}", font=ctk.CTkFont(size=12), text_color="#F1F5F9").grid(row=idx, column=3, padx=10, pady=8)
+                    ctk.CTkLabel(scroll_frame, text=f"H#{hs['index']}", font=ctk.CTkFont(size=12, weight="bold"), text_color=COLOR_TEXT_PRIMARY).grid(row=idx, column=0, padx=10, pady=8, sticky="w")
+                    ctk.CTkLabel(scroll_frame, text=f"{area:,} px", font=ctk.CTkFont(size=12), text_color=COLOR_TEXT_PRIMARY).grid(row=idx, column=1, padx=10, pady=8)
+                    ctk.CTkLabel(scroll_frame, text=mean_temp_str, font=ctk.CTkFont(size=12), text_color=COLOR_TEXT_PRIMARY).grid(row=idx, column=2, padx=10, pady=8)
+                    ctk.CTkLabel(scroll_frame, text=max_temp_str, font=ctk.CTkFont(size=12), text_color=COLOR_TEXT_PRIMARY).grid(row=idx, column=3, padx=10, pady=8)
                     ctk.CTkLabel(scroll_frame, text=diag_text, font=ctk.CTkFont(size=12, weight="bold"), text_color=diag_color).grid(row=idx, column=4, padx=10, pady=8, sticky="w")
             else:
-                lbl_no = ctk.CTkLabel(scroll_frame, text="Keine Hotspots detektiert oder Bild noch nicht geladen.", font=ctk.CTkFont(size=13, slant="italic"), text_color="#94A3B8")
+                lbl_no = ctk.CTkLabel(scroll_frame, text="Keine Hotspots detektiert oder Bild noch nicht geladen.", font=ctk.CTkFont(size=13, slant="italic"), text_color=COLOR_TEXT_SECONDARY)
                 lbl_no.grid(row=1, column=0, columnspan=5, padx=20, pady=30, sticky="nsew")
 
     def draw_general_annotations(self, img: np.ndarray, body_mask: np.ndarray, hotspots_mask: np.ndarray) -> np.ndarray:
@@ -967,7 +1310,7 @@ class IgniteApp:
             self.current_filepath = file_path
             self.filename_label.configure(
                 text=f"Datei: {os.path.basename(file_path)}",
-                text_color="#06B6D4"
+                text_color=COLOR_PRIMARY_ACCENT
             )
             self.process_pipeline()
 
@@ -1005,6 +1348,208 @@ class IgniteApp:
         
         if self.current_filepath:
             self.process_pipeline()
+
+    def on_calibration_changed(self, event=None) -> None:
+        """Wird aufgerufen, wenn die Kamera-Kalibrierungswerte geändert werden."""
+        try:
+            t_min = float(self.t_min_entry.get().replace(",", "."))
+            t_max = float(self.t_max_entry.get().replace(",", "."))
+            if t_max <= t_min:
+                self.calib_status_lbl.configure(
+                    text="⚠ T-Max muss größer als T-Min sein!", text_color="#EF4444"
+                )
+                return
+            self.t_min_celsius = t_min
+            self.t_max_celsius = t_max
+            resolution = (t_max - t_min) / 255.0
+            self.calib_status_lbl.configure(
+                text=f"Bereich: {t_min:.1f}°C – {t_max:.1f}°C  |  Aufl.: {resolution:.3f}°C/px",
+                text_color="#3F3F46"
+            )
+            # Pipeline neu starten, falls Bild geladen
+            if self.current_filepath:
+                self.process_pipeline()
+        except ValueError:
+            self.calib_status_lbl.configure(
+                text="⚠ Ungültige Eingabe (nur Zahlen erlaubt)", text_color="#EF4444"
+            )
+
+    def on_dsgvo_toggle(self) -> None:
+        """Aktiviert/Deaktiviert die DSGVO-Pseudonymisierung."""
+        self.dsgvo_anonymize = bool(self.dsgvo_switch.get())
+        if self.dsgvo_anonymize:
+            self.dsgvo_info_lbl.configure(
+                text="✓ Aktiv: Klarnamen werden NICHT in Dateien gespeichert.",
+                text_color="#10B981"
+            )
+        else:
+            self.dsgvo_info_lbl.configure(
+                text="Klarnamen werden NICHT in Dateien gespeichert.",
+                text_color="#3F3F46"
+            )
+
+    def convert_celsius_to_unit(self, val_c: float) -> float:
+        """Konvertiert einen Celsius-Wert unter Berücksichtigung von Emissionsgrad in die Ziel-Einheit."""
+        k = val_c + 273.15
+        eps = getattr(self, "emissivity", 0.98)
+        if eps <= 0:
+            eps = 0.98
+        k_corr = k / (eps ** 0.25)
+        c_corr = k_corr - 273.15
+        
+        unit = self.temp_unit_opt.get() if hasattr(self, "temp_unit_opt") else "Celsius (°C)"
+        if "Fahrenheit" in unit:
+            return c_corr * 1.8 + 32.0
+        elif "Kelvin" in unit:
+            return k_corr
+        return c_corr
+
+    def convert_delta_to_unit(self, delta_c: float) -> float:
+        """Konvertiert ein Celsius-Delta unter Berücksichtigung von Emissionsgrad in die Ziel-Einheit."""
+        eps = getattr(self, "emissivity", 0.98)
+        if eps <= 0:
+            eps = 0.98
+        delta_c_corr = delta_c / (eps ** 0.25)
+        unit = self.temp_unit_opt.get() if hasattr(self, "temp_unit_opt") else "Celsius (°C)"
+        if "Fahrenheit" in unit:
+            return delta_c_corr * 1.8
+        return delta_c_corr
+
+    def to_temp_val(self, raw_val: float) -> float:
+        """Konvertiert einen Raw-Pixelwert in die ausgewählte Temperatureinheit unter Berücksichtigung von Emissionsgrad."""
+        # Basis-Celsius: T_min + x * (T_max - T_min) / 255
+        temp_c = self.t_min_celsius + (raw_val / 255.0) * (self.t_max_celsius - self.t_min_celsius)
+        
+        # Emissionsgrad-Korrektur (Stefan-Boltzmann-Gesetz auf absolute Temperatur in Kelvin)
+        temp_k = temp_c + 273.15
+        eps = getattr(self, "emissivity", 0.98)
+        if eps <= 0:
+            eps = 0.98
+        temp_k_corr = temp_k / (eps ** 0.25)
+        temp_c_corr = temp_k_corr - 273.15
+        
+        unit = self.temp_unit_opt.get() if hasattr(self, "temp_unit_opt") else "Celsius (°C)"
+        if "Fahrenheit" in unit:
+            return temp_c_corr * 1.8 + 32.0
+        elif "Kelvin" in unit:
+            return temp_k_corr
+        return temp_c_corr
+
+    def to_temp_str(self, raw_val: float) -> str:
+        """Gibt den Temperaturwert formatiert mit der ausgewählten Einheit zurück."""
+        val = self.to_temp_val(raw_val)
+        unit = self.temp_unit_opt.get() if hasattr(self, "temp_unit_opt") else "Celsius (°C)"
+        unit_str = "°C"
+        if "Fahrenheit" in unit:
+            unit_str = "°F"
+        elif "Kelvin" in unit:
+            unit_str = "K"
+        return f"{val:.2f} {unit_str}"
+
+    def to_delta_val(self, raw_delta: float) -> float:
+        """Konvertiert ein Raw-Pixel-Delta in das Temperatur-Delta der ausgewählten Einheit."""
+        delta_c = (self.t_max_celsius - self.t_min_celsius) / 255.0 * raw_delta
+        eps = getattr(self, "emissivity", 0.98)
+        if eps <= 0:
+            eps = 0.98
+        delta_c_corr = delta_c / (eps ** 0.25)
+        
+        unit = self.temp_unit_opt.get() if hasattr(self, "temp_unit_opt") else "Celsius (°C)"
+        if "Fahrenheit" in unit:
+            return delta_c_corr * 1.8
+        return delta_c_corr
+
+    def to_delta_str(self, raw_delta: float) -> str:
+        """Gibt das Temperatur-Delta formatiert mit der ausgewählten Einheit zurück."""
+        val = self.to_delta_val(raw_delta)
+        unit = self.temp_unit_opt.get() if hasattr(self, "temp_unit_opt") else "Celsius (°C)"
+        unit_str = "°C"
+        if "Fahrenheit" in unit:
+            unit_str = "°F"
+        elif "Kelvin" in unit:
+            unit_str = "K"
+        return f"{val:.2f} {unit_str}"
+
+    def on_temp_unit_changed(self, unit: str) -> None:
+        """Behandelt die Änderung der Temperatureinheit."""
+        if self.current_filepath:
+            self.process_pipeline()
+        else:
+            self.update_detail_tab()
+            self.draw_histogram()
+
+    def on_emissivity_changed(self, event=None) -> None:
+        """Behandelt die Änderung des Emissionsgrads."""
+        try:
+            val = float(self.emissivity_entry.get().replace(",", "."))
+            if not (0.1 <= val <= 1.0):
+                raise ValueError()
+            self.emissivity = val
+            if self.current_filepath:
+                self.process_pipeline()
+        except ValueError:
+            self.emissivity_entry.delete(0, tk.END)
+            self.emissivity_entry.insert(0, f"{self.emissivity:.2f}")
+            messagebox.showerror("Fehler", "Der Emissionsgrad muss eine Zahl zwischen 0.1 und 1.0 sein.")
+
+    def on_export_path_changed(self, event=None) -> None:
+        """Behandelt die manuelle Pfadänderung des Exportordners."""
+        path = self.export_path_entry.get().strip()
+        if path:
+            config.OUTPUT_DIR = path
+            config.init_output_dir()
+            global AUDIT_LOG_FILE
+            config.AUDIT_TRAIL_PATH = os.path.join(config.OUTPUT_DIR, "ignite_audit_trail.csv")
+            AUDIT_LOG_FILE = config.AUDIT_TRAIL_PATH
+
+    def browse_export_path(self) -> None:
+        """Öffnet den Verzeichnisauswahldialog zur Wahl des Exportordners."""
+        path = filedialog.askdirectory(title="Exportordner wählen")
+        if path:
+            self.export_path_entry.delete(0, tk.END)
+            self.export_path_entry.insert(0, path)
+            self.on_export_path_changed()
+
+    def toggle_settings_visibility(self) -> None:
+        """Blendet die Systemeinstellungen in der Seitenleiste ein oder aus."""
+        if self.settings_visible:
+            self.settings_boxes_frame.pack_forget()
+            self.toggle_settings_btn.configure(text="⚙️ Systemeinstellungen [▶]")
+            self.settings_visible = False
+        else:
+            self.settings_boxes_frame.pack(fill=ctk.X, padx=12, pady=(4, 8))
+            self.toggle_settings_btn.configure(text="⚙️ Systemeinstellungen [▼]")
+            self.settings_visible = True
+
+    def toggle_checklist_visibility(self) -> None:
+        """Blendet das Vorbereitungsprotokoll (Checkliste) in der Seitenleiste ein oder aus."""
+        if self.checklist_visible:
+            self.checklist_boxes_frame.pack_forget()
+            self.toggle_checklist_btn.configure(text="📋 Vorbereitungsprotokoll [▶]")
+            self.checklist_visible = False
+        else:
+            self.checklist_boxes_frame.pack(fill=ctk.X, padx=12, pady=(4, 8))
+            self.toggle_checklist_btn.configure(text="📋 Vorbereitungsprotokoll [▼]")
+            self.checklist_visible = True
+
+    def update_checklist_status(self) -> None:
+        """Aktualisiert das Status-Label der Vorbereitungs-Checkliste."""
+        checked_count = sum([
+            self.chk_temp.get(),
+            self.chk_draft.get(),
+            self.chk_acclim.get(),
+            self.chk_creams.get()
+        ])
+        if checked_count == 4:
+            self.checklist_status_lbl.configure(
+                text="✓ Protokoll vollständig erfüllt",
+                text_color="#10B981"
+            )
+        else:
+            self.checklist_status_lbl.configure(
+                text=f"Protokoll: {checked_count}/4 Bedingungen erfüllt",
+                text_color="#FFA500" if checked_count > 0 else "#A1A1AA"
+            )
 
     def draw_foot_annotations(self, img: np.ndarray, body_mask: np.ndarray, hotspots_mask: np.ndarray) -> np.ndarray:
         """Erzeugt anatomische Bounding-Boxen und 3-Zonen-Unterteilung."""
@@ -1065,9 +1610,20 @@ class IgniteApp:
             self.zonal_stats["left"]["heel"] = np.mean(img[z3_m > 0]) if np.sum(z3_m) > 0 else 0.0
             self.zonal_stats["left"]["exists"] = True
             
-            cv2.putText(annotated, f"VF: {self.zonal_stats['left']['fore']:.1f}", (min_x + 3, z1_y2 - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
-            cv2.putText(annotated, f"MF: {self.zonal_stats['left']['mid']:.1f}", (min_x + 3, z2_y2 - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
-            cv2.putText(annotated, f"F: {self.zonal_stats['left']['heel']:.1f}", (min_x + 3, max_y - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
+            unit = self.temp_unit_opt.get() if hasattr(self, "temp_unit_opt") else "Celsius (°C)"
+            unit_char = "C"
+            if "Fahrenheit" in unit:
+                unit_char = "F"
+            elif "Kelvin" in unit:
+                unit_char = "K"
+            
+            val_vf_l = self.to_temp_val(self.zonal_stats["left"]["fore"])
+            val_mf_l = self.to_temp_val(self.zonal_stats["left"]["mid"])
+            val_f_l = self.to_temp_val(self.zonal_stats["left"]["heel"])
+            
+            cv2.putText(annotated, f"VF: {val_vf_l:.1f} {unit_char}", (min_x + 3, z1_y2 - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
+            cv2.putText(annotated, f"MF: {val_mf_l:.1f} {unit_char}", (min_x + 3, z2_y2 - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
+            cv2.putText(annotated, f"F: {val_f_l:.1f} {unit_char}", (min_x + 3, max_y - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
 
         # ── Rechter Fuß (Right) ──────────────────────────────────────────────
         right_y, right_x = np.where(body_mask[:, mid_x:] > 0)
@@ -1099,9 +1655,13 @@ class IgniteApp:
             self.zonal_stats["right"]["heel"] = np.mean(img[z3_m > 0]) if np.sum(z3_m) > 0 else 0.0
             self.zonal_stats["right"]["exists"] = True
             
-            cv2.putText(annotated, f"VF: {self.zonal_stats['right']['fore']:.1f}", (min_x + 3, z1_y2 - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
-            cv2.putText(annotated, f"MF: {self.zonal_stats['right']['mid']:.1f}", (min_x + 3, z2_y2 - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
-            cv2.putText(annotated, f"F: {self.zonal_stats['right']['heel']:.1f}", (min_x + 3, max_y - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
+            val_vf_r = self.to_temp_val(self.zonal_stats["right"]["fore"])
+            val_mf_r = self.to_temp_val(self.zonal_stats["right"]["mid"])
+            val_f_r = self.to_temp_val(self.zonal_stats["right"]["heel"])
+            
+            cv2.putText(annotated, f"VF: {val_vf_r:.1f} {unit_char}", (min_x + 3, z1_y2 - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
+            cv2.putText(annotated, f"MF: {val_mf_r:.1f} {unit_char}", (min_x + 3, z2_y2 - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
+            cv2.putText(annotated, f"F: {val_f_r:.1f} {unit_char}", (min_x + 3, max_y - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
 
         return annotated
 
@@ -1111,7 +1671,7 @@ class IgniteApp:
             return
 
         try:
-            self.status_label.configure(text="Pipeline läuft...", text_color="#06B6D4")
+            self.status_label.configure(text="Pipeline läuft...", text_color=COLOR_PRIMARY_ACCENT)
             self.root.update_idletasks()
 
             # Parameter laden
@@ -1124,9 +1684,34 @@ class IgniteApp:
             er = self.erosion_slider.get()
             to = self.temp_offset_slider.get()
 
-            # Bild laden und kalibrieren (Offset addieren)
+            # Protokollprüfung vor Durchführung
+            checked_count = sum([
+                self.chk_temp.get(),
+                self.chk_draft.get(),
+                self.chk_acclim.get(),
+                self.chk_creams.get()
+            ])
+            if checked_count < 4:
+                confirm = messagebox.askyesno(
+                    "Vorbereitungsprotokoll unvollständig",
+                    "Achtung: Das klinische Vorbereitungsprotokoll ist unvollständig "
+                    f"({checked_count}/4 Bedingungen erfüllt).\n"
+                    "Dies kann zu verfälschten Messergebnissen führen.\n\n"
+                    "Möchten Sie die Analyse trotzdem fortsetzen?"
+                )
+                if not confirm:
+                    self.status_label.configure(text="Status: Abgebrochen", text_color="#A1A1AA")
+                    return
+
+            # Bild laden und kalibrieren (Offset addieren in Celsius -> in Raw-Pixel transformiert)
             img = image_processing.load_thermal_image(self.current_filepath)
-            calibrated_img = np.clip(img.astype(np.int16) + int(to), 0, 255).astype(np.uint8)
+            
+            range_c = self.t_max_celsius - self.t_min_celsius
+            if range_c <= 0:
+                range_c = 20.0
+            raw_offset = int(round(to * 255.0 / range_c))
+            
+            calibrated_img = np.clip(img.astype(np.int16) + raw_offset, 0, 255).astype(np.uint8)
             self.current_raw_original = calibrated_img
 
             storage.save_image_step(calibrated_img, "1", "original", self.current_filepath)
@@ -1157,7 +1742,7 @@ class IgniteApp:
             self.display_image_in_panel(diff_img, "3. Lokale Hitze-Differenz")
 
             # Panel 4: Annotiertes overlay mit BBoxes & Zonen
-            if self.analysis_mode_opt.get() == "Fuß-Symmetrieanalyse":
+            if self.analysis_mode_opt.get() == "Podologische Symmetrieanalyse":
                 annotated_overlay = self.draw_foot_annotations(calibrated_img, body_mask_vis, hotspot_mask)
             else:
                 annotated_overlay = self.draw_general_annotations(calibrated_img, body_mask_vis, hotspot_mask)
@@ -1189,8 +1774,40 @@ class IgniteApp:
 
             self.status_label.configure(
                 text="Status: ✓ Berechnet",
-                text_color="#06B6D4"
+                text_color=COLOR_PRIMARY_ACCENT
             )
+
+            # ── Audit-Trail Eintrag schreiben ──────────────────────────────────
+            try:
+                p_name_raw = self.patient_name_entry.get().strip() or "Unbekannt"
+                p_dob_raw = self.patient_dob_entry.get().strip()
+                operator = self.operator_entry.get().strip() or "n.a."
+                if self.dsgvo_anonymize and p_name_raw != "Unbekannt":
+                    pid = pseudonymize_patient(p_name_raw, p_dob_raw)
+                else:
+                    pid = p_name_raw
+                # Max-Temperatur in Celsius
+                max_px_val = float(np.max(calibrated_img[hotspot_mask > 0])) if np.any(hotspot_mask > 0) else 0.0
+                max_temp_c = pixel_to_celsius(max_px_val, self.t_min_celsius, self.t_max_celsius)
+                write_audit_entry({
+                    "Zeitstempel": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "Patienten-ID": pid,
+                    "Analysemodus": self.analysis_mode_opt.get(),
+                    "Bilddatei": os.path.basename(self.current_filepath),
+                    "sigma_k": round(self.sigma_k_slider.get(), 2),
+                    "tophat_factor": round(self.tophat_slider.get(), 4),
+                    "T_min_C": self.t_min_celsius,
+                    "T_max_C": self.t_max_celsius,
+                    "Hotspot_Pixel": hotspot_count,
+                    "Max_Temp_C": round(max_temp_c, 2),
+                    "Symmetrie_Delta": round(
+                        abs(self.zonal_stats.get("left", {}).get("fore", 0.0) -
+                            self.zonal_stats.get("right", {}).get("fore", 0.0)), 2
+                    ) if self.analysis_mode_opt.get() == "Podologische Symmetrieanalyse" else "n.a.",
+                    "Operator": operator,
+                })
+            except Exception as audit_err:
+                print(f"[AUDIT] Fehler: {audit_err}")
 
         except Exception as e:
             self.status_label.configure(text="Status: Fehler!", text_color="#EF4444")
@@ -1213,7 +1830,7 @@ class IgniteApp:
 
         self.backend_label.configure(
             text=f"Backend: {backend_disp}",
-            text_color="#06B6D4"
+            text_color=COLOR_PRIMARY_ACCENT
         )
 
     def display_image_in_panel(self, cv_img: np.ndarray, panel_name: str, update_cache: bool = True) -> None:
@@ -1309,7 +1926,7 @@ class IgniteApp:
             
             if self.current_raw_mask is not None:
                 body_mask_vis = (self.current_images.get("2. Hintergrund-Maske") > 0).astype(np.uint8) * 255
-                if self.analysis_mode_opt.get() == "Fuß-Symmetrieanalyse":
+                if self.analysis_mode_opt.get() == "Podologische Symmetrieanalyse":
                     overlay_img = self.draw_foot_annotations(self.current_raw_original, body_mask_vis, self.current_raw_mask)
                 else:
                     overlay_img = self.draw_general_annotations(self.current_raw_original, body_mask_vis, self.current_raw_mask)
@@ -1352,16 +1969,17 @@ class IgniteApp:
             orig_y = min(max(orig_y, 0), orig_h - 1)
             
             val = self.current_raw_original[orig_y, orig_x]
-            
+            temp_str = self.to_temp_str(float(val))
+
             is_hotspot = False
             if self.current_raw_mask is not None:
                 is_hotspot = self.current_raw_mask[orig_y, orig_x] > 0
-                
-            hotspot_str = "JA (Entzündung!)" if is_hotspot else "Nein"
+
+            hotspot_str = "Hotspot detektiert" if is_hotspot else "Unauffällig"
             hotspot_color = "#FF0055" if is_hotspot else "#0EA5E9"
-            
+
             self.pixel_info_label.configure(
-                text=f"Pixel: X={orig_x}, Y={orig_y}\nWert: {val} | Hotspot: {hotspot_str}",
+                text=f"X={orig_x}, Y={orig_y}  |  {temp_str}  (px={val})\nBefund: {hotspot_str}",
                 text_color=hotspot_color
             )
         else:
@@ -1385,36 +2003,87 @@ class IgniteApp:
         if len(pixels) == 0:
             return
 
-        # Statistiken
+        # Statistiken (in Raw-Werten für Berechnung, °C für Anzeige)
         mean_val = np.mean(pixels)
         std_val = np.std(pixels)
         threshold = mean_val + self.sigma_k_slider.get() * std_val
+
+        # Einheit bestimmen
+        unit = self.temp_unit_opt.get() if hasattr(self, "temp_unit_opt") else "Celsius (°C)"
+        unit_str = "°C"
+        if "Fahrenheit" in unit:
+            unit_str = "°F"
+        elif "Kelvin" in unit:
+            unit_str = "K"
+
+        # Dynamische Konvertierung für Statistiken
+        mean_disp = self.to_temp_val(mean_val)
+        std_disp = self.to_delta_val(std_val)
+        thresh_disp = self.to_temp_val(threshold)
+        max_disp = self.to_temp_val(float(np.max(pixels)))
+
+        # Vektorisierte Konvertierung der Pixeldaten mittels Numpy (effizient)
+        temp_c = self.t_min_celsius + (pixels / 255.0) * (self.t_max_celsius - self.t_min_celsius)
+        temp_k = temp_c + 273.15
+        eps = getattr(self, "emissivity", 0.98)
+        if eps <= 0:
+            eps = 0.98
+        temp_k_corr = temp_k / (eps ** 0.25)
+        temp_c_corr = temp_k_corr - 273.15
+        
+        if "Fahrenheit" in unit:
+            pixels_disp = temp_c_corr * 1.8 + 32.0
+        elif "Kelvin" in unit:
+            pixels_disp = temp_k_corr
+        else:
+            pixels_disp = temp_c_corr
 
         # Clear previous matplotlib drawing
         for widget in self.hist_container.winfo_children():
             widget.destroy()
 
-        # Matplotlib Figure erstellen (abgestimmt auf neues Dunkelgrau #09090B)
-        fig = Figure(figsize=(6, 3.8), dpi=100, facecolor="#09090B")
-        ax = fig.add_subplot(111, facecolor="#09090B")
+        # Matplotlib Styling je nach aktivem Designmode (Light/Dark)
+        mode = ctk.get_appearance_mode()
+        if mode == "Dark":
+            bg_fig = "#09090B"
+            bg_ax = "#09090B"
+            color_text = "#FAF5FF"
+            color_tick = "#71717A"
+            color_grid = "#18181B"
+            color_spine = "#27272A"
+            bg_legend = "#18181B"
+        else:
+            bg_fig = "#FAFAFA"
+            bg_ax = "#FFFFFF"
+            color_text = "#09090B"
+            color_tick = "#71717A"
+            color_grid = "#E4E4E7"
+            color_spine = "#E4E4E7"
+            bg_legend = "#F4F4F5"
 
-        # Histogramm plotten (mit neuem Cyan #06B6D4)
-        ax.hist(pixels, bins=256, range=(0, 256), color="#06B6D4", alpha=0.7, edgecolor="none")
-        
+        # Matplotlib Figure erstellen
+        fig = Figure(figsize=(6, 3.8), dpi=100, facecolor=bg_fig)
+        ax = fig.add_subplot(111, facecolor=bg_ax)
+
+        # Histogramm plotten
+        ax.hist(pixels_disp, bins=128, color=COLOR_PRIMARY_ACCENT, alpha=0.7, edgecolor="none")
+
         # Hilfslinien
-        ax.axvline(mean_val, color="#F4F4F5", linestyle="--", linewidth=1.5, label=f"Mittelwert \u03bc ({mean_val:.1f})")
-        ax.axvline(threshold, color="#FF0055", linestyle="-.", linewidth=2.0, label=f"Grenzwert µ+k\u03c3 ({threshold:.1f})")
+        ax.axvline(mean_disp, color=("#18181B" if mode != "Dark" else "#F4F4F5"), linestyle="--", linewidth=1.5,
+                   label=f"Mittelwert \u03bc ({mean_disp:.1f} {unit_str})")
+        ax.axvline(thresh_disp, color="#FF0055", linestyle="-.", linewidth=2.0,
+                   label=f"Grenzwert µ+k\u03c3 ({thresh_disp:.1f} {unit_str})")
 
         # Achsen-Styling
-        ax.spines['bottom'].set_color('#27272A')
-        ax.spines['top'].set_color('#27272A')
-        ax.spines['left'].set_color('#27272A')
-        ax.spines['right'].set_color('#27272A')
-        ax.tick_params(colors='#71717A', labelsize=8)
-        ax.set_xlabel("Pixel-Intensitätswert", color="#F4F4F5", fontsize=9, fontweight="bold")
-        ax.set_ylabel("Häufigkeit", color="#F4F4F5", fontsize=9, fontweight="bold")
-        ax.legend(facecolor="#18181B", edgecolor="#27272A", labelcolor="#F4F4F5", fontsize=8)
-        ax.grid(color="#18181B", linestyle=":", linewidth=0.5)
+        ax.spines['bottom'].set_color(color_spine)
+        ax.spines['top'].set_color(color_spine)
+        ax.spines['left'].set_color(color_spine)
+        ax.spines['right'].set_color(color_spine)
+        ax.tick_params(colors=color_tick, labelsize=8)
+        ax.set_xlabel(f"Temperatur ({unit_str})", color=color_text, fontsize=9, fontweight="bold")
+        ax.set_ylabel("Häufigkeit", color=color_text, fontsize=9, fontweight="bold")
+        ax.legend(facecolor=bg_legend, edgecolor=color_spine, labelcolor=color_text, fontsize=8)
+        ax.grid(color=color_grid, linestyle=":", linewidth=0.5)
 
         fig.tight_layout()
 
@@ -1423,29 +2092,30 @@ class IgniteApp:
         canvas_widget.draw()
         canvas_widget.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
-        # ── Statistiken-Labels updaten ──────────────────────────────────
+        # ── Statistiken-Labels updaten ──────────────────────────────
         self.stats_labels["pixel_count"].configure(text=f"{len(pixels):,} px")
-        self.stats_labels["mean"].configure(text=f"{mean_val:.2f}")
-        self.stats_labels["std"].configure(text=f"{std_val:.2f}")
-        self.stats_labels["threshold"].configure(text=f"{threshold:.2f}")
-        self.stats_labels["max_val"].configure(text=f"{np.max(pixels)}")
-        
+        self.stats_labels["mean"].configure(text=f"{mean_disp:.2f} {unit_str}")
+        self.stats_labels["std"].configure(text=f"{std_disp:.2f} {unit_str}")
+        self.stats_labels["threshold"].configure(text=f"{thresh_disp:.2f} {unit_str}")
+        self.stats_labels["max_val"].configure(text=f"{max_disp:.2f} {unit_str}")
+
         hotspot_count = int(self.current_raw_mask.sum()) // 255 if self.current_raw_mask is not None else 0
         self.stats_labels["hotspots"].configure(
-            text=f"{hotspot_count} px", 
-            text_color="#FF0055" if hotspot_count > 0 else "#F4F4F5"
+            text=f"{hotspot_count} px",
+            text_color="#FF0055" if hotspot_count > 0 else COLOR_TEXT_PRIMARY
         )
-        
+
         percentage = (hotspot_count / len(pixels)) * 100 if len(pixels) > 0 else 0
         self.stats_labels["percentage"].configure(
-            text=f"{percentage:.3f} %", 
-            text_color="#FF0055" if hotspot_count > 0 else "#F4F4F5"
+            text=f"{percentage:.3f} %",
+            text_color="#FF0055" if hotspot_count > 0 else COLOR_TEXT_PRIMARY
         )
 
-        # ── Titel & Metriken je nach Modus anpassen ──────────────────────────
-        mode = self.analysis_mode_opt.get()
 
-        if mode == "Fuß-Symmetrieanalyse":
+        # ── Titel & Metriken je nach Modus anpassen ──────────────────────────
+        mode_analysis = self.analysis_mode_opt.get()
+
+        if mode_analysis == "Podologische Symmetrieanalyse":
             self.stats_title_labels["pixel_count"].configure(text="Fußoberfläche (Pixel)")
             self.stats_title_labels["mean"].configure(text="Mittelwert Fußhitze (µ)")
             if self.stats_divider_label:
@@ -1472,22 +2142,27 @@ class IgniteApp:
                 mean_r = np.mean(right_pixels)
                 delta = abs(mean_l - mean_r)
                 
+                # Dynamische Einheitenumrechnung
+                mean_l_disp = self.to_temp_val(mean_l)
+                mean_r_disp = self.to_temp_val(mean_r)
+                delta_disp = self.to_delta_val(delta)
+
                 if delta >= 15.0:
-                    sym_status = "ASYMMETRIE (Entzündungsverdacht!)"
+                    sym_status = "Asymmetrie detektiert \u2013 Bitte abkl\u00e4ren"
                     sym_color = "#FF0055"
                 else:
-                    sym_status = "NORMAL (Symmetrisch)"
+                    sym_status = "Symmetrisch \u2013 Unauff\u00e4llig"
                     sym_color = "#10B981"
-                    
-                self.stats_labels["mean_left"].configure(text=f"{mean_l:.2f}")
-                self.stats_labels["mean_right"].configure(text=f"{mean_r:.2f}")
-                self.stats_labels["delta"].configure(text=f"{delta:.2f}", text_color=sym_color)
+
+                self.stats_labels["mean_left"].configure(text=f"{mean_l_disp:.2f} {unit_str}")
+                self.stats_labels["mean_right"].configure(text=f"{mean_r_disp:.2f} {unit_str}")
+                self.stats_labels["delta"].configure(text=f"{delta_disp:.2f} {unit_str}", text_color=sym_color)
                 self.stats_labels["status_symmetry"].configure(text=sym_status, text_color=sym_color)
             else:
                 self.stats_labels["mean_left"].configure(text="--")
                 self.stats_labels["mean_right"].configure(text="--")
-                self.stats_labels["delta"].configure(text="--", text_color="#F4F4F5")
-                self.stats_labels["status_symmetry"].configure(text="Keine Daten", text_color="#F4F4F5")
+                self.stats_labels["delta"].configure(text="--", text_color=COLOR_TEXT_PRIMARY)
+                self.stats_labels["status_symmetry"].configure(text="Keine Messdaten vorhanden", text_color=COLOR_TEXT_PRIMARY)
 
         else:
             self.stats_title_labels["pixel_count"].configure(text="Objektoberfläche (Pixel)")
@@ -1506,22 +2181,28 @@ class IgniteApp:
             avg_temp = np.mean([hs["mean_temp"] for hs in hotspots]) if num_hotspots > 0 else 0.0
             
             if hotspot_count == 0:
-                diag_status = "NORMAL (Kein Befund)"
+                diag_status = "Unauff\u00e4llig \u2013 Kein Befund"
                 diag_color = "#10B981"
             elif hotspot_count < 150:
-                diag_status = "BEOBACHTUNG (Verdacht)"
+                diag_status = "Grenzwertig \u2013 Verlaufsbeobachtung"
                 diag_color = "#FFA500"
             else:
-                diag_status = "KRITISCH (Entzündung!)"
+                diag_status = "Klinisch auff\u00e4llig \u2013 Weiteres Monitoring"
                 diag_color = "#FF0055"
                 
             self.stats_labels["mean_left"].configure(text=f"{num_hotspots}")
             self.stats_labels["mean_right"].configure(text=f"{max_area:,} px")
-            self.stats_labels["delta"].configure(text=f"{avg_temp:.2f}", text_color=diag_color if num_hotspots > 0 else "#F4F4F5")
+            
+            # Dynamische Einheitenumrechnung
+            avg_temp_disp = self.to_temp_val(avg_temp) if num_hotspots > 0 else 0.0
+            
+            self.stats_labels["delta"].configure(
+                text=f"{avg_temp_disp:.2f} {unit_str}" if num_hotspots > 0 else f"0.00 {unit_str}",
+                text_color=diag_color if num_hotspots > 0 else COLOR_TEXT_PRIMARY
+            )
             self.stats_labels["status_symmetry"].configure(text=diag_status, text_color=diag_color)
 
-        # Detail-Tab (Tab 6) direkt mitaktualisieren
-        self.update_detail_tab()
+
 
     def save_active_view(self) -> None:
         """Exportiert das aktuell angezeigte Bild des aktiven Tabs als PNG."""
@@ -1554,7 +2235,7 @@ class IgniteApp:
         elif tab_name == "4. Erkannte Hotspots":
             palette = self.palette_menu.get()
             body_mask_vis = (self.current_images.get("2. Hintergrund-Maske") > 0).astype(np.uint8) * 255
-            if self.analysis_mode_opt.get() == "Fuß-Symmetrieanalyse":
+            if self.analysis_mode_opt.get() == "Podologische Symmetrieanalyse":
                 img_to_save = self.draw_foot_annotations(self.current_raw_original, body_mask_vis, self.current_raw_mask)
             else:
                 img_to_save = self.draw_general_annotations(self.current_raw_original, body_mask_vis, self.current_raw_mask)
@@ -1611,7 +2292,7 @@ class IgniteApp:
             right_pixels = self.current_raw_original[right_mask > 0]
             
             mean_l, mean_r, delta = 0.0, 0.0, 0.0
-            sym_status, sym_color = "Keine Daten", "#94A3B8"
+            sym_status, sym_color = "Keine Messdaten vorhanden", "#94A3B8"
             
             if len(left_pixels) > 0 and len(right_pixels) > 0:
                 mean_l = np.mean(left_pixels)
@@ -1624,31 +2305,70 @@ class IgniteApp:
                     sym_status = "NORMAL (Temperatursymmetrisch)"
                     sym_color = "#10B981"
             
-            # Patient Info auslesen
-            p_name = self.patient_name_entry.get().strip() or "Unbekannt"
+            # Patient Info auslesen (mit DSGVO-Pseudonymisierung)
+            p_name_raw = self.patient_name_entry.get().strip() or "Unbekannt"
             p_age = self.patient_age_entry.get().strip() or "Unbekannt"
             p_diab = self.patient_diabetes_opt.get()
             p_notes = self.patient_notes_entry.get().strip() or "Keine Notizen"
-            
+            p_icd = self.patient_icd_entry.get().strip() or "—"
+            operator = self.operator_entry.get().strip() or "Nicht angegeben"
+
+            p_dob_raw = self.patient_dob_entry.get().strip()
+            if self.dsgvo_anonymize and p_name_raw != "Unbekannt":
+                p_name = pseudonymize_patient(p_name_raw, p_dob_raw)
+                report_filename = f"report_{p_name}_{base_name}.html"
+                messagebox.showinfo(
+                    "DSGVO-Pseudonymisierung",
+                    "Achtung: Der Bericht wird pseudonymisiert unter der ID "
+                    f"'{p_name}' exportiert. Bitte bewahren Sie den Zuordnungsschlüssel "
+                    "(Name -> ID) sicher und getrennt auf."
+                )
+            else:
+                p_name = p_name_raw
+                report_filename = f"report_{base_name}.html"
+            report_filepath = os.path.join(config.OUTPUT_DIR, report_filename)
+
             backend_info = image_processing.get_active_backend()
             forced = self.backend_var.get()
             if forced != "auto":
                 backend_info = f"{backend_info} (Erzwungen)"
 
-            # Zonal für Report
-            l_f = self.zonal_stats.get("left", {}).get("fore", 0.0)
-            r_f = self.zonal_stats.get("right", {}).get("fore", 0.0)
-            l_m = self.zonal_stats.get("left", {}).get("mid", 0.0)
-            r_m = self.zonal_stats.get("right", {}).get("mid", 0.0)
-            l_h = self.zonal_stats.get("left", {}).get("heel", 0.0)
-            r_h = self.zonal_stats.get("right", {}).get("heel", 0.0)
+            # Einheit bestimmen
+            unit = self.temp_unit_opt.get() if hasattr(self, "temp_unit_opt") else "Celsius (°C)"
+            unit_str = "°C"
+            if "Fahrenheit" in unit:
+                unit_str = "°F"
+            elif "Kelvin" in unit:
+                unit_str = "K"
+
+            # Werte berechnen in Ziel-Einheit
+            mean_l_disp = self.to_temp_val(mean_l)
+            mean_r_disp = self.to_temp_val(mean_r)
+            mean_val_disp = self.to_temp_val(mean_val)
+            threshold_disp = self.to_temp_val(threshold)
+            delta_disp = self.to_delta_val(abs(mean_l - mean_r))
+            std_disp = self.to_delta_val(std_val)
+
+            # Zonal für Report umrechnen
+            l_f = self.to_temp_val(self.zonal_stats.get("left", {}).get("fore", 0.0))
+            r_f = self.to_temp_val(self.zonal_stats.get("right", {}).get("fore", 0.0))
+            l_m = self.to_temp_val(self.zonal_stats.get("left", {}).get("mid", 0.0))
+            r_m = self.to_temp_val(self.zonal_stats.get("right", {}).get("mid", 0.0))
+            l_h = self.to_temp_val(self.zonal_stats.get("left", {}).get("heel", 0.0))
+            r_h = self.to_temp_val(self.zonal_stats.get("right", {}).get("heel", 0.0))
+
+            df_disp = self.to_delta_val(abs(self.zonal_stats.get("left", {}).get("fore", 0.0) - self.zonal_stats.get("right", {}).get("fore", 0.0)))
+            dm_disp = self.to_delta_val(abs(self.zonal_stats.get("left", {}).get("mid", 0.0) - self.zonal_stats.get("right", {}).get("mid", 0.0)))
+            dh_disp = self.to_delta_val(abs(self.zonal_stats.get("left", {}).get("heel", 0.0) - self.zonal_stats.get("right", {}).get("heel", 0.0)))
 
             # HTML generieren
             self._write_individual_html_report(
-                report_filepath, base_name, os.path.basename(self.current_filepath), mean_val, std_val,
-                threshold, hotspot_count, len(pixels), mean_l, mean_r, delta, sym_status, sym_color,
-                l_f, r_f, l_m, r_m, l_h, r_h, abs(l_f - r_f), abs(l_m - r_m), abs(l_h - r_h),
-                p_name, p_age, p_diab, p_notes, backend_info, self.analysis_mode_opt.get()
+                report_filepath, base_name, os.path.basename(self.current_filepath), mean_val_disp, std_disp,
+                threshold_disp, hotspot_count, len(pixels), mean_l_disp, mean_r_disp, delta_disp, sym_status, sym_color,
+                l_f, r_f, l_m, r_m, l_h, r_h, df_disp, dm_disp, dh_disp,
+                p_name, p_age, p_diab, p_notes, backend_info, self.analysis_mode_opt.get(),
+                p_icd=p_icd, operator=operator,
+                t_min_c=self.t_min_celsius, t_max_c=self.t_max_celsius, unit_str=unit_str
             )
             
             messagebox.showinfo("Export erfolgreich", f"Der HTML-Bericht wurde erfolgreich gespeichert:\n{report_filename}")
@@ -1660,7 +2380,8 @@ class IgniteApp:
         mean_l, mean_r, delta, sym_status, sym_color,
         lf, rf, lm, rm, lh, rh, df, dm, dh,
         p_name="Unbekannt", p_age="Unbekannt", p_diab="Nicht angegeben", p_notes="Keine",
-        backend_info="auto", analysis_mode="Allgemeine Analyse"
+        backend_info="auto", analysis_mode="Klinische Allgemeinanalyse",
+        p_icd="—", operator="Nicht angegeben", t_min_c=20.0, t_max_c=40.0, unit_str="°C"
     ):
         """Hilfsfunktion zum Schreiben einer detailreichen HTML-Berichtsdatei."""
         def get_badge_style(color_hex):
@@ -1672,9 +2393,19 @@ class IgniteApp:
             else:
                 return "background-color: rgba(239, 68, 68, 0.1); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.2);"
 
-        if analysis_mode == "Fuß-Symmetrieanalyse":
-            h1_title = "IGNITE // Medizinisches Entzündungsprotokoll (Füße)"
-            mean_title = "Mittelwert Fußoberfläche (µ)"
+        gdpr_badge = ""
+        if p_name.startswith("ANON-"):
+            gdpr_badge = """
+            <div class="meta-item">
+                <div class="meta-label">Datenschutz-Status</div>
+                <div class="meta-value">
+                    <span class="status-badge" style="background-color: rgba(16, 185, 129, 0.1); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.2);">DSGVO-konform pseudonymisiert</span>
+                </div>
+            </div>"""
+
+        if analysis_mode == "Podologische Symmetrieanalyse":
+            h1_title = "IGNITE Medical Imaging Suite – Podologisches Thermografiebefund"
+            mean_title = "Mittl. Temperatur Fußoberfläche"
             diabetes_html = f"""
             <div class="meta-item">
                 <div class="meta-label">Diabetes-Klassifizierung</div>
@@ -1684,7 +2415,7 @@ class IgniteApp:
             symmetry_or_hotspots_meta = f"""
             <div class="meta-item">
                 <div class="meta-label">Symmetrie-Delta (Δ)</div>
-                <div class="meta-value" style="color: #06B6D4; font-weight: bold;">{delta:.2f}</div>
+                <div class="meta-value" style="color: #EF4444; font-weight: bold;">{delta:.2f} {unit_str}</div>
             </div>
             <div class="meta-item">
                 <div class="meta-label">Klinischer Symmetriestatus</div>
@@ -1708,9 +2439,9 @@ class IgniteApp:
                 <thead>
                     <tr>
                         <th>Anatomische Zone</th>
-                        <th>Links (L)</th>
-                        <th>Rechts (R)</th>
-                        <th>Differenz (Δ)</th>
+                        <th>Links (L) ({unit_str})</th>
+                        <th>Rechts (R) ({unit_str})</th>
+                        <th>Differenz (Δ) ({unit_str})</th>
                         <th>Zonale Diagnose</th>
                     </tr>
                 </thead>
@@ -1748,25 +2479,26 @@ class IgniteApp:
             general_hs = getattr(self, "general_hotspots", [])
             num_hotspots = len(general_hs)
             avg_temp = np.mean([hs["mean_temp"] for hs in general_hs]) if num_hotspots > 0 else 0.0
+            avg_temp_disp = self.to_temp_val(avg_temp) if num_hotspots > 0 else 0.0
             
             if hotspots == 0:
-                diag_status = "NORMAL (Kein Befund)"
+                diag_status = "Unauff\u00e4llig \u2013 Kein Befund"
                 diag_color = "#10B981"
             elif hotspots < 150:
-                diag_status = "BEOBACHTUNG (Verdacht)"
+                diag_status = "Grenzwertig \u2013 Verlaufsbeobachtung"
                 diag_color = "#FFA500"
             else:
-                diag_status = "KRITISCH (Entzündung!)"
+                diag_status = "Klinisch auff\u00e4llig \u2013 Weiteres Monitoring"
                 diag_color = "#FF0055"
                 
             symmetry_or_hotspots_meta = f"""
             <div class="meta-item">
                 <div class="meta-label">Anzahl Hotspots</div>
-                <div class="meta-value" style="font-weight: bold; color: #06B6D4;">{num_hotspots}</div>
+                <div class="meta-value" style="font-weight: bold; color: #EF4444;">{num_hotspots}</div>
             </div>
             <div class="meta-item">
                 <div class="meta-label">Durchschnittliche Hotspot-Hitze</div>
-                <div class="meta-value" style="font-weight: bold; color: #06B6D4;">{avg_temp:.2f}</div>
+                <div class="meta-value" style="font-weight: bold; color: #EF4444;">{avg_temp_disp:.2f} {unit_str}</div>
             </div>
             <div class="meta-item">
                 <div class="meta-label">Globaler Befund</div>
@@ -1780,11 +2512,16 @@ class IgniteApp:
                 for hs in general_hs:
                     area = hs["area"]
                     mean_temp = hs["mean_temp"]
+                    max_temp = hs["max_temp"]
+                    
+                    mean_temp_disp = self.to_temp_val(mean_temp)
+                    max_temp_disp = self.to_temp_val(max_temp)
+                    
                     if area >= 150 or mean_temp >= 180:
-                        diag_text = "Akut entzündlich (Kritisch)"
+                        diag_text = "Klinisch relevant \u2013 Abkl\u00e4rung empfohlen"
                         diag_color = "#FF0055"
                     elif area >= 50 or mean_temp >= 140:
-                        diag_text = "Grenzwertig (Beobachtung)"
+                        diag_text = "Grenzwertig \u2013 Verlaufsbeobachtung"
                         diag_color = "#FFA500"
                     else:
                         diag_text = "Geringfügig (Unbedenklich)"
@@ -1794,8 +2531,8 @@ class IgniteApp:
                     <tr>
                         <td><b>H#{hs['index']}</b></td>
                         <td>{area:,} px</td>
-                        <td>{mean_temp:.2f}</td>
-                        <td>{hs['max_temp']:.0f}</td>
+                        <td>{mean_temp_disp:.2f}</td>
+                        <td>{max_temp_disp:.2f}</td>
                         <td><span class="status-badge" style="{get_badge_style(diag_color)}">{diag_text}</span></td>
                     </tr>"""
             else:
@@ -1811,8 +2548,8 @@ class IgniteApp:
                     <tr>
                         <th>Hotspot ID</th>
                         <th>Fläche (Pixel)</th>
-                        <th>Mittelwert Hitze</th>
-                        <th>Maximalwert Hitze</th>
+                        <th>Mittelwert Hitze ({unit_str})</th>
+                        <th>Maximalwert Hitze ({unit_str})</th>
                         <th>Klinischer Befund</th>
                     </tr>
                 </thead>
@@ -1854,7 +2591,7 @@ class IgniteApp:
             letter-spacing: -0.025em;
         }}
         h2 {{
-            color: #06B6D4;
+            color: #EF4444;
             margin-top: 40px;
             font-size: 14px;
             font-weight: 600;
@@ -1934,7 +2671,7 @@ class IgniteApp:
         }}
         th {{
             background-color: #18181B;
-            color: #06B6D4;
+            color: #EF4444;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.05em;
@@ -1956,7 +2693,7 @@ class IgniteApp:
             letter-spacing: 0.025em;
         }}
         .report-link {{
-            color: #06B6D4;
+            color: #EF4444;
             text-decoration: none;
             font-weight: 600;
         }}
@@ -1981,20 +2718,29 @@ class IgniteApp:
         <div class="metadata-grid">
             <div class="meta-item">
                 <div class="meta-label">Patienten-Name / ID</div>
-                <div class="meta-value" style="font-weight: bold; color: #06B6D4;">{p_name}</div>
+                <div class="meta-value" style="font-weight: bold; color: #EF4444;">{p_name}</div>
             </div>
             <div class="meta-item">
                 <div class="meta-label">Alter</div>
                 <div class="meta-value">{p_age} Jahre</div>
             </div>
             {diabetes_html}
+            {gdpr_badge}
+            <div class="meta-item">
+                <div class="meta-label">ICD-10 Verdachtsdiagnose</div>
+                <div class="meta-value" style="font-style: italic;">{p_icd}</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Untersuchender</div>
+                <div class="meta-value">{operator}</div>
+            </div>
             <div class="meta-item">
                 <div class="meta-label">Klinische Notizen</div>
                 <div class="meta-value">{p_notes}</div>
             </div>
         </div>
 
-        <h2>Diagnostische Parameter & globale Statistik</h2>
+        <h2>Diagnostische Parameter &amp; Globale Statistik</h2>
         <div class="metadata-grid">
             <div class="meta-item">
                 <div class="meta-label">Analysierte Bilddatei</div>
@@ -2005,8 +2751,12 @@ class IgniteApp:
                 <div class="meta-value">{backend_info}</div>
             </div>
             <div class="meta-item">
-                <div class="meta-label">{mean_title}</div>
-                <div class="meta-value">{mean:.2f}</div>
+                <div class="meta-label">Kamerakalibrierung</div>
+                <div class="meta-value">{self.convert_celsius_to_unit(t_min_c):.1f} {unit_str} – {self.convert_celsius_to_unit(t_max_c):.1f} {unit_str}</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">{mean_title} ({unit_str})</div>
+                <div class="meta-value">{mean:.2f} {unit_str}</div>
             </div>
             <div class="meta-item">
                 <div class="meta-label">Standardabweichung (σ)</div>
@@ -2014,7 +2764,7 @@ class IgniteApp:
             </div>
             <div class="meta-item">
                 <div class="meta-label">Hotspot-Detektionsgrenze</div>
-                <div class="meta-value">{thresh:.2f} (µ + k*σ)</div>
+                <div class="meta-value">{thresh:.2f} {unit_str} (µ + k*σ)</div>
             </div>
             <div class="meta-item">
                 <div class="meta-label">Erkannte Hotspots</div>
@@ -2047,9 +2797,52 @@ class IgniteApp:
             </div>
         </div>
 
+        <h2>Befundbestätigung &amp; Ärztliche Signatur</h2>
+        <div style="background: #18181B; border: 1px solid #27272A; border-radius: 10px; padding: 24px 28px; margin: 0 0 24px 0;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+                <div>
+                    <div style="color: #71717A; font-size: 12px; margin-bottom: 4px;">Untersuchender / Kürzel</div>
+                    <div style="color: #F4F4F5; font-size: 14px;">{operator}</div>
+                </div>
+                <div>
+                    <div style="color: #71717A; font-size: 12px; margin-bottom: 4px;">Datum der Untersuchung</div>
+                    <div style="color: #F4F4F5; font-size: 14px;">{__import__('datetime').datetime.now().strftime('%d.%m.%Y')}</div>
+                </div>
+                <div>
+                    <div style="color: #71717A; font-size: 12px; margin-bottom: 4px;">ICD-10 Verdachtsdiagnose</div>
+                    <div style="color: #F4F4F5; font-size: 14px; font-style: italic;">{p_icd}</div>
+                </div>
+                <div>
+                    <div style="color: #71717A; font-size: 12px; margin-bottom: 4px;">Befundstatus</div>
+                    <div><span class="status-badge" style="{get_badge_style(sym_color)}">{sym_status}</span></div>
+                </div>
+            </div>
+            <div style="border-top: 1px solid #27272A; padding-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
+                <div>
+                    <div style="color: #3F3F46; font-size: 10px; margin-bottom: 32px;">Unterschrift Untersuchender</div>
+                    <div style="border-top: 1px solid #3F3F46; padding-top: 6px; color: #52525B; font-size: 10px;">Datum &amp; Stempel</div>
+                </div>
+                <div>
+                    <div style="color: #3F3F46; font-size: 10px; margin-bottom: 32px;">Gegenzeichnung (Arzt / Ärztin)</div>
+                    <div style="border-top: 1px solid #3F3F46; padding-top: 6px; color: #52525B; font-size: 10px;">Facharztqualifikation</div>
+                </div>
+            </div>
+            <div style="margin-top: 16px; padding: 12px; background: rgba(239,68,68,0.05); border: 1px solid rgba(239,68,68,0.15); border-radius: 6px;">
+                <p style="color: #71717A; font-size: 11px; margin: 0; line-height: 1.6;">
+                    <strong style="color: #EF4444;">⚠ Wichtiger Hinweis:</strong>
+                    Dieser automatisch generierte Analysebericht dient ausschließlich der wissenschaftlichen Forschung und Dokumentation. 
+                    Er stellt keine Diagnose im Sinne des Medizinproduktegesetzes (MPG/MDR) dar und ersetzt keine qualifizierte ärztliche Beurteilung.
+                    Vor therapeutischen Entscheidungen ist eine Validierung durch einen Facharzt zwingend erforderlich.
+                </p>
+            </div>
+        </div>
+
         <div class="footer">
-            Entwickelt von Jona Noack | Jugend forscht 2026<br>
-            Dieser medizinische Analysebericht wurde automatisch von der IGNITE-Diagnosesoftware generiert.
+            <strong>IGNITE Medical Imaging Suite v{APP_VERSION}</strong> &nbsp;&middot;&nbsp; Entwickelt von Jona Noack &nbsp;&middot;&nbsp; Jugend forscht 2026<br>
+            Automatisch generierter Analysebericht &nbsp;&middot;&nbsp; Erstellt: {__import__('datetime').datetime.now().strftime('%d.%m.%Y %H:%M:%S')}
+            <br><br>
+            <em>Rechtlicher Hinweis: Dieser Bericht wurde von einer nicht-zertifizierten Forschungssoftware erstellt und ist kein zugelassenes Medizinprodukt.<br>
+            Er ersetzt keine qualifizierte ärztliche Untersuchung oder Diagnose. Alle Ergebnisse sind rein wissenschaftlich-analytischer Natur.</em>
         </div>
     </div>
 </body>
@@ -2057,7 +2850,7 @@ class IgniteApp:
         with open(filepath, "w", encoding="utf-8") as f:
             f.write(html_content)
 
-    def _write_batch_summary_html(self, filepath, patients_processed, analysis_mode="Allgemeine Analyse"):
+    def _write_batch_summary_html(self, filepath, patients_processed, analysis_mode="Klinische Allgemeinanalyse"):
         """Schreibt das HTML Dashboard für die Stapelverarbeitung."""
         total = len(patients_processed)
         critical = sum(1 for p in patients_processed if "KRITISCH" in p["status"])
@@ -2075,7 +2868,7 @@ class IgniteApp:
 
         rows_html = ""
         for p in patients_processed:
-            if analysis_mode == "Fuß-Symmetrieanalyse":
+            if analysis_mode == "Podologische Symmetrieanalyse":
                 delta_col = f"{p['delta']:.2f}"
                 zonal_col = f"{p['max_zonal_delta']:.2f}"
             else:
@@ -2092,7 +2885,7 @@ class IgniteApp:
                 <td><a class="report-link" href="{p['report']}" target="_blank">Bericht öffnen &#x2197;</a></td>
             </tr>"""
 
-        if analysis_mode == "Fuß-Symmetrieanalyse":
+        if analysis_mode == "Podologische Symmetrieanalyse":
             th_delta = "Globales Delta (Δ)"
             th_zonal = "Max. Zonal-Delta"
         else:
@@ -2172,7 +2965,7 @@ class IgniteApp:
         }}
         th {{
             background-color: #18181B;
-            color: #06B6D4;
+            color: #EF4444;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.05em;
@@ -2194,7 +2987,7 @@ class IgniteApp:
             letter-spacing: 0.025em;
         }}
         .report-link {{
-            color: #06B6D4;
+            color: #EF4444;
             text-decoration: none;
             font-weight: 600;
         }}
@@ -2218,7 +3011,7 @@ class IgniteApp:
         <div class="stats-grid">
             <div class="stat-card">
                 <div class="stat-label">Gesamt Verarbeitet</div>
-                <div class="stat-value" style="color: #06B6D4;">{total}</div>
+                <div class="stat-value" style="color: #EF4444;">{total}</div>
             </div>
             <div class="stat-card">
                 <div class="stat-label">Entzündung (Kritisch)</div>
@@ -2284,13 +3077,13 @@ class IgniteApp:
         progress_win.configure(fg_color="#09090B")
         progress_win.transient(self.root)
         
-        lbl_title = ctk.CTkLabel(progress_win, text="Stapelverarbeitung läuft...", font=ctk.CTkFont(size=14, weight="bold"), text_color="#06B6D4")
+        lbl_title = ctk.CTkLabel(progress_win, text="Stapelverarbeitung läuft...", font=ctk.CTkFont(size=14, weight="bold"), text_color=COLOR_PRIMARY_ACCENT)
         lbl_title.pack(pady=(20, 10))
         
         lbl_status = ctk.CTkLabel(progress_win, text="Initialisiere...", text_color="#F4F4F5")
         lbl_status.pack(pady=5)
         
-        pbar = ctk.CTkProgressBar(progress_win, width=300, fg_color="#18181B", progress_color="#06B6D4")
+        pbar = ctk.CTkProgressBar(progress_win, width=300, fg_color="#18181B", progress_color=COLOR_PRIMARY_ACCENT)
         pbar.set(0.0)
         pbar.pack(pady=10)
         
@@ -2317,7 +3110,13 @@ class IgniteApp:
             
             try:
                 img = image_processing.load_thermal_image(filepath)
-                calibrated_img = np.clip(img.astype(np.int16) + int(to), 0, 255).astype(np.uint8)
+                
+                range_c = self.t_max_celsius - self.t_min_celsius
+                if range_c <= 0:
+                    range_c = 20.0
+                raw_offset = int(round(to * 255.0 / range_c))
+                
+                calibrated_img = np.clip(img.astype(np.int16) + raw_offset, 0, 255).astype(np.uint8)
                 
                 diff_img, hotspot_mask = image_processing.run_rust_pipeline(
                     calibrated_img, sk, th, ma, mc, omin, omax, er
@@ -2336,7 +3135,7 @@ class IgniteApp:
                 cv2.imwrite(os.path.join(steps_dir, f"{base_name}_step3_local_heat_diff.png"), diff_img)
                 
                 # Overlay erzeugen & speichern
-                if self.analysis_mode_opt.get() == "Fuß-Symmetrieanalyse":
+                if self.analysis_mode_opt.get() == "Podologische Symmetrieanalyse":
                     overlay_img = self.draw_foot_annotations(calibrated_img, body_mask_vis, hotspot_mask)
                 else:
                     overlay_img = self.draw_general_annotations(calibrated_img, body_mask_vis, hotspot_mask)
@@ -2346,7 +3145,7 @@ class IgniteApp:
                 pixels = calibrated_img[body_mask]
                 mean_val = np.mean(pixels) if len(pixels) > 0 else 0.0
                 
-                if self.analysis_mode_opt.get() == "Fuß-Symmetrieanalyse":
+                if self.analysis_mode_opt.get() == "Podologische Symmetrieanalyse":
                     # Left vs Right
                     h_orig, w_orig = calibrated_img.shape[:2]
                     mid_x = w_orig // 2
@@ -2404,13 +3203,13 @@ class IgniteApp:
                     
                     max_zonal_delta = max(d_fore, d_mid, d_heel)
                     if delta >= 15.0 or hotspot_count >= 150 or max_zonal_delta >= 15.0:
-                        status_text = "KRITISCH (Entzündung!)"
+                        status_text = "Klinisch auff\u00e4llig \u2013 Weiteres Monitoring"
                         status_color = "#FF0055"
                     elif delta >= 10.0 or hotspot_count > 0 or max_zonal_delta >= 10.0:
-                        status_text = "BEOBACHTUNG (Verdacht)"
+                        status_text = "Grenzwertig \u2013 Verlaufsbeobachtung"
                         status_color = "#FFA500"
                     else:
-                        status_text = "NORMAL (Symmetrisch)"
+                        status_text = "Symmetrisch \u2013 Unauff\u00e4llig"
                         status_color = "#10B981"
                 else:
                     # General mode calculations
@@ -2428,13 +3227,13 @@ class IgniteApp:
                     max_zonal_delta = float(max_area)
 
                     if hotspot_count >= 150:
-                        status_text = "KRITISCH (Entzündung!)"
+                        status_text = "Klinisch auff\u00e4llig \u2013 Weiteres Monitoring"
                         status_color = "#FF0055"
                     elif hotspot_count > 0:
-                        status_text = "BEOBACHTUNG (Verdacht)"
+                        status_text = "Grenzwertig \u2013 Verlaufsbeobachtung"
                         status_color = "#FFA500"
                     else:
-                        status_text = "NORMAL (Unauffällig)"
+                        status_text = "Unauff\u00e4llig \u2013 Kein Befund"
                         status_color = "#10B981"
                         
                 patient_report_filename = f"report_{base_name}.html"
@@ -2497,7 +3296,7 @@ class IgniteApp:
             self.info_win,
             text="IGNITE – Entzündungsdetektion",
             font=ctk.CTkFont(family="Arial", size=20, weight="bold"),
-            text_color="#06B6D4"
+            text_color=COLOR_PRIMARY_ACCENT
         )
         title_lbl.pack(pady=(20, 10))
         
@@ -2516,7 +3315,7 @@ class IgniteApp:
             "Die Anwendung bietet zwei verschiedene Analysemodi:\n"
             "- Allgemeine Analyse: Erkennt und visualisiert beliebige lokale Entzündungsherde am Körper "
             "(z. B. Hände, Gelenke, Rücken). Die erkannten Hotspots werden markiert und vermessen.\n"
-            "- Fuß-Symmetrieanalyse: Spezifischer klinischer Symmetrievergleich beider Füße (3-Zonen-Modell) "
+            "- Podologische Symmetrieanalyse: Spezifischer klinischer Symmetrievergleich beider Füße (3-Zonen-Modell) "
             "zur Früherkennung des Diabetischen Fußsyndroms.\n\n"
             "Die mathematische Pipeline besteht aus 5 Stufen:\n\n"
             "1. Dynamische Kernel:\n"
@@ -2538,11 +3337,73 @@ class IgniteApp:
         txt.configure(state="disabled")
 
     def show_about_window(self) -> None:
-        """Zeigt einen Info-Dialog über das Projekt an."""
-        messagebox.showinfo(
-            "Über IGNITE",
-            "IGNITE – Entzündungsdetektion via Thermografie\n"
-            "Version 0.1.0 (Jury-Ready Release)\n\n"
-            "Entwickelt von Jona Noack für den Wettbewerb 'Jugend forscht 2026'.\n\n"
-            "Ein hocheffizientes Hybridsystem aus Python, Rust-Native Multi-threading und PyTorch GPU-Beschleunigung."
-        )
+        """Zeigt einen professionellen Info-Dialog über das Produkt."""
+        about_win = ctk.CTkToplevel(self.root)
+        about_win.title("IGNITE Medical Imaging Suite – Über diese Software")
+        about_win.geometry("480x360")
+        about_win.resizable(False, False)
+        about_win.configure(fg_color="#09090B")
+        about_win.transient(self.root)
+        about_win.after(100, lambda: about_win.focus_force())
+
+        # Logo
+        icon_png_path = get_resource_path(os.path.join("icon", "LogoRund.png"))
+        if os.path.exists(icon_png_path):
+            try:
+                logo_img = Image.open(icon_png_path)
+                logo_ctk = ctk.CTkImage(light_image=logo_img, dark_image=logo_img, size=(56, 56))
+                logo_lbl = ctk.CTkLabel(about_win, image=logo_ctk, text="")
+                logo_lbl.pack(pady=(28, 6))
+            except Exception:
+                pass
+
+        ctk.CTkLabel(
+            about_win,
+            text="IGNITE Medical Imaging Suite",
+            font=ctk.CTkFont(family="Arial", size=18, weight="bold"),
+            text_color="#FAF5FF"
+        ).pack(pady=(4, 2))
+
+        ctk.CTkLabel(
+            about_win,
+            text=f"Version {APP_VERSION}  ·  Thermografische Entzündungsdetektion",
+            font=ctk.CTkFont(family="Arial", size=11),
+            text_color="#71717A"
+        ).pack(pady=(0, 16))
+
+        sep = ctk.CTkFrame(about_win, fg_color="#27272A", height=1)
+        sep.pack(fill=ctk.X, padx=30, pady=(0, 16))
+
+        ctk.CTkLabel(
+            about_win,
+            text=(
+                "Entwickelt von Jona Noack im Rahmen von Jugend forscht 2026.\n"
+                "Hybrides Hochleistungssystem: Python · Rust (Rayon) · PyTorch CUDA"
+            ),
+            font=ctk.CTkFont(family="Arial", size=12),
+            text_color="#A1A1AA",
+            justify="center",
+            wraplength=400
+        ).pack(pady=(0, 12))
+
+        ctk.CTkLabel(
+            about_win,
+            text="HINWEIS: Dieses System ist kein zugelassenes Medizinprodukt.\nAlle Analysen dienen ausschließlich der wissenschaftlichen Forschung.\nKein Ersatz für qualifizierte ärztliche Diagnose.",
+            font=ctk.CTkFont(family="Arial", size=10),
+            text_color="#52525B",
+            justify="center",
+            wraplength=420
+        ).pack(pady=(0, 20))
+
+        ctk.CTkButton(
+            about_win,
+            text="Schließen",
+            command=about_win.destroy,
+            font=ctk.CTkFont(family="Arial", size=13, weight="bold"),
+            fg_color=COLOR_PRIMARY_ACCENT,
+            hover_color=COLOR_HOVER_ACCENT,
+            text_color="#09090B",
+            height=34,
+            width=120,
+            corner_radius=6
+        ).pack()

@@ -17,7 +17,7 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=['torch', 'torchvision', 'torchaudio', 'scipy', 'matplotlib', 'pandas', 'sympy', 'IPython', 'notebook', 'PyQt5', 'PyQt6', 'PySide2', 'PySide6'],
+    excludes=['torch', 'torchvision', 'torchaudio', 'scipy', 'pandas', 'sympy', 'IPython', 'notebook', 'PyQt5', 'PyQt6', 'PySide2', 'PySide6'],
     noarchive=False,
     optimize=0,
 )
@@ -29,7 +29,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='Ignite',
+    name='IGNITE',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -42,5 +42,6 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['icon\\LogoRund.ico'],
+    icon=['icon/LogoRund.ico'],
+    version_file=None,
 )

@@ -1,9 +1,9 @@
 [package]
 name = "ignite_core"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
-description = "Hochleistungs-Rust-Core für das Ignite Entzündungsdetektions-Projekt (Jugend forscht). Implementiert die vollständige Thermobild-Verarbeitungs-Pipeline ohne externe OpenCV-Abhängigkeit."
-authors = ["Ignite Team"]
+description = "Ignite – Hochleistungs-Rust-Core für die thermografische Entzündungsdetektions-Pipeline. Implementiert die vollständige Thermobild-Verarbeitungs-Pipeline ohne externe OpenCV-Abhängigkeit."
+authors = ["Jona Noack"]
 
 # Die Bibliothek wird als C-kompatible Shared-Library gebaut,
 # damit Python (über PyO3/maturin) sie als .pyd-Modul importieren kann.
