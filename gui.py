@@ -167,6 +167,17 @@ class IgniteApp:
         self.resize_job: str | None = None
         self.pil_cache: dict[str, Image.Image] = {}
 
+        # ROI State-Variablen
+        self.drawing_roi: bool = False
+        self.roi_active_panel: str | None = None
+        self.roi_active_is_grid: bool = False
+        self.roi_start_x: int = 0
+        self.roi_start_y: int = 0
+        self.roi_current_x: int = 0
+        self.roi_current_y: int = 0
+        self.roi_end_x: int = 0
+        self.roi_end_y: int = 0
+
         self.setup_ui()
         self.setup_menu()
 
@@ -349,7 +360,25 @@ class IgniteApp:
         )
         self.analysis_mode_opt.pack(fill=ctk.X, padx=12, pady=(4, 8))
 
+        # Sektion: Interaktive ROI-Analyse
+        self.roi_card = ctk.CTkFrame(self.sidebar_scroll, fg_color=COLOR_BG_CARD, corner_radius=8, border_width=1, border_color=COLOR_BORDER_CARD)
+        self.roi_card.pack(fill=ctk.X, pady=(0, 15), ipady=6)
 
+        roi_title = ctk.CTkLabel(self.roi_card, text="INTERAKTIVE ROI-ANALYSE", font=ctk.CTkFont(size=10, weight="bold"), text_color=COLOR_PRIMARY_ACCENT)
+        roi_title.pack(padx=12, pady=(8, 4), anchor="w")
+
+        self.roi_info_lbl = ctk.CTkLabel(
+            self.roi_card,
+            text="Ziehe mit der Maus auf einem Bild ein Rechteck auf, um eine Region of Interest (ROI) live zu analysieren.",
+            font=ctk.CTkFont(size=11, slant="italic"),
+            text_color=COLOR_TEXT_SECONDARY,
+            anchor="w",
+            wraplength=250,
+            justify="left"
+        )
+        self.roi_info_lbl.pack(fill=ctk.X, padx=12, pady=4)
+
+        self.roi_stats_frame = ctk.CTkFrame(self.roi_card, fg_color="transparent")
 
         # ── Celsius-Kalibrierungskarte ──────────────────────────────────────
         calib_card = ctk.CTkFrame(self.sidebar_scroll, fg_color=COLOR_BG_CARD, corner_radius=8, border_width=1, border_color=COLOR_BORDER_CARD)
@@ -722,6 +751,11 @@ class IgniteApp:
             # Bind mouse hover events
             lbl.bind("<Motion>", lambda e, n=name, is_grid=True: self.on_image_hover(e, n, is_grid))
             lbl.bind("<Leave>", self.on_image_leave)
+            
+            # Bind ROI interactive selection events
+            lbl.bind("<ButtonPress-1>", lambda e, n=name, is_grid=True: self.on_roi_start(e, n, is_grid))
+            lbl.bind("<B1-Motion>", lambda e, n=name, is_grid=True: self.on_roi_drag(e, n, is_grid))
+            lbl.bind("<ButtonRelease-1>", lambda e, n=name, is_grid=True: self.on_roi_end(e, n, is_grid))
 
         # ── TAB 2-5: Einzelansichten (Full-size) ──────────────────────────────
         tab_mapping = {
@@ -764,6 +798,11 @@ class IgniteApp:
             # Bind mouse hover events
             lbl.bind("<Motion>", lambda e, n=step_name, is_grid=False: self.on_image_hover(e, n, is_grid))
             lbl.bind("<Leave>", self.on_image_leave)
+            
+            # Bind ROI interactive selection events
+            lbl.bind("<ButtonPress-1>", lambda e, n=step_name, is_grid=False: self.on_roi_start(e, n, is_grid))
+            lbl.bind("<B1-Motion>", lambda e, n=step_name, is_grid=False: self.on_roi_drag(e, n, is_grid))
+            lbl.bind("<ButtonRelease-1>", lambda e, n=step_name, is_grid=False: self.on_roi_end(e, n, is_grid))
 
         # ── TAB 5: Temperatur-Verteilung (Histogramm & Statistiken) ──────────
         hist_tab = self.tabview.tab("5. Temperatur-Verteilung")
@@ -1785,6 +1824,228 @@ class IgniteApp:
     def on_image_leave(self, event) -> None:
         """Setzt den Pixel-Inspektor zurück, wenn die Maus das Bild verlässt."""
         self.pixel_info_label.configure(text="Pixel-Info: --", text_color="#71717A")
+
+    def map_event_to_image_coords(self, event, panel_name: str, is_grid: bool) -> tuple[int | None, int | None]:
+        """Übersetzt Widget-Mauskoordinaten in die originalen Pixel-Koordinaten des Bildes."""
+        if self.current_raw_original is None:
+            return None, None
+
+        lbl = self.panels[panel_name] if is_grid else self.panels_full[panel_name]
+        lbl_w = lbl.winfo_width()
+        lbl_h = lbl.winfo_height()
+        
+        orig_h, orig_w = self.current_raw_original.shape[:2]
+        
+        pad = 30 if is_grid else 40
+        w_avail = max(lbl_w - pad, 100)
+        h_avail = max(lbl_h - pad, 100)
+        
+        if w_avail <= 100 or h_avail <= 100:
+            return None, None
+            
+        ratio = min(w_avail / orig_w, h_avail / orig_h)
+        img_w = int(orig_w * ratio)
+        img_h = int(orig_h * ratio)
+        
+        offset_x = (lbl_w - img_w) / 2
+        offset_y = (lbl_h - img_h) / 2
+        
+        mx = event.x - offset_x
+        my = event.y - offset_y
+        
+        if 0 <= mx < img_w and 0 <= my < img_h:
+            orig_x = int(mx * (orig_w / img_w))
+            orig_y = int(my * (orig_h / img_h))
+            orig_x = min(max(orig_x, 0), orig_w - 1)
+            orig_y = min(max(orig_y, 0), orig_h - 1)
+            return orig_x, orig_y
+            
+        return None, None
+
+    def on_roi_start(self, event, panel_name: str, is_grid: bool) -> None:
+        """Erfasst den Startpunkt beim Zeichnen einer ROI."""
+        if self.current_raw_original is None:
+            return
+        x_orig, y_orig = self.map_event_to_image_coords(event, panel_name, is_grid)
+        if x_orig is not None and y_orig is not None:
+            self.roi_start_x = x_orig
+            self.roi_start_y = y_orig
+            self.roi_active_panel = panel_name
+            self.roi_active_is_grid = is_grid
+            self.drawing_roi = True
+
+    def on_roi_drag(self, event, panel_name: str, is_grid: bool) -> None:
+        """Zeichnet live ein temporäres grünes Rechteck beim Ziehen der Maus."""
+        if not getattr(self, "drawing_roi", False) or getattr(self, "roi_active_panel", None) != panel_name:
+            return
+        
+        x_orig, y_orig = self.map_event_to_image_coords(event, panel_name, is_grid)
+        if x_orig is not None and y_orig is not None:
+            self.roi_current_x = x_orig
+            self.roi_current_y = y_orig
+            self.draw_temp_roi_on_panel(panel_name, is_grid, self.roi_start_x, self.roi_start_y, x_orig, y_orig)
+
+    def on_roi_end(self, event, panel_name: str, is_grid: bool) -> None:
+        """Schließt das Zeichnen der ROI ab und berechnet die lokalen Statistiken."""
+        if not getattr(self, "drawing_roi", False) or getattr(self, "roi_active_panel", None) != panel_name:
+            return
+        
+        self.drawing_roi = False
+        x_orig, y_orig = self.map_event_to_image_coords(event, panel_name, is_grid)
+        if x_orig is not None and y_orig is not None:
+            self.roi_end_x = x_orig
+            self.roi_end_y = y_orig
+            self.calculate_and_show_roi_stats(self.roi_start_x, self.roi_start_y, self.roi_end_x, self.roi_end_y)
+        else:
+            self.calculate_and_show_roi_stats(self.roi_start_x, self.roi_start_y, self.roi_current_x, self.roi_current_y)
+        
+        # Originalbild wiederherstellen
+        self.redraw_all_images()
+
+    def draw_temp_roi_on_panel(self, panel_name: str, is_grid: bool, x1: int, y1: int, x2: int, y2: int) -> None:
+        """Zeichnet ein Rechteck direkt auf das gecachte PIL-Bild und aktualisiert das UI-Widget."""
+        pil_orig = self.pil_cache.get(panel_name)
+        if pil_orig is None:
+            return
+            
+        from PIL import ImageDraw
+        pil_copy = pil_orig.copy()
+        draw = ImageDraw.Draw(pil_copy)
+        
+        min_x = min(x1, x2)
+        max_x = max(x1, x2)
+        min_y = min(y1, y2)
+        max_y = max(y1, y2)
+        
+        # Grünes Rechteck zeichnen (outline und width)
+        draw.rectangle([min_x, min_y, max_x, max_y], outline="#10B981", width=3)
+        
+        # 1. Grid Panel aktualisieren
+        lbl_grid = self.panels[panel_name]
+        w_grid = max(lbl_grid.winfo_width() - 30, 100)
+        h_grid = max(lbl_grid.winfo_height() - 30, 100)
+        if w_grid <= 100 or h_grid <= 100:
+            w_grid, h_grid = 420, 280
+
+        pil_grid = pil_copy.copy()
+        pil_grid.thumbnail((w_grid, h_grid))
+        img_tk_grid = ctk.CTkImage(light_image=pil_grid, dark_image=pil_grid, size=pil_grid.size)
+        lbl_grid.configure(image=img_tk_grid, text="")
+        lbl_grid.image = img_tk_grid
+
+        # 2. Fullsize Panel aktualisieren
+        lbl_full = self.panels_full[panel_name]
+        w_full = max(lbl_full.winfo_width() - 40, 100)
+        h_full = max(lbl_full.winfo_height() - 40, 100)
+        if w_full <= 100 or h_full <= 100:
+            w_full, h_full = 800, 500
+
+        pil_full = pil_copy.copy()
+        pil_full.thumbnail((w_full, h_full))
+        img_tk_full = ctk.CTkImage(light_image=pil_full, dark_image=pil_full, size=pil_full.size)
+        lbl_full.configure(image=img_tk_full, text="")
+        lbl_full.image = img_tk_full
+
+    def calculate_and_show_roi_stats(self, x1: int, y1: int, x2: int, y2: int) -> None:
+        """Berechnet T-Min, T-Max, Durchschnitt, Standardabweichung und Hotspots für die ROI."""
+        if self.current_raw_original is None:
+            return
+            
+        min_x = max(0, min(x1, x2))
+        max_x = min(self.current_raw_original.shape[1] - 1, max(x1, x2))
+        min_y = max(0, min(y1, y2))
+        max_y = min(self.current_raw_original.shape[0] - 1, max(y1, y2))
+        
+        if min_x == max_x or min_y == max_y:
+            return
+            
+        roi_patch = self.current_raw_original[min_y:max_y+1, min_x:max_x+1]
+        
+        # Maske ermitteln
+        roi_mask_patch = None
+        if self.current_raw_mask is not None:
+            roi_mask_patch = self.current_raw_mask[min_y:max_y+1, min_x:max_x+1]
+                
+        val_min = float(np.min(roi_patch))
+        val_max = float(np.max(roi_patch))
+        val_mean = float(np.mean(roi_patch))
+        val_std = float(np.std(roi_patch))
+        
+        temp_min = image_processing.pixel_to_celsius(val_min, self.t_min_celsius, self.t_max_celsius)
+        temp_max = image_processing.pixel_to_celsius(val_max, self.t_min_celsius, self.t_max_celsius)
+        temp_mean = image_processing.pixel_to_celsius(val_mean, self.t_min_celsius, self.t_max_celsius)
+        temp_std = (val_std / 255.0) * (self.t_max_celsius - self.t_min_celsius)
+        
+        hotspot_px = 0
+        if roi_mask_patch is not None:
+            hotspot_px = int(np.sum(roi_mask_patch > 0))
+            
+        self.update_roi_sidebar_ui(min_x, min_y, max_x, max_y, temp_min, temp_max, temp_mean, temp_std, hotspot_px)
+
+    def update_roi_sidebar_ui(self, x1, y1, x2, y2, t_min, t_max, t_mean, t_std, hotspots) -> None:
+        """Baut den Inhalt des ROI-Statistik-Panels dynamisch auf."""
+        for w in self.roi_stats_frame.winfo_children():
+            w.destroy()
+            
+        self.roi_info_lbl.pack_forget()
+        self.roi_stats_frame.pack(fill=ctk.X, padx=12, pady=4)
+        
+        unit = self.temp_unit_opt.get() if hasattr(self, "temp_unit_opt") else "Celsius (°C)"
+        unit_str = "°C"
+        if "Fahrenheit" in unit:
+            unit_str = "°F"
+        elif "Kelvin" in unit:
+            unit_str = "K"
+            
+        def format_temp(val_c):
+            val_converted = self.convert_celsius_to_unit(val_c) if hasattr(self, "convert_celsius_to_unit") else val_c
+            return f"{val_converted:.2f} {unit_str}"
+            
+        def format_delta(val_c_delta):
+            val_converted = (val_c_delta * 1.8) if "Fahrenheit" in unit else val_c_delta
+            return f"{val_converted:.2f} {unit_str}"
+
+        ctk.CTkLabel(self.roi_stats_frame, text=f"Bereich: [{x1},{y1}] bis [{x2},{y2}]", font=ctk.CTkFont(size=11, weight="bold"), text_color=COLOR_PRIMARY_ACCENT, anchor="w").pack(fill=ctk.X, pady=2)
+        
+        grid = ctk.CTkFrame(self.roi_stats_frame, fg_color="transparent")
+        grid.pack(fill=ctk.X, pady=4)
+        
+        stats = [
+            ("Max. Temp:", format_temp(t_max)),
+            ("Min. Temp:", format_temp(t_min)),
+            ("Mittelwert (µ):", format_temp(t_mean)),
+            ("Abweichung (σ):", format_delta(t_std)),
+            ("Hotspot-Pixel:", f"{hotspots} px")
+        ]
+        
+        for name, val in stats:
+            row = ctk.CTkFrame(grid, fg_color="transparent")
+            row.pack(fill=ctk.X, pady=1)
+            ctk.CTkLabel(row, text=name, font=ctk.CTkFont(size=10, weight="bold"), text_color=COLOR_TEXT_SECONDARY, anchor="w").pack(side=ctk.LEFT)
+            ctk.CTkLabel(row, text=val, font=ctk.CTkFont(size=11), text_color=COLOR_TEXT_PRIMARY, anchor="w").pack(side=ctk.RIGHT)
+
+        btn_reset = ctk.CTkButton(
+            self.roi_stats_frame,
+            text="ROI zurücksetzen",
+            command=self.reset_roi_analysis,
+            font=ctk.CTkFont(size=11),
+            fg_color="transparent",
+            text_color=COLOR_PRIMARY_ACCENT,
+            hover_color=COLOR_BORDER_CARD,
+            border_width=1,
+            border_color=COLOR_BORDER_CARD,
+            height=24,
+            corner_radius=4
+        )
+        btn_reset.pack(fill=ctk.X, pady=(6, 2))
+
+    def reset_roi_analysis(self) -> None:
+        """Setzt die ROI-Analyse zurück."""
+        for w in self.roi_stats_frame.winfo_children():
+            w.destroy()
+        self.roi_stats_frame.pack_forget()
+        self.roi_info_lbl.pack(fill=ctk.X, padx=12, pady=4)
+        self.redraw_all_images()
 
     def draw_histogram(self) -> None:
         """Zeichnet das statistische Matplotlib-Histogramm exklusiv über der Körperoberfläche."""
