@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IGNITE – Thermografische Entzündungsdetektion</title>
+  <meta name="description" content="IGNITE ist eine intelligente Medical Imaging Suite zur automatisierten Erkennung thermischer Anomalien und Entzündungen an Füßen und Gelenken. Entwickelt für Jugend forscht 2026.">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+  
+  <link rel="icon" type="image/png" href="/images/logo.png">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-container">
+      <a href="#" class="logo-area">
+        <img src="/images/logo.png" alt="IGNITE Logo" class="nav-logo">
+        <span class="nav-brand">IGNITE</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="#showcase" id="link-showcase">Pipeline-Showcase</a></li>
+        <li><a href="#features" id="link-features">Features</a></li>
+        <li><a href="#download" class="nav-cta" id="link-download">Download</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <header class="hero-section">
+    <div class="hero-bg-overlay"></div>
+    <div class="hero-container">
+      <div class="hero-content">
+        <div class="badge">Jugend forscht 2026</div>
+        <h1>Die Zukunft der <span class="highlight">thermografischen</span> Entzündungsdetektion</h1>
+        <p class="hero-desc">
+          Automatisierte Hotspot-Erkennung und podologische Symmetrieanalyse in Echtzeit. 
+          Powered by Rust-Core-Performance und GPU-Beschleunigung.
+        </p>
+        <div class="hero-buttons">
+          <a href="#download" class="btn-primary" id="btn-hero-download">
+            <span class="btn-icon">📥</span> Desktop-App laden
+          </a>
+          <a href="#showcase" class="btn-secondary" id="btn-hero-showcase">
+            Analyse ansehen
+          </a>
+        </div>
+      </div>
+      <div class="hero-image-wrapper">
+        <img src="/images/step4.png" alt="Analyse-Ergebnis Vorschau" class="hero-mockup">
+        <div class="glow-effect"></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Interactive Pipeline Showcase -->
+  <section id="showcase" class="showcase-section">
+    <div class="container">
+      <div class="section-header">
+        <h2>Die Analyse-Pipeline im Detail</h2>
+        <p class="section-subtitle">
+          Vier vollautomatische Schritte separieren den Fuß vom Hintergrund und lokalisieren Entzündungsherde.
+        </p>
+      </div>
+
+      <!-- Tabs Navigation -->
+      <div class="showcase-tabs" role="tablist">
+        <button class="tab-btn active" data-step="1" id="tab-btn-1" role="tab" aria-selected="true">
+          1. Originalbild
+        </button>
+        <button class="tab-btn" data-step="2" id="tab-btn-2" role="tab" aria-selected="false">
+          2. Rumpf-Maske
+        </button>
+        <button class="tab-btn" data-step="3" id="tab-btn-3" role="tab" aria-selected="false">
+          3. Hitze-Differenz
+        </button>
+        <button class="tab-btn" data-step="4" id="tab-btn-4" role="tab" aria-selected="false">
+          4. Hotspots (Rust)
+        </button>
+      </div>
+
+      <!-- Showcase Display Box -->
+      <div class="showcase-display">
+        <div class="display-image-container">
+          <img src="/images/step1.png" alt="Originales Infrarotbild" id="showcase-image" class="showcase-img">
+        </div>
+        <div class="display-info">
+          <h3 id="showcase-title">Schritt 1: Infrarot-Originalbild</h3>
+          <p id="showcase-description">
+            Das rohe Infrarotbild aus der FLIR-Wärmebildkamera. Die Farbskalierung bildet die ungefilterte Oberflächentemperatur des Fußes ab. Zu diesem Zeitpunkt sind Rauschen und Raum-Hintergrundreflexionen noch voll vorhanden.
+          </p>
+          <ul class="showcase-bullets" id="showcase-bullets">
+            <li>Kalibrierung über anpassbaren Temperatur-Offset</li>
+            <li>Präzise Pixel-Temperatur-Konvertierung</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Technical Features Grid -->
+  <section id="features" class="features-section">
+    <div class="container">
+      <div class="section-header">
+        <h2>Wissenschaftliche Präzision trifft Performance</h2>
+        <p class="section-subtitle">
+          IGNITE kombiniert modernste geometrische Filter mit nativer Performanz für klinisch relevante Ergebnisse.
+        </p>
+      </div>
+
+      <div class="features-grid">
+        <!-- Feature 1 -->
+        <div class="feature-card">
+          <div class="feature-icon">⚡</div>
+          <h3>Rust & GPU Pipeline</h3>
+          <p>
+            Der Kern-Algorithmus ist in hoch-optimiertem, nativem Rust geschrieben und nutzt Rayon für Multi-Threading. Bei Bedarf schaltet die Pipeline vollautomatisch auf PyTorch-GPU-Beschleunigung um.
+          </p>
+        </div>
+
+        <!-- Feature 2 -->
+        <div class="feature-card">
+          <div class="feature-icon">🩺</div>
+          <h3>Podologisches 3-Zonen-Modell</h3>
+          <p>
+            Unterteilt den Fuß automatisch in Vorfuß, Mittelfuß und Rückfuß. Die Software vergleicht die Symmetrie beider Füße und warnt bei einer Abweichung von über 1.0 Kelvin.
+          </p>
+        </div>
+
+        <!-- Feature 3 -->
+        <div class="feature-card">
+          <div class="feature-icon">🎯</div>
+          <h3>Interaktive ROI-Analyse</h3>
+          <p>
+            Zeichne einfach mit gedrückter Maustaste eine Region of Interest (ROI) über ein beliebiges Areal auf. Das System berechnet live die Maximal-, Minimal- und Durchschnittstemperatur für diese Zone.
+          </p>
+        </div>
+
+        <!-- Feature 4 -->
+        <div class="feature-card">
+          <div class="feature-icon">📁</div>
+          <h3>Automatisierter Audit-Trail</h3>
+          <p>
+            Jeder Analyseschritt wird fälschungssicher mit Zeitstempel und pseudonymisierten Metadaten in ein lokales Audit-Protokoll exportiert und steht als interaktiver HTML-Report bereit.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Download & Action Section -->
+  <section id="download" class="download-section">
+    <div class="container">
+      <div class="download-card">
+        <div class="download-badge">Desktop Application</div>
+        <h2>Bereit für den Testlauf?</h2>
+        <p>
+          Lade die IGNITE Desktop-Anwendung herunter. Die Software wurde optimiert für Windows 10/11 und läuft dank nativer Algorithmen auch auf leistungsschwachen Laptops flüssig.
+        </p>
+        <div class="download-cta-row">
+          <a href="#" class="btn-primary btn-large" id="btn-download-win">
+            💾 IGNITE für Windows laden (.msi / .exe)
+          </a>
+        </div>
+        <div class="download-meta">
+          <span>Version 1.0.0</span> • 
+          <span>Größe: ~24 MB</span> • 
+          <span>Voraussetzungen: Windows 10/11 (64-Bit)</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="main-footer">
+    <div class="container footer-container">
+      <div class="footer-left">
+        <span class="footer-logo">IGNITE</span>
+        <p class="footer-text">Medical Imaging Suite — Jugend forscht 2026</p>
+      </div>
+      <div class="footer-right">
+        <p class="copyright">&copy; 2026 Jona Noack. Alle Rechte vorbehalten.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
