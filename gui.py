@@ -38,8 +38,8 @@ COLOR_TEXT_SECONDARY = ("#71717A", "#A1A1AA")
 COLOR_TEXT_MUTED = ("#A1A1AA", "#3F3F46")
 COLOR_BG_INPUT = ("#FFFFFF", "#09090B")
 COLOR_BORDER_INPUT = ("#E4E4E7", "#27272A")
-COLOR_PRIMARY_ACCENT = "#EF4444"
-COLOR_HOVER_ACCENT = "#DC2626" 
+COLOR_PRIMARY_ACCENT = "#06B6D4"
+COLOR_HOVER_ACCENT = "#0891B2" 
 
 
 # ─── KLINISCHE HILFSFUNKTIONEN ────────────────────────────────────────────────
@@ -498,34 +498,53 @@ class IgniteApp:
         )
         self.export_browse_btn.pack(side=ctk.RIGHT, padx=(4, 0))
 
-        # Sektion: Steuerung Buttons
-        ctrl_card = ctk.CTkFrame(self.sidebar_scroll, fg_color="transparent")
-        ctrl_card.pack(fill=ctk.X, pady=(0, 15))
-
+        # Sektion: Haupt-Steuerung
         self.load_btn = ctk.CTkButton(
-            ctrl_card,
+            self.sidebar_scroll,
             text="Wärmebild laden",
             command=self.load_file,
             font=ctk.CTkFont(family="Arial", size=14, weight="bold"),
             fg_color=COLOR_PRIMARY_ACCENT,
             hover_color=COLOR_HOVER_ACCENT,
             text_color=COLOR_BG_MAIN,
-            height=38,
-            corner_radius=6
+            height=40,
+            corner_radius=8
         )
-        self.load_btn.pack(fill=ctk.X, pady=4)
+        self.load_btn.pack(fill=ctk.X, pady=(0, 15))
+
+        # Sektion: Aktionen & Export (Einklappbar)
+        self.actions_visible = False
+        self.actions_card = ctk.CTkFrame(self.sidebar_scroll, fg_color=COLOR_BG_CARD, corner_radius=8, border_width=1, border_color=COLOR_BORDER_CARD)
+        self.actions_card.pack(fill=ctk.X, pady=(0, 15))
+
+        self.toggle_actions_btn = ctk.CTkButton(
+            self.actions_card,
+            text="📁 Aktionen & Export [▶]",
+            command=self.toggle_actions_visibility,
+            font=ctk.CTkFont(size=11, weight="bold"),
+            fg_color="transparent",
+            text_color=COLOR_TEXT_SECONDARY,
+            hover_color=COLOR_BORDER_CARD,
+            height=32,
+            anchor="w",
+            corner_radius=8
+        )
+        self.toggle_actions_btn.pack(fill=ctk.X, padx=4, pady=4)
+
+        self.actions_container = ctk.CTkFrame(self.actions_card, fg_color="transparent")
+        # Wird initial nicht gepackt (eingeklappt)
 
         self.batch_btn = ctk.CTkButton(
-            ctrl_card,
+            self.actions_container,
             text="Ordner-Stapelverarbeitung",
             command=self.run_batch_processing,
-            font=ctk.CTkFont(family="Arial", size=13, weight="bold"),
+            font=ctk.CTkFont(family="Arial", size=12, weight="bold"),
             fg_color="transparent",
             text_color=COLOR_PRIMARY_ACCENT,
             hover_color=COLOR_BG_CARD,
             border_width=1,
             border_color=COLOR_PRIMARY_ACCENT,
-            height=34,
+            height=32,
             corner_radius=6
         )
         self.batch_btn.pack(fill=ctk.X, pady=4)
@@ -614,15 +633,15 @@ class IgniteApp:
 
         # Dokumentations-Ordner-Button
         self.open_dir_btn = ctk.CTkButton(
-            self.sidebar_scroll,
+            self.actions_container,
             text="Ergebnisordner öffnen",
             command=self.open_output_dir,
-            font=ctk.CTkFont(family="Arial", size=13),
+            font=ctk.CTkFont(family="Arial", size=12, weight="bold"),
             fg_color="transparent",
             text_color=COLOR_PRIMARY_ACCENT,
             hover_color=COLOR_BG_CARD,
             border_width=1,
-            border_color=COLOR_BORDER_CARD,
+            border_color=COLOR_PRIMARY_ACCENT,
             height=32,
             corner_radius=6
         )
@@ -630,15 +649,15 @@ class IgniteApp:
 
         # HTML-Bericht-Button
         self.export_report_btn = ctk.CTkButton(
-            self.sidebar_scroll,
+            self.actions_container,
             text="HTML-Bericht exportieren",
             command=self.export_html_report,
-            font=ctk.CTkFont(family="Arial", size=13),
+            font=ctk.CTkFont(family="Arial", size=12, weight="bold"),
             fg_color="transparent",
             text_color=COLOR_PRIMARY_ACCENT,
             hover_color=COLOR_BG_CARD,
             border_width=1,
-            border_color=COLOR_BORDER_CARD,
+            border_color=COLOR_PRIMARY_ACCENT,
             height=32,
             corner_radius=6
         )
@@ -646,15 +665,15 @@ class IgniteApp:
 
         # Bereinigen-Button
         self.clean_dir_btn = ctk.CTkButton(
-            self.sidebar_scroll,
+            self.actions_container,
             text="Ergebnisordner bereinigen",
             command=self.clean_output_dir,
-            font=ctk.CTkFont(family="Arial", size=13),
+            font=ctk.CTkFont(family="Arial", size=12, weight="bold"),
             fg_color="transparent",
             text_color="#EF4444",
-            hover_color=("#FEE2E2", "#2D1A22"),
+            hover_color=("#2D1A22", "#fee2e2"),
             border_width=1,
-            border_color=("#FCA5A5", "#451A22"),
+            border_color="#EF4444",
             height=32,
             corner_radius=6
         )
@@ -776,14 +795,14 @@ class IgniteApp:
             box = ctk.CTkFrame(
                 steps_frame,
                 fg_color=COLOR_BG_MAIN,
-                corner_radius=6,
+                corner_radius=8,
                 border_width=1,
-                border_color=COLOR_BORDER_CARD
+                border_color="#0F766E"  # Edler dunkel-cyanfarbener Rand
             )
             box.grid(row=0, column=idx, padx=8, sticky="nsew")
             
             ctk.CTkLabel(box, text=f_title, font=ctk.CTkFont(size=12, weight="bold"), text_color=COLOR_PRIMARY_ACCENT).pack(pady=(8, 2), padx=8)
-            ctk.CTkLabel(box, text=f_desc, font=ctk.CTkFont(size=10), text_color=COLOR_TEXT_SECONDARY, wraplength=170, justify="center").pack(pady=(0, 8), padx=8)
+            ctk.CTkLabel(box, text=f_desc, font=ctk.CTkFont(size=11), text_color=COLOR_TEXT_SECONDARY, wraplength=170, justify="center").pack(pady=(0, 8), padx=8)
 
         # Loading Overlay (für Hintergrund-Verarbeitung)
         self.loading_overlay = ctk.CTkFrame(content_frame, fg_color="transparent")
@@ -1561,6 +1580,17 @@ class IgniteApp:
             self.settings_boxes_frame.pack(fill=ctk.X, padx=12, pady=(4, 8))
             self.toggle_settings_btn.configure(text="⚙️ Erweiterte Einstellungen [▼]")
             self.settings_visible = True
+
+    def toggle_actions_visibility(self) -> None:
+        """Blendet die Aktionen-Buttons ein oder aus."""
+        if self.actions_visible:
+            self.actions_container.pack_forget()
+            self.toggle_actions_btn.configure(text="📁 Aktionen & Export [▶]")
+            self.actions_visible = False
+        else:
+            self.actions_container.pack(fill=ctk.X, padx=12, pady=(4, 8))
+            self.toggle_actions_btn.configure(text="📁 Aktionen & Export [▼]")
+            self.actions_visible = True
 
 
 
