@@ -56,10 +56,10 @@ Die Detektion stützt sich auf eine fünfstufige Pipeline zur präzisen Extrakti
 
 ### 1. Dynamische Kernel-Skalierung (Feature A)
 Um Bildauflösungen unabhängig zu verarbeiten, skaliert das System die Radien $R$ aller morphologischen Operatoren proportional zur Bildbreite $W$:
-$$R_{\text{tophat}} = \text{tophat\_factor} \cdot W$$
+$$R_{\text{tophat}} = \text{tophat-factor} \cdot W$$
 
 ### 2. Adaptive Körper-Segmentierung / Body-Mask (Feature B)
-Das Objekt wird mittels Otsu-Binarisierung vom Hintergrund getrennt. Der Schwellenwert $T$ wird künstlich auf das Temperaturintervall $[\text{otsu\_min}, \text{otsu\_max}]$ beschränkt, um kältere Gliedmaßen zuverlässig zu maskieren. Es folgt eine euklidische Distanztransformation (Chamfer-3-4-Metrik) und eine adaptive Erosion:
+Das Objekt wird mittels Otsu-Binarisierung vom Hintergrund getrennt. Der Schwellenwert $T$ wird künstlich auf das Temperaturintervall $[\text{otsu-min}, \text{otsu-max}]$ beschränkt, um kältere Gliedmaßen zuverlässig zu maskieren. Es folgt eine euklidische Distanztransformation (Chamfer-3-4-Metrik) und eine adaptive Erosion:
 $$\text{Maske} = \text{Erosion}(\text{Otsu}(f, T), R_{\text{erosion}})$$
 
 ### 3. Morphologische Top-Hat-Transformation (Feature C)
