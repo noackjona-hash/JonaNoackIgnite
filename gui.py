@@ -31,16 +31,23 @@ import storage
 
 
 # ─── COLOR TOKENS FÜR DYNAMISCHES DESIGN (LIGHT / DARK MODE) ──────────────────
-COLOR_BG_MAIN = ("#FAFAFA", "#09090B")
-COLOR_BG_CARD = ("#F4F4F5", "#18181B")
-COLOR_BORDER_CARD = ("#E4E4E7", "#27272A")
-COLOR_TEXT_PRIMARY = ("#09090B", "#FAF5FF")
-COLOR_TEXT_SECONDARY = ("#71717A", "#A1A1AA")
-COLOR_TEXT_MUTED = ("#A1A1AA", "#3F3F46")
-COLOR_BG_INPUT = ("#FFFFFF", "#09090B")
-COLOR_BORDER_INPUT = ("#E4E4E7", "#27272A")
-COLOR_PRIMARY_ACCENT = "#06B6D4"
-COLOR_HOVER_ACCENT = "#0891B2" 
+# Inspiriert von modernen Premium-Schnittstellen (Slate / Indigo / Violet)
+COLOR_BG_MAIN = ("#F8FAFC", "#030712")       # Slate-50 / Gray-950
+COLOR_BG_CARD = ("#FFFFFF", "#0B0F19")       # Pure White / Dark Indigo-Slate-900
+COLOR_BORDER_CARD = ("#E2E8F0", "#1E293B")   # Slate-200 / Slate-800
+COLOR_TEXT_PRIMARY = ("#0F172A", "#F8FAFC")  # Slate-900 / Slate-50
+COLOR_TEXT_SECONDARY = ("#475569", "#94A3B8")# Slate-600 / Slate-400
+COLOR_TEXT_MUTED = ("#94A3B8", "#475569")    # Slate-400 / Slate-600
+COLOR_BG_INPUT = ("#F1F5F9", "#070A13")      # Slate-100 / Gray-900
+COLOR_BORDER_INPUT = ("#CBD5E1", "#1E293B")  # Slate-300 / Slate-800
+COLOR_PRIMARY_ACCENT = "#6366F1"             # Premium Indigo-500 (Vibrant indigo glow)
+COLOR_HOVER_ACCENT = "#4F46E5"               # Indigo-600
+COLOR_VIOLET = "#8B5CF6"                     # Violet-500
+COLOR_SUCCESS = "#10B981"                    # Emerald-500
+COLOR_WARNING = "#F59E0B"                    # Amber-500
+COLOR_DANGER = "#EF4444"                     # Red-500
+FONT_FAMILY = "Segoe UI"
+
 
 
 # ─── KLINISCHE HILFSFUNKTIONEN ────────────────────────────────────────────────
@@ -252,7 +259,7 @@ class IgniteApp:
         title_lbl = ctk.CTkLabel(
             sidebar_frame,
             text="IGNITE",
-            font=ctk.CTkFont(family="Arial", size=26, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=26, weight="bold"),
             text_color=COLOR_TEXT_PRIMARY
         )
         title_lbl.pack(padx=20, pady=pady_title, anchor="w")
@@ -260,7 +267,7 @@ class IgniteApp:
         subtitle_lbl = ctk.CTkLabel(
             sidebar_frame,
             text="Medical Imaging Suite  ·  v1.0",
-            font=ctk.CTkFont(family="Arial", size=11),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
             text_color=COLOR_TEXT_SECONDARY
         )
         subtitle_lbl.pack(padx=20, pady=(0, 4), anchor="w")
@@ -268,7 +275,7 @@ class IgniteApp:
         sub2_lbl = ctk.CTkLabel(
             sidebar_frame,
             text="Thermografische Entzündungsdetektion",
-            font=ctk.CTkFont(family="Arial", size=10),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=10),
             text_color=COLOR_TEXT_MUTED
         )
         sub2_lbl.pack(padx=20, pady=(0, 20), anchor="w")
@@ -475,10 +482,10 @@ class IgniteApp:
             self.sidebar_scroll,
             text="Wärmebild laden",
             command=self.load_file,
-            font=ctk.CTkFont(family="Arial", size=14, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=14, weight="bold"),
             fg_color=COLOR_PRIMARY_ACCENT,
             hover_color=COLOR_HOVER_ACCENT,
-            text_color=COLOR_BG_MAIN,
+            text_color="#FFFFFF", # Weißer Text für optimalen Kontrast auf Indigo
             height=40,
             corner_radius=8
         )
@@ -493,7 +500,7 @@ class IgniteApp:
             self.actions_card,
             text="📁 Aktionen & Export [▶]",
             command=self.toggle_actions_visibility,
-            font=ctk.CTkFont(size=11, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
             fg_color="transparent",
             text_color=COLOR_TEXT_SECONDARY,
             hover_color=COLOR_BORDER_CARD,
@@ -510,7 +517,7 @@ class IgniteApp:
             self.actions_container,
             text="Ordner-Stapelverarbeitung",
             command=self.run_batch_processing,
-            font=ctk.CTkFont(family="Arial", size=12, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
             fg_color="transparent",
             text_color=COLOR_PRIMARY_ACCENT,
             hover_color=COLOR_BG_CARD,
@@ -525,7 +532,7 @@ class IgniteApp:
         palette_lbl = ctk.CTkLabel(
             self.sidebar_scroll,
             text="FARBPALETTE",
-            font=ctk.CTkFont(family="Arial", size=10, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=10, weight="bold"),
             text_color=COLOR_PRIMARY_ACCENT
         )
         palette_lbl.pack(padx=5, pady=(5, 2), anchor="w")
@@ -534,7 +541,7 @@ class IgniteApp:
             self.sidebar_scroll,
             values=["Graustufen", "Regenbogen (Jet)", "Inferno", "Heiß (Hot)"],
             command=self.on_palette_changed,
-            font=ctk.CTkFont(family="Arial", size=13),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=13),
             fg_color=COLOR_BG_CARD,
             button_color=COLOR_PRIMARY_ACCENT,
             button_hover_color=COLOR_HOVER_ACCENT,
@@ -747,34 +754,34 @@ class IgniteApp:
         ctk.CTkLabel(
             center_container,
             text="Willkommen bei IGNITE",
-            font=ctk.CTkFont(family="Arial", size=34, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=34, weight="bold"),
             text_color=COLOR_TEXT_PRIMARY
-        ).pack(pady=4)
+        ).pack(pady=(10, 4))
 
         ctk.CTkLabel(
             center_container,
             text="Medical Imaging Suite  ·  Jugend forscht 2026",
-            font=ctk.CTkFont(family="Arial", size=13),
-            text_color=COLOR_TEXT_SECONDARY
+            font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"),
+            text_color=COLOR_PRIMARY_ACCENT
         ).pack(pady=(0, 6))
 
         ctk.CTkLabel(
             center_container,
             text="Ein intelligentes System zur automatischen Erkennung thermischer Anomalien\nund Entzündungsprozessen an Füßen und Gelenken.",
-            font=ctk.CTkFont(family="Arial", size=12),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
             text_color=COLOR_TEXT_SECONDARY,
             justify="center"
         ).pack(pady=(0, 30))
 
-        # Laden-Button
+        # Laden-Button (mit weißem Text für optimalen Kontrast auf Indigo)
         welcome_load_btn = ctk.CTkButton(
             center_container,
             text="Wärmebild laden und analysieren",
             command=self.load_file,
-            font=ctk.CTkFont(family="Arial", size=15, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=15, weight="bold"),
             fg_color=COLOR_PRIMARY_ACCENT,
             hover_color=COLOR_HOVER_ACCENT,
-            text_color=COLOR_BG_MAIN,
+            text_color="#FFFFFF",
             height=44,
             width=320,
             corner_radius=8
@@ -800,12 +807,12 @@ class IgniteApp:
                 fg_color=COLOR_BG_MAIN,
                 corner_radius=8,
                 border_width=1,
-                border_color="#0F766E"  # Edler dunkel-cyanfarbener Rand
+                border_color=COLOR_BORDER_CARD
             )
             box.grid(row=0, column=idx, padx=8, sticky="nsew")
             
-            ctk.CTkLabel(box, text=f_title, font=ctk.CTkFont(size=12, weight="bold"), text_color=COLOR_PRIMARY_ACCENT).pack(pady=(8, 2), padx=8)
-            ctk.CTkLabel(box, text=f_desc, font=ctk.CTkFont(size=11), text_color=COLOR_TEXT_SECONDARY, wraplength=170, justify="center").pack(pady=(0, 8), padx=8)
+            ctk.CTkLabel(box, text=f_title, font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"), text_color=COLOR_PRIMARY_ACCENT).pack(pady=(8, 2), padx=8)
+            ctk.CTkLabel(box, text=f_desc, font=ctk.CTkFont(family=FONT_FAMILY, size=11), text_color=COLOR_TEXT_SECONDARY, wraplength=170, justify="center").pack(pady=(0, 8), padx=8)
 
         # Loading Overlay (für Hintergrund-Verarbeitung)
         self.loading_overlay = ctk.CTkFrame(content_frame, fg_color="transparent")
@@ -825,7 +832,7 @@ class IgniteApp:
         self.loading_title_lbl = ctk.CTkLabel(
             loading_card,
             text="IGNITE-Pipeline läuft...",
-            font=ctk.CTkFont(family="Arial", size=20, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=20, weight="bold"),
             text_color=COLOR_PRIMARY_ACCENT
         )
         self.loading_title_lbl.pack(pady=(45, 10))
@@ -833,7 +840,7 @@ class IgniteApp:
         self.loading_step_lbl = ctk.CTkLabel(
             loading_card,
             text="Initialisiere Berechnungen...",
-            font=ctk.CTkFont(family="Arial", size=13),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=13),
             text_color=COLOR_TEXT_SECONDARY
         )
         self.loading_step_lbl.pack(pady=5)
@@ -2368,21 +2375,21 @@ class IgniteApp:
         # Matplotlib Styling je nach aktivem Designmode (Light/Dark)
         mode = ctk.get_appearance_mode()
         if mode == "Dark":
-            bg_fig = "#09090B"
-            bg_ax = "#09090B"
-            color_text = "#FAF5FF"
-            color_tick = "#71717A"
-            color_grid = "#18181B"
-            color_spine = "#27272A"
-            bg_legend = "#18181B"
+            bg_fig = "#0B0F19" # Match dark COLOR_BG_CARD
+            bg_ax = "#0B0F19"
+            color_text = "#F8FAFC"
+            color_tick = "#94A3B8"
+            color_grid = "#1E293B"
+            color_spine = "#1E293B"
+            bg_legend = "#070A13"
         else:
-            bg_fig = "#FAFAFA"
+            bg_fig = "#FFFFFF" # Match light COLOR_BG_CARD
             bg_ax = "#FFFFFF"
-            color_text = "#09090B"
-            color_tick = "#71717A"
-            color_grid = "#E4E4E7"
-            color_spine = "#E4E4E7"
-            bg_legend = "#F4F4F5"
+            color_text = "#0F172A"
+            color_tick = "#475569"
+            color_grid = "#E2E8F0"
+            color_spine = "#E2E8F0"
+            bg_legend = "#F1F5F9"
 
         # Matplotlib Figure erstellen
         fig = Figure(figsize=(6, 3.8), dpi=100, facecolor=bg_fig)

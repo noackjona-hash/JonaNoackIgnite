@@ -21,7 +21,7 @@ def create_instant_splash():
     splash = tk.Tk()
     splash.title("IGNITE")
     splash.overrideredirect(True)
-    splash.configure(bg="#09090B")
+    splash.configure(bg="#030712") # Neue Hintergrundfarbe Gray-950
     splash.resizable(False, False)
 
     W, H = 480, 300
@@ -38,29 +38,30 @@ def create_instant_splash():
         from PIL import Image, ImageTk
         img = Image.open(logo_path).resize((64, 64), Image.LANCZOS)
         logo_img_ref = ImageTk.PhotoImage(img)
-        tk.Label(splash, image=logo_img_ref, bg="#09090B").pack(pady=(36, 6))
+        tk.Label(splash, image=logo_img_ref, bg="#030712").pack(pady=(36, 6))
     except Exception:
-        tk.Label(splash, text="", bg="#09090B", height=3).pack()
+        tk.Label(splash, text="", bg="#030712", height=3).pack()
 
+    # Font stack: Segoe UI
     tk.Label(splash, text="IGNITE",
-             font=("Arial", 30, "bold"), fg="#FAF5FF", bg="#09090B").pack(pady=(0, 3))
+             font=("Segoe UI", 30, "bold"), fg="#F8FAFC", bg="#030712").pack(pady=(0, 3))
     tk.Label(splash, text="Medical Imaging Suite  ·  Jugend forscht 2026",
-             font=("Arial", 11), fg="#71717A", bg="#09090B").pack()
+             font=("Segoe UI", 11), fg="#94A3B8", bg="#030712").pack()
 
-    tk.Frame(splash, bg="#27272A", height=1).pack(fill=tk.X, padx=40, pady=14)
+    tk.Frame(splash, bg="#1E293B", height=1).pack(fill=tk.X, padx=40, pady=14)
 
     status_var = tk.StringVar(value="Lade Module...")
     tk.Label(splash, textvariable=status_var,
-             font=("Arial", 11), fg="#52525B", bg="#09090B").pack()
+             font=("Segoe UI", 11), fg="#475569", bg="#030712").pack()
 
     tk.Label(splash, text="© 2026 Jona Noack  ·  Jugend forscht",
-             font=("Arial", 9), fg="#27272A", bg="#09090B").pack(pady=(10, 6))
+             font=("Segoe UI", 9), fg="#1E293B", bg="#030712").pack(pady=(10, 6))
 
     # Fortschrittsbalken (simuliert via Canvas)
-    pbar_canvas = tk.Canvas(splash, width=360, height=3, bg="#18181B",
+    pbar_canvas = tk.Canvas(splash, width=360, height=3, bg="#0B0F19",
                              highlightthickness=0, bd=0)
     pbar_canvas.pack()
-    bar = pbar_canvas.create_rectangle(0, 0, 0, 3, fill="#06B6D4", outline="")
+    bar = pbar_canvas.create_rectangle(0, 0, 0, 3, fill="#6366F1", outline="") # Neue Akzentfarbe Indigo
 
     # Referenzen sichern damit GC sie nicht löscht
     splash._logo_ref = logo_img_ref
