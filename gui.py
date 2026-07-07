@@ -333,20 +333,20 @@ class IgniteApp:
 
         # ── Systemeinstellungen-Karte (standardmäßig eingeklappt) ────────────
         self.settings_visible = False  # Standardmäßig EINGEKLAPPT für cleane UI
-        self.settings_card = ctk.CTkFrame(self.sidebar_scroll, fg_color=COLOR_BG_CARD, corner_radius=8, border_width=1, border_color=COLOR_BORDER_CARD)
+        self.settings_card = ctk.CTkFrame(self.sidebar_scroll, fg_color=COLOR_BG_CARD, corner_radius=12, border_width=1, border_color=COLOR_BORDER_CARD)
         self.settings_card.pack(fill=ctk.X, pady=(0, 15), ipady=6)
 
         self.toggle_settings_btn = ctk.CTkButton(
             self.settings_card,
-            text="⚙️ Erweiterte Einstellungen [▶]",
+            text="⚙️ Systemeinstellungen  ▸",
             command=self.toggle_settings_visibility,
-            font=ctk.CTkFont(size=11, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
             fg_color="transparent",
             text_color=COLOR_TEXT_SECONDARY,
             hover_color=COLOR_BORDER_CARD,
             height=32,
             anchor="w",
-            corner_radius=8
+            corner_radius=12
         )
         self.toggle_settings_btn.pack(fill=ctk.X, padx=4, pady=4)
 
@@ -493,12 +493,12 @@ class IgniteApp:
 
         # Sektion: Aktionen & Export (Einklappbar)
         self.actions_visible = False
-        self.actions_card = ctk.CTkFrame(self.sidebar_scroll, fg_color=COLOR_BG_CARD, corner_radius=8, border_width=1, border_color=COLOR_BORDER_CARD)
+        self.actions_card = ctk.CTkFrame(self.sidebar_scroll, fg_color=COLOR_BG_CARD, corner_radius=12, border_width=1, border_color=COLOR_BORDER_CARD)
         self.actions_card.pack(fill=ctk.X, pady=(0, 15))
 
         self.toggle_actions_btn = ctk.CTkButton(
             self.actions_card,
-            text="📁 Aktionen & Export [▶]",
+            text="📁 Aktionen & Berichte  ▸",
             command=self.toggle_actions_visibility,
             font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
             fg_color="transparent",
@@ -506,7 +506,7 @@ class IgniteApp:
             hover_color=COLOR_BORDER_CARD,
             height=32,
             anchor="w",
-            corner_radius=8
+            corner_radius=12
         )
         self.toggle_actions_btn.pack(fill=ctk.X, padx=4, pady=4)
 
@@ -552,20 +552,20 @@ class IgniteApp:
         self.palette_menu.pack(fill=ctk.X, pady=(0, 15))
 
         # Sektion: Pipeline Parameter (Einklappbar)
-        self.param_card = ctk.CTkFrame(self.sidebar_scroll, fg_color=COLOR_BG_CARD, corner_radius=8, border_width=1, border_color=COLOR_BORDER_CARD)
+        self.param_card = ctk.CTkFrame(self.sidebar_scroll, fg_color=COLOR_BG_CARD, corner_radius=12, border_width=1, border_color=COLOR_BORDER_CARD)
         self.param_card.pack(fill=ctk.X, pady=(0, 15))
 
         self.toggle_param_btn = ctk.CTkButton(
             self.param_card,
-            text="⚙️ Parameter einblenden",
+            text="📊 Parameter einblenden  ▸",
             command=self.toggle_pipeline_parameters,
-            font=ctk.CTkFont(size=11, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
             fg_color="transparent",
             text_color=COLOR_PRIMARY_ACCENT,
             hover_color=COLOR_BORDER_CARD,
             height=32,
             anchor="w",
-            corner_radius=8
+            corner_radius=12
         )
         self.toggle_param_btn.pack(fill=ctk.X, padx=4, pady=4)
 
@@ -885,7 +885,7 @@ class IgniteApp:
             panel_frame = ctk.CTkFrame(
                 grid_frame,
                 fg_color=COLOR_BG_CARD,
-                corner_radius=8,
+                corner_radius=12, # Größere Ecken für modernen Card-Look
                 border_width=1,
                 border_color=COLOR_BORDER_CARD
             )
@@ -894,19 +894,19 @@ class IgniteApp:
             title = ctk.CTkLabel(
                 panel_frame,
                 text=name,
-                font=ctk.CTkFont(family="Arial", size=13, weight="bold"),
+                font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"),
                 text_color=COLOR_TEXT_PRIMARY,
                 anchor="w"
             )
-            title.pack(fill=ctk.X, padx=15, pady=(10, 2))
+            title.pack(fill=ctk.X, padx=15, pady=(12, 4))
 
             lbl = ctk.CTkLabel(
                 panel_frame,
-                text="\n🌡️\n\nKein Bild geladen\n",
-                font=ctk.CTkFont(family="Arial", size=13),
+                text="\n🌡️\n\nBEREIT FÜR ANALYSE\n\nBitte laden Sie ein Wärmebild über die Seitenleiste.\n",
+                font=ctk.CTkFont(family=FONT_FAMILY, size=12),
                 text_color=COLOR_TEXT_MUTED,
                 fg_color=COLOR_BG_MAIN,
-                corner_radius=6
+                corner_radius=8
             )
             lbl.pack(fill=ctk.BOTH, expand=True, padx=15, pady=(0, 15))
             self.panels[name] = lbl
@@ -932,7 +932,7 @@ class IgniteApp:
             panel_frame = ctk.CTkFrame(
                 self.tabview.tab(tab_name),
                 fg_color=COLOR_BG_CARD,
-                corner_radius=8,
+                corner_radius=12,
                 border_width=1,
                 border_color=COLOR_BORDER_CARD
             )
@@ -941,7 +941,7 @@ class IgniteApp:
             title = ctk.CTkLabel(
                 panel_frame,
                 text=step_name,
-                font=ctk.CTkFont(family="Arial", size=15, weight="bold"),
+                font=ctk.CTkFont(family=FONT_FAMILY, size=15, weight="bold"),
                 text_color=COLOR_TEXT_PRIMARY,
                 anchor="w"
             )
@@ -949,11 +949,11 @@ class IgniteApp:
 
             lbl = ctk.CTkLabel(
                 panel_frame,
-                text="\n\n🌡️\n\nNoch kein Wärmebild geladen.\n\nBitte lade ein Bild über die Seitenleiste.\n",
-                font=ctk.CTkFont(family="Arial", size=14),
+                text="\n\n🌡️\n\nNoch kein Wärmebild geladen.\n\nBitte laden Sie eine Bilddatei über die linke Seitenleiste.\n",
+                font=ctk.CTkFont(family=FONT_FAMILY, size=13),
                 text_color=COLOR_TEXT_MUTED,
                 fg_color=COLOR_BG_MAIN,
-                corner_radius=6
+                corner_radius=8
             )
             lbl.pack(fill=ctk.BOTH, expand=True, padx=20, pady=(0, 20))
             self.panels_full[step_name] = lbl
@@ -1360,14 +1360,14 @@ class IgniteApp:
             self.pil_cache.clear()
             
             for name, lbl in self.panels.items():
-                lbl.configure(image="", text="\n🌡️\n\nKein Bild geladen\n")
+                lbl.configure(image="", text="\n🌡️\n\nBEREIT FÜR ANALYSE\n\nBitte laden Sie ein Wärmebild über die Seitenleiste.\n")
             for name, lbl in self.panels_full.items():
-                lbl.configure(image="", text="\n\n🌡️\n\nNoch kein Wärmebild geladen.\n\nBitte lade ein Bild über die Seitenleiste.\n")
+                lbl.configure(image="", text="\n\n🌡️\n\nNoch kein Wärmebild geladen.\n\nBitte laden Sie eine Bilddatei über die linke Seitenleiste.\n")
                 
-            self.filename_label.configure(text="Datei: Keine", text_color="#F4F4F5")
-            self.hotspot_label.configure(text="Hotspots: --", text_color="#F4F4F5")
-            self.pixel_info_label.configure(text="Pixel-Info: --", text_color="#71717A")
-            self.status_label.configure(text="Status: Bereit", text_color="#A1A1AA")
+            self.filename_label.configure(text="Datei: Keine", text_color=COLOR_TEXT_PRIMARY)
+            self.hotspot_label.configure(text="Hotspots: --", text_color=COLOR_TEXT_PRIMARY)
+            self.pixel_info_label.configure(text="Pixel-Info: --", text_color=COLOR_TEXT_SECONDARY)
+            self.status_label.configure(text="Status: Bereit", text_color=COLOR_TEXT_SECONDARY)
             
             for widget in self.hist_container.winfo_children():
                 widget.destroy()
@@ -1396,11 +1396,11 @@ class IgniteApp:
         """Blendet die Pipeline-Parameter in der Seitenleiste ein oder aus."""
         if self.parameters_visible:
             self.param_sliders_frame.pack_forget()
-            self.toggle_param_btn.configure(text="⚙️ Parameter einblenden")
+            self.toggle_param_btn.configure(text="📊 Parameter einblenden  ▸")
             self.parameters_visible = False
         else:
             self.param_sliders_frame.pack(fill=ctk.X, padx=12, pady=(4, 8))
-            self.toggle_param_btn.configure(text="⚙️ Parameter ausblenden")
+            self.toggle_param_btn.configure(text="📊 Parameter ausblenden  ▾")
             self.parameters_visible = True
 
     def update_params(self, event=None) -> None:
@@ -1585,22 +1585,22 @@ class IgniteApp:
         """Blendet die Systemeinstellungen in der Seitenleiste ein oder aus."""
         if self.settings_visible:
             self.settings_boxes_frame.pack_forget()
-            self.toggle_settings_btn.configure(text="⚙️ Erweiterte Einstellungen [▶]")
+            self.toggle_settings_btn.configure(text="⚙️ Systemeinstellungen  ▸")
             self.settings_visible = False
         else:
             self.settings_boxes_frame.pack(fill=ctk.X, padx=12, pady=(4, 8))
-            self.toggle_settings_btn.configure(text="⚙️ Erweiterte Einstellungen [▼]")
+            self.toggle_settings_btn.configure(text="⚙️ Systemeinstellungen  ▾")
             self.settings_visible = True
 
     def toggle_actions_visibility(self) -> None:
         """Blendet die Aktionen-Buttons ein oder aus."""
         if self.actions_visible:
             self.actions_container.pack_forget()
-            self.toggle_actions_btn.configure(text="📁 Aktionen & Export [▶]")
+            self.toggle_actions_btn.configure(text="📁 Aktionen & Berichte  ▸")
             self.actions_visible = False
         else:
             self.actions_container.pack(fill=ctk.X, padx=12, pady=(4, 8))
-            self.toggle_actions_btn.configure(text="📁 Aktionen & Export [▼]")
+            self.toggle_actions_btn.configure(text="📁 Aktionen & Berichte  ▾")
             self.actions_visible = True
 
 
@@ -1849,13 +1849,13 @@ class IgniteApp:
         self.update_backend_label()
 
         if hotspot_count == 0:
-            hotspot_color = "#F1F5F9"
+            hotspot_color = COLOR_TEXT_PRIMARY
             hotspot_text = "0 Pixel (Normal)"
         elif hotspot_count < 150:
-            hotspot_color = "#FFA500"
+            hotspot_color = COLOR_WARNING
             hotspot_text = f"{hotspot_count} Pixel (Verdacht)"
         else:
-            hotspot_color = "#FF0055"
+            hotspot_color = COLOR_DANGER
             hotspot_text = f"{hotspot_count} Pixel (Entzündung)"
 
         self.hotspot_label.configure(
@@ -1865,7 +1865,7 @@ class IgniteApp:
 
         self.status_label.configure(
             text="Status: ✓ Berechnet",
-            text_color=COLOR_PRIMARY_ACCENT
+            text_color=COLOR_SUCCESS
         )
 
         # Audit-Trail Eintrag schreiben
