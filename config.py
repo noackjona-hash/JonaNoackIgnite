@@ -30,13 +30,12 @@ AUDIT_TRAIL_PATH = os.path.join(OUTPUT_DIR, "ignite_audit_trail.csv")
 ANATOMICAL_LOWER_CUTOFF_Y = 0.65
 
 # Mindest-Abstand vom Maskenrand als Bruchteil der Bildbreite.
-# Hotspots direkt am Körperrand (Knöchel → Hintergrund-Übergang) haben
-# sehr kleine Distanzwerte. Ein echter entzündeter Zeh liegt im Inneren.
-# Wert * Bildbreite ergibt: bei 640px → 14px, bei 1440px → 31px Mindestabstand.
-MIN_DIST_FROM_BORDER_FACTOR = 0.022
+# Ein kleinerer Wert (0.005) ist nötig, um Hotspots an schmalen Gliedmaßen
+# (wie Zehen oder Fingern) nicht fälschlicherweise als Rand-Artefakt zu filtern.
+MIN_DIST_FROM_BORDER_FACTOR = 0.005
 
-# Absoluter Mindest-Abstand in Pixeln (Untergrenze, unabhängig von Bildgröße).
-MIN_DIST_FROM_BORDER_ABS = 12.0
+# Absoluter Mindest-Abstand in Pixeln (Untergrenze für schmale Zonen).
+MIN_DIST_FROM_BORDER_ABS = 4.0
 
 # Bildrand-Margin in Pixeln: Hotspots die den Bildrand berühren werden verworfen.
 BORDER_MARGIN_PX = 10

@@ -1117,8 +1117,8 @@ fn process_thermal_pipeline<'py>(
             // min_dist_from_border: Hotspot-Komponenten müssen mindestens 0.8% der
             // Bildbreite vom Maskenrand entfernt sein. Rand-Artefakte (Knöchel, Fersen)
             // liegen direkt an der Körper-Hintergrund-Grenze (dist ≈ 0-8px).
-            // Echter entzündeter Zeh liegt im Inneren des Zehenbereichs (dist > 12px).
-            let min_dist_from_border = (width as f64 * 0.022).max(12.0);
+            // Echter entzündeter Zeh liegt im Inneren des Zehenbereichs (dist > 4px).
+            let min_dist_from_border = (width as f64 * 0.005).max(4.0);
             let final_mask = filter_geometric(
                 &binary_raw, &mask, &dist_map,
                 min_area_factor, min_circularity, min_dist_from_border
