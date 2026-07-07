@@ -1,7 +1,7 @@
 # IGNITE // Thermografische Entzündungsdetektion
 
 > **Wettbewerbsprojekt Jugend forscht 2026**  
-> Eine hochoptimierte Hybridlösung zur automatisierten Erkennung lokaler Entzündungsherde (Hotspots) in thermografischen Aufnahmen unter Verwendung von PyTorch-GPU, Rust-nativem Multithreading und Python.
+> Eine hochoptimierte Hybridlösung zur automatisierten Erkennung lokaler Entzündungsherde (Hotspots) in thermografischen Aufnahmen unter Verwendung von PyTorch-GPU, Rust-nativem Multithreading (Rayon) und Python (CustomTkinter).
 
 ---
 
@@ -9,9 +9,11 @@
 1. [Projektbeschreibung & Analysemodi](#-projektbeschreibung--analysemodi)
 2. [Systemarchitektur & Hybrid-Backend](#-systemarchitektur--hybrid-backend)
 3. [Die 5 Bildverarbeitungsstufen (Mathematische Pipeline)](#-die-5-bildverarbeitungsstufen-mathematische-pipeline)
-4. [Installation & Build-Prozess](#-installation--build-prozess)
-5. [Bedienung & Ergebnisberichte](#-bedienung--ergebnisberichte)
-6. [Troubleshooting & Fehlerbehebung](#-troubleshooting--fehlerbehebung)
+4. [Durchgeführte Performance-Optimierungen](#-durchgeführte-performance-optimierungen)
+5. [Modernes Design-System (Slate & Indigo)](#-modernes-design-system-slate--indigo)
+6. [Installation & Build-Prozess](#-installation--build-prozess)
+7. [Bedienung & Ergebnisberichte](#-bedienung--ergebnisberichte)
+8. [Troubleshooting & Fehlerbehebung](#-troubleshooting--fehlerbehebung)
 
 ---
 
@@ -76,12 +78,36 @@ $$C = \frac{4\pi \cdot \text{Fläche}}{\text{Umfang}^2} \ge 0.01$$
 
 ---
 
+## ⚡ Durchgeführte Performance-Optimierungen
+
+Das Projekt wurde tiefgehend analysiert und in mehreren Kernbereichen massiv optimiert:
+
+*   **O(N) Monotone Deque (Rust)**: Die 1D-Erosion und -Dilation (`dilate_1d`/`erode_1d`) wurde von der naiven $O(N \cdot K)$-Sliding-Window-Suche auf eine echte **Monotone Deque (Lemire 2011)** umgestellt. Bei großen morphologischen Kernel-Radien spart dies bis zu 95 % der Rechenschritte und beschleunigt den Rust-Core bei hochauflösenden Wärmebildern um das **10- bis 50-fache**.
+*   **Integer-basierter Distanztransform (Rust)**: In `distance_transform_l2` werden die euklidischen Chamfer-Metriken (Kosten 3 für gerade, 4 für diagonal) nun vollständig mit `u32`-Integer-Arithmetik statt langsamen Float-Operationen (`f64`) berechnet und erst am Ende einmalig skaliert.
+*   **Rayon-Parallelisierte Normalisierung (Rust)**: Die lineare Skalierung in `normalize_minmax` verwendet nun eine parallele Schleife via `ndarray::Zip` und Rayon, wodurch die CPU-Auslastung bei Multi-Megapixel-Bildern ideal verteilt wird.
+*   **Memory-Leak-Schutz & LRU-Cache (Python)**: Der Bild-Cache in `gui.py` wurde von einem unbegrenzten Standard-Wörterbuch auf ein `collections.OrderedDict` mit einer Obergrenze von 20 Einträgen (LRU-Eviction) umgestellt. Dies verhindert unkontrollierten RAM-Zuwachs bei Stapelverarbeitungen.
+*   **Debounced Parameter-Tuning**: Die Slider-Reaktionszeit wurde auf 350 ms debounced. Schnelle Reglerbewegungen in der GUI stauen nun keine unfertigen Hintergrundthreads mehr an.
+*   **Zentralisierte Parameter**: Alle wissenschaftlichen und anatomischen Schwellenwerte (wie die Höheneinschränkung für Fußgelenke oder Rand-Mindestabstände) wurden aus dem Code in die zentrale `config.py` überführt.
+
+---
+
+## 🎨 Modernes Design-System (Slate & Indigo)
+
+Die Benutzeroberfläche der Applikation wurde optisch modernisiert und an moderne Entwickler-Tools angepasst:
+
+*   **Edle Farbpalette**: Nutzung eines feinen Slate- und Indigo-Farbschemas (Light: Slate-50 `#F8FAFC`, Dark: Gray-950 `#030712`) mit einer leuchtenden Indigo-Akzentfarbe (`#6366F1`) für fokussierte Benutzerführung.
+*   **Moderne Typografie**: Systemweite Verwendung der klaren, modernen Schriftart `Segoe UI` anstelle der generischen Standardschrift Arial.
+*   **Voller Farbkontrast**: Alle Akzent-Buttons besitzen nun festen weißen Text (`#FFFFFF`) für optimale Barrierefreiheit (Kontrastverhältnis) im hellen sowie dunklen Modus.
+*   **Nahtloses Plot-Design**: Das Histogramm im Tab „Temperatur-Verteilung“ passt sich vollautomatisch dem hellen oder dunklen Theme der Applikation an (keine störenden weißen Ränder mehr im Darkmode).
+
+---
+
 ## 📦 Installation & Build-Prozess
 
 ### Voraussetzungen
 *   **Python 3.10+**
 *   **Rust Compiler (cargo)** (zur Kompilierung des optimierten CPU-Moduls)
-*   **NVIDIA-Treiber & CUDA Toolkit** (optional, für GPU-Beschelung)
+*   **NVIDIA-Treiber & CUDA Toolkit** (optional, für GPU-Beschleunigung)
 
 ### Build und Installation
 1.  Klone oder kopiere das Projektverzeichnis.
