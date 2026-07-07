@@ -137,28 +137,41 @@ fn dilate_1d(data: &[u8], radius: usize) -> Vec<u8> {
         return Vec::new();
     }
     let mut result = vec![0u8; n];
-    // Monotone Deque: Indizes, Werte sind absteigend sortiert
     let mut deque: VecDeque<usize> = VecDeque::new();
 
-    for i in 0..n {
-        // 1. Altes Element aus dem Fenster entfernen
-        if let Some(&front) = deque.front() {
-            if front + radius < i {
-                deque.pop_front();
+    // Das Fenster für den zentrierten Pixel i reicht von i-radius bis i+radius.
+    // Wir verschieben die führende Kante j von 0 bis n + radius, um alle Werte zu verarbeiten.
+    for j in 0..(n + radius) {
+        // 1. Element j am Ende der Deque einfügen
+        if j < n {
+            while let Some(&back) = deque.back() {
+                if data[back] <= data[j] {
+                    deque.pop_back();
+                } else {
+                    break;
+                }
+            }
+            deque.push_back(j);
+        }
+
+        // 2. Veraltete Indizes (älter als der linke Fensterrand) vorne entfernen.
+        // Der linke Fensterrand für den Pixel i = j - radius ist i - radius = j - 2*radius.
+        if j >= 2 * radius {
+            let limit = j - 2 * radius;
+            while let Some(&front) = deque.front() {
+                if front < limit {
+                    deque.pop_front();
+                } else {
+                    break;
+                }
             }
         }
-        // 2. Kleinere Elemente am Ende entfernen (sie können nie Maximum werden)
-        while let Some(&back) = deque.back() {
-            if data[back] <= data[i] {
-                deque.pop_back();
-            } else {
-                break;
-            }
+
+        // 3. Maximum für den zentrierten Pixel i = j - radius speichern
+        if j >= radius {
+            let i = j - radius;
+            result[i] = data[*deque.front().unwrap()];
         }
-        deque.push_back(i);
-        // 3. Maximum = vorderstes Element in der Deque
-        // Warte bis das Fenster vollständig gefüllt ist (Rand-Pixel werden korrekt behandelt)
-        result[i] = data[*deque.front().unwrap()];
     }
     result
 }
@@ -176,24 +189,36 @@ fn erode_1d(data: &[u8], radius: usize) -> Vec<u8> {
     let mut result = vec![255u8; n];
     let mut deque: VecDeque<usize> = VecDeque::new();
 
-    for i in 0..n {
-        // 1. Altes Element aus dem Fenster entfernen
-        if let Some(&front) = deque.front() {
-            if front + radius < i {
-                deque.pop_front();
+    for j in 0..(n + radius) {
+        // 1. Element j einsortieren
+        if j < n {
+            while let Some(&back) = deque.back() {
+                if data[back] >= data[j] {
+                    deque.pop_back();
+                } else {
+                    break;
+                }
+            }
+            deque.push_back(j);
+        }
+
+        // 2. Veraltete Indizes entfernen (kleiner als linker Fensterrand j - 2*radius)
+        if j >= 2 * radius {
+            let limit = j - 2 * radius;
+            while let Some(&front) = deque.front() {
+                if front < limit {
+                    deque.pop_front();
+                } else {
+                    break;
+                }
             }
         }
-        // 2. Größere Elemente am Ende entfernen
-        while let Some(&back) = deque.back() {
-            if data[back] >= data[i] {
-                deque.pop_back();
-            } else {
-                break;
-            }
+
+        // 3. Minimum für den zentrierten Pixel i = j - radius speichern
+        if j >= radius {
+            let i = j - radius;
+            result[i] = data[*deque.front().unwrap()];
         }
-        deque.push_back(i);
-        // 3. Minimum = vorderstes Element
-        result[i] = data[*deque.front().unwrap()];
     }
     result
 }
@@ -1166,4 +1191,54 @@ fn ignite_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("__author__", "Ignite Team – Jugend forscht")?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn naive_dilate_1d(data: &[u8], radius: usize) -> Vec<u8> {
+        let n = data.len();
+        let mut result = vec![0u8; n];
+        for i in 0..n {
+            let start = i.saturating_sub(radius);
+            let end = (i + radius + 1).min(n);
+            result[i] = data[start..end].iter().cloned().max().unwrap_or(0);
+        }
+        result
+    }
+
+    fn naive_erode_1d(data: &[u8], radius: usize) -> Vec<u8> {
+        let n = data.len();
+        let mut result = vec![255u8; n];
+        for i in 0..n {
+            let start = i.saturating_sub(radius);
+            let end = (i + radius + 1).min(n);
+            result[i] = data[start..end].iter().cloned().min().unwrap_or(0);
+        }
+        result
+    }
+
+    #[test]
+    fn test_dilate_and_erode_monotone_deque() {
+        let test_cases = vec![
+            (vec![1, 3, 2, 4, 3], 1),
+            (vec![10, 20, 30, 40, 50, 40, 30, 20, 10], 2),
+            (vec![5, 5, 5, 5, 5], 3),
+            (vec![1, 2, 3, 4, 5, 6, 7, 8, 9], 4),
+            (vec![9, 8, 7, 6, 5, 4, 3, 2, 1], 1),
+            (vec![1, 100, 2, 100, 3, 100, 4], 2),
+            (vec![255, 0, 255, 0, 255], 1),
+        ];
+
+        for (data, radius) in test_cases {
+            let naive_d = naive_dilate_1d(&data, radius);
+            let opt_d = dilate_1d(&data, radius);
+            assert_eq!(naive_d, opt_d, "Dilation test failed for data={:?} and radius={}", data, radius);
+
+            let naive_e = naive_erode_1d(&data, radius);
+            let opt_e = erode_1d(&data, radius);
+            assert_eq!(naive_e, opt_e, "Erosion test failed for data={:?} and radius={}", data, radius);
+        }
+    }
 }
