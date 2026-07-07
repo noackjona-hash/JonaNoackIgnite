@@ -7,6 +7,7 @@ Dieses Modul dient als schlanke Vermittlungsschicht zwischen dem Tkinter-Fronten
 import warnings
 import cv2
 import numpy as np
+import config as _config
 
 # ─────────────────────────────────────────────────────────────────────────────
 # GPU- & Rust-Core-Erkennung mit Fallback-Mechanismus
@@ -157,18 +158,21 @@ def _pytorch_gpu_pipeline(
     # Hotspots am Maskenrand (Knöchel, Fersen) haben kleine Distanzwerte,
     # echter Entzündungs-Hotspot liegt im Inneren (große Distanzwerte).
     dist_map = cv2.distanceTransform(mask_cpu, cv2.DIST_L2, 5)
-    min_dist_from_border = max(4.0, binary_raw_np.shape[1] * 0.005)
-    
+    min_dist_from_border = max(
+        _config.MIN_DIST_FROM_BORDER_ABS,
+        binary_raw_np.shape[1] * _config.MIN_DIST_FROM_BORDER_FACTOR
+    )
+
     num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(binary_raw_np)
     final_mask = np.zeros_like(binary_raw_np)
-    
-    border_margin = 10
+
+    border_margin = _config.BORDER_MARGIN_PX
     h_img, w_img = binary_raw_np.shape[:2]
-    
+
     for i in range(1, num_labels):
-        # Anatomische Einschränkung: Hotspots im unteren 35% Bildbereich ausschließen (Knöchel/Fersen)
+        # Anatomische Einschränkung: Hotspots im unteren Bildbereich ausschließen
         centroid_y = centroids[i][1]
-        if centroid_y > h_img * 0.65:
+        if centroid_y > h_img * _config.ANATOMICAL_LOWER_CUTOFF_Y:
             continue
             
         area = stats[i, cv2.CC_STAT_AREA]
@@ -265,18 +269,21 @@ def _python_fallback_pipeline(
     
     # Distanztransformation der Body-Maske für Rand-Artefakt-Filter
     dist_map = cv2.distanceTransform(mask, cv2.DIST_L2, 5)
-    min_dist_from_border = max(4.0, img.shape[1] * 0.005)
-    
+    min_dist_from_border = max(
+        _config.MIN_DIST_FROM_BORDER_ABS,
+        img.shape[1] * _config.MIN_DIST_FROM_BORDER_FACTOR
+    )
+
     num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(binary_raw)
     final_mask = np.zeros_like(binary_raw)
-    
-    border_margin = 10
+
+    border_margin = _config.BORDER_MARGIN_PX
     h_img, w_img = binary_raw.shape[:2]
-    
+
     for i in range(1, num_labels):
-        # Anatomische Einschränkung: Hotspots im unteren 35% Bildbereich ausschließen (Knöchel/Fersen)
+        # Anatomische Einschränkung: Hotspots im unteren Bildbereich ausschließen
         centroid_y = centroids[i][1]
-        if centroid_y > h_img * 0.65:
+        if centroid_y > h_img * _config.ANATOMICAL_LOWER_CUTOFF_Y:
             continue
             
         area = stats[i, cv2.CC_STAT_AREA]

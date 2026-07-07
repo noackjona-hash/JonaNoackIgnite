@@ -12,6 +12,7 @@ import hashlib
 import datetime
 import tkinter as tk
 import threading
+from collections import OrderedDict
 from tkinter import filedialog, messagebox
 import cv2
 import numpy as np
@@ -166,7 +167,12 @@ class IgniteApp:
         self.emissivity: float = 0.98       # Standard-Emissionsgrad für Haut
 
         self.resize_job: str | None = None
-        self.pil_cache: dict[str, Image.Image] = {}
+        # PIL-Bild-Cache für die Bildanzeige (LRU-beschränkt auf 20 Einträge).
+        # OrderedDict ermöglicht effizientes LRU-Eviction:
+        # älteste Einträge werden entfernt, wenn das Limit überschritten wird.
+        # Verhindert Memory-Leaks bei Batch-Verarbeitung vieler Bilder.
+        self._PIL_CACHE_MAXSIZE = 20
+        self.pil_cache: OrderedDict[str, Image.Image] = OrderedDict()
 
         # ROI State-Variablen
         self.drawing_roi: bool = False
@@ -1412,11 +1418,12 @@ class IgniteApp:
         self.temp_offset_val.configure(text=f"{to:+.1f}")
         
         if self.current_filepath:
-            # Slider-Bewegungen debouncen: Falls ein altes Update aussteht, abbrechen
+            # Slider-Bewegungen debouncen: Falls ein altes Update aussteht, abbrechen.
+            # 350 ms Wartezeit: kurze Pausen beim Slider-Ziehen lösen keine Neu-Analyse aus.
+            # Verhindert Thread-Stacking bei schneller Slider-Bewegung (Rust: ~30ms pro Lauf).
             if hasattr(self, "_param_update_job") and self._param_update_job:
                 self.root.after_cancel(self._param_update_job)
-            # Neues Update nach 180ms Inaktivität planen
-            self._param_update_job = self.root.after(180, self.process_pipeline)
+            self._param_update_job = self.root.after(350, self.process_pipeline)
 
     def on_calibration_changed(self, event=None) -> None:
         """Wird aufgerufen, wenn die Kamera-Kalibrierungswerte geändert werden."""
@@ -1935,7 +1942,11 @@ class IgniteApp:
                 else:
                     rgb_img = cv_img
 
+            # LRU-Cache-Limit prüfen und ältesten Eintrag verdrängen wenn nötig
             self.pil_cache[panel_name] = Image.fromarray(rgb_img)
+            self.pil_cache.move_to_end(panel_name)  # Als MRU markieren
+            while len(self.pil_cache) > self._PIL_CACHE_MAXSIZE:
+                self.pil_cache.popitem(last=False)  # Ältesten (LRU) entfernen
 
         pil_img = self.pil_cache.get(panel_name)
         if pil_img is None:

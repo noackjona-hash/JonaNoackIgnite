@@ -20,6 +20,27 @@ OUTPUT_DIR = "ignite_steps_output"
 # Audit-Trail-Pfad (persistente klinische Protokolldatei)
 AUDIT_TRAIL_PATH = os.path.join(OUTPUT_DIR, "ignite_audit_trail.csv")
 
+# ── Anatomische Filterparameter ────────────────────────────────────────────────
+# Diese Konstanten steuern den geometrischen Rauschfilter (Feature E) und
+# basieren auf anatomischen Beobachtungen aus der Projektentwicklung.
+
+# Hotspots unterhalb dieser relativen Y-Position werden verworfen.
+# Begründung: Knöchel, Fersen und Hosenbein liegen anatomisch im unteren
+# 35 % des Bildes. Entzündete Zehen liegen weit oben (< 65 % der Bildhöhe).
+ANATOMICAL_LOWER_CUTOFF_Y = 0.65
+
+# Mindest-Abstand vom Maskenrand als Bruchteil der Bildbreite.
+# Hotspots direkt am Körperrand (Knöchel → Hintergrund-Übergang) haben
+# sehr kleine Distanzwerte. Ein echter entzündeter Zeh liegt im Inneren.
+# Wert * Bildbreite ergibt: bei 640px → 14px, bei 1440px → 31px Mindestabstand.
+MIN_DIST_FROM_BORDER_FACTOR = 0.022
+
+# Absoluter Mindest-Abstand in Pixeln (Untergrenze, unabhängig von Bildgröße).
+MIN_DIST_FROM_BORDER_ABS = 12.0
+
+# Bildrand-Margin in Pixeln: Hotspots die den Bildrand berühren werden verworfen.
+BORDER_MARGIN_PX = 10
+
 def init_output_dir():
     """Erstellt den Ausgabeordner, falls er noch nicht existiert."""
     if not os.path.exists(OUTPUT_DIR):
