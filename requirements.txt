@@ -1,0 +1,10 @@
+numpy
+opencv-python
+customtkinter
+matplotlib
+Pillow
+pytest
+
+# Optionale Backends:
+torch           # Für GPU-Beschleunigung (am besten via pytorch.org installieren je nach CUDA-Version)
+maturin         # Zum Kompilieren des Rust-Cores (ignite_core)

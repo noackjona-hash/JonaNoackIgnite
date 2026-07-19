@@ -87,9 +87,9 @@ def load_thermal_image(filepath: str) -> np.ndarray:
 # ─────────────────────────────────────────────────────────────────────────────
 def _extract_body_mask_cpu(
     img: np.ndarray,
-    otsu_min: int = 35,
-    otsu_max: int = 50,
-    dist_erosion_factor: float = 0.05
+    otsu_min: int = _config.DEFAULT_OTSU_MIN,
+    otsu_max: int = _config.DEFAULT_OTSU_MAX,
+    dist_erosion_factor: float = _config.DEFAULT_DIST_EROSION_FACTOR
 ) -> np.ndarray:
     """Extrahiert die Body-Mask auf der CPU mit identischen Schwellenwerten wie Rust."""
     otsu_thresh, _ = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
@@ -109,13 +109,13 @@ def _extract_body_mask_cpu(
 # ─────────────────────────────────────────────────────────────────────────────
 def _pytorch_gpu_pipeline(
     img: np.ndarray,
-    sigma_k: float = 3.0,
-    tophat_factor: float = 0.05,
-    min_area_factor: float = 0.0005,
-    min_circularity: float = 0.01,
-    otsu_min: int = 35,
-    otsu_max: int = 50,
-    dist_erosion_factor: float = 0.05
+    sigma_k: float = _config.DEFAULT_SIGMA_K,
+    tophat_factor: float = _config.DEFAULT_TOPHAT_FACTOR,
+    min_area_factor: float = _config.DEFAULT_MIN_AREA_FACTOR,
+    min_circularity: float = _config.DEFAULT_MIN_CIRCULARITY,
+    otsu_min: int = _config.DEFAULT_OTSU_MIN,
+    otsu_max: int = _config.DEFAULT_OTSU_MAX,
+    dist_erosion_factor: float = _config.DEFAULT_DIST_EROSION_FACTOR
 ) -> tuple[np.ndarray, np.ndarray]:
     """GPU-beschleunigte Pipeline unter Verwendung von PyTorch CUDA."""
     mask_cpu = _extract_body_mask_cpu(img, otsu_min, otsu_max, dist_erosion_factor)
@@ -130,25 +130,26 @@ def _pytorch_gpu_pipeline(
     kernel_large = compute_odd_kernel(w, tophat_factor)
     pad = kernel_large // 2
     
-    img_4d = img_t.unsqueeze(0).unsqueeze(0)
-    
-    # Erode / Dilate
-    eroded = -F.max_pool2d(-img_4d, kernel_size=kernel_large, stride=1, padding=pad)
-    dilated = F.max_pool2d(eroded, kernel_size=kernel_large, stride=1, padding=pad)
-    tophat_t = (img_4d - dilated).squeeze(0).squeeze(0)
-    
-    diff_t = torch.where(mask_t > 0, tophat_t, torch.zeros_like(tophat_t))
-    
-    body_pixels = diff_t[mask_t > 0]
-    mu_diff = body_pixels.mean()
-    sigma_diff = body_pixels.std()
-    T_rel = mu_diff + sigma_k * sigma_diff
-    
-    orig_body_pixels = img_t[mask_t > 0]
-    mu_orig = orig_body_pixels.mean()
-    
-    binary_raw_t = (diff_t > T_rel) & (img_t > mu_orig)
-    binary_raw_np = (binary_raw_t.cpu().numpy() * 255).astype(np.uint8)
+    with torch.no_grad():
+        img_4d = img_t.unsqueeze(0).unsqueeze(0)
+        
+        # Erode / Dilate
+        eroded = -F.max_pool2d(-img_4d, kernel_size=kernel_large, stride=1, padding=pad)
+        dilated = F.max_pool2d(eroded, kernel_size=kernel_large, stride=1, padding=pad)
+        tophat_t = (img_4d - dilated).squeeze(0).squeeze(0)
+        
+        diff_t = torch.where(mask_t > 0, tophat_t, torch.zeros_like(tophat_t))
+        
+        body_pixels = diff_t[mask_t > 0]
+        mu_diff = body_pixels.mean()
+        sigma_diff = body_pixels.std()
+        T_rel = mu_diff + sigma_k * sigma_diff
+        
+        orig_body_pixels = img_t[mask_t > 0]
+        mu_orig = orig_body_pixels.mean()
+        
+        binary_raw_t = (diff_t > T_rel) & (img_t > mu_orig)
+        binary_raw_np = (binary_raw_t.cpu().numpy() * 255).astype(np.uint8)
     
     # Geometrischer Rauschfilter auf CPU
     total_body_area = np.sum(mask_cpu == 255)
@@ -224,13 +225,13 @@ def _pytorch_gpu_pipeline(
 # ─────────────────────────────────────────────────────────────────────────────
 def _python_fallback_pipeline(
     img: np.ndarray,
-    sigma_k: float = 3.0,
-    tophat_factor: float = 0.05,
-    min_area_factor: float = 0.0005,
-    min_circularity: float = 0.01,
-    otsu_min: int = 35,
-    otsu_max: int = 50,
-    dist_erosion_factor: float = 0.05
+    sigma_k: float = _config.DEFAULT_SIGMA_K,
+    tophat_factor: float = _config.DEFAULT_TOPHAT_FACTOR,
+    min_area_factor: float = _config.DEFAULT_MIN_AREA_FACTOR,
+    min_circularity: float = _config.DEFAULT_MIN_CIRCULARITY,
+    otsu_min: int = _config.DEFAULT_OTSU_MIN,
+    otsu_max: int = _config.DEFAULT_OTSU_MAX,
+    dist_erosion_factor: float = _config.DEFAULT_DIST_EROSION_FACTOR
 ) -> tuple[np.ndarray, np.ndarray]:
     """Python-Fallback-Pipeline mit identischen mathematischen Schritten wie Rust."""
     warnings.warn(
@@ -329,13 +330,13 @@ FORCED_BACKEND = "auto"
 
 def run_rust_pipeline(
     img: np.ndarray,
-    sigma_k: float = 3.0,
-    tophat_factor: float = 0.05,
-    min_area_factor: float = 0.0005,
-    min_circularity: float = 0.01,
-    otsu_min: int = 35,
-    otsu_max: int = 50,
-    dist_erosion_factor: float = 0.05
+    sigma_k: float = _config.DEFAULT_SIGMA_K,
+    tophat_factor: float = _config.DEFAULT_TOPHAT_FACTOR,
+    min_area_factor: float = _config.DEFAULT_MIN_AREA_FACTOR,
+    min_circularity: float = _config.DEFAULT_MIN_CIRCULARITY,
+    otsu_min: int = _config.DEFAULT_OTSU_MIN,
+    otsu_max: int = _config.DEFAULT_OTSU_MAX,
+    dist_erosion_factor: float = _config.DEFAULT_DIST_EROSION_FACTOR
 ) -> tuple[np.ndarray, np.ndarray]:
     """Führt die vollständige Bildverarbeitungs-Pipeline aus."""
     global FORCED_BACKEND

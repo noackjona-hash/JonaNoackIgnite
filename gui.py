@@ -3350,184 +3350,194 @@ class IgniteApp:
         omax = int(self.otsu_max_slider.get())
         er = self.erosion_slider.get()
         to = self.temp_offset_slider.get()
+        t_max_celsius = self.t_max_celsius
+        t_min_celsius = self.t_min_celsius
+        analysis_mode = self.analysis_mode_opt.get()
 
-        patients_processed = []
+        def worker():
+            patients_processed = []
 
-        for idx, filename in enumerate(image_files):
-            pbar.set((idx + 1) / len(image_files))
-            lbl_status.configure(text=f"Verarbeite: {filename} ({idx+1}/{len(image_files)})")
-            progress_win.update()
-            
-            filepath = os.path.join(src_dir, filename)
-            
-            try:
-                img = image_processing.load_thermal_image(filepath)
+            for idx, filename in enumerate(image_files):
+                def update_ui(i=idx, f=filename):
+                    pbar.set((i + 1) / len(image_files))
+                    lbl_status.configure(text=f"Verarbeite: {f} ({i+1}/{len(image_files)})")
                 
-                range_c = self.t_max_celsius - self.t_min_celsius
-                if range_c <= 0:
-                    range_c = 20.0
-                raw_offset = int(round(to * 255.0 / range_c))
+                self.root.after(0, update_ui)
                 
-                calibrated_img = np.clip(img.astype(np.int16) + raw_offset, 0, 255).astype(np.uint8)
+                filepath = os.path.join(src_dir, filename)
                 
-                diff_img, hotspot_mask = image_processing.run_rust_pipeline(
-                    calibrated_img, sk, th, ma, mc, omin, omax, er
-                )
-                
-                body_mask_vis = (diff_img > 0).astype(np.uint8) * 255
-                hotspot_count = int(hotspot_mask.sum()) // 255
-                
-                steps_dir = os.path.join(dest_dir, "steps")
-                os.makedirs(steps_dir, exist_ok=True)
-                
-                base_name = os.path.splitext(filename)[0]
-                
-                cv2.imwrite(os.path.join(steps_dir, f"{base_name}_step1_original.png"), calibrated_img)
-                cv2.imwrite(os.path.join(steps_dir, f"{base_name}_step2_mask.png"), body_mask_vis)
-                cv2.imwrite(os.path.join(steps_dir, f"{base_name}_step3_local_heat_diff.png"), diff_img)
-                
-                # Overlay erzeugen & speichern
-                if self.analysis_mode_opt.get() == "Podologische Symmetrieanalyse":
-                    overlay_img = self.draw_foot_annotations(calibrated_img, body_mask_vis, hotspot_mask)
-                else:
-                    overlay_img = self.draw_general_annotations(calibrated_img, body_mask_vis, hotspot_mask)
-                cv2.imwrite(os.path.join(steps_dir, f"{base_name}_step4_dynamic_hotspots.png"), overlay_img)
-                
-                body_mask = body_mask_vis > 0
-                pixels = calibrated_img[body_mask]
-                mean_val = np.mean(pixels) if len(pixels) > 0 else 0.0
-                
-                if self.analysis_mode_opt.get() == "Podologische Symmetrieanalyse":
-                    # Left vs Right
-                    h_orig, w_orig = calibrated_img.shape[:2]
-                    mid_x = w_orig // 2
+                try:
+                    img = image_processing.load_thermal_image(filepath)
                     
-                    left_mask = np.zeros_like(body_mask)
-                    left_mask[:, :mid_x] = body_mask[:, :mid_x]
-                    right_mask = np.zeros_like(body_mask)
-                    right_mask[:, mid_x:] = body_mask[:, mid_x:]
+                    range_c = t_max_celsius - t_min_celsius
+                    if range_c <= 0:
+                        range_c = 20.0
+                    raw_offset = int(round(to * 255.0 / range_c))
                     
-                    left_pixels = calibrated_img[left_mask > 0]
-                    right_pixels = calibrated_img[right_mask > 0]
+                    calibrated_img = np.clip(img.astype(np.int16) + raw_offset, 0, 255).astype(np.uint8)
                     
-                    mean_l = np.mean(left_pixels) if len(left_pixels) > 0 else 0.0
-                    mean_r = np.mean(right_pixels) if len(right_pixels) > 0 else 0.0
-                    delta = abs(mean_l - mean_r)
+                    diff_img, hotspot_mask = image_processing.run_rust_pipeline(
+                        calibrated_img, sk, th, ma, mc, omin, omax, er
+                    )
                     
-                    # Zonal Analyse
-                    # Left
-                    left_y, left_x = np.where(body_mask[:, :mid_x] > 0)
-                    l_fore_m, l_mid_m, l_heel_m = 0.0, 0.0, 0.0
-                    if len(left_y) > 0:
-                        l_min_y, l_max_y = left_y.min(), left_y.max()
-                        l_hz = (l_max_y - l_min_y) // 3
-                        l_f_m = np.zeros_like(body_mask)
-                        l_f_m[l_min_y:l_min_y+l_hz, :mid_x] = body_mask[l_min_y:l_min_y+l_hz, :mid_x]
-                        l_m_m = np.zeros_like(body_mask)
-                        l_m_m[l_min_y+l_hz:l_min_y+2*l_hz, :mid_x] = body_mask[l_min_y+l_hz:l_min_y+2*l_hz, :mid_x]
-                        l_h_m = np.zeros_like(body_mask)
-                        l_h_m[l_min_y+2*l_hz:l_max_y, :mid_x] = body_mask[l_min_y+2*l_hz:l_max_y, :mid_x]
-                        
-                        l_fore_m = np.mean(calibrated_img[l_f_m > 0]) if np.sum(l_f_m) > 0 else 0.0
-                        l_mid_m = np.mean(calibrated_img[l_m_m > 0]) if np.sum(l_m_m) > 0 else 0.0
-                        l_heel_m = np.mean(calibrated_img[l_h_m > 0]) if np.sum(l_h_m) > 0 else 0.0
-                        
-                    # Right
-                    right_y, right_x = np.where(body_mask[:, mid_x:] > 0)
-                    r_fore_m, r_mid_m, r_heel_m = 0.0, 0.0, 0.0
-                    if len(right_y) > 0:
-                        r_min_y, r_max_y = right_y.min(), right_y.max()
-                        r_hz = (r_max_y - r_min_y) // 3
-                        r_f_m = np.zeros_like(body_mask)
-                        r_f_m[r_min_y:r_min_y+r_hz, mid_x:] = body_mask[r_min_y:r_min_y+r_hz, mid_x:]
-                        r_m_m = np.zeros_like(body_mask)
-                        r_m_m[r_min_y+r_hz:r_min_y+2*r_hz, mid_x:] = body_mask[r_min_y+r_hz:r_min_y+2*r_hz, mid_x:]
-                        r_h_m = np.zeros_like(body_mask)
-                        r_h_m[r_min_y+2*r_hz:r_max_y, mid_x:] = body_mask[r_min_y+2*r_hz:r_max_y, mid_x:]
-                        
-                        r_fore_m = np.mean(calibrated_img[r_f_m > 0]) if np.sum(r_f_m) > 0 else 0.0
-                        r_mid_m = np.mean(calibrated_img[r_m_m > 0]) if np.sum(r_m_m) > 0 else 0.0
-                        r_heel_m = np.mean(calibrated_img[r_h_m > 0]) if np.sum(r_h_m) > 0 else 0.0
-
-                    d_fore = abs(l_fore_m - r_fore_m)
-                    d_mid = abs(l_mid_m - r_mid_m)
-                    d_heel = abs(l_heel_m - r_heel_m)
+                    body_mask_vis = (diff_img > 0).astype(np.uint8) * 255
+                    hotspot_count = int(hotspot_mask.sum()) // 255
                     
-                    max_zonal_delta = max(d_fore, d_mid, d_heel)
-                    if delta >= 15.0 or hotspot_count >= 150 or max_zonal_delta >= 15.0:
-                        status_text = "Klinisch auff\u00e4llig \u2013 Weiteres Monitoring"
-                        status_color = "#FF0055"
-                    elif delta >= 10.0 or hotspot_count > 0 or max_zonal_delta >= 10.0:
-                        status_text = "Grenzwertig \u2013 Verlaufsbeobachtung"
-                        status_color = "#FFA500"
+                    steps_dir = os.path.join(dest_dir, "steps")
+                    os.makedirs(steps_dir, exist_ok=True)
+                    
+                    base_name = os.path.splitext(filename)[0]
+                    
+                    cv2.imwrite(os.path.join(steps_dir, f"{base_name}_step1_original.png"), calibrated_img)
+                    cv2.imwrite(os.path.join(steps_dir, f"{base_name}_step2_mask.png"), body_mask_vis)
+                    cv2.imwrite(os.path.join(steps_dir, f"{base_name}_step3_local_heat_diff.png"), diff_img)
+                    
+                    # Overlay erzeugen & speichern
+                    if analysis_mode == "Podologische Symmetrieanalyse":
+                        overlay_img = self.draw_foot_annotations(calibrated_img, body_mask_vis, hotspot_mask)
                     else:
-                        status_text = "Symmetrisch \u2013 Unauff\u00e4llig"
-                        status_color = "#10B981"
-                else:
-                    # General mode calculations
-                    mean_l, mean_r = 0.0, 0.0
-                    l_fore_m, r_fore_m, l_mid_m, r_mid_m, l_heel_m, r_heel_m = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
-                    d_fore, d_mid, d_heel = 0.0, 0.0, 0.0
+                        overlay_img = self.draw_general_annotations(calibrated_img, body_mask_vis, hotspot_mask)
+                    cv2.imwrite(os.path.join(steps_dir, f"{base_name}_step4_dynamic_hotspots.png"), overlay_img)
                     
-                    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(hotspot_mask)
-                    num_hotspots = max(0, num_labels - 1)
-                    max_area = 0
-                    for i in range(1, num_labels):
-                        max_area = max(max_area, stats[i, cv2.CC_STAT_AREA])
+                    body_mask = body_mask_vis > 0
+                    pixels = calibrated_img[body_mask]
+                    mean_val = np.mean(pixels) if len(pixels) > 0 else 0.0
+                    
+                    if analysis_mode == "Podologische Symmetrieanalyse":
+                        # Left vs Right
+                        h_orig, w_orig = calibrated_img.shape[:2]
+                        mid_x = w_orig // 2
                         
-                    delta = float(num_hotspots)
-                    max_zonal_delta = float(max_area)
+                        left_mask = np.zeros_like(body_mask)
+                        left_mask[:, :mid_x] = body_mask[:, :mid_x]
+                        right_mask = np.zeros_like(body_mask)
+                        right_mask[:, mid_x:] = body_mask[:, mid_x:]
+                        
+                        left_pixels = calibrated_img[left_mask > 0]
+                        right_pixels = calibrated_img[right_mask > 0]
+                        
+                        mean_l = np.mean(left_pixels) if len(left_pixels) > 0 else 0.0
+                        mean_r = np.mean(right_pixels) if len(right_pixels) > 0 else 0.0
+                        delta = abs(mean_l - mean_r)
+                        
+                        # Zonal Analyse
+                        # Left
+                        left_y, left_x = np.where(body_mask[:, :mid_x] > 0)
+                        l_fore_m, l_mid_m, l_heel_m = 0.0, 0.0, 0.0
+                        if len(left_y) > 0:
+                            l_min_y, l_max_y = left_y.min(), left_y.max()
+                            l_hz = (l_max_y - l_min_y) // 3
+                            l_f_m = np.zeros_like(body_mask)
+                            l_f_m[l_min_y:l_min_y+l_hz, :mid_x] = body_mask[l_min_y:l_min_y+l_hz, :mid_x]
+                            l_m_m = np.zeros_like(body_mask)
+                            l_m_m[l_min_y+l_hz:l_min_y+2*l_hz, :mid_x] = body_mask[l_min_y+l_hz:l_min_y+2*l_hz, :mid_x]
+                            l_h_m = np.zeros_like(body_mask)
+                            l_h_m[l_min_y+2*l_hz:l_max_y, :mid_x] = body_mask[l_min_y+2*l_hz:l_max_y, :mid_x]
+                            
+                            l_fore_m = np.mean(calibrated_img[l_f_m > 0]) if np.sum(l_f_m) > 0 else 0.0
+                            l_mid_m = np.mean(calibrated_img[l_m_m > 0]) if np.sum(l_m_m) > 0 else 0.0
+                            l_heel_m = np.mean(calibrated_img[l_h_m > 0]) if np.sum(l_h_m) > 0 else 0.0
+                            
+                        # Right
+                        right_y, right_x = np.where(body_mask[:, mid_x:] > 0)
+                        r_fore_m, r_mid_m, r_heel_m = 0.0, 0.0, 0.0
+                        if len(right_y) > 0:
+                            r_min_y, r_max_y = right_y.min(), right_y.max()
+                            r_hz = (r_max_y - r_min_y) // 3
+                            r_f_m = np.zeros_like(body_mask)
+                            r_f_m[r_min_y:r_min_y+r_hz, mid_x:] = body_mask[r_min_y:r_min_y+r_hz, mid_x:]
+                            r_m_m = np.zeros_like(body_mask)
+                            r_m_m[r_min_y+r_hz:r_min_y+2*r_hz, mid_x:] = body_mask[r_min_y+r_hz:r_min_y+2*r_hz, mid_x:]
+                            r_h_m = np.zeros_like(body_mask)
+                            r_h_m[r_min_y+2*r_hz:r_max_y, mid_x:] = body_mask[r_min_y+2*r_hz:r_max_y, mid_x:]
+                            
+                            r_fore_m = np.mean(calibrated_img[r_f_m > 0]) if np.sum(r_f_m) > 0 else 0.0
+                            r_mid_m = np.mean(calibrated_img[r_m_m > 0]) if np.sum(r_m_m) > 0 else 0.0
+                            r_heel_m = np.mean(calibrated_img[r_h_m > 0]) if np.sum(r_h_m) > 0 else 0.0
 
-                    if hotspot_count >= 150:
-                        status_text = "Klinisch auff\u00e4llig \u2013 Weiteres Monitoring"
-                        status_color = "#FF0055"
-                    elif hotspot_count > 0:
-                        status_text = "Grenzwertig \u2013 Verlaufsbeobachtung"
-                        status_color = "#FFA500"
+                        d_fore = abs(l_fore_m - r_fore_m)
+                        d_mid = abs(l_mid_m - r_mid_m)
+                        d_heel = abs(l_heel_m - r_heel_m)
+                        
+                        max_zonal_delta = max(d_fore, d_mid, d_heel)
+                        if delta >= 15.0 or hotspot_count >= 150 or max_zonal_delta >= 15.0:
+                            status_text = "Klinisch auffällig \u2013 Weiteres Monitoring"
+                            status_color = "#FF0055"
+                        elif delta >= 10.0 or hotspot_count > 0 or max_zonal_delta >= 10.0:
+                            status_text = "Grenzwertig \u2013 Verlaufsbeobachtung"
+                            status_color = "#FFA500"
+                        else:
+                            status_text = "Symmetrisch \u2013 Unauffällig"
+                            status_color = "#10B981"
                     else:
-                        status_text = "Unauff\u00e4llig \u2013 Kein Befund"
-                        status_color = "#10B981"
+                        # General mode calculations
+                        mean_l, mean_r = 0.0, 0.0
+                        l_fore_m, r_fore_m, l_mid_m, r_mid_m, l_heel_m, r_heel_m = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+                        d_fore, d_mid, d_heel = 0.0, 0.0, 0.0
                         
-                patient_report_filename = f"report_{base_name}.html"
-                patient_report_path = os.path.join(dest_dir, patient_report_filename)
-                
-                self._write_individual_html_report(
-                    patient_report_path, base_name, filename, mean_val, np.std(pixels) if len(pixels)>0 else 0.0,
-                    mean_val + sk * np.std(pixels) if len(pixels)>0 else 0.0, hotspot_count, len(pixels),
-                    mean_l, mean_r, delta, status_text, status_color, l_fore_m, r_fore_m, l_mid_m, r_mid_m, l_heel_m, r_heel_m,
-                    d_fore, d_mid, d_heel, p_name="Patient_"+base_name, backend_info=image_processing.get_active_backend(),
-                    analysis_mode=self.analysis_mode_opt.get()
+                        num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(hotspot_mask)
+                        num_hotspots = max(0, num_labels - 1)
+                        max_area = 0
+                        for i in range(1, num_labels):
+                            max_area = max(max_area, stats[i, cv2.CC_STAT_AREA])
+                            
+                        delta = float(num_hotspots)
+                        max_zonal_delta = float(max_area)
+
+                        if hotspot_count >= 150:
+                            status_text = "Klinisch auffällig \u2013 Weiteres Monitoring"
+                            status_color = "#FF0055"
+                        elif hotspot_count > 0:
+                            status_text = "Grenzwertig \u2013 Verlaufsbeobachtung"
+                            status_color = "#FFA500"
+                        else:
+                            status_text = "Unauffällig \u2013 Kein Befund"
+                            status_color = "#10B981"
+                            
+                    patient_report_filename = f"report_{base_name}.html"
+                    patient_report_path = os.path.join(dest_dir, patient_report_filename)
+                    
+                    self._write_individual_html_report(
+                        patient_report_path, base_name, filename, mean_val, np.std(pixels) if len(pixels)>0 else 0.0,
+                        mean_val + sk * np.std(pixels) if len(pixels)>0 else 0.0, hotspot_count, len(pixels),
+                        mean_l, mean_r, delta, status_text, status_color, l_fore_m, r_fore_m, l_mid_m, r_mid_m, l_heel_m, r_heel_m,
+                        d_fore, d_mid, d_heel, p_name="Patient_"+base_name, backend_info=image_processing.get_active_backend(),
+                        analysis_mode=analysis_mode
+                    )
+                    
+                    patients_processed.append({
+                        "filename": filename,
+                        "base_name": base_name,
+                        "hotspots": hotspot_count,
+                        "delta": delta,
+                        "max_zonal_delta": max_zonal_delta,
+                        "status": status_text,
+                        "color": status_color,
+                        "report": patient_report_filename
+                    })
+                    
+                except Exception as e:
+                    print(f"Error processing {filename}: {e}")
+
+            summary_path = os.path.join(dest_dir, "batch_report.html")
+            self._write_batch_summary_html(summary_path, patients_processed, analysis_mode)
+
+            def on_done():
+                progress_win.destroy()
+                try:
+                    os.startfile(os.path.abspath(dest_dir))
+                except Exception:
+                    pass
+                messagebox.showinfo(
+                    "Stapelverarbeitung beendet",
+                    f"Erfolgreich {len(patients_processed)} Wärmebilder verarbeitet!\n\n"
+                    f"Zentraler Ergebnisbericht: batch_report.html"
                 )
-                
-                patients_processed.append({
-                    "filename": filename,
-                    "base_name": base_name,
-                    "hotspots": hotspot_count,
-                    "delta": delta,
-                    "max_zonal_delta": max_zonal_delta,
-                    "status": status_text,
-                    "color": status_color,
-                    "report": patient_report_filename
-                })
-                
-            except Exception as e:
-                print(f"Error processing {filename}: {e}")
 
-        summary_path = os.path.join(dest_dir, "batch_report.html")
-        self._write_batch_summary_html(summary_path, patients_processed, self.analysis_mode_opt.get())
+            self.root.after(0, on_done)
 
-        progress_win.destroy()
-        
-        try:
-            os.startfile(os.path.abspath(dest_dir))
-        except Exception:
-            pass
-            
-        messagebox.showinfo(
-            "Stapelverarbeitung beendet",
-            f"Erfolgreich {len(patients_processed)} Wärmebilder verarbeitet!\n\n"
-            f"Zentraler Ergebnisbericht: batch_report.html"
-        )
+        t = threading.Thread(target=worker, daemon=True)
+        t.start()
 
     def show_info_window(self) -> None:
         """Öffnet ein Informations-Fenster über die Funktionsweise des Systems."""
