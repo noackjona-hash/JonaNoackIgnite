@@ -276,25 +276,70 @@ class IgniteApp:
         btn_minimize = ctk.CTkButton(self.title_bar, text="—", width=46, height=40, fg_color="transparent", hover_color=COLOR_BORDER_CARD, text_color=COLOR_TEXT_PRIMARY, corner_radius=0, command=minimize_window)
         btn_minimize.pack(side="right")
 
-        # Window Dragging
+        # Window Dragging & Edge Snapping
         self._offset_x = 0
         self._offset_y = 0
+        self._normal_geometry = "1400x900"
+        self._is_snapped = False
+
+        def get_work_area():
+            try:
+                import ctypes
+                from ctypes.wintypes import RECT
+                rect = RECT()
+                ctypes.windll.user32.SystemParametersInfoW(48, 0, ctypes.byref(rect), 0)
+                return rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top
+            except Exception:
+                return 0, 0, self.root.winfo_screenwidth(), self.root.winfo_screenheight() - 40
 
         def start_move(event):
-            if not self.is_maximized:
+            if not self.is_maximized and not self._is_snapped:
                 self._offset_x = event.x
                 self._offset_y = event.y
 
         def do_move(event):
-            if not self.is_maximized:
-                x = self.root.winfo_x() + event.x - self._offset_x
-                y = self.root.winfo_y() + event.y - self._offset_y
-                self.root.geometry(f"+{x}+{y}")
+            if self.is_maximized or self._is_snapped:
+                if self.is_maximized:
+                    self.root.state("normal")
+                    self.is_maximized = False
+                    btn_maximize.configure(text="🗖")
+                
+                self.root.geometry(self._normal_geometry)
+                self.root.update_idletasks()
+                self._offset_x = self.root.winfo_width() // 2
+                self._offset_y = event.y if event.y < 40 else 15
+                self._is_snapped = False
+
+            x = self.root.winfo_x() + event.x - self._offset_x
+            y = self.root.winfo_y() + event.y - self._offset_y
+            self.root.geometry(f"+{x}+{y}")
+
+        def stop_move(event):
+            wx, wy, ww, wh = get_work_area()
+            pointer_x = self.root.winfo_pointerx()
+            pointer_y = self.root.winfo_pointery()
+            snap_margin = 15
+
+            if pointer_y <= wy + snap_margin:
+                self._normal_geometry = f"{self.root.winfo_width()}x{self.root.winfo_height()}"
+                self.root.state("zoomed")
+                self.is_maximized = True
+                btn_maximize.configure(text="🗗")
+            elif pointer_x <= wx + snap_margin:
+                self._normal_geometry = f"{self.root.winfo_width()}x{self.root.winfo_height()}"
+                self.root.geometry(f"{ww//2}x{wh}+{wx}+{wy}")
+                self._is_snapped = True
+            elif pointer_x >= wx + ww - snap_margin:
+                self._normal_geometry = f"{self.root.winfo_width()}x{self.root.winfo_height()}"
+                self.root.geometry(f"{ww//2}x{wh}+{wx + ww//2}+{wy}")
+                self._is_snapped = True
 
         self.title_bar.bind("<Button-1>", start_move)
         self.title_bar.bind("<B1-Motion>", do_move)
+        self.title_bar.bind("<ButtonRelease-1>", stop_move)
         lbl_title.bind("<Button-1>", start_move)
         lbl_title.bind("<B1-Motion>", do_move)
+        lbl_title.bind("<ButtonRelease-1>", stop_move)
         
         # CTYPES Taskbar Fix
         def set_appwindow():
