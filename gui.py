@@ -139,6 +139,7 @@ class IgniteApp:
             root: Das CustomTkinter-Hauptfenster-Objekt.
         """
         self.root = root
+        self.root.overrideredirect(True)
         self.root.title(f"IGNITE Medical Imaging Suite v{APP_VERSION} – Thermografische Analyse")
         self.root.geometry("1400x900")
         self.root.minsize(1200, 780)
@@ -193,6 +194,7 @@ class IgniteApp:
         self.roi_end_y: int = 0
 
         self.backend_var = tk.StringVar(value="auto")
+        self.setup_title_bar()
         self.setup_ui()
 
         # Bind-Event für dynamische Skalierung bei Fenster-Größenänderungen (Debounced)
@@ -230,16 +232,97 @@ class IgniteApp:
         
         return slider, val_lbl
 
+    def setup_title_bar(self) -> None:
+        """Erstellt eine komplett benutzerdefinierte Titel-Leiste mit Drag-Funktion und Window-Controls."""
+        self.title_bar = ctk.CTkFrame(self.root, height=40, corner_radius=0, fg_color=COLOR_BG_CARD)
+        self.title_bar.grid(row=0, column=0, columnspan=2, sticky="ew")
+        self.title_bar.grid_propagate(False)
+
+        # App-Logo
+        icon_png_path = get_resource_path(os.path.join("icon", "LogoRund.png"))
+        if os.path.exists(icon_png_path):
+            try:
+                logo_img = Image.open(icon_png_path)
+                logo_ctk = ctk.CTkImage(light_image=logo_img, dark_image=logo_img, size=(20, 20))
+                lbl_icon = ctk.CTkLabel(self.title_bar, image=logo_ctk, text="")
+                lbl_icon.pack(side="left", padx=(15, 8))
+            except Exception:
+                pass
+
+        lbl_title = ctk.CTkLabel(self.title_bar, text=f"IGNITE Medical Imaging Suite v{APP_VERSION} – Thermografische Analyse", font=(FONT_FAMILY, 12, "bold"), text_color=COLOR_TEXT_PRIMARY)
+        lbl_title.pack(side="left")
+
+        # Window Controls
+        btn_close = ctk.CTkButton(self.title_bar, text="✕", width=46, height=40, fg_color="transparent", hover_color=COLOR_DANGER, text_color=COLOR_TEXT_PRIMARY, corner_radius=0, command=self.root.quit)
+        btn_close.pack(side="right")
+
+        self.is_maximized = False
+        def toggle_maximize():
+            if self.is_maximized:
+                self.root.state("normal")
+                self.is_maximized = False
+                btn_maximize.configure(text="🗖")
+            else:
+                self.root.state("zoomed")
+                self.is_maximized = True
+                btn_maximize.configure(text="🗗")
+
+        btn_maximize = ctk.CTkButton(self.title_bar, text="🗖", width=46, height=40, fg_color="transparent", hover_color=COLOR_BORDER_CARD, text_color=COLOR_TEXT_PRIMARY, corner_radius=0, command=toggle_maximize)
+        btn_maximize.pack(side="right")
+
+        def minimize_window():
+            self.root.iconify()
+
+        btn_minimize = ctk.CTkButton(self.title_bar, text="—", width=46, height=40, fg_color="transparent", hover_color=COLOR_BORDER_CARD, text_color=COLOR_TEXT_PRIMARY, corner_radius=0, command=minimize_window)
+        btn_minimize.pack(side="right")
+
+        # Window Dragging
+        self._offset_x = 0
+        self._offset_y = 0
+
+        def start_move(event):
+            if not self.is_maximized:
+                self._offset_x = event.x
+                self._offset_y = event.y
+
+        def do_move(event):
+            if not self.is_maximized:
+                x = self.root.winfo_x() + event.x - self._offset_x
+                y = self.root.winfo_y() + event.y - self._offset_y
+                self.root.geometry(f"+{x}+{y}")
+
+        self.title_bar.bind("<Button-1>", start_move)
+        self.title_bar.bind("<B1-Motion>", do_move)
+        lbl_title.bind("<Button-1>", start_move)
+        lbl_title.bind("<B1-Motion>", do_move)
+        
+        # CTYPES Taskbar Fix
+        def set_appwindow():
+            try:
+                import ctypes
+                from ctypes import windll
+                hwnd = windll.user32.GetParent(self.root.winfo_id())
+                GWL_EXSTYLE = -20
+                WS_EX_APPWINDOW = 0x00040000
+                WS_EX_TOOLWINDOW = 0x00000080
+                style = windll.user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
+                style = style & ~WS_EX_TOOLWINDOW | WS_EX_APPWINDOW
+                windll.user32.SetWindowLongW(hwnd, GWL_EXSTYLE, style)
+            except Exception:
+                pass
+        self.root.after(100, set_appwindow)
+
     def setup_ui(self) -> None:
         """Erstellt das moderne Interface mit Sidebar und Tabview-Bildanzeige."""
         # Haupt-Grid
         self.root.grid_columnconfigure(0, weight=0)  # Sidebar behält feste Breite
         self.root.grid_columnconfigure(1, weight=1)  # Tab-Inhalt dehnt sich aus
-        self.root.grid_rowconfigure(0, weight=1)
+        self.root.grid_rowconfigure(0, weight=0)  # Title bar
+        self.root.grid_rowconfigure(1, weight=1)  # App Inhalt
 
         # ── 1. LINKE SEITENLEISTE ─────────────────────────────────────────────
         sidebar_frame = ctk.CTkFrame(self.root, width=320, corner_radius=0, fg_color=COLOR_BG_MAIN)
-        sidebar_frame.grid(row=0, column=0, sticky="nsew", padx=0, pady=0)
+        sidebar_frame.grid(row=1, column=0, sticky="nsew", padx=0, pady=0)
         sidebar_frame.grid_propagate(False)
 
         # App-Logo
@@ -708,7 +791,7 @@ class IgniteApp:
 
         # ── 2. RECHTER HAUPTBEREICH (Tabview & Willkommensbildschirm) ──────────
         content_frame = ctk.CTkFrame(self.root, fg_color=COLOR_BG_MAIN, corner_radius=0)
-        content_frame.grid(row=0, column=1, sticky="nsew", padx=0, pady=0)
+        content_frame.grid(row=1, column=1, sticky="nsew", padx=0, pady=0)
 
         # CTkTabview erstellen und konfigurieren (wird erst nach Laden eines Bildes gepackt)
         self.tabview = ctk.CTkTabview(
