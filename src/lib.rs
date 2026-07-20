@@ -131,13 +131,12 @@ fn compute_odd_kernel(dimension: usize, factor: f64) -> usize {
 /// - Das aktuelle Maximum ist immer vorne in der Deque.
 use std::collections::VecDeque;
 
-fn dilate_1d(data: &[u8], radius: usize) -> Vec<u8> {
+fn dilate_1d(data: &[u8], result: &mut [u8], radius: usize, deque: &mut VecDeque<usize>) {
     let n = data.len();
     if n == 0 {
-        return Vec::new();
+        return;
     }
-    let mut result = vec![0u8; n];
-    let mut deque: VecDeque<usize> = VecDeque::new();
+    deque.clear();
 
     // Das Fenster für den zentrierten Pixel i reicht von i-radius bis i+radius.
     // Wir verschieben die führende Kante j von 0 bis n + radius, um alle Werte zu verarbeiten.
@@ -173,7 +172,6 @@ fn dilate_1d(data: &[u8], radius: usize) -> Vec<u8> {
             result[i] = data[*deque.front().unwrap()];
         }
     }
-    result
 }
 
 /// 1D-Sliding-Window Minimum (Erosion) für eine Datenreihe.
@@ -181,13 +179,12 @@ fn dilate_1d(data: &[u8], radius: usize) -> Vec<u8> {
 /// # Komplexität
 /// O(N) – analoges Monotone Deque Sliding-Window Minimum.
 /// Deque hält Indizes in aufsteigender Wertereihenfolge.
-fn erode_1d(data: &[u8], radius: usize) -> Vec<u8> {
+fn erode_1d(data: &[u8], result: &mut [u8], radius: usize, deque: &mut VecDeque<usize>) {
     let n = data.len();
     if n == 0 {
-        return Vec::new();
+        return;
     }
-    let mut result = vec![255u8; n];
-    let mut deque: VecDeque<usize> = VecDeque::new();
+    deque.clear();
 
     for j in 0..(n + radius) {
         // 1. Element j einsortieren
@@ -220,7 +217,6 @@ fn erode_1d(data: &[u8], radius: usize) -> Vec<u8> {
             result[i] = data[*deque.front().unwrap()];
         }
     }
-    result
 }
 
 /// Morphologische Dilatation – Separierbare Sliding-Window-Implementierung.
@@ -245,38 +241,38 @@ fn dilate(img: &ImageMatrix, kernel_size: usize) -> Result<ImageMatrix, String> 
     let (h, w) = img.dim();
     let radius = kernel_size / 2;
 
-    // Pass 1: Horizontale Dilation (parallelisiert über Zeilen via rayon)
-    let tmp_rows: Vec<Vec<u8>> = (0..h)
-        .into_par_iter()
-        .map(|y| {
-            let row: Vec<u8> = (0..w).map(|x| img[[y, x]]).collect();
-            dilate_1d(&row, radius)
-        })
-        .collect();
-
-    // Zwischenergebnis in Matrix umwandeln
     let mut tmp = Array2::<u8>::zeros((h, w));
-    for (y, row) in tmp_rows.iter().enumerate() {
-        for (x, &v) in row.iter().enumerate() {
-            tmp[[y, x]] = v;
-        }
-    }
 
-    // Pass 2: Vertikale Dilation (parallelisiert über Spalten via rayon)
-    let col_results: Vec<Vec<u8>> = (0..w)
+    // Pass 1: Horizontale Dilation (parallelisiert über Zeilen via rayon)
+    ndarray::Zip::from(tmp.rows_mut())
+        .and(img.rows())
         .into_par_iter()
-        .map(|x| {
-            let col: Vec<u8> = (0..h).map(|y| tmp[[y, x]]).collect();
-            dilate_1d(&col, radius)
-        })
-        .collect();
+        .for_each(|(mut out_row, in_row)| {
+            let mut deque: VecDeque<usize> = VecDeque::with_capacity(w.min(radius * 2 + 2));
+            if let (Some(in_slice), Some(out_slice)) = (in_row.as_slice(), out_row.as_slice_mut()) {
+                dilate_1d(in_slice, out_slice, radius, &mut deque);
+            } else {
+                let in_vec = in_row.to_vec();
+                let mut out_vec = vec![0u8; w];
+                dilate_1d(&in_vec, &mut out_vec, radius, &mut deque);
+                for i in 0..w { out_row[i] = out_vec[i]; }
+            }
+        });
 
     let mut output = Array2::<u8>::zeros((h, w));
-    for (x, col) in col_results.iter().enumerate() {
-        for (y, &v) in col.iter().enumerate() {
-            output[[y, x]] = v;
-        }
-    }
+    
+    // Pass 2: Vertikale Dilation (parallelisiert über Spalten via rayon)
+    ndarray::Zip::from(output.columns_mut())
+        .and(tmp.columns())
+        .into_par_iter()
+        .for_each(|(mut out_col, in_col)| {
+            let mut deque: VecDeque<usize> = VecDeque::with_capacity(h.min(radius * 2 + 2));
+            let in_vec = in_col.to_vec();
+            let mut out_vec = vec![0u8; h];
+            dilate_1d(&in_vec, &mut out_vec, radius, &mut deque);
+            for i in 0..h { out_col[i] = out_vec[i]; }
+        });
+
     Ok(output)
 }
 
@@ -297,37 +293,38 @@ fn erode(img: &ImageMatrix, kernel_size: usize) -> Result<ImageMatrix, String> {
     let (h, w) = img.dim();
     let radius = kernel_size / 2;
 
-    // Pass 1: Horizontale Erosion (parallelisiert über Zeilen)
-    let tmp_rows: Vec<Vec<u8>> = (0..h)
-        .into_par_iter()
-        .map(|y| {
-            let row: Vec<u8> = (0..w).map(|x| img[[y, x]]).collect();
-            erode_1d(&row, radius)
-        })
-        .collect();
-
     let mut tmp = Array2::<u8>::zeros((h, w));
-    for (y, row) in tmp_rows.iter().enumerate() {
-        for (x, &v) in row.iter().enumerate() {
-            tmp[[y, x]] = v;
-        }
-    }
 
-    // Pass 2: Vertikale Erosion (parallelisiert über Spalten)
-    let col_results: Vec<Vec<u8>> = (0..w)
+    // Pass 1: Horizontale Erosion (parallelisiert über Zeilen)
+    ndarray::Zip::from(tmp.rows_mut())
+        .and(img.rows())
         .into_par_iter()
-        .map(|x| {
-            let col: Vec<u8> = (0..h).map(|y| tmp[[y, x]]).collect();
-            erode_1d(&col, radius)
-        })
-        .collect();
+        .for_each(|(mut out_row, in_row)| {
+            let mut deque: VecDeque<usize> = VecDeque::with_capacity(w.min(radius * 2 + 2));
+            if let (Some(in_slice), Some(out_slice)) = (in_row.as_slice(), out_row.as_slice_mut()) {
+                erode_1d(in_slice, out_slice, radius, &mut deque);
+            } else {
+                let in_vec = in_row.to_vec();
+                let mut out_vec = vec![0u8; w];
+                erode_1d(&in_vec, &mut out_vec, radius, &mut deque);
+                for i in 0..w { out_row[i] = out_vec[i]; }
+            }
+        });
 
     let mut output = Array2::<u8>::zeros((h, w));
-    for (x, col) in col_results.iter().enumerate() {
-        for (y, &v) in col.iter().enumerate() {
-            output[[y, x]] = v;
-        }
-    }
+
+    // Pass 2: Vertikale Erosion (parallelisiert über Spalten)
+    ndarray::Zip::from(output.columns_mut())
+        .and(tmp.columns())
+        .into_par_iter()
+        .for_each(|(mut out_col, in_col)| {
+            let mut deque: VecDeque<usize> = VecDeque::with_capacity(h.min(radius * 2 + 2));
+            let in_vec = in_col.to_vec();
+            let mut out_vec = vec![0u8; h];
+            erode_1d(&in_vec, &mut out_vec, radius, &mut deque);
+            for i in 0..h { out_col[i] = out_vec[i]; }
+        });
+
     Ok(output)
 }
 

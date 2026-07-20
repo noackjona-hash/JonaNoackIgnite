@@ -31,23 +31,8 @@ import image_processing
 import storage
 
 
-# ─── COLOR TOKENS FÜR DYNAMISCHES DESIGN (LIGHT / DARK MODE) ──────────────────
-# Inspiriert von modernen Premium-Schnittstellen (Slate / Indigo / Violet)
-COLOR_BG_MAIN = ("#F8FAFC", "#030712")       # Slate-50 / Gray-950
-COLOR_BG_CARD = ("#FFFFFF", "#0B0F19")       # Pure White / Dark Indigo-Slate-900
-COLOR_BORDER_CARD = ("#E2E8F0", "#1E293B")   # Slate-200 / Slate-800
-COLOR_TEXT_PRIMARY = ("#0F172A", "#F8FAFC")  # Slate-900 / Slate-50
-COLOR_TEXT_SECONDARY = ("#475569", "#94A3B8")# Slate-600 / Slate-400
-COLOR_TEXT_MUTED = ("#94A3B8", "#475569")    # Slate-400 / Slate-600
-COLOR_BG_INPUT = ("#F1F5F9", "#070A13")      # Slate-100 / Gray-900
-COLOR_BORDER_INPUT = ("#CBD5E1", "#1E293B")  # Slate-300 / Slate-800
-COLOR_PRIMARY_ACCENT = "#6366F1"             # Premium Indigo-500 (Vibrant indigo glow)
-COLOR_HOVER_ACCENT = "#4F46E5"               # Indigo-600
-COLOR_VIOLET = "#8B5CF6"                     # Violet-500
-COLOR_SUCCESS = "#10B981"                    # Emerald-500
-COLOR_WARNING = "#F59E0B"                    # Amber-500
-COLOR_DANGER = "#EF4444"                     # Red-500
-FONT_FAMILY = "Segoe UI"
+from gui.theme import *
+from gui.utils_ui import make_slider
 
 
 
@@ -640,14 +625,14 @@ class IgniteApp:
         self.param_sliders_frame = ctk.CTkFrame(self.param_card, fg_color="transparent")
         self.parameters_visible = False
 
-        self.sigma_k_slider, self.sigma_k_val = self.make_slider(self.param_sliders_frame, "Threshold-Faktor (sigma_k)", 1.0, 5.0, config.DEFAULT_SIGMA_K, 0.1)
-        self.tophat_slider, self.tophat_val = self.make_slider(self.param_sliders_frame, "Top-Hat Kernel (%)", 0.01, 0.15, config.DEFAULT_TOPHAT_FACTOR, 0.005)
-        self.min_area_slider, self.min_area_val = self.make_slider(self.param_sliders_frame, "Min. Fläche (%)", 0.0001, 0.005, config.DEFAULT_MIN_AREA_FACTOR, 0.0001)
-        self.min_circ_slider, self.min_circ_val = self.make_slider(self.param_sliders_frame, "Min. Circularity", 0.001, 0.100, config.DEFAULT_MIN_CIRCULARITY, 0.002)
-        self.otsu_min_slider, self.otsu_min_val = self.make_slider(self.param_sliders_frame, "Otsu Min Schwellenwert", 10.0, 100.0, config.DEFAULT_OTSU_MIN, 1.0)
-        self.otsu_max_slider, self.otsu_max_val = self.make_slider(self.param_sliders_frame, "Otsu Max Schwellenwert", 50.0, 150.0, config.DEFAULT_OTSU_MAX, 1.0)
-        self.erosion_slider, self.erosion_val = self.make_slider(self.param_sliders_frame, "Erosions-Faktor", 0.01, 0.20, config.DEFAULT_DIST_EROSION_FACTOR, 0.005)
-        self.temp_offset_slider, self.temp_offset_val = self.make_slider(self.param_sliders_frame, "Temp-Offset (Kalibrierung)", -50.0, 50.0, 0.0, 0.5)
+        self.sigma_k_slider, self.sigma_k_val = make_slider(self.param_sliders_frame, "Threshold-Faktor (sigma_k)", 1.0, 5.0, config.DEFAULT_SIGMA_K, 0.1)
+        self.tophat_slider, self.tophat_val = make_slider(self.param_sliders_frame, "Top-Hat Kernel (%)", 0.01, 0.15, config.DEFAULT_TOPHAT_FACTOR, 0.005)
+        self.min_area_slider, self.min_area_val = make_slider(self.param_sliders_frame, "Min. Fläche (%)", 0.0001, 0.005, config.DEFAULT_MIN_AREA_FACTOR, 0.0001)
+        self.min_circ_slider, self.min_circ_val = make_slider(self.param_sliders_frame, "Min. Circularity", 0.001, 0.100, config.DEFAULT_MIN_CIRCULARITY, 0.002)
+        self.otsu_min_slider, self.otsu_min_val = make_slider(self.param_sliders_frame, "Otsu Min Schwellenwert", 10.0, 100.0, config.DEFAULT_OTSU_MIN, 1.0)
+        self.otsu_max_slider, self.otsu_max_val = make_slider(self.param_sliders_frame, "Otsu Max Schwellenwert", 50.0, 150.0, config.DEFAULT_OTSU_MAX, 1.0)
+        self.erosion_slider, self.erosion_val = make_slider(self.param_sliders_frame, "Erosions-Faktor", 0.01, 0.20, config.DEFAULT_DIST_EROSION_FACTOR, 0.005)
+        self.temp_offset_slider, self.temp_offset_val = make_slider(self.param_sliders_frame, "Temp-Offset (Kalibrierung)", -50.0, 50.0, 0.0, 0.5)
 
         # Sliders bindings
         self.sigma_k_slider.configure(command=self.update_params)

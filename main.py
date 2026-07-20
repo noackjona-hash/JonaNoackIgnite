@@ -107,7 +107,7 @@ def main():
 
             splash.after(0, lambda: update_splash(splash, 0.55, "Initialisiere GPU-Backend..."))
 
-            from gui import IgniteApp
+            from gui.main_window import IgniteApp
             loaded["IgniteApp"] = IgniteApp
 
             splash.after(0, lambda: update_splash(splash, 0.85, "Lade Benutzeroberfläche..."))
