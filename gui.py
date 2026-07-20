@@ -189,7 +189,11 @@ class IgniteApp:
         lbl_title.pack(side="left")
 
         # Window Controls
-        btn_close = ctk.CTkButton(self.title_bar, text="✕", width=46, height=40, fg_color="transparent", hover_color=COLOR_DANGER, text_color=COLOR_TEXT_PRIMARY, corner_radius=0, command=self.root.quit)
+        def hard_exit():
+            self.root.destroy()
+            import sys
+            sys.exit(0)
+        btn_close = ctk.CTkButton(self.title_bar, text="✕", width=46, height=40, fg_color="transparent", hover_color=COLOR_DANGER, text_color=COLOR_TEXT_PRIMARY, corner_radius=0, command=hard_exit)
         btn_close.pack(side="right")
 
         self.is_maximized = False
