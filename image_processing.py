@@ -104,6 +104,66 @@ def _extract_body_mask_cpu(
     eroded_mask = (dist >= dist_erosion_factor * max_dist).astype(np.uint8) * 255
     return eroded_mask
 
+def _filter_geometric_noise(
+    binary_raw: np.ndarray,
+    mask: np.ndarray,
+    min_area_factor: float,
+    min_circularity: float
+) -> np.ndarray:
+    """Filtert Rauschen und anatomische Artefakte basierend auf Geometrie und Distanztransformation."""
+    total_body_area = np.sum(mask == 255)
+    min_area = max(10, min_area_factor * total_body_area)
+    
+    dist_map = cv2.distanceTransform(mask, cv2.DIST_L2, 5)
+    min_dist_from_border = max(
+        _config.MIN_DIST_FROM_BORDER_ABS,
+        binary_raw.shape[1] * _config.MIN_DIST_FROM_BORDER_FACTOR
+    )
+
+    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(binary_raw)
+    final_mask = np.zeros_like(binary_raw)
+
+    border_margin = _config.BORDER_MARGIN_PX
+    h_img, w_img = binary_raw.shape[:2]
+
+    for i in range(1, num_labels):
+        centroid_y = centroids[i][1]
+        if centroid_y > h_img * _config.ANATOMICAL_LOWER_CUTOFF_Y:
+            continue
+            
+        area = stats[i, cv2.CC_STAT_AREA]
+        if area < min_area:
+            continue
+            
+        x = stats[i, cv2.CC_STAT_LEFT]
+        y = stats[i, cv2.CC_STAT_TOP]
+        w_box = stats[i, cv2.CC_STAT_WIDTH]
+        h_box = stats[i, cv2.CC_STAT_HEIGHT]
+        
+        if x <= border_margin or y <= border_margin or (x + w_box) >= (w_img - border_margin) or (y + h_box) >= (h_img - border_margin):
+            continue
+        
+        component_mask = (labels == i)
+        max_dist = float(np.max(dist_map[component_mask])) if np.sum(component_mask) > 0 else 0.0
+        if max_dist < min_dist_from_border:
+            continue
+        contours, _ = cv2.findContours(
+            (labels == i).astype(np.uint8) * 255, 
+            cv2.RETR_EXTERNAL, 
+            cv2.CHAIN_APPROX_SIMPLE
+        )
+        if not contours:
+            continue
+        cnt = contours[0]
+        perimeter = cv2.arcLength(cnt, True)
+        if perimeter < 1.0:
+            continue
+        circularity = (4.0 * np.pi * area) / (perimeter * perimeter)
+        if circularity >= min_circularity:
+            cv2.drawContours(final_mask, [cnt], -1, 255, thickness=cv2.FILLED)
+            
+    return final_mask
+
 # ─────────────────────────────────────────────────────────────────────────────
 # FUNKTION 3: GPU/PyTorch-Pipeline
 # ─────────────────────────────────────────────────────────────────────────────
@@ -151,63 +211,8 @@ def _pytorch_gpu_pipeline(
         binary_raw_t = (diff_t > T_rel) & (img_t > mu_orig)
         binary_raw_np = (binary_raw_t.cpu().numpy() * 255).astype(np.uint8)
     
-    # Geometrischer Rauschfilter auf CPU
-    total_body_area = np.sum(mask_cpu == 255)
-    min_area = max(10, min_area_factor * total_body_area)
-    
-    # Distanztransformation der Body-Maske:
-    # Hotspots am Maskenrand (Knöchel, Fersen) haben kleine Distanzwerte,
-    # echter Entzündungs-Hotspot liegt im Inneren (große Distanzwerte).
-    dist_map = cv2.distanceTransform(mask_cpu, cv2.DIST_L2, 5)
-    min_dist_from_border = max(
-        _config.MIN_DIST_FROM_BORDER_ABS,
-        binary_raw_np.shape[1] * _config.MIN_DIST_FROM_BORDER_FACTOR
-    )
-
-    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(binary_raw_np)
-    final_mask = np.zeros_like(binary_raw_np)
-
-    border_margin = _config.BORDER_MARGIN_PX
-    h_img, w_img = binary_raw_np.shape[:2]
-
-    for i in range(1, num_labels):
-        # Anatomische Einschränkung: Hotspots im unteren Bildbereich ausschließen
-        centroid_y = centroids[i][1]
-        if centroid_y > h_img * _config.ANATOMICAL_LOWER_CUTOFF_Y:
-            continue
-            
-        area = stats[i, cv2.CC_STAT_AREA]
-        if area < min_area:
-            continue
-            
-        x = stats[i, cv2.CC_STAT_LEFT]
-        y = stats[i, cv2.CC_STAT_TOP]
-        w_box = stats[i, cv2.CC_STAT_WIDTH]
-        h_box = stats[i, cv2.CC_STAT_HEIGHT]
-        
-        # Bildrand-Ausschluss
-        if x <= border_margin or y <= border_margin or (x + w_box) >= (w_img - border_margin) or (y + h_box) >= (h_img - border_margin):
-            continue
-        
-        # Distanztransformations-Filter: Komponente verwerfen, wenn sie zu nah am Maskenrand
-        component_mask = (labels == i)
-        max_dist = float(np.max(dist_map[component_mask])) if np.sum(component_mask) > 0 else 0.0
-        if max_dist < min_dist_from_border:
-            continue
-        contours, _ = cv2.findContours(
-            (labels == i).astype(np.uint8) * 255, 
-            cv2.RETR_EXTERNAL, 
-            cv2.CHAIN_APPROX_SIMPLE
-        )
-        if not contours:
-            continue
-        cnt = contours[0]
-        perimeter = cv2.arcLength(cnt, True)
-        if perimeter < 1.0:
-            continue
-        circularity = (4.0 * np.pi * area) / (perimeter * perimeter)
-        if circularity >= min_circularity:
-            cv2.drawContours(final_mask, [cnt], -1, 255, thickness=cv2.FILLED)
+    # Geometrischer Rauschfilter
+    final_mask = _filter_geometric_noise(binary_raw_np, mask_cpu, min_area_factor, min_circularity)
             
     diff_np = diff_t.cpu().numpy()
     min_val = diff_np.min()
@@ -265,60 +270,8 @@ def _python_fallback_pipeline(
     
     binary_raw = ((diff_img > T_rel) & (img > mu_orig)).astype(np.uint8) * 255
     
-    # 4. Connected Components mit Distanztransformations-Filter
-    min_area = max(10, min_area_factor * total_body_area)
-    
-    # Distanztransformation der Body-Maske für Rand-Artefakt-Filter
-    dist_map = cv2.distanceTransform(mask, cv2.DIST_L2, 5)
-    min_dist_from_border = max(
-        _config.MIN_DIST_FROM_BORDER_ABS,
-        img.shape[1] * _config.MIN_DIST_FROM_BORDER_FACTOR
-    )
-
-    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(binary_raw)
-    final_mask = np.zeros_like(binary_raw)
-
-    border_margin = _config.BORDER_MARGIN_PX
-    h_img, w_img = binary_raw.shape[:2]
-
-    for i in range(1, num_labels):
-        # Anatomische Einschränkung: Hotspots im unteren Bildbereich ausschließen
-        centroid_y = centroids[i][1]
-        if centroid_y > h_img * _config.ANATOMICAL_LOWER_CUTOFF_Y:
-            continue
-            
-        area = stats[i, cv2.CC_STAT_AREA]
-        if area < min_area:
-            continue
-            
-        x = stats[i, cv2.CC_STAT_LEFT]
-        y = stats[i, cv2.CC_STAT_TOP]
-        w_box = stats[i, cv2.CC_STAT_WIDTH]
-        h_box = stats[i, cv2.CC_STAT_HEIGHT]
-        
-        # Bildrand-Ausschluss
-        if x <= border_margin or y <= border_margin or (x + w_box) >= (w_img - border_margin) or (y + h_box) >= (h_img - border_margin):
-            continue
-        
-        # Distanztransformations-Filter
-        component_mask = (labels == i)
-        max_dist = float(np.max(dist_map[component_mask])) if np.sum(component_mask) > 0 else 0.0
-        if max_dist < min_dist_from_border:
-            continue
-        contours, _ = cv2.findContours(
-            (labels == i).astype(np.uint8) * 255,
-            cv2.RETR_EXTERNAL,
-            cv2.CHAIN_APPROX_SIMPLE
-        )
-        if not contours:
-            continue
-        cnt = contours[0]
-        perimeter = cv2.arcLength(cnt, True)
-        if perimeter < 1.0:
-            continue
-        circularity = (4.0 * np.pi * area) / (perimeter * perimeter)
-        if circularity >= min_circularity:
-            cv2.drawContours(final_mask, [cnt], -1, 255, thickness=cv2.FILLED)
+    # Geometrischer Rauschfilter
+    final_mask = _filter_geometric_noise(binary_raw, mask, min_area_factor, min_circularity)
             
     diff_vis = cv2.normalize(diff_img, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
     return diff_vis, final_mask

@@ -7,6 +7,7 @@ GPU-beschleunigte PyTorch-Pipeline delegiert.
 """
 
 import os
+import logging
 import csv
 import hashlib
 import datetime
@@ -52,73 +53,8 @@ FONT_FAMILY = "Segoe UI"
 
 # ─── KLINISCHE HILFSFUNKTIONEN ────────────────────────────────────────────────
 
-def pixel_to_celsius(pixel_value: float, t_min: float, t_max: float) -> float:
-    """Konvertiert einen 8-Bit Pixelwert (0-255) in Grad Celsius.
-
-    Lineare Abbildung: T(x) = T_min + x * (T_max - T_min) / 255
-
-    Args:
-        pixel_value: Rohwert aus dem Thermobild (0–255).
-        t_min: Minimaler Temperaturbereich der Kamera in °C.
-        t_max: Maximaler Temperaturbereich der Kamera in °C.
-
-    Returns:
-        Temperatur in Grad Celsius.
-    """
-    return t_min + (pixel_value / 255.0) * (t_max - t_min)
-
-
-def pseudonymize_patient(name: str, dob: str = "") -> str:
-    """Erzeugt eine DSGVO-konforme Pseudonym-ID via SHA-256.
-
-    Args:
-        name: Klartextname des Patienten.
-        dob: Optionales Geburtsdatum zur Erhöhung der Eindeutigkeit.
-
-    Returns:
-        12-stellige alphanumerische Patienten-ID (Präfix 'ANON-').
-    """
-    raw = f"{name.strip().lower()}|{dob.strip()}"
-    digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()
-    return f"ANON-{digest[:12].upper()}"
-
-
-AUDIT_LOG_FILE = config.AUDIT_TRAIL_PATH
-AUDIT_LOG_HEADER = [
-    "Zeitstempel", "Patienten-ID", "Analysemodus", "Bilddatei",
-    "sigma_k", "tophat_factor", "T_min_C", "T_max_C",
-    "Hotspot_Pixel", "Max_Temp_C", "Symmetrie_Delta", "Operator"
-]
-
-
-def write_audit_entry(entry: dict) -> None:
-    """Schreibt einen Eintrag in den klinischen Audit-Trail (CSV).
-
-    Erstellt die Datei mit Header, falls noch nicht vorhanden.
-    Appended jeweils eine neue Zeile.
-
-    Args:
-        entry: Dictionary mit den Audit-Feldern.
-    """
-    file_exists = os.path.exists(AUDIT_LOG_FILE)
-    try:
-        with open(AUDIT_LOG_FILE, "a", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=AUDIT_LOG_HEADER)
-            if not file_exists:
-                writer.writeheader()
-            writer.writerow(entry)
-    except Exception as e:
-        print(f"[AUDIT] Fehler beim Schreiben des Audit-Trails: {e}")
-
-
-def get_resource_path(relative_path: str) -> str:
-    """Gibt den absoluten Pfad zu einer Ressource zurück, passend für PyInstaller-EXEn."""
-    import sys
-    try:
-        base_path = sys._MEIPASS
-    except AttributeError:
-        base_path = os.path.abspath(".")
-    return os.path.join(base_path, relative_path)
+from utils import pixel_to_celsius, pseudonymize_patient, get_resource_path
+from audit_log import write_audit_entry
 
 
 APP_VERSION = "1.0.0"
@@ -150,8 +86,8 @@ class IgniteApp:
         if os.path.exists(icon_path):
             try:
                 self.root.iconbitmap(icon_path)
-            except Exception:
-                pass
+            except Exception as e:
+                logging.debug(f"Fehler ignoriert: {e}")
 
         # Ausgabe-Verzeichnis anlegen
         config.init_output_dir()
@@ -246,8 +182,8 @@ class IgniteApp:
                 logo_ctk = ctk.CTkImage(light_image=logo_img, dark_image=logo_img, size=(20, 20))
                 lbl_icon = ctk.CTkLabel(self.title_bar, image=logo_ctk, text="")
                 lbl_icon.pack(side="left", padx=(15, 8))
-            except Exception:
-                pass
+            except Exception as e:
+                logging.debug(f"Fehler ignoriert: {e}")
 
         lbl_title = ctk.CTkLabel(self.title_bar, text=f"IGNITE Medical Imaging Suite v{APP_VERSION} – Thermografische Analyse", font=(FONT_FAMILY, 12, "bold"), text_color=COLOR_TEXT_PRIMARY)
         lbl_title.pack(side="left")
@@ -353,8 +289,8 @@ class IgniteApp:
                 style = windll.user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
                 style = style & ~WS_EX_TOOLWINDOW | WS_EX_APPWINDOW
                 windll.user32.SetWindowLongW(hwnd, GWL_EXSTYLE, style)
-            except Exception:
-                pass
+            except Exception as e:
+                logging.debug(f"Fehler ignoriert: {e}")
         self.root.after(100, set_appwindow)
 
     def setup_ui(self) -> None:
@@ -380,8 +316,8 @@ class IgniteApp:
                 logo_lbl = ctk.CTkLabel(sidebar_frame, image=logo_ctk, text="")
                 logo_lbl.pack(padx=20, pady=(25, 5), anchor="w")
                 pady_title = (5, 2)
-            except Exception:
-                pass
+            except Exception as e:
+                logging.debug(f"Fehler ignoriert: {e}")
 
         # App-Header
         title_lbl = ctk.CTkLabel(
@@ -1475,8 +1411,8 @@ class IgniteApp:
                             files_removed += 1
                     try:
                         os.rmdir(item_path)
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logging.debug(f"Fehler ignoriert: {e}")
 
             messagebox.showinfo("Bereinigung erfolgreich", f"Erfolgreich {files_removed} Dateien gelöscht.")
             
@@ -3654,8 +3590,8 @@ class IgniteApp:
                 progress_win.destroy()
                 try:
                     os.startfile(os.path.abspath(dest_dir))
-                except Exception:
-                    pass
+                except Exception as e:
+                    logging.debug(f"Fehler ignoriert: {e}")
                 messagebox.showinfo(
                     "Stapelverarbeitung beendet",
                     f"Erfolgreich {len(patients_processed)} Wärmebilder verarbeitet!\n\n"
@@ -3744,8 +3680,8 @@ class IgniteApp:
                 logo_ctk = ctk.CTkImage(light_image=logo_img, dark_image=logo_img, size=(56, 56))
                 logo_lbl = ctk.CTkLabel(about_win, image=logo_ctk, text="")
                 logo_lbl.pack(pady=(28, 6))
-            except Exception:
-                pass
+            except Exception as e:
+                logging.debug(f"Fehler ignoriert: {e}")
 
         ctk.CTkLabel(
             about_win,

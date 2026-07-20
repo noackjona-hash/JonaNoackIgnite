@@ -1,6 +1,7 @@
 import tkinter as tk
 import threading
 import os
+import logging
 
 
 # ─── Sofortiger Splash-Screen ─────────────────────────────────────────────────
@@ -39,7 +40,8 @@ def create_instant_splash():
         img = Image.open(logo_path).resize((64, 64), Image.LANCZOS)
         logo_img_ref = ImageTk.PhotoImage(img)
         tk.Label(splash, image=logo_img_ref, bg="#030712").pack(pady=(36, 6))
-    except Exception:
+    except Exception as e:
+        logging.debug(f"Fehler beim Laden des Splash-Logos: {e}")
         tk.Label(splash, text="", bg="#030712", height=3).pack()
 
     # Font stack: Segoe UI
@@ -79,13 +81,15 @@ def update_splash(splash, progress: float, message: str):
         splash._pbar_canvas.coords(splash._pbar_bar, 0, 0, width, 3)
         splash._status_var.set(message)
         splash.update()
-    except Exception:
-        pass
+    except Exception as e:
+        logging.debug(f"Splash-Fehler ignoriert: {e}")
 
 
 # ─── Hauptprogramm ────────────────────────────────────────────────────────────
 
 def main():
+    logging.basicConfig(level=logging.INFO, filename='ignite_app.log', format='%(asctime)s - %(levelname)s - %(message)s')
+    
     # Splash sofort zeigen – noch BEVOR schwere Imports
     splash = create_instant_splash()
     splash.update()
