@@ -33,8 +33,11 @@ import storage
 
 from gui.theme import *
 from gui.utils_ui import make_slider
-from gui.services import ExportService, ThermalProcessingService
-from gui.components import ThermalCanvasWidget, ParameterControlsPanel
+from gui.services.export_service import ExportService
+from gui.services.processing_service import ThermalProcessingService
+from gui.components.thermal_canvas import ThermalCanvasWidget
+from gui.components.controls_panel import ParameterControlsPanel
+
 
 
 
