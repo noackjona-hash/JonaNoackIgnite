@@ -14,3 +14,8 @@ bindings = "pyo3"
 # module-name: Exakter Python-Modulname (muss mit dem #[pymodule] fn-Namen übereinstimmen)
 module-name = "ignite_core"
 # Kein python-source: Wir liefern nur das native .pyd-Modul, kein Python-Paket-Verzeichnis
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+

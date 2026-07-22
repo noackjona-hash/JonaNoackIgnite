@@ -10,12 +10,12 @@ def synthetic_thermal_image():
     # 1. Simulate the body part with a temperature/pixel value within the typical OTSU range
     img[50:250, 50:250] = 80 
     
-    # 2. Add some "hotspots" to be detected
-    # A large hotspot
-    img[100:130, 100:130] = 190
+    # 2. Add some "hotspots" to be detected (must be smaller than the 15x15 top-hat kernel to be isolated)
+    # A localized hotspot
+    img[100:110, 100:110] = 190
     
     # A smaller, subtle hotspot
-    img[200:215, 200:215] = 140
+    img[180:188, 180:188] = 150
     
     return img
 
