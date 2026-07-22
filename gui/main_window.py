@@ -634,7 +634,7 @@ class IgniteApp:
         self.sigma_k_slider, self.sigma_k_val = make_slider(self.param_sliders_frame, "Threshold-Faktor (sigma_k)", 1.0, 5.0, config.DEFAULT_SIGMA_K, 0.1)
         self.tophat_slider, self.tophat_val = make_slider(self.param_sliders_frame, "Top-Hat Kernel (%)", 0.01, 0.15, config.DEFAULT_TOPHAT_FACTOR, 0.005)
         self.min_area_slider, self.min_area_val = make_slider(self.param_sliders_frame, "Min. Fläche (%)", 0.0001, 0.005, config.DEFAULT_MIN_AREA_FACTOR, 0.0001)
-        self.min_circ_slider, self.min_circ_val = make_slider(self.param_sliders_frame, "Min. Circularity", 0.001, 0.100, config.DEFAULT_MIN_CIRCULARITY, 0.002)
+        self.min_circ_slider, self.min_circ_val = make_slider(self.param_sliders_frame, "Min. Circularity", 0.01, 0.50, config.DEFAULT_MIN_CIRCULARITY, 0.005)
         self.otsu_min_slider, self.otsu_min_val = make_slider(self.param_sliders_frame, "Otsu Min Schwellenwert", 10.0, 100.0, config.DEFAULT_OTSU_MIN, 1.0)
         self.otsu_max_slider, self.otsu_max_val = make_slider(self.param_sliders_frame, "Otsu Max Schwellenwert", 50.0, 150.0, config.DEFAULT_OTSU_MAX, 1.0)
         self.erosion_slider, self.erosion_val = make_slider(self.param_sliders_frame, "Erosions-Faktor", 0.01, 0.20, config.DEFAULT_DIST_EROSION_FACTOR, 0.005)
