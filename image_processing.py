@@ -58,7 +58,7 @@ def get_active_backend() -> str:
         return "Python-Fallback"
 
 def compute_odd_kernel(dimension: int, factor: float) -> int:
-    """Berechnet eine ungerade Kernelgröße als Prozentsatz der Bildbreite, analog zu Rust."""
+    """Berechnet eine ungerade Kernelgröße als Prozentsatz der minimalen Bilddimension min(W, H), analog zu Rust."""
     raw = int(dimension * factor)
     odd = max(1, raw | 1)
     return max(3, odd)
@@ -92,9 +92,15 @@ def _extract_body_mask_cpu(
     dist_erosion_factor: float = _config.DEFAULT_DIST_EROSION_FACTOR
 ) -> np.ndarray:
     """Extrahiert die Body-Mask auf der CPU mit identischen Schwellenwerten wie Rust."""
-    otsu_thresh, _ = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    threshold = max(otsu_min, min(otsu_max, otsu_thresh / 2))
-    _, mask = cv2.threshold(img, threshold, 255, cv2.THRESH_BINARY)
+    min_val, max_val, _, _ = cv2.minMaxLoc(img)
+    dynamic_range = max_val - min_val
+    if dynamic_range < 30:
+        threshold = max(otsu_min, min(otsu_max, min_val + 0.3 * dynamic_range))
+    else:
+        otsu_thresh, _ = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        threshold = max(otsu_min, min(otsu_max, otsu_thresh / 2))
+        
+    _, mask = cv2.threshold(img, int(threshold), 255, cv2.THRESH_BINARY)
     
     dist = cv2.distanceTransform(mask, cv2.DIST_L2, 3)
     max_dist = dist.max()
@@ -186,8 +192,8 @@ def _pytorch_gpu_pipeline(
     img_t = torch.from_numpy(img).to(device).float()
     mask_t = torch.from_numpy(mask_cpu).to(device)
     
-    w = img.shape[1]
-    kernel_large = compute_odd_kernel(w, tophat_factor)
+    dim = min(img.shape[0], img.shape[1])
+    kernel_large = compute_odd_kernel(dim, tophat_factor)
     pad = kernel_large // 2
     
     with torch.no_grad():
@@ -252,8 +258,8 @@ def _python_fallback_pipeline(
         raise ValueError("Body-Mask ist leer – kein Körper im Bild erkannt.")
         
     # 2. Top-Hat
-    w = img.shape[1]
-    kernel_large = compute_odd_kernel(w, tophat_factor)
+    dim = min(img.shape[0], img.shape[1])
+    kernel_large = compute_odd_kernel(dim, tophat_factor)
     kernel_se = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_large, kernel_large))
     opened = cv2.morphologyEx(img, cv2.MORPH_OPEN, kernel_se)
     tophat = cv2.subtract(img, opened)

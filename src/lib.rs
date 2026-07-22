@@ -550,9 +550,16 @@ fn extract_body_mask(
 ) -> Result<(ImageMatrix, FloatMatrix), String> {
     let (h, w) = img.dim();
 
-    // Schritt 1: Otsu-Binarisierung mit adaptivem Fallback.
+    // Schritt 1: Otsu-Binarisierung mit adaptivem Fallback für niedrigen Kontrast.
     let otsu_thresh = otsu_threshold(img);
-    let threshold = (otsu_thresh / 2).max(otsu_min).min(otsu_max);
+    let min_px = *img.iter().min().unwrap_or(&0) as f64;
+    let max_px = *img.iter().max().unwrap_or(&0) as f64;
+    let dynamic_range = max_px - min_px;
+    let threshold = if dynamic_range < 30.0 {
+        ((min_px + 0.3 * dynamic_range) as u8).max(otsu_min).min(otsu_max)
+    } else {
+        (otsu_thresh / 2).max(otsu_min).min(otsu_max)
+    };
     let mut otsu_mask = Array2::<u8>::zeros((h, w));
     otsu_mask.zip_mut_with(img, |out, &px| {
         *out = if px > threshold { 255 } else { 0 };
@@ -1069,16 +1076,16 @@ fn process_thermal_pipeline<'py>(
             let img = box_blur_3x3(&img);
 
             // ── Feature A: Dynamische Kernel-Größen ──────────────────────
-            // Top-Hat-Kernel: 5 % der Bildbreite (passend zu realen Thermokameras
-            // mit 160–320px Auflösung, wo Hotspots typisch 10–50 Pixel groß sind).
-            // Bei 640px Breite: 5 % = 33px Kernel.
-            let kernel_large = compute_odd_kernel(width, tophat_factor);
+            // Top-Hat-Kernel: 5 % der minimalen Bilddimension min(W, H)
+            // (passend zu realen Thermokameras mit variablen Seitenverhältnissen).
+            let dimension = width.min(height);
+            let kernel_large = compute_odd_kernel(dimension, tophat_factor);
             // Geometriefilter-Referenzgröße (nicht für Morph-Ops genutzt, nur als Parameter)
-            let kernel_small = compute_odd_kernel(width, 0.02).max(3);
+            let kernel_small = compute_odd_kernel(dimension, 0.02).max(3);
 
             println!(
-                "[ignite_core] Bild: {}×{}, Kernel groß: {}, Kernel klein: {}",
-                width, height, kernel_large, kernel_small
+                "[ignite_core] Bild: {}×{}, Dim: {}, Kernel groß: {}, Kernel klein: {}",
+                width, height, dimension, kernel_large, kernel_small
             );
 
             // ── Feature B: Adaptive Body-Mask via Distanztransformation ──
