@@ -251,8 +251,11 @@ def _python_fallback_pipeline(
         stacklevel=3,
     )
     
+    # 0. Pre-filter 3x3 box blur (analog zu Rust box_blur_3x3)
+    img_blurred = cv2.blur(img, (3, 3))
+
     # 1. Body mask
-    mask = _extract_body_mask_cpu(img, otsu_min, otsu_max, dist_erosion_factor)
+    mask = _extract_body_mask_cpu(img_blurred, otsu_min, otsu_max, dist_erosion_factor)
     total_body_area = np.sum(mask == 255)
     if total_body_area == 0:
         raise ValueError("Body-Mask ist leer – kein Körper im Bild erkannt.")
@@ -261,8 +264,8 @@ def _python_fallback_pipeline(
     dim = min(img.shape[0], img.shape[1])
     kernel_large = compute_odd_kernel(dim, tophat_factor)
     kernel_se = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_large, kernel_large))
-    opened = cv2.morphologyEx(img, cv2.MORPH_OPEN, kernel_se)
-    tophat = cv2.subtract(img, opened)
+    opened = cv2.morphologyEx(img_blurred, cv2.MORPH_OPEN, kernel_se)
+    tophat = cv2.subtract(img_blurred, opened)
     diff_img = cv2.bitwise_and(tophat, tophat, mask=mask)
     
     # 3. Stats threshold
@@ -271,10 +274,10 @@ def _python_fallback_pipeline(
     sigma_diff = np.std(body_pixels)
     T_rel = mu_diff + sigma_k * sigma_diff
     
-    orig_body_pixels = img[mask > 0]
+    orig_body_pixels = img_blurred[mask > 0]
     mu_orig = np.mean(orig_body_pixels)
     
-    binary_raw = ((diff_img > T_rel) & (img > mu_orig)).astype(np.uint8) * 255
+    binary_raw = ((diff_img > T_rel) & (img_blurred > mu_orig)).astype(np.uint8) * 255
     
     # Geometrischer Rauschfilter
     final_mask = _filter_geometric_noise(binary_raw, mask, min_area_factor, min_circularity)
