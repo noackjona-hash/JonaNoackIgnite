@@ -90,7 +90,7 @@ def main():
         sys.stdout.write(f"\r[{percent:5.1f}%] {idx}/{total_files} | Zeilen: {total_lines:,} ({display_name:<40})")
         sys.stdout.flush()
 
-    print("\n\n─── Fertig! ───")
+    print("\n\n--- Fertig! ---")
     print(f"Gefundene Code-Dateien: {total_files}")
     print(f"Gesamte Codezeilen:     {total_lines:,}")
 
