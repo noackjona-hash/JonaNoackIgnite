@@ -1,21 +1,31 @@
-import os
 import subprocess
+import sys
 
-def is_ignored(path):
-    """Prüft via Git, ob ein Pfad durch .gitignore ignoriert wird."""
+def get_tracked_and_untracked_files():
+    """Holt alle nicht-ignorierten Dateien direkt von Git in einem Rutsch."""
     try:
-        result = subprocess.run(
-            ["git", "check-ignore", "-q", path],
-            capture_output=True
-        )
-        # Returncode 0 bedeutet: Pfad wird ignoriert
-        return result.returncode == 0
+        # 1. Alle getrackten Dateien
+        cmd_tracked = ["git", "ls-files"]
+        res_tracked = subprocess.run(cmd_tracked, capture_output=True, text=True, check=True)
+        files_tracked = set(res_tracked.stdout.splitlines())
+
+        # 2. Alle ungetrackten, aber NICHT ignorierten Dateien
+        cmd_untracked = ["git", "ls-files", "--others", "--exclude-standard"]
+        res_untracked = subprocess.run(cmd_untracked, capture_output=True, text=True, check=True)
+        files_untracked = set(res_untracked.stdout.splitlines())
+
+        # Zusammenführen
+        all_files = sorted(list(files_tracked | files_untracked))
+        return all_files
+    except subprocess.CalledProcessError:
+        print("Fehler: Das aktuelle Verzeichnis ist kein Git-Repository oder Git meldet einen Fehler.")
+        sys.exit(1)
     except FileNotFoundError:
-        print("Fehler: Git ist auf diesem System nicht installiert oder nicht im PATH.")
-        exit(1)
+        print("Fehler: Git ist auf diesem System nicht installiert.")
+        sys.exit(1)
 
 def count_lines_in_file(file_path):
-    """Zählt die Zeilen einer einzelnen Datei (ignoriert Binärdateien)."""
+    """Zählt die Zeilen einer Datei (ignoriert Binärdateien)."""
     try:
         with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
             return sum(1 for _ in f)
@@ -23,31 +33,34 @@ def count_lines_in_file(file_path):
         return 0
 
 def main():
-    # Prüfen, ob wir uns in einem Git-Repo befinden
-    if not os.path.exists(".git"):
-        print("Hinweis: Kein .git-Ordner im aktuellen Verzeichnis gefunden. Git-Ignore funktioniert möglicherweise nicht wie erwartet.")
+    print("Suche Dateien via Git...")
+    files = get_tracked_and_untracked_files()
+    
+    # Skript selbst ausnehmen, falls vorhanden
+    files = [f for f in files if f != "count_lines.py"]
+
+    total_files = len(files)
+    if total_files == 0:
+        print("Keine relevanten Dateien gefunden.")
+        return
+
+    print(f"{total_files} relevante Dateien gefunden. Starte Zählung...\n")
 
     total_lines = 0
-    total_files = 0
 
-    for root, dirs, files in os.walk("."):
-        # Entferne ignorierte Ordner direkt aus 'dirs', damit os.walk nicht hineingeht
-        dirs[:] = [d for d in dirs if not is_ignored(os.path.join(root, d))]
+    for idx, file_path in enumerate(files, start=1):
+        lines = count_lines_in_file(file_path)
+        total_lines += lines
 
-        for file in files:
-            file_path = os.path.join(root, file)
-            
-            # Überspringe das Skript selbst und ignorierte Dateien
-            if file == "count_lines.py" or is_ignored(file_path):
-                continue
+        # Statuszeile im Terminal live überschreiben (\r)
+        percent = (idx / total_files) * 100
+        sys.stdout.write(f"\r[{percent:5.1f}%] Verarbeitet: {idx}/{total_files} Dateien | Zeilen: {total_lines:,} ({file_path[:40]:<40})")
+        sys.stdout.flush()
 
-            lines = count_lines_in_file(file_path)
-            total_lines += lines
-            total_files += 1
-
-    print(f"─── Ergebnis ───")
-    print(f"Verarbeitete Dateien: {total_files}")
-    print(f"Gesamte Codezeilen:   {total_lines}")
+    # Nach Abschluss eine neue Zeile drucken
+    print("\n\n─── Fertig! ───")
+    print(f"Gesamte Dateien:    {total_files}")
+    print(f"Gesamte Codezeilen: {total_lines:,}")
 
 if __name__ == "__main__":
     main()
