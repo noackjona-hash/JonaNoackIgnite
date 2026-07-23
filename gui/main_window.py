@@ -709,7 +709,7 @@ class IgniteApp:
             return f"{val:.1f} K"
         return f"{val:.1f} °C"
 
-    def update_backend_label() -> None:
+    def update_backend_label(self) -> None:
         active = image_processing.get_active_backend()
         forced = self.backend_var.get()
         if forced != "auto":
