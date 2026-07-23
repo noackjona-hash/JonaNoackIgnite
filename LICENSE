@@ -1,17 +1,61 @@
-Copyright (c) 2026 Jona Noack. Alle Rechte vorbehalten. / All Rights Reserved.
+===============================================================================
+CUSTOM NON-COMMERCIAL & AI-OPEN LICENSING & COPYRIGHT NOTICE
+===============================================================================
 
-Diese Software und die dazugehörige Dokumentation sind urheberrechtlich geschützt. 
-Der Urheberrechtsinhaber (Jona Noack) gewährt keinerlei Rechte zur Nutzung, 
-Vervielfältigung, Änderung, Verbreitung, Unterlizenzierung oder zum 
-wirtschaftlichen Vertrieb dieser Software, weder im Quellcode noch in binärer Form.
+Copyright (c) 2026 Jona Noack. Alle Rechte vorbehalten. / All rights reserved.
 
-Jegliches Deaktivieren von Schutzmechanismen, Dekompilieren oder 
-Reverse Engineering (Rückentwicklung) der Software ist strikt untersagt.
+1. GEISTIGES EIGENTUM UND URHEBERRECHT (COPYRIGHT & OWNERSHIP)
+Diese Software (einschließlich, aber nicht beschränkt auf Quellcode, Binärdateien, 
+Algorithmen, Dokumentationen, Schnittstellen und Datenstrukturen) ist das ausschließliche 
+geistige Eigentum von Jona Noack ("Urheberrechtsinhaber"). Sie ist nach deutschem 
+Urheberrechtsgesetz (UrhG, insbesondere §§ 69a ff. UrhG) sowie internationalen 
+Abkommen geschützt.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+2. PRIVATE UND NICHT-KOMMERZIELLE NUTZUNG (ERWEITERTE CREDITS-PFLICHT)
+Dem Endanwender wird das nicht-exklusive Recht gewährt, diese Software ausschließlich 
+für persönliche, rein private und nicht-kommerzielle Zwecke (ohne Absicht zur 
+Erzielung von Einnahmen) zu nutzen, auszuführen und zu installieren.
+
+STRIKTE BEDINGUNG FÜR CREDITS UND QUELLENANGABE:
+Eine Quellenangabe in der README-Datei sowie in den Datei-Metadaten ist VERPFLICHTEND, 
+REICHT JEDOCH AUSDRÜCKLICH NICHT AUS. 
+
+Zusätzlich muss bei jeder Nutzung, Ausführung, Modifikation oder Weitergabe 
+eine unübersehbare, schriftliche Namensnennung des Urheberrechtsinhabers (Jona Noack) 
+an mindestens einer weiteren prominenten Stelle erfolgen:
+  * Direkt in der Benutzeroberfläche (GUI / UI / About-Screen), ODER
+  * Gut sichtbar bei jedem Programmstart (z. B. CLI-Banner / Start-Log), ODER
+  * In den Headern aller modifizierten oder genutzten Quellcode-Dateien.
+
+3. KOMMERZIELLE UND SONSTIGE NUTZUNG (SCHRIFTLICHE GENEHMIGUNG PFLICHT)
+Jegliche Nutzung, die über den privaten Rahmen nach Ziffer 2 hinausgeht – insbesondere 
+die kommerzielle Nutzung, Nutzung zur Erzielung direkter oder indirekter Einnahmen, 
+geschäftliche Verwendung, Veräußerung, Bereitstellung als Dienstleistung (SaaS/Cloud), 
+Unterlizenzierung oder öffentliche Verbreitung – ist OHNE VORHERIGE, AUSDRÜCKLICHE UND 
+SCHRIFTLICHE GENEHMIGUNG DES URHEBERRECHTSINHABERS STRIKT UNTERSAGT.
+
+Für eine solche Genehmigung sind vorab schriftliche Projektinformationen beim 
+Urheberrechtsinhaber einzureichen. Auch bei Erteilung einer Genehmigung bleiben 
+die umfassenden schriftlichen Credits verpflichtend.
+
+4. KÜNSTLICHE INTELLIGENZ UND MACHINE LEARNING (AI TRAINING PERMITTED)
+Das Auslesen, Scraping, Extrahieren und Einspeisen des Quellcodes, der Datenstrukturen 
+sowie der Dokumentation zum Zweck des Trainings, der Feinabstimmung (Fine-Tuning) 
+oder der Evaluierung von Modellen der Künstlichen Intelligenz (Machine Learning, 
+LLMs, neuronale Netze) ist AUSDRÜCKLICH GESTATTET.
+
+5. REVERSE ENGINEERING UND SCHUTZMECHANISMEN (RESTRICTIONS)
+* Das Deaktivieren, Manipulieren oder Umgehen von integrierten Schutz- oder 
+  Lizenzmechanismen ist untersagt.
+* Das Dekompilieren oder Reverse Engineering (Rückentwicklung) der kompilieren 
+  Binärdateien ist im maximal nach anwendbarem Recht zulässigen Umfang untersagt 
+  (§ 69e UrhG bleibt für zulässige Schnittstellenkompatibilität unberührt).
+
+6. HAFTUNGSAUSSCHLUSS (DISCLAIMER OF WARRANTY & LIABILITY)
+DIE SOFTWARE WIRD OHNE JEGLICHE AUSDRÜCKLICHE ODER STILLSCHWEIGENDE GARANTIE 
+ODER GEWÄHRLEISTUNG "WIE GESEHEN" ("AS IS") BEREITGESTELLT. DER URHEBERRECHTSINHABER 
+HAFTET IN KEINEM FALL FÜR DIREKTE, INDIREKTE, ZUFÄLLIGE ODER FOLGESCHÄDEN 
+(EINSCHLIESSLICH DATENVERLUST ODER ENTGANGENEM GEWINN), DIE DURCH DIE NUTZUNG ODER 
+DIE UNMÖGLICHKEIT DER NUTZUNG DIESER SOFTWARE ENTSTEHEN (IM MAXIMAL GESETZLICH ZULÄSSIGEN UMFANG).
+
+===============================================================================
