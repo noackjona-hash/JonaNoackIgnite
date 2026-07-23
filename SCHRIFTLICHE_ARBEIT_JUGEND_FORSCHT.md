@@ -67,7 +67,7 @@ Die thermografische Früherkennung von Entzündungsherden – etwa zur Präventi
 
 Die mathematische Pipeline filtert großflächige Gewebegradienten durch eine morphologische Top-Hat-Transformation auf Basis separierbarer 1D-Deque-Pässe ($O(K)$ nach Lemire 2011) und segmentiert Hitzespitzen über Schwellenwertverfahren ($\mu + 3\sigma$ sowie robustes MAD). Ein in nativem Rust programmierter Rechenkern (`ignite_core`) reduziert die Rechenzeit auf unter 30 ms pro Bild. Ein automatisches Modul zur kontralateralen Asymmetrie-Analyse vergleicht beide Körperhälften und gibt ab einer Abweichung von $\Delta T > 2{,}2\,^\circ\text{C}$ einen Hinweis aus. 
 
-In Tests mit synthetischen Rauschmodellen wurden Entzündungen zuverlässig erkannt. Die Arbeit arbeitet jedoch auch die methodischen Schwachstellen heraus: Der deterministische Algorithmus kann nicht zwischen pathogenen Entzündungen und harmlosen mechanischen Druckstellen unterscheiden. Die Software stellt daher kein Medizinprodukt dar, sondern dient als Orientierungshilfe unter ärztlicher Aufsicht.
+In Tests mit synthetischen Rauschmodellen wurden Entzündungen zuverlässig erkannt. Die Arbeit arbeitet jedoch auch die methodischen Schwachstellen heraus: Der deterministische Algorithmus kann nicht zwischen pathogenen Entzündungen und harmlosen mechanischen Druckstellen unterscheiden. Die Software stellt daher kein Medizinprodukt dar, sondern dient als Orientierungshilfe im Behandlungsablauf und ersetzt keine ärztliche Diagnose.
 
 ---
 
@@ -150,6 +150,11 @@ $$\text{TopHat}(I) = I - \text{Opening}(I) = I - ((I \ominus K) \oplus K)$$
 
 Im Rust-Kern wird die 2D-Operation in zwei 1D-Durchläufe (horizontal und vertikal) nach Lemire zerlegt, was die Komplexität pro Pixel auf $O(K)$ senkt.
 
+![Skizze 1: Prinzip der morphologischen Top-Hat-Transformation](images/skizze_tophat_prinzip.png)  
+*Abbildung 1 (Skizze 1): Das Prinzip der morphologischen Top-Hat-Transformation im 1D-Temperaturprofil. Das morphologische Opening glättet großflächige Verläufe. Die Differenz isoliert scharfe lokale Hitzespitzen oberhalb des Schwellenwerts.*
+
+---
+
 ### Stufe 4: Statistisches Outlier-Thresholding (Gauß vs. Robust-MAD)
 Zur Markierung auffälliger Helligkeiten nutzt IGNITE zwei Verfahren:
 * **Gauß-Verfahren:** $\text{Schwellenwert} = \mu_{\text{diff}} + 3 \cdot \sigma_{\text{diff}}$
@@ -158,6 +163,11 @@ Zur Markierung auffälliger Helligkeiten nutzt IGNITE zwei Verfahren:
 $$\text{MAD} = \text{median}(|X - \tilde{\mu}|), \quad \hat{\sigma}_{\text{MAD}} = 1{,}4826 \cdot \text{MAD}$$
 
 $$\text{Schwellenwert}_{\text{MAD}} = \tilde{\mu} + 3 \cdot \hat{\sigma}_{\text{MAD}}$$
+
+![Skizze 2: Gauß vs. Robust-MAD bei bimodaler Verteilung](images/skizze_gauss_vs_mad.png)  
+*Abbildung 2 (Skizze 2): Vergleichende Skizze der statistischen Schwellenwerte bei einer bimodalen Gewebeverteilung (kalte Zehen). Der Gauß-Mittelwert verschiebt sich nach links und verzerrt die Schwelle, während das Median/MAD-Verfahren stabil bleibt.*
+
+---
 
 ### Stufe 5: Geometrische Rauschfilterung & Kontralaterale Asymmetrie
 Isolierte Pixelgruppen werden mittels Connected-Components-Analyse gruppiert. Pixelgruppen unter $0{,}05\%$ der Körperfläche oder mit geringer Circularität ($C = \frac{4\pi A}{P^2} < 0{,}01$) werden gelöscht. Anschließend vergleicht das Programm die Durchschnittstemperaturen beider Seiten ($\Delta T > 2{,}2\,^\circ\text{C}$).
@@ -169,9 +179,8 @@ Isolierte Pixelgruppen werden mittels Connected-Components-Analyse gruppiert. Pi
 ## 4.1 Analyse des klinischen Behandlungsablaufs
 Der gedachte Ablauf im Behandlungszimmer gliedert sich wie folgt:
 
-```
-[1. Foto erstellen] ──> [2. IGNITE Analyse < 30ms] ──> [3. Visuelle Orientierung] ──> [4. Ärztliche Diagnose]
-```
+![Skizze 3: Integration in den Praxis-Workflow](images/skizze_praxis_workflow.png)  
+*Abbildung 3 (Skizze 3): Schema der Integration von IGNITE in den täglichen Praxisablauf im Behandlungszimmer.*
 
 Die Software dient dabei als Werkzeug für Schritt 3. Die eigentliche Diagnose in Schritt 4 bleibt immer beim Fachpersonal.
 
@@ -205,37 +214,37 @@ Die folgenden Abbildungen zeigen die Zwischenschritte der Pipeline an einem echt
 
 ### 5.1 Ausgangsmaterial (Original-Thermogramm)
 ![Originales Wärmebild in Grauwert und Jet-Colormap](images/1_original_thermal_jet.png)  
-*Abbildung 1: Originales thermografisches Wärmebild in Jet-Colormap.*
+*Abbildung 4: Originales thermografisches Wärmebild in Jet-Colormap.*
 
 ---
 
 ### 5.2 Körpermaskierung und Distanzkarte (Stufe 2)
 ![Körpermaske und Chamfer-L2 Distanzkarte](images/2_distance_transform.png)  
-*Abbildung 2: Chamfer-L2 Distanzkarte zur Abtrennung unscharfer Ränder.*
+*Abbildung 5: Chamfer-L2 Distanzkarte zur Abtrennung unscharfer Ränder.*
 
 ---
 
 ### 5.3 Hintergrundkorrektur via Top-Hat-Transformation (Stufe 3)
 ![Top-Hat Differenzbild](images/3_tophat_difference.png)  
-*Abbildung 3: Ergebnis der Top-Hat-Transformation (isoliert lokale Temperaturunterschiede).*
+*Abbildung 6: Ergebnis der Top-Hat-Transformation (isoliert lokale Temperaturunterschiede).*
 
 ---
 
 ### 5.4 Statistisches Thresholding und Hotspot-Maske (Stufe 4 & 5)
 ![Binäre Hotspot-Maske](images/4_hotspot_mask.png)  
-*Abbildung 4: Binäre Hotspot-Maske nach Schwellenwertentscheidung und Rauschfilterung.*
+*Abbildung 7: Binäre Hotspot-Maske nach Schwellenwertentscheidung und Rauschfilterung.*
 
 ---
 
 ### 5.5 Finales diagnostisches Overlay
 ![Finales Hotspot Overlay](images/5_final_overlay_jet.png)  
-*Abbildung 5: Visuelle Orientierungshilfe mit roter Hotspot-Markierung.*
+*Abbildung 8: Visuelle Orientierungshilfe mit roter Hotspot-Markierung.*
 
 ---
 
 ### 5.6 Auswertung synthetischer Szenarien
 ![Synthetisches Szenario Diabetischer Fuß](images/synthetic_diabetic_ulcer.png)  
-*Abbildung 6: Auswertung eines simulierten diabetischen Fußgeschwürs.*
+*Abbildung 9: Auswertung eines simulierten diabetischen Fußgeschwürs.*
 
 ---
 
@@ -249,6 +258,9 @@ Gemessen über 100 Durchläufe auf einem Mittelklasse-PC:
 | **PyTorch (NVIDIA CUDA GPU)** | **8,2 ms** | **18,4 ms** | ~350 MB VRAM |
 | **Mein Rust-Core (CPU Standard)** | **22,5 ms** | **41,1 ms** | **< 25 MB RAM** |
 | **Python Fallback (CPU)** | 78,4 ms | 210,6 ms | ~85 MB RAM |
+
+![Diagramm 1: Rechenzeiten im Vergleich](images/diagramm_rechenzeiten_vergleich.png)  
+*Abbildung 10 (Diagramm 1): Vergleichendes Balkendiagramm der Ausführungszeiten aller drei Backends bei unterschiedlichen Bildauflösungen.*
 
 *Ergebnis:* Der Rust-Core verarbeitet Bilder auf der CPU in unter 30 ms und ist deutlich schneller als der Python-Code.
 
