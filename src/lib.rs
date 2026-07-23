@@ -1185,6 +1185,57 @@ fn process_thermal_pipeline<'py>(
     Ok((diff_py.unbind(), mask_py.unbind()))
 }
 
+#[pyfunction]
+#[pyo3(name = "compute_asymmetry")]
+fn compute_asymmetry(
+    gray_array: PyReadonlyArray2<u8>,
+    body_mask_array: PyReadonlyArray2<u8>,
+    temp_min_c: f64,
+    temp_max_c: f64,
+    threshold_c: f64,
+) -> PyResult<(f64, f64, f64, bool)> {
+    let img = gray_array.as_array();
+    let mask = body_mask_array.as_array();
+    let shape = img.shape();
+    let (h, w) = (shape[0], shape[1]);
+    let mid_x = w / 2;
+
+    let mut left_sum = 0.0;
+    let mut left_count = 0.0;
+    let mut right_sum = 0.0;
+    let mut right_count = 0.0;
+
+    for y in 0..h {
+        for x in 0..w {
+            if mask[[y, x]] > 0 {
+                let val = img[[y, x]] as f64;
+                if x < mid_x {
+                    left_sum += val;
+                    left_count += 1.0;
+                } else {
+                    right_sum += val;
+                    right_count += 1.0;
+                }
+            }
+        }
+    }
+
+    if left_count < 1.0 || right_count < 1.0 {
+        return Ok((0.0, 0.0, 0.0, false));
+    }
+
+    let mu_left = left_sum / left_count;
+    let mu_right = right_sum / right_count;
+    let temp_range = (temp_max_c - temp_min_c).max(1.0);
+
+    let left_c = temp_min_c + (mu_left / 255.0) * temp_range;
+    let right_c = temp_min_c + (mu_right / 255.0) * temp_range;
+    let delta_c = (left_c - right_c).abs();
+    let is_asym = delta_c > threshold_c;
+
+    Ok((left_c, right_c, delta_c, is_asym))
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // ABSCHNITT 10: MODUL-REGISTRATION (PyO3 Boilerplate)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1196,12 +1247,14 @@ fn process_thermal_pipeline<'py>(
 ///
 /// # Registrierte Symbole
 /// - `process_thermal_pipeline(gray_array)` – Haupt-Pipeline-Funktion
+/// - `compute_asymmetry(gray_array, body_mask_array, temp_min, temp_max, threshold)` – Kontralaterale Asymmetrie
 /// - `__backend__` – Aktives Compute-Backend als String
 /// - `__version__` – Modul-Version
 /// - `__author__`  – Projekt-Information
 #[pymodule]
 fn ignite_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(process_thermal_pipeline, m)?)?;
+    m.add_function(wrap_pyfunction!(compute_asymmetry, m)?)?;
 
     // Backend-Info (CPU+rayon – Rust-native ohne externe CV-Bibliothek)
     let num_threads = rayon::current_num_threads();

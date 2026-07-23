@@ -84,6 +84,18 @@ Zusammenhängende Hotspot-Pixel werden als isolierte Objekte geometrisch analysi
 
 ---
 
+### 6. Kontralaterale Asymmetrie-Analyse (Feature F – Optionaler Medizinscher Goldstandard)
+In der podiatrischen Thermografie (z. B. Früherkennung des diabetischen Fußsyndroms nach Armstrong et al.) gilt die kontralaterale Temperaturdifferenz zwischen der linken und rechten Fußsohle als klinischer Goldstandard:
+1. **Bilaterale Maskenspaltung:** Das Bild wird an der vertikalen Bildmitte $X_{\text{mid}} = W / 2$ in eine linke und rechte Körperhälfte unterteilt.
+2. **Mittlere Oberflächentemperaturen:** Berechne die durchschnittlichen Temperaturen $\mu_{\text{links}}$ und $\mu_{\text{rechts}}$ über alle maskierten Körperpixel.
+3. **Temperaturdifferenz (Delta-T):**
+   $$\Delta T_{\text{mean}} = |T_{\text{links, C}} - T_{\text{rechts, C}}|$$
+4. **Klinische Risiko-Klassifizierung:**
+   $$\Delta T_{\text{mean}} > 2,2\,^\circ\text{C} \implies \mathbf{\text{Pathologische Asymmetrie (Warnung)}}$$
+   Beträgt die Abweichung $\Delta T > 2,2\,^\circ\text{C}$, wird auf dem Analyse-Overlay ein rotes medizinisches Warnbanner eingeblendet.
+
+---
+
 ## 🌡️ Physikalische Radiometrie & Strahlungsmodell
 
 Zur physikalisch exakten Temperaturumrechnung berücksichtigt **IGNITE** den Emissivitätsgrad menschlicher Haut ($\epsilon \approx 0.98$) sowie die reflektierte Umgebungstemperatur $T_{\text{refl}}$ nach dem Stefan-Boltzmann-Gesetz:

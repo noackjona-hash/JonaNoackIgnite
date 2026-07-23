@@ -51,3 +51,20 @@ def test_pseudonymize_patient():
     # Different dob should yield different output
     res3 = pseudonymize_patient("Max Mustermann", "02.01.2000")
     assert res1 != res3
+
+def test_contralateral_asymmetry():
+    import image_processing
+    img = np.zeros((100, 200), dtype=np.uint8)
+    body_mask = np.zeros((100, 200), dtype=np.uint8)
+
+    # Left foot: colder ~85 (26.6°C)
+    img[20:80, 20:80] = 85
+    body_mask[20:80, 20:80] = 255
+
+    # Right foot: warmer ~160 (32.5°C) -> Delta ~5.9°C > 2.2°C
+    img[20:80, 120:180] = 160
+    body_mask[20:80, 120:180] = 255
+
+    res = image_processing.compute_contralateral_asymmetry(img, body_mask, 20.0, 40.0, 2.2)
+    assert res["is_asymmetric"] is True
+    assert res["delta_t_c"] > 2.2

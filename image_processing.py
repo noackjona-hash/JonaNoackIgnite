@@ -395,3 +395,79 @@ def create_hotspot_overlay(original_img: np.ndarray, hotspots_mask: np.ndarray, 
     ).astype(np.uint8)
 
     return final_img
+
+# ─────────────────────────────────────────────────────────────────────────────
+# KONTRALATERALE ASYMMETRIE-ANALYSE
+# ─────────────────────────────────────────────────────────────────────────────
+def compute_contralateral_asymmetry(
+    img: np.ndarray,
+    body_mask: np.ndarray,
+    temp_min_c: float = _config.DEFAULT_TEMP_MIN,
+    temp_max_c: float = _config.DEFAULT_TEMP_MAX,
+    threshold_c: float = _config.ASYMMETRY_THRESHOLD_C
+) -> dict:
+    """
+    Berechnet die kontralaterale Temperatur-Asymmetrie zwischen der linken und rechten Körperhälfte.
+    Klinischer Goldstandard (Armstrong et al. 2007): Delta-T > 2.2 °C signalisiert pathologischen Verdacht.
+    """
+    if img is None or body_mask is None or np.sum(body_mask == 255) == 0:
+        return {
+            "left_mean_c": 0.0,
+            "right_mean_c": 0.0,
+            "delta_t_c": 0.0,
+            "is_asymmetric": False,
+            "status": "Keine Gewebe-Maske"
+        }
+
+    # Rust-Native Aufruf falls verfügbar
+    if _RUST_BACKEND_AVAILABLE and _ignite_core is not None and hasattr(_ignite_core, "compute_asymmetry"):
+        try:
+            img_cont = np.ascontiguousarray(img, dtype=np.uint8)
+            mask_cont = np.ascontiguousarray(body_mask, dtype=np.uint8)
+            left_c, right_c, delta_c, is_asym = _ignite_core.compute_asymmetry(
+                img_cont, mask_cont, temp_min_c, temp_max_c, threshold_c
+            )
+            return {
+                "left_mean_c": round(left_c, 2),
+                "right_mean_c": round(right_c, 2),
+                "delta_t_c": round(delta_c, 2),
+                "is_asymmetric": is_asym,
+                "status": "Pathologische Asymmetrie (⚠️ > 2.2°C)" if is_asym else "Physiologisch Symmetrisch (✓)"
+            }
+        except Exception:
+            pass  # Fallback auf Python CPU
+
+    h, w = img.shape[:2]
+    mid_x = w // 2
+
+    left_mask = body_mask[:, :mid_x] > 0
+    right_mask = body_mask[:, mid_x:] > 0
+
+    left_px = img[:, :mid_x][left_mask]
+    right_px = img[:, mid_x:][right_mask]
+
+    if len(left_px) == 0 or len(right_px) == 0:
+        return {
+            "left_mean_c": 0.0,
+            "right_mean_c": 0.0,
+            "delta_t_c": 0.0,
+            "is_asymmetric": False,
+            "status": "Nur einseitiges Gewebe"
+        }
+
+    mu_left_raw = float(np.mean(left_px))
+    mu_right_raw = float(np.mean(right_px))
+
+    temp_range = max(1.0, temp_max_c - temp_min_c)
+    left_temp_c = temp_min_c + (mu_left_raw / 255.0) * temp_range
+    right_temp_c = temp_min_c + (mu_right_raw / 255.0) * temp_range
+    delta_t_c = abs(left_temp_c - right_temp_c)
+    is_asymmetric = delta_t_c > threshold_c
+
+    return {
+        "left_mean_c": round(left_temp_c, 2),
+        "right_mean_c": round(right_temp_c, 2),
+        "delta_t_c": round(delta_t_c, 2),
+        "is_asymmetric": is_asymmetric,
+        "status": "Pathologische Asymmetrie (⚠️ > 2.2°C)" if is_asymmetric else "Physiologisch Symmetrisch (✓)"
+    }

@@ -650,7 +650,19 @@ class IgniteApp:
             self.mad_switch.select()
         else:
             self.mad_switch.deselect()
-        self.mad_switch.pack(fill=ctk.X, padx=10, pady=(5, 10))
+        self.mad_switch.pack(fill=ctk.X, padx=10, pady=(5, 5))
+
+        self.asymmetry_switch = ctk.CTkSwitch(
+            self.param_sliders_frame,
+            text="Kontralat. Asymmetrie (>2.2°C)",
+            command=self.update_params,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold")
+        )
+        if config.DEFAULT_ENABLE_ASYMMETRY:
+            self.asymmetry_switch.select()
+        else:
+            self.asymmetry_switch.deselect()
+        self.asymmetry_switch.pack(fill=ctk.X, padx=10, pady=(0, 10))
 
         # Sliders bindings
         self.sigma_k_slider.configure(command=self.update_params)
@@ -1788,6 +1800,23 @@ class IgniteApp:
             cv2.putText(annotated, f"MF: {val_mf_r:.1f} {unit_char}", (min_x + 3, z2_y2 - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
             cv2.putText(annotated, f"F: {val_f_r:.1f} {unit_char}", (min_x + 3, max_y - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
 
+        # ── Kontralaterale Asymmetrie-Analyse (Armstrong Goldstandard) ────────
+        if hasattr(self, "asymmetry_switch") and self.asymmetry_switch.get() == 1:
+            asym_res = image_processing.compute_contralateral_asymmetry(
+                img, body_mask, self.t_min_celsius, self.t_max_celsius, config.ASYMMETRY_THRESHOLD_C
+            )
+            self.asymmetry_results = asym_res
+            delta_t = asym_res["delta_t_c"]
+            is_asym = asym_res["is_asymmetric"]
+            
+            banner_h = 32
+            banner_bg = (0, 0, 180) if is_asym else (0, 140, 0)
+            cv2.rectangle(annotated, (0, 0), (w_orig, banner_h), banner_bg, -1)
+            
+            status_symbol = "WARNUNG" if is_asym else "OK"
+            banner_txt = f"KONTRALATERALE ASYMMETRIE: Delta-T = {delta_t:.1f} deg C [{status_symbol} > {config.ASYMMETRY_THRESHOLD_C} deg C Goldstandard]" if is_asym else f"KONTRALATERALE SYMMETRIE: Delta-T = {delta_t:.1f} deg C [{status_symbol} <= {config.ASYMMETRY_THRESHOLD_C} deg C]"
+            cv2.putText(annotated, banner_txt, (10, 21), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255, 255, 255), 1, cv2.LINE_AA)
+
         return annotated
 
     def show_loading_overlay(self) -> None:
@@ -1886,7 +1915,7 @@ class IgniteApp:
                 ))
 
             except Exception as e:
-                self.root.after(0, lambda: self.on_pipeline_failed(e))
+                self.root.after(0, lambda err=e: self.on_pipeline_failed(err))
 
         t = threading.Thread(target=worker, daemon=True)
         t.start()
