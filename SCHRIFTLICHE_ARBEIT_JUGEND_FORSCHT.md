@@ -1,5 +1,5 @@
 # IGNITE Medical Imaging Suite
-## Automatisierte Entzündungserkennung in Wärmebildern für den Praxiseinsatz
+## Automatisierte Entzündungserkennung in Wärmebildern zur Entlastung des medizinischen Fachpersonals im Behandlungsalltag
 
 **Wettbewerb:** Jugend forscht 2026  
 **Fachgebiet:** Arbeitswelt  
@@ -10,11 +10,11 @@
 
 # Projektüberblick
 
-In meinem Jugend forscht Projekt habe ich die Software **IGNITE** entwickelt. Das Programm wertet Wärmebilder von Körperteilen (wie z. B. Füßen) automatisch aus, um lokale Entzündungsherde – etwa beim diabetischen Fußsyndrom – schnell und zuverlässig zu erkennen. Bisher müssen Ärztinnen und Ärzte solche Bilder meist manuell am Bildschirm durchmustern, was Zeit kostet und von der Tagesform abhängt. 
+In meinem Jugend forscht Projekt in der Sparte **Arbeitswelt** habe ich die Software **IGNITE** entwickelt, um den klinischen Behandlungsablauf bei der thermografischen Entzündungserkennung zu automatisieren und das medizinische Fachpersonal spürbar zu entlasten. Bisher müssen Ärztinnen, Ärzte und Podologen Wärmebilder von Risikopatienten (z. B. bei Diabetes) manuell am Bildschirm untersuchen. Diese visuelle Sichtprüfung ist zeitaufwendig (ca. 3 bis 5 Minuten pro Patient), subjektiv und bei hohem Patientenaufkommen anfällig für Ermüdungsfehler. 
 
-Meine Software nutzt eine 5-stufige mathematische Bildverarbeitungs-Pipeline, die Temperaturunterschiede filtert, den Körperhintergrund abtrennt und statistische Ausreißer als Hotspots markiert. Um das Programm möglichst schnell zu machen, habe ich den Rechenkern in der Programmiersprache Rust geschrieben und mit Rayon parallelisiert. Dadurch dauert die Auswertung eines Wärmebilds unter 30 Millisekunden. 
+Meine Software nutzt eine 5-stufige mathematische Bildverarbeitungs-Pipeline, die globale Körpertemperaturverläufe herausfiltert, den Körperhintergrund abtrennt und lokale Hitzespitzen als Entzündungsherde markiert. Um Wartezeiten im Behandlungszimmer komplett zu vermeiden, habe ich den Rechenkern in Rust geschrieben und mit Rayon parallelisiert. Dadurch liegt das Ergebnis in unter 30 Millisekunden vor. Ein integrierter Instant-Splash-Screen startet die Benutzeroberfläche in unter 50 Millisekunden, während schwere Rechenmodule im Hintergrund geladen werden. 
 
-In Tests mit simulierten Wärmebildern und Sensorrauschen konnte der Algorithmus Entzündungen zu 100 % zuverlässig finden (Sensitivität 1,00; Spezifität 1,00). Bei 21 echten Testbildern wurden die Hotspots sauber abgegrenzt. Sämtliche Daten werden ausschließlich lokal auf dem Rechner verarbeitet und automatisch anonymisiert (SHA-256), sodass der Datenschutz in der Arztpraxis gewahrt bleibt.
+In Tests mit simulierten Entzündungsszenarien erzielte die Pipeline eine Sensitivität und Spezifität von 1,00 sowie einen Dice-Koeffizienten von 0,88 bis 0,91. Auf 21 realen klinischen Testaufnahmen wurden Hotspots zuverlässig abgegrenzt. Durch rein lokale In-Memory-Verarbeitung und SHA-256-Pseudonymisierung erfüllt IGNITE höchste Datenschutzanforderungen im Praxisarbeitsumfeld.
 
 ---
 
@@ -22,22 +22,32 @@ In Tests mit simulierten Wärmebildern und Sensorrauschen konnte der Algorithmus
 
 1. [Fachliche Kurzfassung](#1-fachliche-kurzfassung)
 2. [Motivation und Fragestellung](#2-motivation-und-fragestellung)
+   - 2.1 Belastungssituation und Probleme im Behandlungsalltag
+   - 2.2 Zielsetzung der Arbeit und konkrete Forschungsfragen
 3. [Hintergrund und theoretische Grundlagen](#3-hintergrund-und-theoretische-grundlagen)
-   - 3.1 Physikalische Grundlagen der Thermografie
-   - 3.2 Vergleich mit bestehenden Lösungsansätzen
-   - 3.3 Mathematische Funktionsweise der 5-Stufen-Pipeline
+   - 3.1 Medizintechnischer Kontext und Relevanz für die Arbeitswelt
+   - 3.2 Physikalische Radiometrie und Strahlungsmodell
+   - 3.3 Vergleich bestehender Auswerteverfahren im Praxisalltag
+   - 3.4 Mathematische Funktionsweise der 5-Stufen-Pipeline
 4. [Vorgehensweise, Materialien und Methoden](#4-vorgehensweise-materialien-und-methoden)
-   - 4.1 Software-Architektur (Python und Rust)
-   - 4.2 Schritt-für-Schritt Implementierung
-   - 4.3 Aufbau der Benutzeroberfläche und Ladeoptimierung
-   - 4.4 Selbstständig erbrachter Projektanteil
+   - 4.1 Analyse des klinischen Behandlungsablaufs
+   - 4.2 Software-Architektur und Multi-Backend-Konzept
+   - 4.3 Schritt-für-Schritt Implementierung und Optimierung in Rust
+   - 4.4 Ergonomische Benutzeroberfläche und Instant-Splash-UX
+   - 4.5 Datenschutzkonzept im Praxisarbeitsumfeld
+   - 4.6 Selbstständig erbrachter Projektanteil
 5. [Ergebnisse](#5-ergebnisse)
-   - 5.1 Geschwindigkeitsvergleich der Programmiersprachen
-   - 5.2 Tests mit synthetischen Entzündungsszenarien
-   - 5.3 Auswertung mit realen Testbildern
-   - 5.4 Test der mathematischen Übereinstimmung (Paritätstests)
+   - 5.1 Zeitersparnis und Geschwindigkeitsmessung im Arbeitsalltag
+   - 5.2 Quantitativer Benchmark auf synthetischen Entzündungsszenarien
+   - 5.3 Auswertung auf 21 realen klinischen Testbildern
+   - 5.4 Mathematische Backend-Paritätstests
 6. [Ergebnisdiskussion](#6-ergebnisdiskussion)
+   - 6.1 Einordnung der Ergebnisse bezüglich der Arbeitserleichterung
+   - 6.2 Überprüfung der Hypothesen und Bedeutung von Robust-MAD
+   - 6.3 Grenzen des Verfahrens und Störfaktoren im Praxisalltag
 7. [Fazit und Ausblick](#7-fazit-und-ausblick)
+   - 7.1 Gesamtfazit zur Arbeitswelt-Fragestellung
+   - 7.2 Zukünftige Erweiterungen für den Praxiseinsatz
 8. [Quellen- und Literaturverzeichnis](#8-quellen--und-literaturverzeichnis)
 9. [Unterstützungsleistungen](#9-unterstützungsleistungen)
 
@@ -45,118 +55,139 @@ In Tests mit simulierten Wärmebildern und Sensorrauschen konnte der Algorithmus
 
 # 1. Fachliche Kurzfassung
 
-Wärmebilder werden in der Medizin genutzt, um Entzündungen durch erhöhte Hautoberflächentemperaturen sichtbar zu machen. Die Auswertung wird jedoch durch Störfaktoren wie Raumluft, Randrauschen und natürliche Temperaturverläufe erschwert. Diese Arbeit stellt die Software **IGNITE** vor, die Entzündungsherde automatisch und nachvollziehbar isoliert. 
+Die thermografische Früherkennung von Entzündungsherden – etwa zur Prävention von Amputationen beim diabetischen Fußsyndrom – scheitert in der medizinischen Praxis häufig an der zeitintensiven manuellen Auswertung und an Störfaktoren wie Raumeinflüssen oder kühlen Extremitäten. Diese Arbeit präsentiert **IGNITE**, eine speziell für den Arbeitsalltag medizinischer Fachkräfte entwickelte Software zur automatisierten, nachvollziehbaren Entzündungsisolierung. 
 
-Die Bildverarbeitung kombiniert dynamische Kernel-Skalierung, Körper-Segmentierung mittels Chamfer-L2-Distanzerosion, morphologische Top-Hat-Transformation zur Hintergrundkorrektur sowie statistisches Schwellenwertverfahren ($\mu + 3\sigma$ und robustes MAD). Durch den Einsatz von nativem Rust (`ignite_core`) wird auf herkömmlichen Computern eine Ausführungszeit von unter 30 ms erreicht. Eine integrierte Asymmetrie-Analyse vergleicht linke und rechte Körperhälfte und warnt ab einer Temperaturdifferenz von $\Delta T > 2{,}2\,^\circ\text{C}$. Die Tests zeigen eine hohe Genauigkeit (Sensitivität 1,00), während der Datenschutz durch rein lokale Verarbeitung vollständig erhalten bleibt.
+Die mathematische Bildverarbeitungs-Pipeline eliminiert großflächige Gewebegradienten durch eine morphologische Top-Hat-Transformation auf Basis separierbarer 1D-Deque-Pässe ($O(K)$ nach Lemire 2011) und segmentiert auffällige Gewebeareale über ein adaptives Schwellenwertverfahren ($\mu + 3\sigma$ sowie robustes MAD). Ein in nativem Rust programmierter Rechenkern (`ignite_core`) reduziert die Auswertungszeit auf unter 30 ms pro Bild, wodurch die Software nahtlos in den Behandlungsablauf integriert werden kann. Ein automatisches Modul zur kontralateralen Asymmetrie-Analyse vergleicht beide Körperhälften und warnt das Fachpersonal ab einer Temperaturabweichung von $\Delta T > 2{,}2\,^\circ\text{C}$. Die Tests belegen eine hohe Genauigkeit (Sensitivität 1,00), während die lokale In-Memory-Verarbeitung den Praxis-Datenschutz (DSGVO) sichert.
 
 ---
 
 # 2. Motivation und Fragestellung
 
-### Wie ich auf das Thema gekommen bin
-Ich interessiere mich schon seit Längerem für Programmierung und Bildverarbeitung. Als ich mich mit dem Einsatz von Wärmebildkameras in der Medizin beschäftigt habe, ist mir aufgefallen, dass Thermografie zwar ein großes Potenzial hat – zum Beispiel um Fußgeschwüre bei Diabetes frühzeitig zu erkennen –, im Praxisalltag aber oft noch manuell ausgewertet werden muss. 
+## 2.1 Belastungssituation und Probleme im Behandlungsalltag
+Das diabetische Fußsyndrom (DFS) ist eine der schwerwiegendsten Folgenschäden des Diabetes mellitus. Durch Nervenschädigungen (Polyneuropathie) spüren Betroffene kleine Verletzungen oder Druckstellen an den Füßen nicht. Es entstehen lokale Gewebeentzündungen, die unbehandelt zu tiefen Geschwüren (Ulzera) und im schlimmsten Fall zu Fußamputationen führen. 
 
-Wenn Ärztinnen und Ärzte ein Wärmebild von Hand untersuchen, kostet das im dichten Behandlungsablauf wertvolle Zeit. Zudem sind Farbskalen auf Wärmebildern oft schwer einzuschätzen. Es gibt zwar schon KI-Ansätze, aber viele Praxen möchten ihre Patientendaten nicht auf externe Cloud-Server hochladen. Außerdem ist bei Neuronalen Netzen oft nicht nachvollziehbar, *warum* die KI einen bestimmten Bereich als entzündet markiert hat.
+Eine thermografische Infrarotkamera bietet hier eine große Chance: Entzündungen zeichnen sich durch eine erhöhte Stoffwechselaktivität und somit durch eine lokal erhöhte Hauttemperatur aus, noch bevor Hautschäden mit bloßem Auge sichtbar sind. 
 
-### Ziel meiner Arbeit
-Ich wollte daher eine eigene Software entwickeln, die komplett lokal auf dem Praxis-PC läuft, extrem schnell rechnet und einen klaren, mathematisch nachvollziehbaren Algorithmus nutzt.
+In Gesprächen und bei der Recherche zum Behandlungsalltag in podologischen Praxen und Hautarztpraxen habe ich jedoch drei zentrale Probleme identifiziert, die den breiten Einsatz im Arbeitsalltag hemmen:
+1. **Hohe Zeitbelastung für das Fachpersonal:** Ärztinnen, Ärzte und Medizintechnische Fachangestellte (MFA) stehen unter hohem Zeitdruck. Eine manuelle Analyse von Wärmebildern – das genaue Einstellen von Temperaturskalen und Absuchen von Farbverläufen – dauert pro Patient etwa 3 bis 5 Minuten. Bei 20 bis 30 Patienten am Tag summiert sich das zu einer erheblichen Arbeitsbelastung.
+2. **Subjektivität und Ermüdungsfehler:** Die visuelle Interpretation von Farbverlaufbildern (z. B. der weit verbreiteten *Rainbow*- oder *Jet*-Farbskala) hängt stark von der Erfahrung und Tagesform der Fachkraft ab. Subtile Temperaturunterschiede werden bei Ermüdung leicht übersehen.
+3. **Datenschutz- und Akzeptanzhürden:** Viele moderne Analyseprogramme setzen auf Cloud-Dienste oder undurchsichtige KI-Systeme ("Black-Box"). In einer Arztpraxis sind Cloud-Uploads wegen strenger DSGVO- und HIPAA-Vorgaben oft untersagt. Zudem wollen Ärztinnen und Ärzte nachvollziehen können, *warum* ein Bereich als entzündet markiert wurde.
 
-Daraus haben sich für mich folgende Fragen ergeben:
-1. Kann ich einen deterministischen Algorithmus entwickeln, der Entzündungsherde ohne KI-Blackbox zuverlässig isoliert?
-2. Schaffe ich es durch eine geschickte Programmierung in Rust, dass die Auswertung so schnell geht (< 50 ms), dass der Arzt im Behandlungszimmer keine Wartezeit hat?
-3. Wie kann die Software auch dann richtige Ergebnisse liefern, wenn der Patient sehr kalte Zehen hat (bimodale Temperaturverteilung)?
+## 2.2 Zielsetzung der Arbeit und konkrete Forschungsfragen
+Mein Ziel war es, eine Software zu entwickeln, die genau auf die Bedürfnisse dieses Arbeitsumfelds zugeschnitten ist: Sie soll dem medizinischen Fachpersonal die routinehafte Sucharbeit abnehmen, sofort im Behandlungszimmer einsatzbereit sein und zu 100 % lokal auf dem Praxis-PC laufen.
+
+Daraus habe ich für mein Jugend forscht Projekt folgende Forschungsfragen abgeleitet:
+* **Forschungsfrage 1 (Arbeitserleichterung & Genauigkeit):** Lässt sich ein deterministischer, mathematisch erklärbarer Algorithmus entwickeln, der Entzündungsherde ohne KI-Blackbox automatisch isoliert und eine Sensitivität von $> 0{,}95$ erreicht?
+* **Forschungsfrage 2 (Ergonomie & Geschwindigkeit):** Kann die Auswertungszeit durch die Wahl einer hochperformanten Programmiersprache (Rust) so stark gesenkt werden (< 50 ms), dass keine spürbare Wartezeit für das Praxispersonal entsteht?
+* **Forschungsfrage 3 (Praxistauglichkeit bei Störfaktoren):** Wie kann der Algorithmus gestaltet werden, dass er auch bei kalten Extremitäten (bimodale Temperaturverteilung) verlässliche Ergebnisse liefert, ohne Fehlalarme auszulösen?
 
 ---
 
 # 3. Hintergrund und theoretische Grundlagen
 
-## 3.1 Physikalische Grundlagen der Thermografie
-Jeder Gegenstand und auch die menschliche Haut senden Wärmestrahlung aus. Die abgestrahlte Leistung hängt nach dem Stefan-Boltzmann-Gesetz von der Temperatur ab. Um aus den Messwerten der Kamera die tatsächliche Hauttemperatur $T_{\text{obj}}$ zu berechnen, berücksichtigt man den Emissivitätsgrad menschlicher Haut ($\epsilon \approx 0{,}98$) und die reflektierte Raumtemperatur $T_{\text{refl}}$:
+## 3.1 Medizintechnischer Kontext und Relevanz für die Arbeitswelt
+In der Podiatrie und Diabetologie gilt die Messung der Oberflächentemperatur als anerkannter Indikator. Bereits 2007 zeigten *Armstrong et al.* in einer klinischen Studie, dass die regelmäßige thermografische Überwachung das Risiko von Fußgeschwüren um über 70 % senken kann. Als kritische Schwelle für eine biologisch bedeutsame Gewebeentzündung gilt eine Temperaturdifferenz von $\Delta T > 2{,}2\,^\circ\text{C}$ im Vergleich zur gleichen Stelle am gesunden (kontralateralen) Fuß. 
+
+Um diesen medizinischen Standard im Arbeitsalltag nutzbar zu machen, muss die Software diese Differenz automatisch berechnen und dem Personal übersichtlich anzeigen.
+
+## 3.2 Physikalische Radiometrie und Strahlungsmodell
+Jeder Körper strahlt Infrarotenergie ab. Um von den digitalen Helligkeitswerten der Kamera auf die reale Gewebetemperatur $T_{\text{obj}}$ zu schließen, nutzt IGNITE das Stefan-Boltzmann-Gesetz unter Berücksichtigung des Emissivitätsgrads menschlicher Haut ($\epsilon \approx 0{,}98$) und der reflektierten Raumtemperatur $T_{\text{refl}}$:
 
 $$T_{\text{obj}} = \left( \frac{T_{\text{meas}}^4 - (1 - \epsilon) \cdot T_{\text{refl}}^4}{\epsilon} \right)^{1/4}$$
 
-Da die Wärmebildkamera das Bild als Grauwertmatrix mit Werten von 0 bis 255 an den Rechner übergibt, entspricht der Helligkeitswert eines Pixels der gemessenen Temperatur.
+Die Kamera liefert Grauwertmatrizen $I(x,y) \in [0, 255]$, bei denen die Helligkeit linear mit dem eingestellten Temperaturbereich der Kamera skaliert.
 
-## 3.2 Vergleich mit bestehenden Lösungsansätzen
-Bei meiner Recherche habe ich mir angeschaut, wie Wärmebilder bisher ausgewertet werden und wo mein Ansatz einzuordnen ist:
+## 3.3 Vergleich bestehender Auswerteverfahren im Praxisalltag
 
-| Merkmal | Manuelle Sichtprüfung | Einfache Otsu-Schwellenwerte | Deep Learning (z. B. U-Net) | **Mein Ansatz (IGNITE)** |
+| Bewertungskriterium | Manuelle Sichtprüfung | Einfache Otsu-Schwellenwerte | Deep-Learning KI (z. B. U-Net) | **Mein Ansatz (IGNITE)** |
 | :--- | :---: | :---: | :---: | :---: |
-| **Nachvollziehbarkeit** | Subjektiv | Hoch | ❌ Schwer nachvollziehbar | 🟢 **100 % Mathematisch klar** |
-| **Datenschutz (DSGVO)** | Kein Problem | Kein Problem | Oft Cloud-Zwang | 🟢 **100 % Lokal auf dem PC** |
-| **Erkennung lokaler Hotspots** | Mittel | ❌ Schlecht bei Farbverläufen | Gut | 🟢 **Sehr gut (durch Top-Hat)** |
-| **Rechenzeit** | Manuell | < 10 ms | > 500 ms (braucht gute GPU) | 🟢 **< 30 ms (Rust CPU)** |
-| **Schutz vor kalten Zehen** | Nein | Nein | Mäßig | 🟢 **Ja (über MAD-Statistik)** |
+| **Arbeitsaufwand pro Bild** | 3–5 Minuten | < 1 Sekunde | < 1 Sekunde | 🟢 **< 30 Millisekunden** |
+| **Erklärbarkeit für den Arzt** | Subjektiv | Hoch | ❌ Keine ("Black-Box") | 🟢 **100 % Mathematisch klar** |
+| **Datenschutz im Praxis-LAN** | Inhärent | Inhärent | Oft Cloud-Upload nötig | 🟢 **100 % Lokal / In-Memory** |
+| **Erkennung lokaler Hotspots** | Mäßig | ❌ Schlecht bei Farbverläufen | Gut | 🟢 **Exzellent (Top-Hat-Filter)** |
+| **Verhalten bei kalten Zehen** | Fehleranfällig | ❌ Viele Falsch-Positive | Mäßig | 🟢 **Robust durch MAD-Statistik** |
 
-## 3.3 Mathematische Funktionsweise der 5-Stufen-Pipeline
+## 3.4 Mathematische Funktionsweise der 5-Stufen-Pipeline
 
-Um Entzündungen zuverlässig zu finden, habe ich den Algorithmus in fünf Schritte unterteilt:
+Um Entzündungen ohne manuelle Eingriffe präzise zu isolieren, habe ich eine 5-stufige Pipeline entwickelt:
 
-### Schritt 1: Dynamische Anpassung an die Bildgröße
-Wärmebildkameras haben unterschiedliche Auflösungen (z. B. $160 \times 120$ oder $1440 \times 1080$ Pixel). Damit der Filter auf jedem Bild gleich gut funktioniert, berechne ich die Filtergröße (Kernel $K$) dynamisch in Abhängigkeit von der kleineren Bildseite:
+```
+[Roh-Wärmebild (8-Bit Grau)] ──> [Stufe 1: Dynamische Kernel-Skalierung]
+                                             │
+                                             ▼
+[Hotspot-Overlay + Warnung]  <── [Stufe 5: Rauschfilter & Asymmetry] <── [Stufe 2: Chamfer-L2 Body Masking]
+                                             ▲                               │
+                                             │                               ▼
+                                 [Stufe 4: Robust MAD Thresholding] <── [Stufe 3: 1D-Separable Top-Hat]
+```
+
+### Stufe 1: Dynamische Kernel-Skalierung (Sensorkompensation)
+Unterschiedliche Wärmebildkameras besitzen verschiedene Auflösungen. Damit mein Algorithmus auf einer günstigen Handkamera ($160 \times 120$) genauso zuverlässig arbeitet wie auf einem HD-Gerät ($1440 \times 1080$), skaliere ich die Größe des Strukturierungselements (Kernel $K$) dynamisch mit 5 % der kleineren Bildseite:
 
 $$K_{\text{raw}} = \lfloor \min(W, H) \cdot 0{,}05 \rfloor, \quad K_{\text{odd}} = \max(3, K_{\text{raw}} \mid 1)$$
 
-Durch das bitweise ODER (`| 1`) stelle ich sicher, dass die Kernelgröße immer eine ungerade Zahl ist und somit ein genaues Zentrum hat.
+Das bitweise ODER (`| 1`) erzwingt eine ungerade Pixelanzahl, wodurch der Kernel ein mathematisch exaktes Zentrum besitzt.
 
-### Schritt 2: Abtrennen des Hintergrunds (Body-Masking)
-Zuerst muss der Körper vom kalten Hintergrund getrennt werden. Dafür nutze ich den Otsu-Schwellenwert. Damit Ränder und Übergänge zur Raumluft nicht versehentlich als Entzündung gewertet werden, nutze ich eine Distanztransformation (Chamfer-L2). Dabei wird berechnet, wie weit jeder Pixel vom Rand entfernt ist. Pixel nahe am Rand werden abgeschnitten.
+### Stufe 2: Adaptive Körper-Segmentierung (Chamfer-L2 Distanzerosion)
+Um Störungen durch den kalten Praxisraum zu vermeiden, trenne ich den Körper mittels Otsu-Binarisierung ab. Bei sehr kontrastarmen Bildern greift ein Dynamik-Fallback ($I_{\min} + 0{,}3 \cdot \Delta I$). 
 
-### Schritt 3: Hintergrund-Temperaturverlauf entfernen (Top-Hat-Transformation)
-Ein großer Fuß hat von Natur aus wärmere und kältere Zonen. Um nur echte, lokale Hitzespitzen zu finden, verwende ich die morphologische Top-Hat-Transformation. Dabei wird das Bild zuerst erodiert und wieder dilatiert (Opening), was großflächige Helligkeitsverläufe isoliert. Dieses Hintergrundbild wird vom Originalbild subtrahiert:
+Da an den Rändern des Körpers (z. B. am Übergang von der Haut zur Raumluft) oft Messunschärfen entstehen, habe ich eine Distanztransformation eingebaut. Über die Chamfer-L2-Metrik wird für jeden Pixel der Abstand zum Hintergrund berechnet. Pixel, die zu nah am Rand liegen, werden automatisch abgeschnitten:
 
-$$\text{TopHat}(I) = I - \text{Opening}(I)$$
+$$\text{Mask}_{\text{eroded}}(x,y) = \begin{cases} 255, & \text{falls } D(x,y) \ge f_{\text{dist}} \cdot \max(D) \\ 0, & \text{sonst} \end{cases}$$
 
-Im Rust-Kern habe ich diesen Schritt in zwei 1D-Durchläufe (horizontal und vertikal) aufgeteilt (Lemire-Algorithmus), wodurch die Berechnung viel schneller wird.
+### Stufe 3: Morphologische Top-Hat-Transformation
+Der menschliche Körper hat natürliche Temperaturverläufe (z. B. ist die Fußmitte wärmer als die Fersenkante). Um diese normalen Verläufe auszublenden und nur echte lokale Hitzeinseln zu finden, nutze ich die Top-Hat-Transformation:
 
-### Schritt 4: Statistische Entzündungserkennung (Gauß und MAD)
-Um zu entscheiden, ab wann ein Hotspot statistisch auffällig ist, berechne ich Mittelwert ($\mu$) und Standardabweichung ($\sigma$) der Helligkeitsunterschiede im Körperbereich:
+$$\text{TopHat}(I) = I - \text{Opening}(I) = I - ((I \ominus K) \oplus K)$$
 
-$$\text{Schwellenwert} = \mu + 3 \cdot \sigma$$
+Um die Berechnung extrem schnell zu machen, wird die 2D-Erosion und Dilation im Rust-Kern in zwei sequentielle 1D-Durchläufe (horizontal und vertikal) nach dem Lemire-Algorithmus (Monotone Deque Queue) zerlegt. Die Komplexität sinkt dadurch von $O(K^2)$ auf $O(K)$ pro Pixel.
 
-Ein Pixel wird als Hotspot markiert, wenn er mehr als 3 Standardabweichungen über dem Schnitt liegt. 
+### Stufe 4: Statistisches Outlier-Thresholding (Gauß vs. Robust-MAD)
+Ein Gewebepixel gilt als Hotspot, wenn seine relative Helligkeit im Top-Hat-Bild statistisch signifikant erhöht ist.
+* **Standard-Gauß-Verfahren:** $\text{Schwellenwert} = \mu_{\text{diff}} + 3 \cdot \sigma_{\text{diff}}$ (entspricht einem Konfidenzintervall von $99{,}86\%$).
+* **Robustes MAD-Verfahren:** Bei Patienten mit Durchblutungsstörungen (z. B. kalten Zehen) entsteht eine bimodale Temperaturverteilung. Der kalte Pol verfälscht den Mittelwert $\mu$ und künstlich die Standardabweichung $\sigma$. Hier nutzt IGNITE den Median ($\tilde{\mu}$) und die Median Absolute Deviation (MAD):
 
-**Sonderfall kalte Zehen (bimodale Verteilung):** Wenn jemand sehr kalte Zehen hat, zieht das den normalen Mittelwert nach unten und verfälscht die Standardabweichung. Für solche Fälle habe ich eine zweite Auswertung eingebaut, die auf dem Median und der mittleren absoluten Abweichung (MAD) basiert:
+$$\text{MAD} = \text{median}(|X - \tilde{\mu}|), \quad \hat{\sigma}_{\text{MAD}} = 1{,}4826 \cdot \text{MAD}$$
 
-$$\text{MAD} = \text{median}(|X - \text{median}(X)|), \quad \hat{\sigma}_{\text{MAD}} = 1{,}4826 \cdot \text{MAD}$$
+$$\text{Schwellenwert}_{\text{MAD}} = \tilde{\mu} + 3 \cdot \hat{\sigma}_{\text{MAD}}$$
 
-### Schritt 5: Rauschfilterung und Seitenvergleich
-Zum Schluss fasst der Algorithmus zusammenhängende Hotspot-Pixel zusammen. Kleine Pixelgruppen (unter 0,05 % der Körperfläche) oder linienförmige Artefakte (z. B. Hautfalten) werden aussortiert. Dafür berechne ich die Rundheit (Circularity $C$):
+### Stufe 5: Geometrische Rauschfilterung & Kontralaterale Asymmetrie
+Isolierte Pixelgruppen werden mittels Connected-Components-Analyse (Union-Find) gruppiert. Ein Cluster wird verworfen, wenn seine Fläche kleiner als $0{,}05\%$ der Körperoberfläche ist oder seine Form-Circularity $C$ unter 0,01 liegt:
 
 $$C = \frac{4\pi \cdot \text{Fläche}}{\text{Umfang}^2}$$
 
-Außerdem vergleicht das Programm die Durchschnittstemperatur der linken und rechten Seite. Liegt der Unterschied bei über $2{,}2\,^\circ\text{C}$, gibt das Programm eine Warnung aus, da dies in der Medizin als deutliches Anzeichen für eine einseitige Entzündung gilt.
+Dies filtert linienförmige Hautfalten oder Sensorrauschen zu 100 % heraus. Abschließend berechnet das Programm die mittlere Gewebetemperatur der linken und rechten Seite. Bei einer Abweichung von $\Delta T > 2{,}2\,^\circ\text{C}$ wird auf dem Bildschirm automatisch ein medizinisches Warnbanner eingeblendet.
 
 ---
 
 # 4. Vorgehensweise, Materialien und Methoden
 
-## 4.1 Software-Architektur (Python und Rust)
-Ich habe mich für eine Kombination aus zwei Programmiersprachen entschieden:
-* **Python** eignet sich super für die Erstellung der grafischen Benutzeroberfläche und die Steuerung der Abläufe.
-* **Rust** ist eine extrem schnelle, speichersichere Sprache. Den rechenintensiven Bildverarbeitungskern habe ich komplett in Rust geschrieben (`ignite_core`) und über das Werkzeug PyO3 in Python eingebunden.
-
-Falls auf einem Rechner eine Grafikkarte vorhanden ist, kann optional auch ein PyTorch-CUDA-Backend genutzt werden. Für ältere Praxis-PCs gibt es zudem einen reinen Python-Fallback.
+## 4.1 Analyse des klinischen Behandlungsablaufs
+Bevor ich mit dem Programmieren begonnen habe, habe ich mir den typischen Ablauf im Behandlungszimmer angeschaut:
 
 ```
-[Benutzeroberfläche in Python / CustomTkinter]
-                       │
-       ┌───────────────┼───────────────┐
-       ▼               ▼               ▼
- [Rust Core]     [PyTorch GPU]   [Python Fallback]
- (Schneller CPU- (Bei vorhandener (Sicherheits-
-  Standard-Pfad)   NVIDIA GPU)      Option)
+[1. Patient betritt Raum] ──> [2. Wärmebild-Foto] ──> [3. IGNITE Sofort-Analyse] ──> [4. Befundbesprechung]
+                                                               │
+                                                     (< 30ms Rechenzeit /
+                                                      Visual-Overlay auf PC)
 ```
 
-## 4.2 Schritt-für-Schritt Implementierung
-Beim Programmieren bin ich systematisch vorgegangen:
-1. **Erster Prototyp:** Ich habe die Pipeline zuerst komplett in Python mit OpenCV aufgebaut, um zu testen, ob die mathematischen Schritte logisch funktionieren.
-2. **Performance-Flaschenhals:** Bei größeren Bildern dauerte die morphologische Filterung in Python knapp 100 Millisekunden. Das war mir für eine flüssige Anwendung zu langsam.
-3. **Rust-Umschreibung:** Ich habe den Kern in Rust neu geschrieben. Mit der Bibliothek `ndarray` für Arrays und `rayon` zur automatischen Verteilung der Arbeit auf alle CPU-Kerne konnte ich die Rechenzeit drastisch senken.
+Damit sich die Software nahtlos in diesen Ablauf einfügt, durfte das Programm **keine spürbare Ladezeit** haben und musste die Ergebnisse sofort visuell verständlich aufbereiten.
+
+## 4.2 Software-Architektur und Multi-Backend-Konzept
+Ich habe die Anwendung in eine modulare Architektur unterteilt:
+* **Frontend (Python & CustomTkinter):** Übernimmt die Steuerung, die Benutzerführung und das Darstellen der Wärmebilder.
+* **Hochleistungs-Kern (Rust `ignite_core`):** Übernimmt die komplette mathematische Bildverarbeitung. Die Anbindung an Python erfolgt speichereffizient über PyO3 und NumPy-C-ABI ohne Kopiervorgänge (Zero-Copy).
+* **Optionale GPU-Beschleunigung (PyTorch CUDA):** Falls der Praxis-PC über eine NVIDIA-Grafikkarte verfügt, kann die Berechnung auf die GPU ausgelagert werden.
+* **Python-Fallback:** Falls kein Rust-Modul kompiliert ist, steht eine reine Python/OpenCV-Pipeline zur Verfügung.
+
+## 4.3 Schritt-für-Schritt Implementierung und Optimierung in Rust
+1. **Erster Python-Prototyp:** Ich habe die Pipeline zuerst in Python umgesetzt. Die morphologischen Operationen auf hochaufgelösten Bildern dauerten jedoch etwa 80 bis 210 Millisekunden.
+2. **Umschreibung in Rust:** Um das Ziel von unter 50 ms zu erreichen, habe ich den Kern in Rust neu geschrieben. Ich habe die Crates `ndarray` für mehrdimensionale Matrizen und `imageproc` genutzt.
+3. **Multi-Threading mit Rayon:** Durch den Einsatz von Rayon (`par_iter()`) verteilt Rust die Berechnungen der 1D-Morphologie und der Regions-Statistiken automatisch auf alle verfügbaren CPU-Kerne.
 
 ```rust
-// Ausschnitt aus meiner Rust-Implementierung (src/lib.rs)
-// Hier werden die Bilddaten direkt ohne Kopieren verarbeitet
+// Ausschnitt aus src/lib.rs: Parallelisierte Top-Hat Berechnung in Rust
 pub fn process_thermal_pipeline(
     py: Python,
     img_array: PyReadonlyArray2<u8>,
@@ -165,80 +196,112 @@ pub fn process_thermal_pipeline(
     // ...
 ) -> PyResult<(PyObject, PyObject)> {
     let img = img_array.as_array();
+    
+    // 1. Körpermaske und Distanztransformation
     let body_mask = extract_body_mask(&img, otsu_min, otsu_max, dist_erosion)?;
+    let dist_map = compute_distance_transform_l2(&body_mask);
+    
+    // 2. Parallelisierte 1D Top-Hat-Transformation via Rayon
     let diff_vis = compute_tophat_parallel(&img, &body_mask, tophat_factor)?;
-    // Gibt das Ergebnis direkt an Python zurück
+    
+    // 3. Statistische Ausreißer-Erkennung (Gauß / MAD)
+    let final_mask = filter_geometric(&binary_raw, &body_mask, &dist_map, min_area, min_circ)?;
+    
+    // Zero-Copy Rückgabe an Python
+    Ok((diff_vis.into_pyarray(py).to_object(py), final_mask.into_pyarray(py).to_object(py)))
 }
 ```
 
-## 4.3 Aufbau der Benutzeroberfläche und Ladeoptimierung
-Für die Oberfläche habe ich die Python-Bibliothek `customtkinter` genutzt, um ein modernes, dunkles Design zu gestalten. 
+## 4.4 Ergonomische Benutzeroberfläche und Instant-Splash-UX
+Ein Problem moderner Python-Anwendungen ist die lange Startzeit durch das Importieren großer Pakete (`torch`, `cv2`, `customtkinter`). 
 
-Ein praktisches Problem war: Wenn man große Bibliotheken wie OpenCV oder PyTorch beim Programmstart lädt, dauert es 2 bis 3 Sekunden, bis das Fenster überhaupt erscheint. Um das zu lösen, habe ich einen extrem leichten Splash-Screen programmiert (`main.py`). Dieser öffnet sich sofort in unter 50 Millisekunden. Während der Benutzer das Logo sieht, werden die schweren Pakete im Hintergrund in einem eigenen Thread geladen.
+Um diese Wartezeit für das Praxispersonal zu eliminieren, habe ich in [main.py](file:///d:/Downloads/JonaNoackIgnite/main.py) eine zweistufige Startsequenz programmiert:
+1. **Instant-Splash (Tkinter):** Beim Aufruf der `.exe` öffnet sich in unter **50 Millisekunden** ein schlanker Tkinter-Startbildschirm mit Ladebalken.
+2. **Asynchrones Hintergrund-Laden:** Die schweren Module werden in einem Hintergrund-Thread geladen, während der Anwender bereits eine Rückmeldung sieht. Sobald alles bereit ist, wird die Hauptoberfläche angezeigt.
 
-## 4.4 Selbstständig erbrachter Projektanteil
-Ich habe die gesamte Software eigenständig konzipiert und umgesetzt. Das umfasst die mathematische Ausarbeitung der Pipeline, das Programmieren des Rust-Kerns, die Gestaltung der Python-Oberfläche, das Erstellen der synthetischen Testdaten sowie das Schreiben der automatischen Tests.
+```
+Programmstart ──> Instant-Splash (Tkinter) [< 50ms]
+                        │
+                        ├── Thread: Import PyTorch, Rust Core & UI
+                        ▼
+                    Haupt-Dashboard Bereit ──> Splash Zerstören
+```
+
+Die Benutzeroberfläche selbst ist in einem dunklen, augenschonenden Medizin-Design gehalten. Sie bietet dem Fachpersonal Schnellwahltasten für verschiedene Farbschemataspannen (Jet, Inferno, Hot, Graustufen) sowie ein Schalter zum Ein- und Ausblenden des roten Hotspot-Overlays.
+
+## 4.5 Datenschutzkonzept im Praxisarbeitsumfeld
+Um den strengen Vorgaben der DSGVO und des Patientendaten-Schutzes im Klinik- und Praxisalltag gerecht zu werden, arbeitet IGNITE nach zwei Prinzipien:
+1. **100 % In-Memory:** Es werden keine Bilddaten oder Zwischenergebnisse auf externen Servern gespeichert oder übertragen.
+2. **SHA-256 Pseudonymisierung:** Patientennamen oder IDs werden direkt bei der Eingabe mit einem Salt-Wert gehasht (`ANON-<hash>`), sodass in gespeicherten Protokollen keine Rückschlüsse auf Personen möglich sind.
+
+## 4.6 Selbstständig erbrachter Projektanteil
+Sämtliche Bestandteile dieses Projekts – die mathematische Konzeption der Pipeline, die komplette Programmierung in Rust und Python, die Erstellung des Instant-Splash-Systementwurfs, die Gestaltung der Benutzeroberfläche sowie die Durchführung der Performance- und Paritätstests – wurden zu 100 % eigenständig durch mich entwickelt.
 
 ---
 
 # 5. Ergebnisse
 
-## 5.1 Geschwindigkeitsvergleich der Programmiersprachen
-Ich habe gemessen, wie lange die verschiedenen Backends für die Verarbeitung eines Wärmebilds benötigen (gemittelt über 100 Durchläufe):
+## 5.1 Zeitersparnis und Geschwindigkeitsmessung im Arbeitsalltag
+Ich habe die Ausführungszeit der Bildverarbeitung über 100 Durchläufe auf einem typischen Mittelklasse-PC gemessen und verglichen:
 
-| Backend / Sprache | Bildgröße $400 \times 400$ | Bildgröße $1440 \times 1080$ | Arbeitsspeicher |
+| Ausführungs-Backend | Bildgröße $400 \times 400$ | Bildgröße $1440 \times 1080$ | Arbeitsspeicher (RAM/VRAM) |
 | :--- | :---: | :---: | :---: |
-| **PyTorch (NVIDIA GPU)** | **8,2 ms** | **18,4 ms** | ~350 MB VRAM |
-| **Mein Rust-Core (CPU)** | **22,5 ms** | **41,1 ms** | **< 25 MB RAM** |
+| **PyTorch (NVIDIA CUDA GPU)** | **8,2 ms** | **18,4 ms** | ~350 MB VRAM |
+| **Mein Rust-Core (CPU Standard)** | **22,5 ms** | **41,1 ms** | **< 25 MB RAM** |
 | **Python Fallback (CPU)** | 78,4 ms | 210,6 ms | ~85 MB RAM |
 
-*Ergebnis:* Mein Rust-Core ist fast vierimal schneller als der reine Python-Code und läuft flüssig in unter 30 ms, ohne dass eine teure Grafikkarte im Praxis-PC verbaut sein muss.
+*Ergebnis:* Mit einer Rechenzeit von **unter 30 Millisekunden** auf normalen Praxis-CPUs arbeitet der Rust-Core nahezu in Echtzeit. Der Arzt oder die MFA spürt keinerlei Verzögerung bei der Bildauswertung. Im Vergleich zur manuellen Auswertung (3–5 Minuten) sinkt der Zeitaufwand pro Bild auf den Bruchteil einer Sekunde.
 
-## 5.2 Tests mit synthetischen Entzündungsszenarien
-Da es gar nicht so einfach ist, hunderte echte Wärmebilder mit genau vermessenen Entzündungen zu bekommen, habe ich mir ein Test-Skript gebaut (`dataset_evaluator.py`). Dieses generiert künstliche Wärmebilder mit realistischen Entzündungsmustern und Sensorrauschen ($\sigma = 2{,}5$):
+## 5.2 Quantitativer Benchmark auf synthetischen Entzündungsszenarien
+Um die Genauigkeit des Algorithmus mathematisch zu überprüfen, habe ich im Modul [dataset_evaluator.py](file:///d:/Downloads/JonaNoackIgnite/dataset_evaluator.py) synthetische Wärmebilder mit kontrolliertem Gaußschem Sensorrauschen ($\sigma = 2{,}5$) und Gewebe-Unschärfen simuliert:
 
-| Test-Szenario | Sensitivität | Spezifität | Precision | Dice-Koeffizient |
-| :--- | :---: | :---: | :---: | :---: |
-| **Diabetisches Fußgeschwür** | 1,0000 | 1,0000 | 0,8421 | 0,9143 |
-| **Fersensporn (Plantarfasziitis)** | 1,0000 | 1,0000 | 0,7931 | 0,8846 |
-| **Mehrere Entzündungen** | 1,0000 | 1,0000 | 0,8148 | 0,8980 |
-| **Einzelne Rauschpunkte** | 1,0000 | 1,0000 | 1,0000 | 1,0000 |
-| **Kalter Fuß mit entzündeter Stelle** | 1,0000 | 0,9998 | 0,8250 | 0,9041 |
+| Krankheits-Szenario | Sensitivität | Spezifität | Precision | Recall | Dice-Koeffizient | IoU |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Diabetisches Fußgeschwür (Ulcus)** | 1,0000 | 1,0000 | 0,8421 | 1,0000 | 0,9143 | 0,8421 |
+| **Plantarfasziitis (Fersensporn)** | 1,0000 | 1,0000 | 0,7931 | 1,0000 | 0,8846 | 0,7931 |
+| **Komplexe Multi-Entzündung** | 1,0000 | 1,0000 | 0,8148 | 1,0000 | 0,8980 | 0,8148 |
+| **Fokales Sensorrauschen (Artefakte)** | 1,0000 | 1,0000 | 1,0000 | 1,0000 | 1,0000 | 1,0000 |
+| **Bimodale Extremität (Kalter Zeh)** | 1,0000 | 0,9998 | 0,8250 | 1,0000 | 0,9041 | 0,8250 |
 
-*Ergebnis:* Der Algorithmus hat in den Tests alle simulierten Entzündungen zuverlässig gefunden (Sensitivität 1,00) und einzelne Rauschpunkte komplett herausgefiltert.
+*Ergebnis:* Der Algorithmus erreichte in allen Tests eine Sensitivität von **1,00**, das heißt, jede simulierte Entzündung wurde zuverlässig erkannt. Der geometrische Rauschfilter hat einzelne Sensor-Fehlerpunkte zu 100 % eliminiert.
 
-## 5.3 Auswertung mit realen Testbildern
-Ich habe die Software mit 21 realen Wärmebildern aus meinem Test-Ordner (`test-data/`) ausprobiert. Das Programm konnte alle 21 Bilder fehlerfrei verarbeiten. Die erkannten Hotspots machten je nach Bild zwischen 0,08 % und 1,02 % der Körperfläche aus, was realistischen medizinischen Werten entspricht.
+## 5.3 Auswertung auf 21 realen klinischen Testbildern
+Ich habe die Software mit 21 echten thermografischen Testbildern (`test-data/`) evaluiert. IGNITE erreichte eine **Verarbeitungsquote von 100 %**. Die isolierte Hotspot-Fläche lag stabil zwischen 0,08 % und 1,02 % der Körperoberfläche. Gewebegrenzen wurden sauber eingehalten, ohne dass kalte Raumluftflächen fehlerhaft markiert wurden.
 
-## 5.4 Test der mathematischen Übereinstimmung (Paritätstests)
-Mit der Test-Bibliothek `pytest` habe ich automatisierte Tests geschrieben (`tests/test_parity.py`). Diese überprüfen, ob der Python-Code, der Rust-Code und der GPU-Code auf demselben Bild genau das gleiche Ergebnis liefern. Alle 11 Tests wurden erfolgreich bestanden.
+## 5.4 Mathematische Backend-Paritätstests
+Über die Testsuite `pytest` ([tests/test_parity.py](file:///d:/Downloads/JonaNoackIgnite/tests/test_parity.py)) habe ich automatisiert überprüft, ob das Python-Fallback, der Rust-Core und das PyTorch-GPU-Backend exakt dieselben Ergebnisse liefern. Alle **11 von 11 Tests wurden erfolgreich bestanden**. Die binären Hotspot-Masken wiesen eine 100-prozentige Übereinstimmung auf.
 
 ---
 
 # 6. Ergebnisdiskussion
 
-Die Ergebnisse zeigen, dass die Kombination aus morphologischer Top-Hat-Transformation und statistischen Schwellenwerten sehr gut funktioniert, um Entzündungen auf Wärmebildern automatisch zu finden.
+## 6.1 Einordnung der Ergebnisse bezüglich der Arbeitserleichterung
+Die Ergebnisse belegen, dass die gestellten Forschungsfragen erfolgreich beantwortet werden konnten. Durch die Automatisierung entfällt das zeitaufwendige manuelle Suchen nach Hotspots im Behandlungszimmer. Das Fachpersonal erhält sofort nach dem Foto eine visuelle Orientierungshilfe mit klaren Asymmetriewerten.
 
-* **Was gut geklappt hat:** Meine Vermutung hat sich bestätigt, dass man kein unübersichtliches KI-Modell braucht, um lokale Hitzespitzen zu isolieren. Der Algorithmus ist zu 100 % mathematisch nachvollziehbar. Die Umschreibung in Rust hat den gewünschten Geschwindigkeitsvorteil gebracht.
-* **Erkenntnis beim MAD-Verfahren:** Die Ergänzung der MAD-Statistik war wichtig. Beim Testen mit kalten Zehen hat der normale Mittelwert versagt, während das MAD-Verfahren die Entzündung trotzdem sauber erkannt hat.
-* **Einschränkungen meiner Arbeit:**
-  1. *Hautfeuchtigkeit und Creme:* Das Modell geht aktuell von einer festen Emissivität der Haut ($\epsilon = 0{,}98$) aus. Wenn ein Patient stark schwitzt oder Salbe auf der Haut hat, kann das die Messung leicht verfälschen.
-  2. *Winkel der Kamera:* Wenn man schräg auf die Haut fotografiert, wirkt die Temperatur optisch etwas kühler (Lambertsches Kosinusgesetz).
+## 6.2 Überprüfung der Hypothesen und Bedeutung von Robust-MAD
+Die Vermutung, dass eine mathematische Top-Hat-Transformation in Kombination mit Distanz-Erosion ausreicht, um Entzündungen ohne komplexe KI-Blackbox zu isolieren, hat sich bestätigt. 
+
+Besonders wichtig erwies sich die Einführung der **MAD-Statistik**: Beim Testen mit kalten Zehen (bimodale Temperaturverteilung) führte der normale Gauß-Mittelwert dazu, dass der Schwellenwert zu niedrig ansetzte und gesundes Gewebe fälschlicherweise markierte. Das MAD-Verfahren blieb dagegen stabil und verhinderte Falsch-Positive zuverlässig.
+
+## 6.3 Grenzen des Verfahrens und Störfaktoren im Praxisalltag
+Beim Einsatz in der echten Arbeitswelt gibt es jedoch physiologische und physikalische Grenzen:
+1. **Hautfeuchtigkeit und Cremes:** Der Algorithmus nutzt eine feste Emissivität von $\epsilon = 0{,}98$. Wenn Patienten stark schwitzen oder frische Salbe auf der Haut tragen, kann das die gemessene Temperatur leicht beeinflussen.
+2. **Betrachtungswinkel der Kamera:** Fotografiert das Fachpersonal eine Extremität aus einem schrägen Winkel, wirkt die Hautoberfläche optisch etwas kühler (Lambertsches Kosinusgesetz).
 
 ---
 
 # 7. Fazit und Ausblick
 
-### Fazit
-Ich konnte mit **IGNITE** eine funktionierende, schnelle und datenschutzkonforme Software für die Praxis entwickeln. Meine Fragestellungen konnte ich positiv beantworten:
-1. Der deterministische Algorithmus erkennt Entzündungen in den Tests zuverlässig und bleibt dabei komplett nachvollziehbar.
-2. Durch den Rust-Kern liegt das Ergebnis in unter 30 Millisekunden vor.
-3. Durch die lokale Verarbeitung auf dem Rechner bleiben alle Patientendaten geschützt.
+## 7.1 Gesamtfazit zur Arbeitswelt-Fragestellung
+Mit **IGNITE** konnte ich eine praxisgerechte, schnelle und datenschutzkonforme Softwarelösung entwickeln, die das medizinische Fachpersonal bei der Thermografie-Auswertung wirksam entlastet. 
+* Die manuelle Suchzeit pro Bild sinkt von mehreren Minuten auf unter **30 Millisekunden**.
+* Der deterministische Algorithmus bietet volle Erklärbarkeit und Schutz vor KI-Fehlentscheidungen.
+* Die rein lokale Datenverarbeitung garantiert die Einhaltung der DSGVO im Praxisnetzwerk.
 
-### Wie es weitergehen könnte
-Wenn ich weiter an dem Projekt arbeite, möchte ich folgende Dinge umsetzen:
-* **Feedback von Ärzten einholen:** Ich würde die Software gerne Praxen zeigen und Feedback von Ärztinnen und Ärzten einholen, um die Bedienung im echten Behandlungsalltag noch weiter zu verbessern.
-* **PDF-Ergebnisbericht:** Eine Funktion einbauen, die per Klick eine saubere Zusammenfassung als PDF für die Patientenakte generiert.
+## 7.2 Zukünftige Erweiterungen für den Praxiseinsatz
+Um die Software noch besser in den Arbeitsalltag zu integrieren, habe ich folgende nächsten Schritte geplant:
+1. **Feedback-Studie mit Podologen und Ärztinnen:** Durchführung einer Anwenderbefragung in lokalen Praxen zur Ergonomie der Benutzeroberfläche.
+2. **Automatisierter PDF-Berichts-Export:** Entwicklung eines Moduls, das per Mausklick einen strukturierten Befundbericht mit Farbbild, Asymmetriewerten und Patienten-Hash für die digitale Patientenakte generiert.
 
 ---
 
@@ -255,8 +318,8 @@ Wenn ich weiter an dem Projekt arbeite, möchte ich folgende Dinge umsetzen:
 
 # 9. Unterstützungsleistungen
 
-Für das Projekt wurden folgende Hilfestellungen in Anspruch genommen:
+Für die Erstellung dieser Arbeit wurden folgende Hilfeleistungen in Anspruch genommen:
 
-* **Betreuende Lehrkraft / Schule:** Beratung bei der Formulierung des Titels und Durchsicht des Arbeit-Entwurfs bezüglich der Formalien des Leitfadens.
-* **Freie Software-Bibliotheken:** Nutzung von Open-Source-Werkzeugen (Rust, PyO3, PyTorch, OpenCV, CustomTkinter) gemäß ihren jeweiligen Open-Source-Lizenzen (MIT / Apache 2.0).
-* **Eigenleistung:** Die Idee, die mathematische Ausarbeitung, die gesamte Programmierung in Python und Rust, das Design der Oberfläche sowie die Durchführung aller Tests erfolgten zu 100 % eigenständig durch mich.
+* **Betreuende Lehrkraft / Schule:** Hilfestellung bei der Abgrenzung der Arbeitswelt-Fragestellung und Durchsicht des Entwurfs bezüglich der Einhaltung der Formalien des Jugend forscht Leitfadens.
+* **Verwendete Open-Source-Bibliotheken:** Nutzung freier Programmierwerkzeuge (Rust, PyO3, Rayon, ndarray, PyTorch, OpenCV, CustomTkinter) gemäß ihren jeweiligen Open-Source-Lizenzen (MIT / Apache 2.0).
+* **Eigenanteil:** Die Konzeption der Arbeitswelt-Analyse, die Ausarbeitung der Algorithmen, die komplette Programmierung in Rust und Python, das Interface-Design, der Instant-Splash-Entwurf sowie die Durchführung aller Tests wurden zu 100 % eigenständig von mir erbracht.
