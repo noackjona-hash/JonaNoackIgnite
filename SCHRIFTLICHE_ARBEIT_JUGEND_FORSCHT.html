@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc 3.10" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <meta name="author" content="Jona Noack" />
+  <meta name="dcterms.date" content="2026-07-23" />
+  <title>IGNITE Schriftliche Arbeit Jugend forscht 2026</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: 1.5em;}
+    div.column{flex: auto;}
+    @media screen {
+    div.columns{gap: min(4vw, 1.5em);}
+    div.column{overflow-x: auto;}
+    }
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+  </style>
+  <link rel="stylesheet" href="jufo_paper_style.css" />
+  
+  
+  <script defer=""
+  src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js"
+  type="text/javascript"></script>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">IGNITE Schriftliche Arbeit Jugend forscht 2026</h1>
+<p class="author">Jona Noack</p>
+<p class="date">2026-07-23</p>
+</header>
+<h1 id="projektüberblick">Projektüberblick</h1>
+<p>In diesem Projekt für den Wettbewerb <em>Jugend forscht 2026</em>
+(Fachgebiet Arbeitswelt) wird die Software <strong>IGNITE</strong>
+vorgestellt. Die Arbeit untersucht Möglichkeiten zur Automatisierung der
+thermografischen Entzündungserkennung im medizinischen
+Behandlungsalltag. Bisher müssen Ärztinnen, Ärzte und Podologen
+Wärmebildaufnahmen von Risikopatienten – beispielsweise beim
+diabetischen Fußsyndrom – manuell am Bildschirm auswerten. Diese
+visuelle Sichtprüfung erfordert viel Zeit (ca. 3 bis 5 Minuten pro
+Aufnahme), ist subjektiv und unterliegt tageszeitlichen
+Ermüdungsfaktoren des Personals.</p>
+<p>Die entwickelte Software nutzt eine 5-stufige mathematische
+Bildverarbeitungs-Pipeline, um physiologische Temperaturverläufe zu
+filtern, Störabstrahlungen des Raumes zu erodieren und lokale
+Hitzespitzen als potenzielle Entzündungsherde zu isolieren. Um
+Verzögerungen im Praxisablauf zu vermeiden, wurde der Rechenkern in der
+Programmiersprache Rust umgesetzt und mittels Rayon parallelisiert,
+wodurch Auswertungszeiten unter 30 Millisekunden erreicht werden. Ein
+integrierter Instant-Splash-Screen startet die Benutzeroberfläche in
+unter 50 Millisekunden.</p>
+<p>Auf synthetischen Datensätzen mit simulierten Rauschmodellen erzielte
+das System eine Sensitivität von 1,00 sowie einen Dice-Koeffizienten von
+0,88 bis 0,91. Bei 21 realen klinischen Testaufnahmen wurden auffällige
+Stellen zuverlässig abgegrenzt. Die Arbeit analysiert jedoch auch die
+deutlichen Grenzen des Verfahrens: Da ein deterministischer Filter nicht
+zwischen biologischen Infektionen und harmlosen mechanischen
+Druckstellen (z. B. durch Socken oder Gehlenken) unterscheiden kann,
+stellt die Software kein Medizinprodukt dar, sondern dient als
+Orientierungshilfe unter ärztlicher Aufsicht.</p>
+<hr />
+<h1 id="inhaltsverzeichnis">Inhaltsverzeichnis</h1>
+<ol type="1">
+<li><a href="#1-einleitung-und-problemstellung">Einleitung und
+Problemstellung</a>
+<ul>
+<li>1.1 Belastungssituation im medizinischen Behandlungsalltag</li>
+<li>1.2 Relevanz der Früherkennung beim Diabetischen Fußsyndrom</li>
+<li>1.3 Zielsetzung und Forschungsfragen</li>
+</ul></li>
+<li><a href="#2-hintergrund-und-theoretische-grundlagen">Hintergrund und
+theoretische Grundlagen</a>
+<ul>
+<li>2.1 Medizintechnischer Kontext und podiatrischer Goldstandard</li>
+<li>2.2 Physikalische Radiometrie und Strahlungsmodell</li>
+<li>2.3 Kritische Vergleichsmatrix bestehender Auswerteverfahren</li>
+<li>2.4 Mathematische Ausarbeitung der 5-Stufen-Pipeline</li>
+</ul></li>
+<li><a href="#3-vorgehensweise-materialien-und-methoden">Vorgehensweise,
+Materialien und Methoden</a>
+<ul>
+<li>3.1 Analyse und Ergonomie des klinischen Behandlungsablaufs</li>
+<li>3.2 Software-Architektur und Multi-Backend-Konzept</li>
+<li>3.3 Schritt-für-Schritt Implementierung in Rust</li>
+<li>3.4 Ergonomische Benutzeroberfläche und Instant-Splash-UX</li>
+<li>3.5 Datenschutzkonzept im Arbeitsumfeld</li>
+<li>3.6 Selbstständig erbrachter Projektanteil</li>
+</ul></li>
+<li><a
+href="#4-bildgestützte-visualisierung-der-pipeline-stufen">Bildgestützte
+Visualisierung der Pipeline-Stufen</a>
+<ul>
+<li>4.1 Ausgangsmaterial (Original-Thermogramm)</li>
+<li>4.2 Körpermaskierung und Distanzkarte (Stufe 2)</li>
+<li>4.3 Hintergrundkorrektur via Top-Hat-Transformation (Stufe 3)</li>
+<li>4.4 Statistisches Thresholding und Hotspot-Maske (Stufe 4 &amp;
+5)</li>
+<li>4.5 Finales diagnostisches Overlay für das Behandlungszimmer</li>
+<li>4.6 Auswertung synthetischer Krankheits-Szenarien</li>
+</ul></li>
+<li><a href="#5-ergebnisse">Ergebnisse</a>
+<ul>
+<li>5.1 Laufzeitmessungen und Rechenzeiten</li>
+<li>5.2 Parameter-Sensitivitätsanalyse des Schwellenwert-Faktors k</li>
+<li>5.3 Quantitativer Benchmark auf synthetischen
+Entzündungsszenarien</li>
+<li>5.4 Auswertung auf 21 realen klinischen Testbildern</li>
+<li>5.5 Mathematische Backend-Paritätstests</li>
+</ul></li>
+<li><a
+href="#6-ergebnisdiskussion-und-kritische-würdigung">Ergebnisdiskussion
+und Kritische Würdigung</a>
+<ul>
+<li>6.1 Einordnung der Ergebnisse bezüglich der
+Arbeitserleichterung</li>
+<li>6.2 Überprüfung der Hypothesen und Bedeutung von Robust-MAD</li>
+<li>6.3 Ausführliche Analyse der Nachteile, Grenzen und
+Störfaktoren</li>
+</ul></li>
+<li><a href="#7-fazit-und-ausblick">Fazit und Ausblick</a>
+<ul>
+<li>7.1 Gesamtfazit zur Arbeitswelt-Fragestellung</li>
+<li>7.2 Zukünftige Erweiterungen für den Praxiseinsatz</li>
+</ul></li>
+<li><a href="#8-literaturverzeichnis">Literaturverzeichnis</a></li>
+<li><a
+href="#9-unterstützungsleistungen">Unterstützungsleistungen</a></li>
+</ol>
+<hr />
+<h1 id="einleitung-und-problemstellung">1. Einleitung und
+Problemstellung</h1>
+<h2 id="belastungssituation-im-medizinischen-behandlungsalltag">1.1
+Belastungssituation im medizinischen Behandlungsalltag</h2>
+<p>Die demografische Entwicklung und die Zunahme chronischer
+Stoffwechselerkrankungen stellen das medizinische Fachpersonal in Praxen
+und Kliniken vor erhebliche kapazitäre Herausforderungen <span
+class="citation"
+data-cites="ring2012healthcare">[@ring2012healthcare]</span>.
+Insbesondere in der Podiatrie, Diabetologie und Dermatologie müssen
+täglich zahlreiche Risikopatienten untersucht werden.</p>
+<p>Das manuelle Durchmustern von Wärmebildaufnahmen zur Identifikation
+pathologischer Hitzespitzen erfordert konzentriertes Absuchen am
+Bildschirm, das manuelle Einstellen dynamischer Farbskalen sowie das
+Ausmessen kontralateraler Temperaturdifferenzen. Für eine qualifizierte
+Erstbeurteilung einer thermografischen Aufnahme benötigt eine Fachkraft
+im Schnitt 3 bis 5 Minuten <span class="citation"
+data-cites="mueller2022thermografie">[@mueller2022thermografie]</span>.
+Bei einer Tagesfrequenz von 20 bis 30 Patienten summiert sich dieser
+Zusatzaufwand zu einer Arbeitszeit von über 1,5 Stunden, die für das
+persönliche Arzt-Patienten-Gespräch fehlt.</p>
+<p>Darüber hinaus birgt die rein visuelle Sichtprüfung ein relevantes
+Fehlerrisiko: Die wahrgenommene Intensität einer Entzündungszone auf
+Farbskalen (z. B. <em>Rainbow</em>- oder <em>Jet</em>-Colormaps) hängt
+stark von der individuellen Farbkontrasteinstellung des Monitors sowie
+von Ermüdungsfaktoren des Fachpersonals am Ende einer Schicht ab.</p>
+<h2 id="relevanz-der-früherkennung-beim-diabetischen-fußsyndrom">1.2
+Relevanz der Früherkennung beim Diabetischen Fußsyndrom</h2>
+<p>Das diabetische Fußsyndrom (DFS) ist eine Folgeerscheinung der
+distalen sensomotorischen Polyneuropathie und der peripheren arteriellen
+Verschlusskrankheit (pAVK). Wegen des Verlusts des Protektivempfindens
+bleiben biomechanische Überlastungen, Mikrotraumen oder Druckstellen vom
+Patienten unbemerkt <span class="citation"
+data-cites="armstrong2007skin">[@armstrong2007skin]</span>.</p>
+<p>Entzündliche Prozesse im tiefen Gewebe führen durch Hyperämie und
+gesteigerte Stoffwechselaktivität zu lokal abgegrenzten
+Temperaturerhöhungen der Hautoberfläche. Diese thermischen Anomalien
+treten häufig Tage bis Wochen auf, bevor histologische Gewebedefekte
+oder ulzeröse Hautdurchbrüche sichtbar werden. Eine verlässliche
+Früherkennung ermöglicht frühzeitige Entlastungsmaßnahmen (z. B.
+orthopädische Schuhanpassungen) und kann das Risiko von
+Unterschenkelamputationen maßgeblich senken <span class="citation"
+data-cites="armstrong2007skin">[@armstrong2007skin]</span>.</p>
+<h2 id="zielsetzung-und-forschungsfragen">1.3 Zielsetzung und
+Forschungsfragen</h2>
+<p>Ziel dieser Arbeit ist die Konzeption, Implementierung und
+mathematische Validierung von <strong>IGNITE</strong>, einer
+hochperformanten, lokal auszuführenden Software zur automatisierten
+Hotspot-Isolierung. Das System soll das Fachpersonal durch eine
+objektive visuelle Orientierungshilfe entlasten, ohne den klinischen
+Behandlungsfluss durch Ladezeiten zu hemmen.</p>
+<p>Folgende Forschungsfragen stehen im Zentrum der Untersuchung: *
+<strong>Forschungsfrage 1 (Arbeitserleichterung &amp;
+Erklärbarkeit):</strong> Lässt sich ein deterministischer, mathematisch
+vollständig nachvollziehbarer Algorithmus entwickeln, der
+Entzündungsareale auf synthetischen Testdaten mit einer Sensitivität von
+<span class="math inline">\(&gt; 0{,}95\)</span> markiert, ohne auf
+undurchsichtige KI-Blackbox-Modelle zurückzufragen? *
+<strong>Forschungsfrage 2 (Geschwindigkeit &amp; Ergonomie):</strong>
+Kann durch die Implementierung in nativem Rust mit Multi-Threading eine
+Rechenzeit von <span class="math inline">\(&lt; 50\text{ ms}\)</span>
+realisiert werden, sodass die Auswertung im Behandlungszimmer
+verzögerungsfrei erfolgt? * <strong>Forschungsfrage 3 (Kritische
+Grenzen):</strong> Wo liegen die physikalischen und algorithmischen
+Schwachstellen eines rein Schwellenwert-basierten Verfahrens im realen
+Praxisbetrieb?</p>
+<hr />
+<h1 id="hintergrund-und-theoretische-grundlagen">2. Hintergrund und
+theoretische Grundlagen</h1>
+<h2 id="medizintechnischer-kontext-und-podiatrischer-goldstandard">2.1
+Medizintechnischer Kontext und podiatrischer Goldstandard</h2>
+<p>In der medizinischen Thermografie gilt die vergleichende Analyse
+symmetrischer Körperareale (kontralaterale Asymmetrie) als
+diagnostischer Goldstandard <span class="citation"
+data-cites="armstrong2007skin ring2012healthcare">[@armstrong2007skin;
+@ring2012healthcare]</span>. Da die physiologische Hauttemperatur
+systemischen Schwankungen (z. B. Zirkadianer Rhythmus, Raumtemperatur)
+unterliegt, ist der absolute Temperaturwert einzelner Pixel nur bedingt
+aussagekräftig.</p>
+<p>Eine kontralaterale Temperaturdifferenz von</p>
+<p><span class="math display">\[ \Delta T = |T_{\text{links}} -
+T_{\text{rechts}}| &gt; 2{,}2\,^\circ\text{C} \]</span></p>
+<p>an anatomisch identischen Messpunkten gilt in der Podiatrie als
+klinisch signifikanter Indikator für entzündliche Gewebeprozesse <span
+class="citation"
+data-cites="armstrong2007skin">[@armstrong2007skin]</span>.</p>
+<p><img src="images/skizze_asymmetrie_analyse.png"
+alt="Skizze 4: Kontralaterale Asymmetrie-Analyse" /><br />
+<em>Abbildung 1 (Skizze 4): Prinzip der kontralateralen
+Asymmetrie-Analyse in der Podiatrie. Das Bild wird an der Bildmitte
+getrennt, um die mittleren Oberflächentemperaturen beider Fußsohlen zu
+vergleichen. Bei einer Abweichung von <span class="math inline">\(\Delta
+T &gt; 2{,}2\,^\circ\text{C}\)</span> erscheint ein
+Warnhinweis.</em></p>
+<hr />
+<h2 id="physikalische-radiometrie-und-strahlungsmodell">2.2
+Physikalische Radiometrie und Strahlungsmodell</h2>
+<p>Die Infrarot-Thermografie basiert auf dem Stefan-Boltzmann-Gesetz
+<span class="citation"
+data-cites="stefan1879beziehung boltzmann1884ableitung">[@stefan1879beziehung;
+@boltzmann1884ableitung]</span>, das die spezifische Ausstrahlung <span
+class="math inline">\(M\)</span> eines schwarzen Körpers in Abhängigkeit
+von der thermodynamischen Temperatur <span
+class="math inline">\(T\)</span> beschreibt:</p>
+<p><span class="math display">\[ M = \sigma \cdot T^4 \]</span></p>
+<p>wobei <span class="math inline">\(\sigma \approx 5{,}670374 \times
+10^{-8}\,\text{W}\,\text{m}^{-2}\,\text{K}^{-4}\)</span> die
+Stefan-Boltzmann-Konstante bezeichnet. Für reale Körper mit dem
+spezifischen Emissivitätsgrad <span class="math inline">\(\epsilon \in
+(0, 1)\)</span> und unter Berücksichtigung der von der Umgebung
+reflektierten Infrarotstrahlung <span
+class="math inline">\(T_{\text{refl}}\)</span> gilt für die vom Sensor
+erfasste Gewebetemperature <span
+class="math inline">\(T_{\text{obj}}\)</span> <span class="citation"
+data-cites="mueller2022thermografie">[@mueller2022thermografie]</span>:</p>
+<p><span class="math display">\[ T_{\text{obj}} = \left(
+\frac{T_{\text{meas}}^4 - (1 - \epsilon) \cdot
+T_{\text{refl}}^4}{\epsilon} \right)^{1/4} \]</span></p>
+<p>Für menschliche Hautgewebe gilt in der medizinischen Praxis der
+Literaturwert <span class="math inline">\(\epsilon \approx
+0{,}98\)</span> <span class="citation"
+data-cites="ring2012healthcare">[@ring2012healthcare]</span>.
+Infrarotkameras transformieren das thermische Strahlungsfeld in eine
+8-Bit-Grauwertmatrix <span class="math inline">\(I(x,y) \in [0,
+255]\)</span>, deren Intensität linear mit dem eingestellten
+Temperaturbereich <span class="math inline">\([T_{\min},
+T_{\max}]\)</span> korreliert.</p>
+<hr />
+<h2 id="kritische-vergleichsmatrix-bestehender-auswerteverfahren">2.3
+Kritische Vergleichsmatrix bestehender Auswerteverfahren</h2>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th style="text-align: left;">Auswerteverfahren</th>
+<th style="text-align: left;">Vorteile im Arbeitsalltag</th>
+<th style="text-align: left;">Nachteile und Schwachstellen</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Manuelle Sichtprüfung
+(Arzt/Podologe)</strong></td>
+<td style="text-align: left;">• Erkennt den klinischen
+Gesamtzusammenhang<br>• Kann Narben, Druckstellen &amp; Wunden
+unterscheiden<br>• Benötigt keine Zusatzsoftware</td>
+<td style="text-align: left;">• Zeitaufwendig (3–5 Minuten pro
+Bild)<br>• Subjektiv und abhängig von Erfahrung/Tagesform<br>• Keine
+automatische Dokumentation</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Einfache Schwellenwert-Filter
+(Otsu)</strong></td>
+<td style="text-align: left;">• Sehr schnell (&lt; 10 ms)<br>• Einfach
+zu programmieren</td>
+<td style="text-align: left;">• Versagt bei normalen
+Körper-Temperaturverläufen<br>• Sehr viele Falsch-Positive an kalten
+Rändern</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Deep-Learning KI (z. B.
+U-Net)</strong></td>
+<td style="text-align: left;">• Kann komplexe Formen und Bildmuster
+erkennen<br>• Hohe Genauigkeit bei gutem Training</td>
+<td style="text-align: left;">• “Black-Box”: Entscheidungen nicht
+mathematisch erklärbar<br>• Oft Cloud-Zwang (DSGVO-Problem im
+Krankenhaus)<br>• Benötigt leistungsfähige GPUs</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Mein Ansatz (IGNITE)</strong></td>
+<td style="text-align: left;">• Schnelle Berechnung (&lt; 30 ms auf
+normaler CPU)<br>• 100 % lokal &amp; DSGVO-konform (kein
+Cloud-Upload)<br>• Mathematisch nachvollziehbar</td>
+<td style="text-align: left;">• Kann <strong>nicht</strong> zwischen
+Entzündung &amp; Druckstelle unterscheiden<br>• Feste Schwellenwerte
+passen nicht auf jeden Hauttyp<br>• Kein zertifiziertes
+Medizinprodukt</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="mathematische-funktionsweise-der-5-stufen-pipeline">2.4
+Mathematische Funktionsweise der 5-Stufen-Pipeline</h2>
+<p>Die Hotspot-Isolierung in IGNITE basiert auf einer 5-stufigen
+Bildverarbeitungs-Pipeline <span class="citation"
+data-cites="jugendforscht2025leitfaden">[@jugendforscht2025leitfaden]</span>:</p>
+<h3 id="stufe-1-dynamische-kernel-skalierung">Stufe 1: Dynamische
+Kernel-Skalierung</h3>
+<p>Um unabhängig von der Sensorauflösung des verwendeten Kamerasystems
+(<span class="math inline">\(160 \times 120\)</span> bis <span
+class="math inline">\(1440 \times 1080\)</span> Pixel) identische
+geometrische Filtereffekte zu erzielen, skaliert der Radius des
+morphologischen Strukturierungselements <span
+class="math inline">\(K\)</span> proportional zur minimalen
+Bilddimension:</p>
+<p><span class="math display">\[ K_{\text{raw}} = \lfloor \min(W, H)
+\cdot 0{,}05 \rfloor, \quad K_{\text{odd}} = \max(3, K_{\text{raw}} \mid
+1) \]</span></p>
+<p>Die bitweise OR-Verknüpfung (<code>raw | 1</code>) erzwingt eine
+ungerade Pixelanzahl und garantiert ein eindeutiges mathematisches
+Symmetriezentrum.</p>
+<h3
+id="stufe-2-adaptive-körper-segmentierung-chamfer-l2-distanzerosion">Stufe
+2: Adaptive Körper-Segmentierung (Chamfer-L2 Distanzerosion)</h3>
+<p>Zur Abtrennung des kühlen Raumes dient die globale Binarisierung nach
+Otsu <span class="citation"
+data-cites="otsu1979threshold">[@otsu1979threshold]</span>. Bei
+kontrastarmen Aufnahmen greift ein Dynamik-Fallback (<span
+class="math inline">\(I_{\min} + 0{,}3 \cdot \Delta I\)</span>).</p>
+<p>Um Messunsicherheiten an den Geweberändern (Luft-Haut-Übergänge) zu
+eliminieren, wird die Chamfer-L2-Distanztransformation angewendet. Pixel
+mit einem Abstand <span class="math inline">\(D(x,y)\)</span> unterhalb
+der relativen Randschwelle werden erodiert:</p>
+<p><span class="math display">\[ \text{Mask}_{\text{eroded}}(x,y) =
+\begin{cases} 255, &amp; \text{falls } D(x,y) \ge f_{\text{dist}} \cdot
+\max_{x&#39;,y&#39;} D(x&#39;,y&#39;) \\ 0, &amp; \text{sonst}
+\end{cases} \]</span></p>
+<h3 id="stufe-3-morphologische-top-hat-transformation">Stufe 3:
+Morphologische Top-Hat-Transformation</h3>
+<p>Zur Elimination physiologischer Helligkeitsverläufe (z. B. der
+natürlichen Gewewärme im Fußgewölbe) wird die morphologische
+Top-Hat-Transformation verwendet:</p>
+<p><span class="math display">\[ \text{TopHat}(I) = I - \gamma_K(I) = I
+- ((I \ominus K) \oplus K) \]</span></p>
+<p>wobei <span class="math inline">\(\gamma_K(I)\)</span> das
+morphologische Opening von <span class="math inline">\(I\)</span> mit
+dem Kernel <span class="math inline">\(K\)</span> bezeichnet. Im
+Rust-Core ist die 2D-Operation in zwei sequentielle 1D-Durchläufe
+(horizontal und vertikal) nach Lemire <span class="citation"
+data-cites="lemire2011streaming">[@lemire2011streaming]</span> zerlegt.
+Die Komplexität pro Pixel sinkt dadurch von <span
+class="math inline">\(O(K^2)\)</span> auf <span
+class="math inline">\(O(K)\)</span>.</p>
+<p><img src="images/skizze_tophat_prinzip.png"
+alt="Skizze 1: Prinzip der morphologischen Top-Hat-Transformation" /><br />
+<em>Abbildung 2 (Skizze 1): Das Prinzip der morphologischen
+Top-Hat-Transformation im 1D-Temperaturprofil. Das morphologische
+Opening glättet großflächige Verläufe. Die Differenz isoliert scharfe
+lokale Hitzespitzen oberhalb des Schwellenwerts.</em></p>
+<hr />
+<h3
+id="stufe-4-statistisches-outlier-thresholding-gauß-vs.-robust-mad">Stufe
+4: Statistisches Outlier-Thresholding (Gauß vs. Robust-MAD)</h3>
+<p>Zur Segmentierung signifikanter Hitzespitzen werden zwei statistische
+Verfahren unterstützt: 1. <strong>Gaussian Thresholding:</strong></p>
+<p><span class="math display">\[ T_{\text{Gauß}} = \mu_{\text{diff}} + k
+\cdot \sigma_{\text{diff}} \]</span></p>
+<ol start="2" type="1">
+<li><strong>Robustes MAD-Thresholding:</strong> Bei bimodalen
+Temperaturverteilungen (z. B. stark unterkühlten Zehen) verzerrt der
+kalte Pol den Mittelwert <span class="math inline">\(\mu\)</span>.
+IGNITE berechnet in diesem Fall die robusten Kennzahlen Median (<span
+class="math inline">\(\tilde{\mu}\)</span>) und Median Absolute
+Deviation (<span class="math inline">\(\text{MAD}\)</span>):</li>
+</ol>
+<p><span class="math display">\[ \text{MAD} = \text{median}(|X -
+\tilde{\mu}|), \quad \hat{\sigma}_{\text{MAD}} = 1{,}4826 \cdot
+\text{MAD} \]</span></p>
+<p><span class="math display">\[ T_{\text{MAD}} = \tilde{\mu} + k \cdot
+\hat{\sigma}_{\text{MAD}} \]</span></p>
+<p><img src="images/skizze_gauss_vs_mad.png"
+alt="Skizze 2: Gauß vs. Robust-MAD bei bimodaler Verteilung" /><br />
+<em>Abbildung 3 (Skizze 2): Vergleichende Skizze der statistischen
+Schwellenwerte bei einer bimodalen Gewebeverteilung (kalte Zehen). Der
+Gauß-Mittelwert verschiebt sich nach links und verzerrt die Schwelle,
+während das Median/MAD-Verfahren stabil bleibt.</em></p>
+<hr />
+<h3 id="stufe-5-geometrische-rauschfilterung-asymmetrie">Stufe 5:
+Geometrische Rauschfilterung &amp; Asymmetrie</h3>
+<p>Zusammenhängende Pixelgruppen werden mittels Union-Find-Algorithmus
+analysiert. Ein Cluster wird verworfen, wenn seine Fläche kleiner als
+<span class="math inline">\(0{,}05\%\)</span> der Körperoberfläche ist
+oder seine Form-Circularity <span class="math inline">\(C\)</span> den
+Schwellenwert unterschreitet:</p>
+<p><span class="math display">\[ C = \frac{4\pi \cdot A}{P^2} &lt;
+0{,}01 \]</span></p>
+<hr />
+<h1 id="vorgehensweise-materialien-und-methoden">3. Vorgehensweise,
+Materialien und Methoden</h1>
+<h2 id="analyse-des-klinischen-behandlungsablaufs">3.1 Analyse des
+klinischen Behandlungsablaufs</h2>
+<p>Der gedachte Ablauf im Behandlungszimmer gliedert sich wie folgt:</p>
+<p><img src="images/skizze_praxis_workflow.png"
+alt="Skizze 3: Integration in den Praxis-Workflow" /><br />
+<em>Abbildung 4 (Skizze 3): Schema der Integration von IGNITE in den
+täglichen Praxisablauf im Behandlungszimmer.</em></p>
+<p>Die Software dient dabei als Werkzeug für Schritt 3. Die eigentliche
+Diagnose in Schritt 4 bleibt immer beim Fachpersonal.</p>
+<h2 id="software-architektur-und-speicherverwaltung">3.2
+Software-Architektur und Speicherverwaltung</h2>
+<p>Die Software ist modular aufgebaut. Um maximale Geschwindigkeit zu
+erreichen und Speicherzugriffe zu minimieren, werden die Bilddaten über
+die C-ABI ohne Kopiervorgänge (Zero-Copy) direkt aus dem Python-Speicher
+in den Rust-Core übergeben:</p>
+<p><img src="images/skizze_rust_ffi_architektur.png"
+alt="Skizze 5: Rust FFI &amp; Speicherarchitektur" /><br />
+<em>Abbildung 5 (Skizze 5): Speicherarchitektur und FFI-Anbindung
+zwischen Python (NumPy) und dem Rust-Core (<code>ignite_core</code>).
+Die Bilddaten werden ohne Kopieren via Zeiger übergeben und in Rust mit
+Rayon auf CPU-Kerne verteilt.</em></p>
+<hr />
+<h2 id="schritt-für-schritt-implementierung-in-rust">3.3
+Schritt-für-Schritt Implementierung in Rust</h2>
+<ol type="1">
+<li><strong>Python-Prototyp:</strong> Erste Tests zeigten, dass OpenCV
+in Python bei großen Bildern 80 bis 210 ms benötigte.</li>
+<li><strong>Rust-Umsetzung:</strong> Durch die Umschreibung in Rust mit
+den Crates <code>ndarray</code> und <code>imageproc</code> konnte die
+Zeit gesenkt werden.</li>
+<li><strong>Parallelisierung:</strong> Mit Rayon
+(<code>par_iter()</code>) werden die Schleifen auf alle verfügbaren
+CPU-Kerne verteilt.</li>
+</ol>
+<h2 id="benutzeroberfläche-und-ladeoptimierung">3.4 Benutzeroberfläche
+und Ladeoptimierung</h2>
+<p>Um lange Startzeiten durch schwere Bibliotheken zu vermeiden, öffnet
+<code>main.py</code> beim Aufruf in unter 50 ms einen leichten
+Tkinter-Splash-Screen. Während der Anwender die Rückmeldung sieht, lädt
+ein Hintergrund-Thread die benötigten Module.</p>
+<h2 id="datenschutzkonzept">3.5 Datenschutzkonzept</h2>
+<ol type="1">
+<li><strong>In-Memory:</strong> Es werden keine Bilddaten auf externe
+Server übertragen.</li>
+<li><strong>SHA-256 Pseudonymisierung:</strong> Patientennamen werden
+mit Salt gehasht (<code>ANON-&lt;hash&gt;</code>).</li>
+</ol>
+<h2 id="selbstständig-erbrachter-projektanteil">3.6 Selbstständig
+erbrachter Projektanteil</h2>
+<p>Die mathematische Ausarbeitung, die Programmierung in Rust und
+Python, das Erstellen der Benutzeroberfläche sowie die Durchführung
+aller Tests wurden zu 100 % eigenständig von mir durchgeführt.</p>
+<hr />
+<h1 id="bildgestützte-visualisierung-der-pipeline-stufen">4.
+Bildgestützte Visualisierung der Pipeline-Stufen</h1>
+<p>Die folgenden Abbildungen zeigen die Zwischenschritte der Pipeline an
+einem echten Testbild:</p>
+<h3 id="ausgangsmaterial-original-thermogramm">4.1 Ausgangsmaterial
+(Original-Thermogramm)</h3>
+<p><img src="images/1_original_thermal_jet.png"
+alt="Originales Wärmebild in Grauwert und Jet-Colormap" /><br />
+<em>Abbildung 6: Originales thermografisches Wärmebild in
+Jet-Colormap.</em></p>
+<hr />
+<h3 id="körpermaskierung-und-distanzkarte-stufe-2">4.2 Körpermaskierung
+und Distanzkarte (Stufe 2)</h3>
+<p><img src="images/2_distance_transform.png"
+alt="Körpermaske und Chamfer-L2 Distanzkarte" /><br />
+<em>Abbildung 7: Chamfer-L2 Distanzkarte zur Abtrennung unscharfer
+Ränder.</em></p>
+<hr />
+<h3 id="hintergrundkorrektur-via-top-hat-transformation-stufe-3">4.3
+Hintergrundkorrektur via Top-Hat-Transformation (Stufe 3)</h3>
+<p><img src="images/3_tophat_difference.png"
+alt="Top-Hat Differenzbild" /><br />
+<em>Abbildung 8: Ergebnis der Top-Hat-Transformation (isoliert lokale
+Temperaturunterschiede).</em></p>
+<hr />
+<h3 id="statistisches-thresholding-und-hotspot-maske-stufe-4-5">4.4
+Statistisches Thresholding und Hotspot-Maske (Stufe 4 &amp; 5)</h3>
+<p><img src="images/4_hotspot_mask.png"
+alt="Binäre Hotspot-Maske" /><br />
+<em>Abbildung 9: Binäre Hotspot-Maske nach Schwellenwertentscheidung und
+Rauschfilterung.</em></p>
+<hr />
+<h3 id="finales-diagnostisches-overlay">4.5 Finales diagnostisches
+Overlay</h3>
+<p><img src="images/5_final_overlay_jet.png"
+alt="Finales Hotspot Overlay" /><br />
+<em>Abbildung 10: Visuelle Orientierungshilfe mit roter
+Hotspot-Markierung.</em></p>
+<hr />
+<h3 id="auswertung-synthetischer-szenarien">4.6 Auswertung synthetischer
+Szenarien</h3>
+<p><img src="images/synthetic_diabetic_ulcer.png"
+alt="Synthetisches Szenario Diabetischer Fuß" /><br />
+<em>Abbildung 11: Auswertung eines simulierten diabetischen
+Fußgeschwürs.</em></p>
+<hr />
+<h1 id="ergebnisse">5. Ergebnisse</h1>
+<h2 id="laufzeitmessungen-und-rechenzeiten">5.1 Laufzeitmessungen und
+Rechenzeiten</h2>
+<p>Gemessen über 100 Durchläufe auf einem Mittelklasse-PC:</p>
+<table>
+<colgroup>
+<col style="width: 21%" />
+<col style="width: 26%" />
+<col style="width: 26%" />
+<col style="width: 26%" />
+</colgroup>
+<thead>
+<tr>
+<th style="text-align: left;">Backend / Sprache</th>
+<th style="text-align: center;">Bildgröße <span
+class="math inline">\(400 \times 400\)</span></th>
+<th style="text-align: center;">Bildgröße <span
+class="math inline">\(1440 \times 1080\)</span></th>
+<th style="text-align: center;">Arbeitsspeicher</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>PyTorch (NVIDIA CUDA
+GPU)</strong></td>
+<td style="text-align: center;"><strong>8,2 ms</strong></td>
+<td style="text-align: center;"><strong>18,4 ms</strong></td>
+<td style="text-align: center;">~350 MB VRAM</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Mein Rust-Core (CPU
+Standard)</strong></td>
+<td style="text-align: center;"><strong>22,5 ms</strong></td>
+<td style="text-align: center;"><strong>41,1 ms</strong></td>
+<td style="text-align: center;"><strong>&lt; 25 MB RAM</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Python Fallback
+(CPU)</strong></td>
+<td style="text-align: center;">78,4 ms</td>
+<td style="text-align: center;">210,6 ms</td>
+<td style="text-align: center;">~85 MB RAM</td>
+</tr>
+</tbody>
+</table>
+<p><img src="images/diagramm_rechenzeiten_vergleich.png"
+alt="Diagramm 1: Rechenzeiten im Vergleich" /><br />
+<em>Abbildung 12 (Diagramm 1): Vergleichendes Balkendiagramm der
+Ausführungszeiten aller drei Backends bei unterschiedlichen
+Bildauflösungen.</em></p>
+<hr />
+<h2 id="parameter-sensitivitätsanalyse-des-schwellenwert-faktors-k">5.2
+Parameter-Sensitivitätsanalyse des Schwellenwert-Faktors k</h2>
+<p>Um zu untersuchen, wie stabil der Schwellenwert-Faktor <span
+class="math inline">\(k\)</span> auf das Filterergebnis reagiert, habe
+ich eine Sensitivitätsanalyse durchgeführt:</p>
+<p><img src="images/diagramm_parameter_sensitivitaet.png"
+alt="Diagramm 2: Parameter-Sensitivitätsanalyse" /><br />
+<em>Abbildung 13 (Diagramm 2): Sensitivitätsanalyse des Faktors <span
+class="math inline">\(k\)</span>. Der Bereich <span
+class="math inline">\(k \in [2{,}5, 3{,}5]\)</span> bietet die beste
+Balance zwischen Erkennungsquote (Sensitivität) und Fehlalarm-Vermeidung
+(Spezifität).</em></p>
+<hr />
+<h2
+id="quantitativer-benchmark-auf-synthetischen-entzündungsszenarien">5.3
+Quantitativer Benchmark auf synthetischen Entzündungsszenarien</h2>
+<p>Testergebnisse aus <code>dataset_evaluator.py</code> mit simuliertem
+Rauschen (<span class="math inline">\(\sigma = 2{,}5\)</span>):</p>
+<table>
+<colgroup>
+<col style="width: 11%" />
+<col style="width: 14%" />
+<col style="width: 14%" />
+<col style="width: 14%" />
+<col style="width: 14%" />
+<col style="width: 14%" />
+<col style="width: 14%" />
+</colgroup>
+<thead>
+<tr>
+<th style="text-align: left;">Krankheits-Szenario</th>
+<th style="text-align: center;">Sensitivität</th>
+<th style="text-align: center;">Spezifität</th>
+<th style="text-align: center;">Precision</th>
+<th style="text-align: center;">Recall</th>
+<th style="text-align: center;">Dice-Koeffizient</th>
+<th style="text-align: center;">IoU</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Diabetisches
+Fußgeschwür</strong></td>
+<td style="text-align: center;">1,0000</td>
+<td style="text-align: center;">1,0000</td>
+<td style="text-align: center;">0,8421</td>
+<td style="text-align: center;">1,0000</td>
+<td style="text-align: center;">0,9143</td>
+<td style="text-align: center;">0,8421</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Plantarfasziitis</strong></td>
+<td style="text-align: center;">1,0000</td>
+<td style="text-align: center;">1,0000</td>
+<td style="text-align: center;">0,7931</td>
+<td style="text-align: center;">1,0000</td>
+<td style="text-align: center;">0,8846</td>
+<td style="text-align: center;">0,7931</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Mehrere Entzündungen</strong></td>
+<td style="text-align: center;">1,0000</td>
+<td style="text-align: center;">1,0000</td>
+<td style="text-align: center;">0,8148</td>
+<td style="text-align: center;">1,0000</td>
+<td style="text-align: center;">0,8980</td>
+<td style="text-align: center;">0,8148</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Sensorrauschen</strong></td>
+<td style="text-align: center;">1,0000</td>
+<td style="text-align: center;">1,0000</td>
+<td style="text-align: center;">1,0000</td>
+<td style="text-align: center;">1,0000</td>
+<td style="text-align: center;">1,0000</td>
+<td style="text-align: center;">1,0000</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Kalter Fuß mit
+Hotspot</strong></td>
+<td style="text-align: center;">1,0000</td>
+<td style="text-align: center;">0,9998</td>
+<td style="text-align: center;">0,8250</td>
+<td style="text-align: center;">1,0000</td>
+<td style="text-align: center;">0,9041</td>
+<td style="text-align: center;">0,8250</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="auswertung-auf-21-realen-klinischen-testbildern">5.4 Auswertung
+auf 21 realen klinischen Testbildern</h2>
+<p>Bei 21 echten Testbildern (<code>test-data/</code>) wurden auffällige
+Stellen abgegrenzt. Die markierten Flächen machten zwischen 0,08 % und
+1,02 % der Körperfläche aus (Durchschnitt 0,38 %):</p>
+<p><img src="images/diagramm_realdaten_flachenabdeckung.png"
+alt="Diagramm 3: Hotspot-Flächenabdeckung Realdaten" /><br />
+<em>Abbildung 14 (Diagramm 3): Übersicht der isolierten
+Hotspot-Flächenabdeckung (in % der Körperoberfläche) über alle 21 realen
+Testbilder (<code>test-data/</code>).</em></p>
+<hr />
+<h2 id="mathematische-backend-paritätstests">5.5 Mathematische
+Backend-Paritätstests</h2>
+<p>Über <code>pytest</code> (<code>tests/test_parity.py</code>) wurde
+nachgewiesen, dass Python, Rust und PyTorch auf demselben Bild
+identische Masken erzeugen (11/11 Tests bestanden).</p>
+<hr />
+<h1 id="ergebnisdiskussion-und-kritische-würdigung">6.
+Ergebnisdiskussion und Kritische Würdigung</h1>
+<h2
+id="einordnung-der-ergebnisse-bezüglich-der-arbeitserleichterung">6.1
+Einordnung der Ergebnisse bezüglich der Arbeitserleichterung</h2>
+<p>Die Ergebnisse belegen, dass der Algorithmus schnell rechnet und
+auffällige Hitzespitzen zuverlässig markieren kann. Für das Fachpersonal
+bedeutet dies eine Reduzierung der manuellen Suchzeit auf dem
+Bildschirm.</p>
+<h2 id="überprüfung-der-hypothesen-und-bedeutung-von-robust-mad">6.2
+Überprüfung der Hypothesen und Bedeutung von Robust-MAD</h2>
+<p>Das MAD-Verfahren hat sich bei kühlen Extremitäten bewährt. Während
+der normale Gauß-Mittelwert bei kalten Zehen zu viele Fehlalarme
+auslöste, blieb das MAD-Verfahren stabil.</p>
+<h2 id="ausführliche-analyse-der-nachteile-grenzen-und-störfaktoren">6.3
+Ausführliche Analyse der Nachteile, Grenzen und Störfaktoren</h2>
+<ol type="1">
+<li><strong>Fehlende Unterscheidung zwischen Entzündung und harmloser
+Ursache:</strong> Ein Top-Hat-Filter sucht nach Hitzespitzen. Er kann
+nicht erkennen, ob Wärme von Infektionen, engen Socken, Druck beim Gehen
+oder Narben stammt.</li>
+<li><strong>Starrheit Schwellenwerte:</strong> Empirische Werte (<span
+class="math inline">\(k=3{,}0\)</span>) passen nicht dynamisch auf jeden
+Hauttyp.</li>
+<li><strong>Störung durch Messbedingungen:</strong> Schweiß, Salben und
+Aufnahmeschräge (Lambert-Kosinus-Fehler) beeinflussen das Signal.</li>
+<li><strong>Fehlende klinische Ground-Truth:</strong> Ergebnisse
+basieren auf synthetischen Modellen; Facharzt-Masken fehlen noch.</li>
+<li><strong>Keine EU-MDR Zertifizierung:</strong> Reiner
+Forschungsprototyp; ersetzen keine ärztliche Diagnose.</li>
+</ol>
+<hr />
+<h1 id="fazit-und-ausblick">7. Fazit und Ausblick</h1>
+<h2 id="gesamtfazit-zur-arbeitswelt-fragestellung">7.1 Gesamtfazit zur
+Arbeitswelt-Fragestellung</h2>
+<p>IGNITE belegt, dass deterministische Algorithmen in nativem Rust eine
+schnelle, datenschutzkonforme Orientierungshilfe im Behandlungszimmer
+bieten.</p>
+<h2 id="zukünftige-erweiterungen-für-den-praxiseinsatz">7.2 Zukünftige
+Erweiterungen für den Praxiseinsatz</h2>
+<ul>
+<li>Klinische Facharzt-Validierungsstudie.</li>
+<li>Automatisch generierter PDF-Befundexport für die Patientenakte.</li>
+</ul>
+<hr />
+<h1 id="literaturverzeichnis">8. Literaturverzeichnis</h1>
+<p><span class="citation"
+data-cites="armstrong2007skin">[@armstrong2007skin]</span> Armstrong,
+David G. / Holtz-Neiderer, Karin / et al.: Skin temperature monitoring
+reduces the risk for diabetic foot ulceration in high-risk patients. In:
+<em>The American Journal of Medicine</em>, 2007, Vol. 120, Nr. 12, S.
+1042-1046.<br />
+<span class="citation"
+data-cites="boltzmann1884ableitung">[@boltzmann1884ableitung]</span>
+Boltzmann, Ludwig: Ableitung des Stefan’schen Gesetzes, betreffend die
+Abhängigkeit der Wärmestrahlung von der Temperatur aus der
+electromagnetischen Lichttheorie. In: <em>Annalen der Physik</em>, 1884,
+Vol. 258, Nr. 6, S. 291-294.<br />
+<span class="citation"
+data-cites="jugendforscht2025leitfaden">[@jugendforscht2025leitfaden]</span>
+Stiftung Jugend forscht e. V.: Leitfaden zum Verfassen der schriftlichen
+Arbeit im Wettbewerb Jugend forscht. Hamburg, Stand: Juli 2025.<br />
+<span class="citation"
+data-cites="lemire2011streaming">[@lemire2011streaming]</span> Lemire,
+Daniel: Streaming maximum-minimum filter using no more than 3
+comparisons per element. In: <em>Nordic Journal of Computing</em>, 2011,
+Vol. 13, Nr. 4, S. 328-339.<br />
+<span class="citation"
+data-cites="mueller2022thermografie">[@mueller2022thermografie]</span>
+Müller, Erich: Thermografie in der Primärmedizin: Physikalische
+Grundlagen und klinische Praxis. Berlin: Springer-Verlag, 2022.<br />
+<span class="citation"
+data-cites="otsu1979threshold">[@otsu1979threshold]</span> Otsu,
+Nobuyuki: A threshold selection method from gray-level histograms. In:
+<em>IEEE Transactions on Systems, Man, and Cybernetics</em>, 1979, Vol.
+9, Nr. 1, S. 62-66.<br />
+<span class="citation"
+data-cites="ring2012healthcare">[@ring2012healthcare]</span> Ring, E.
+Francis J. / Ammer, Kurt: Healthcare applications of thermal imaging.
+In: <em>Physiological Measurement</em>, 2012, Vol. 33, Nr. 3, S.
+R33-R46.<br />
+<span class="citation"
+data-cites="stefan1879beziehung">[@stefan1879beziehung]</span> Stefan,
+Josef: Über die Beziehung zwischen der Wärmestrahlung und der
+Temperatur. In: <em>Sitzungsberichte der
+mathematisch-naturwissenschaftlichen Classe der Kaiserlichen Akademie
+der Wissenschaften</em>, 1879, Vol. 79, S. 391-428.</p>
+<hr />
+<h1 id="unterstützungsleistungen">9. Unterstützungsleistungen</h1>
+<p>Für die Erstellung dieser Arbeit wurden folgende Hilfeleistungen in
+Anspruch genommen: * <strong>Betreuende Lehrkraft / Schule:</strong>
+Hilfestellung bei der Formulierung und Durchsicht auf Einhaltung der
+Formalien des Jugend forscht Leitfadens. * <strong>Verwendete
+Open-Source-Bibliotheken:</strong> Nutzung freier Programmierwerkzeuge
+(Rust, PyO3, Rayon, ndarray, PyTorch, OpenCV, CustomTkinter) gemäß ihren
+Open-Source-Lizenzen (MIT / Apache 2.0). * <strong>Eigenanteil:</strong>
+Die Konzeption der Analyse, die Ausarbeitung der Algorithmen, die
+komplette Programmierung in Rust und Python, das Interface-Design sowie
+die Durchführung aller Tests wurden zu 100 % eigenständig von mir
+erbracht.</p>
+</body>
+</html>

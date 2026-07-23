@@ -1,0 +1,116 @@
+
+@page {
+    size: A4;
+    margin: 2.5cm 2.5cm 2.0cm 2.5cm;
+}
+
+body {
+    font-family: 'Segoe UI', Arial, 'DejaVu Sans', sans-serif;
+    font-size: 11pt;
+    line-height: 1.5;
+    color: #1E293B;
+    background-color: #FFFFFF;
+}
+
+h1 {
+    font-size: 18pt;
+    font-weight: bold;
+    color: #0F172A;
+    border-bottom: 2px solid #6366F1;
+    padding-bottom: 4px;
+    margin-top: 24px;
+    margin-bottom: 12px;
+    page-break-before: always;
+}
+
+h1:first-of-type {
+    page-break-before: avoid;
+}
+
+h2 {
+    font-size: 14pt;
+    font-weight: bold;
+    color: #334155;
+    margin-top: 18px;
+    margin-bottom: 8px;
+}
+
+h3 {
+    font-size: 12pt;
+    font-weight: bold;
+    color: #475569;
+    margin-top: 14px;
+    margin-bottom: 6px;
+}
+
+p {
+    margin-bottom: 10px;
+    text-align: justify;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 14px;
+    margin-bottom: 16px;
+    font-size: 10pt;
+}
+
+th, td {
+    border: 1px solid #CBD5E1;
+    padding: 8px 10px;
+    text-align: left;
+}
+
+th {
+    background-color: #F1F5F9;
+    font-weight: bold;
+    color: #0F172A;
+}
+
+tr:nth-child(even) {
+    background-color: #F8FAFC;
+}
+
+img {
+    max-width: 90%;
+    height: auto;
+    display: block;
+    margin: 16px auto;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+p img {
+    margin: 16px auto;
+}
+
+em {
+    font-style: italic;
+    color: #475569;
+}
+
+blockquote {
+    border-left: 4px solid #6366F1;
+    padding-left: 12px;
+    margin-left: 0;
+    color: #475569;
+    background-color: #F8FAFC;
+    padding-top: 6px;
+    padding-bottom: 6px;
+}
+
+code {
+    background-color: #F1F5F9;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-family: Consolas, monospace;
+    font-size: 9.5pt;
+}
+
+pre code {
+    display: block;
+    padding: 10px;
+    overflow-x: auto;
+    line-height: 1.4;
+}
