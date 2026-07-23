@@ -181,7 +181,8 @@ def _pytorch_gpu_pipeline(
     min_circularity: float = _config.DEFAULT_MIN_CIRCULARITY,
     otsu_min: int = _config.DEFAULT_OTSU_MIN,
     otsu_max: int = _config.DEFAULT_OTSU_MAX,
-    dist_erosion_factor: float = _config.DEFAULT_DIST_EROSION_FACTOR
+    dist_erosion_factor: float = _config.DEFAULT_DIST_EROSION_FACTOR,
+    use_mad: bool = _config.DEFAULT_USE_MAD
 ) -> tuple[np.ndarray, np.ndarray]:
     """GPU-beschleunigte Pipeline unter Verwendung von PyTorch CUDA."""
     mask_cpu = _extract_body_mask_cpu(img, otsu_min, otsu_max, dist_erosion_factor)
@@ -207,12 +208,19 @@ def _pytorch_gpu_pipeline(
         diff_t = torch.where(mask_t > 0, tophat_t, torch.zeros_like(tophat_t))
         
         body_pixels = diff_t[mask_t > 0]
-        mu_diff = body_pixels.mean()
-        sigma_diff = body_pixels.std()
-        T_rel = mu_diff + sigma_k * sigma_diff
-        
         orig_body_pixels = img_t[mask_t > 0]
-        mu_orig = orig_body_pixels.mean()
+
+        if use_mad:
+            median_diff = body_pixels.median()
+            mad_diff = (body_pixels - median_diff).abs().median()
+            sigma_diff = 1.4826 * mad_diff
+            T_rel = median_diff + sigma_k * sigma_diff
+            mu_orig = orig_body_pixels.median()
+        else:
+            mu_diff = body_pixels.mean()
+            sigma_diff = body_pixels.std()
+            T_rel = mu_diff + sigma_k * sigma_diff
+            mu_orig = orig_body_pixels.mean()
         
         binary_raw_t = (diff_t > T_rel) & (img_t > mu_orig)
         binary_raw_np = (binary_raw_t.cpu().numpy() * 255).astype(np.uint8)
@@ -242,7 +250,8 @@ def _python_fallback_pipeline(
     min_circularity: float = _config.DEFAULT_MIN_CIRCULARITY,
     otsu_min: int = _config.DEFAULT_OTSU_MIN,
     otsu_max: int = _config.DEFAULT_OTSU_MAX,
-    dist_erosion_factor: float = _config.DEFAULT_DIST_EROSION_FACTOR
+    dist_erosion_factor: float = _config.DEFAULT_DIST_EROSION_FACTOR,
+    use_mad: bool = _config.DEFAULT_USE_MAD
 ) -> tuple[np.ndarray, np.ndarray]:
     """Python-Fallback-Pipeline mit identischen mathematischen Schritten wie Rust."""
     warnings.warn(
@@ -270,12 +279,19 @@ def _python_fallback_pipeline(
     
     # 3. Stats threshold
     body_pixels = diff_img[mask > 0]
-    mu_diff = np.mean(body_pixels)
-    sigma_diff = np.std(body_pixels)
-    T_rel = mu_diff + sigma_k * sigma_diff
-    
     orig_body_pixels = img_blurred[mask > 0]
-    mu_orig = np.mean(orig_body_pixels)
+
+    if use_mad:
+        median_diff = float(np.median(body_pixels))
+        mad_diff = float(np.median(np.abs(body_pixels - median_diff)))
+        sigma_diff = 1.4826 * mad_diff
+        T_rel = median_diff + sigma_k * sigma_diff
+        mu_orig = float(np.median(orig_body_pixels))
+    else:
+        mu_diff = float(np.mean(body_pixels))
+        sigma_diff = float(np.std(body_pixels))
+        T_rel = mu_diff + sigma_k * sigma_diff
+        mu_orig = float(np.mean(orig_body_pixels))
     
     binary_raw = ((diff_img > T_rel) & (img_blurred > mu_orig)).astype(np.uint8) * 255
     
@@ -298,7 +314,8 @@ def run_rust_pipeline(
     min_circularity: float = _config.DEFAULT_MIN_CIRCULARITY,
     otsu_min: int = _config.DEFAULT_OTSU_MIN,
     otsu_max: int = _config.DEFAULT_OTSU_MAX,
-    dist_erosion_factor: float = _config.DEFAULT_DIST_EROSION_FACTOR
+    dist_erosion_factor: float = _config.DEFAULT_DIST_EROSION_FACTOR,
+    use_mad: bool = _config.DEFAULT_USE_MAD
 ) -> tuple[np.ndarray, np.ndarray]:
     """Führt die vollständige Bildverarbeitungs-Pipeline aus."""
     global FORCED_BACKEND
@@ -307,7 +324,7 @@ def run_rust_pipeline(
         if _GPU_AVAILABLE:
             return _pytorch_gpu_pipeline(
                 img, sigma_k, tophat_factor, min_area_factor, min_circularity,
-                otsu_min, otsu_max, dist_erosion_factor
+                otsu_min, otsu_max, dist_erosion_factor, use_mad
             )
         else:
             raise RuntimeError("GPU-Backend (CUDA) ist nicht verfügbar!")
@@ -317,7 +334,7 @@ def run_rust_pipeline(
             img_contiguous = np.ascontiguousarray(img, dtype=np.uint8)
             return _ignite_core.process_thermal_pipeline(
                 img_contiguous, sigma_k, tophat_factor, min_area_factor, min_circularity,
-                otsu_min, otsu_max, dist_erosion_factor
+                otsu_min, otsu_max, dist_erosion_factor, use_mad
             )
         else:
             raise RuntimeError("Natives Rust-Core-Modul ist nicht verfügbar!")
@@ -325,7 +342,7 @@ def run_rust_pipeline(
     elif FORCED_BACKEND == "python":
         return _python_fallback_pipeline(
             img, sigma_k, tophat_factor, min_area_factor, min_circularity,
-            otsu_min, otsu_max, dist_erosion_factor
+            otsu_min, otsu_max, dist_erosion_factor, use_mad
         )
 
     else:  # auto
@@ -333,7 +350,7 @@ def run_rust_pipeline(
             try:
                 return _pytorch_gpu_pipeline(
                     img, sigma_k, tophat_factor, min_area_factor, min_circularity,
-                    otsu_min, otsu_max, dist_erosion_factor
+                    otsu_min, otsu_max, dist_erosion_factor, use_mad
                 )
             except Exception as e:
                 warnings.warn(
@@ -346,12 +363,12 @@ def run_rust_pipeline(
             img_contiguous = np.ascontiguousarray(img, dtype=np.uint8)
             return _ignite_core.process_thermal_pipeline(
                 img_contiguous, sigma_k, tophat_factor, min_area_factor, min_circularity,
-                otsu_min, otsu_max, dist_erosion_factor
+                otsu_min, otsu_max, dist_erosion_factor, use_mad
             )
         else:
             return _python_fallback_pipeline(
                 img, sigma_k, tophat_factor, min_area_factor, min_circularity,
-                otsu_min, otsu_max, dist_erosion_factor
+                otsu_min, otsu_max, dist_erosion_factor, use_mad
             )
 
 # ─────────────────────────────────────────────────────────────────────────────

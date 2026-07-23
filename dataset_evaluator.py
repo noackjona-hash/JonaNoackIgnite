@@ -57,6 +57,14 @@ def generate_clinical_scenario(scenario_type: str = "diabetic_ulcer", width: int
         img[h2] = 200.0
         ground_truth[h2] = 255
 
+    elif scenario_type == "bimodal_undercooled_extremity":
+        # Bimodale Verteilung: Unterkühlte Zehen/Peripherie + entzündeter Ulcus
+        img[180:240, 60:180] = 35.0
+        rr, cc = np.ogrid[:height, :width]
+        h_bio = np.sqrt((rr - 100)**2 + (cc - 120)**2) <= 6
+        img[h_bio] = 210.0
+        ground_truth[h_bio] = 255
+
     if add_noise:
         # Realistisches Gaußsches Sensorrauschen (sigma = 2.5)
         rng = np.random.default_rng(seed=42)
@@ -153,23 +161,34 @@ def run_benchmark_suite():
     """
     Führt die vollständige Benchmark-Testsuite durch:
     - Synthetische Szenarien mit realistischen Rausch-Modellen
+    - Vergleichende Evaluierung: Standard µ+k·σ vs. Robustes MAD-Thresholding
     - Parameter-Sensitivitätsanalyse
     - Reale Test-Bilddaten-Evaluierung aus test-data/
     """
-    scenarios = ["normal", "diabetic_ulcer", "plantar_fasciitis", "focal_sensor_noise", "complex_multi_inflammation"]
+    scenarios = ["normal", "diabetic_ulcer", "plantar_fasciitis", "focal_sensor_noise", "complex_multi_inflammation", "bimodal_undercooled_extremity"]
     results = {}
+    mad_comparison = {}
 
     print("=== IGNITE Medical Thermal Evaluation Benchmark ===")
 
     for scenario in scenarios:
         img, gt = generate_clinical_scenario(scenario, add_noise=True)
-        diff_img, pred_mask = image_processing.run_rust_pipeline(img)
+        
+        # Standard µ + k·σ
+        diff_img, pred_mask_std = image_processing.run_rust_pipeline(img, use_mad=False)
         body_mask = image_processing._extract_body_mask_cpu(img)
+        metrics_std = evaluate_metrics(pred_mask_std, gt, body_mask)
+        results[scenario] = metrics_std
 
-        metrics = evaluate_metrics(pred_mask, gt, body_mask)
-        results[scenario] = metrics
+        # Robust MAD
+        diff_img_mad, pred_mask_mad = image_processing.run_rust_pipeline(img, use_mad=True)
+        metrics_mad = evaluate_metrics(pred_mask_mad, gt, body_mask)
+        mad_comparison[scenario] = {
+            "mean_std": metrics_std,
+            "mad_robust": metrics_mad
+        }
 
-        print(f"Szenario [{scenario:25s}]: Sensitivity={metrics['sensitivity']:.2f}, Specificity={metrics['specificity']:.2f}, Dice={metrics['dice']:.2f}, IoU={metrics['iou']:.2f}")
+        print(f"Szenario [{scenario:30s}]: (Std) Sens={metrics_std['sensitivity']:.2f}, Spec={metrics_std['specificity']:.2f}, Dice={metrics_std['dice']:.2f} | (MAD) Sens={metrics_mad['sensitivity']:.2f}, Spec={metrics_mad['specificity']:.2f}, Dice={metrics_mad['dice']:.2f}")
 
     # Parameter-Sensitivitätsanalyse für k (1.0 bis 5.0)
     print("\n--- Parameter-Sensitivitätsanalyse (Sigma k) ---")
@@ -191,6 +210,7 @@ def run_benchmark_suite():
 
     output_data = {
         "scenario_results": results,
+        "mad_thresholding_comparison": mad_comparison,
         "sensitivity_analysis_k": k_analysis,
         "real_test_dataset": real_dataset_results
     }

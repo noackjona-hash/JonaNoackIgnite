@@ -640,6 +640,18 @@ class IgniteApp:
         self.erosion_slider, self.erosion_val = make_slider(self.param_sliders_frame, "Erosions-Faktor", 0.01, 0.20, config.DEFAULT_DIST_EROSION_FACTOR, 0.005)
         self.temp_offset_slider, self.temp_offset_val = make_slider(self.param_sliders_frame, "Temp-Offset (Kalibrierung)", -50.0, 50.0, 0.0, 0.5)
 
+        self.mad_switch = ctk.CTkSwitch(
+            self.param_sliders_frame,
+            text="Robustes MAD-Thresholding",
+            command=self.update_params,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold")
+        )
+        if config.DEFAULT_USE_MAD:
+            self.mad_switch.select()
+        else:
+            self.mad_switch.deselect()
+        self.mad_switch.pack(fill=ctk.X, padx=10, pady=(5, 10))
+
         # Sliders bindings
         self.sigma_k_slider.configure(command=self.update_params)
         self.tophat_slider.configure(command=self.update_params)
@@ -1827,6 +1839,7 @@ class IgniteApp:
             "omax": int(self.otsu_max_slider.get()),
             "er": self.erosion_slider.get(),
             "to": self.temp_offset_slider.get(),
+            "use_mad": self.mad_switch.get() == 1,
             "t_min": self.t_min_celsius,
             "t_max": self.t_max_celsius,
             "mode": self.analysis_mode_opt.get()
@@ -1851,7 +1864,7 @@ class IgniteApp:
                 # 2. Rust/GPU Pipeline ausführen
                 self.root.after(0, lambda: self.update_loading_progress(0.60, "Suche Hotspots (Denoising & Top-Hat Differenz)..."))
                 diff_img, hotspot_mask = image_processing.run_rust_pipeline(
-                    calibrated_img, params["sk"], params["th"], params["ma"], params["mc"], params["omin"], params["omax"], params["er"]
+                    calibrated_img, params["sk"], params["th"], params["ma"], params["mc"], params["omin"], params["omax"], params["er"], use_mad=params["use_mad"]
                 )
 
                 # 3. Maske und Speicherung
@@ -3448,7 +3461,7 @@ class IgniteApp:
                     calibrated_img = np.clip(img.astype(np.int16) + raw_offset, 0, 255).astype(np.uint8)
                     
                     diff_img, hotspot_mask = image_processing.run_rust_pipeline(
-                        calibrated_img, sk, th, ma, mc, omin, omax, er
+                        calibrated_img, sk, th, ma, mc, omin, omax, er, use_mad=self.mad_switch.get() == 1
                     )
                     
                     body_mask_vis = (diff_img > 0).astype(np.uint8) * 255

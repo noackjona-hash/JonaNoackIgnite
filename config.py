@@ -13,6 +13,7 @@ _DEFAULT_SETTINGS = {
     "DEFAULT_OTSU_MIN": 35,
     "DEFAULT_OTSU_MAX": 50,
     "DEFAULT_DIST_EROSION_FACTOR": 0.05,
+    "DEFAULT_USE_MAD": False,
     "DEFAULT_TEMP_MIN": 20.0,
     "DEFAULT_TEMP_MAX": 40.0,
     "OUTPUT_DIR": "ignite_steps_output",
@@ -60,6 +61,7 @@ DEFAULT_MIN_CIRCULARITY = _settings["DEFAULT_MIN_CIRCULARITY"]
 DEFAULT_OTSU_MIN = _settings["DEFAULT_OTSU_MIN"]
 DEFAULT_OTSU_MAX = _settings["DEFAULT_OTSU_MAX"]
 DEFAULT_DIST_EROSION_FACTOR = _settings["DEFAULT_DIST_EROSION_FACTOR"]
+DEFAULT_USE_MAD = _settings["DEFAULT_USE_MAD"]
 
 # ── Celsius-Kalibrierung (Kamerabereich) ──────────────────────────────────────
 DEFAULT_TEMP_MIN = _settings["DEFAULT_TEMP_MIN"]

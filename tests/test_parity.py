@@ -57,3 +57,26 @@ def test_pipeline_parity(synthetic_thermal_image):
         # Check parity against Python baseline (atol=4 for 1D separable vs 2D morphology boundary variations)
         np.testing.assert_allclose(rust_diff, py_diff, atol=4, err_msg="Rust diff_img mismatch with Python fallback")
         np.testing.assert_array_equal(rust_mask, py_mask, err_msg="Rust hotspot mask mismatch with Python fallback")
+
+def test_pipeline_parity_mad(synthetic_thermal_image):
+    """
+    Tests that MAD-based robust thresholding produces equivalent output across Python and Rust backends.
+    """
+    py_diff, py_mask = image_processing._python_fallback_pipeline(synthetic_thermal_image, use_mad=True)
+    assert np.sum(py_mask) > 0, "Python baseline with MAD failed to detect hotspots"
+
+    if image_processing._RUST_BACKEND_AVAILABLE and image_processing._ignite_core is not None:
+        img_contiguous = np.ascontiguousarray(synthetic_thermal_image, dtype=np.uint8)
+        rust_diff, rust_mask = image_processing._ignite_core.process_thermal_pipeline(
+            img_contiguous,
+            image_processing._config.DEFAULT_SIGMA_K,
+            image_processing._config.DEFAULT_TOPHAT_FACTOR,
+            image_processing._config.DEFAULT_MIN_AREA_FACTOR,
+            image_processing._config.DEFAULT_MIN_CIRCULARITY,
+            image_processing._config.DEFAULT_OTSU_MIN,
+            image_processing._config.DEFAULT_OTSU_MAX,
+            image_processing._config.DEFAULT_DIST_EROSION_FACTOR,
+            True
+        )
+        np.testing.assert_allclose(rust_diff, py_diff, atol=4, err_msg="Rust MAD diff_img mismatch")
+        np.testing.assert_array_equal(rust_mask, py_mask, err_msg="Rust MAD hotspot mask mismatch")

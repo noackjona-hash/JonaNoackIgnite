@@ -17,6 +17,7 @@ class ThermalProcessingService:
         otsu_min: int,
         otsu_max: int,
         dist_erosion_factor: float,
+        use_mad: bool,
         on_complete_callback,
         on_error_callback
     ):
@@ -32,7 +33,8 @@ class ThermalProcessingService:
                     min_circularity=min_circularity,
                     otsu_min=otsu_min,
                     otsu_max=otsu_max,
-                    dist_erosion_factor=dist_erosion_factor
+                    dist_erosion_factor=dist_erosion_factor,
+                    use_mad=use_mad
                 )
                 on_complete_callback(diff_vis, final_mask)
             except Exception as e:

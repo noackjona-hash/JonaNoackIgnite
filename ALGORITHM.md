@@ -52,12 +52,23 @@ Diese Stufe isoliert lokale Hitzeinseln (lokale Maxima) und gleicht globale Temp
 ---
 
 ### 4. Statistisches Outlier-Thresholding (Feature D)
-Hier wird bestimmt, ab wann eine lokale Erwärmung statistisch signifikant (also ein Entzündungsherd) ist:
+Hier wird bestimmt, ab wann eine lokale Erwärmung statistisch signifikant (also ein Entzündungsherd) ist. **IGNITE** unterstützt zwei Auswertungsverfahren:
+
+#### A. Standard Gaussian Thresholding ($\mu + k \cdot \sigma$)
 1. **Statistik über Körper-Pixel:** Mittelwert $\mu_{\text{diff}}$ und Standardabweichung $\sigma_{\text{diff}}$ der Intensität des Top-Hat-Differenzbildes werden **ausschließlich** für Pixel berechnet, die innerhalb der Body-Mask liegen.
 2. **Adaptiver Schwellenwert:** Ein Pixel wird vorläufig als Hotspot eingestuft, wenn seine lokale Temperaturdifferenz deutlich über dem Rauschen liegt:
    $$\text{TopHat-Wert}(x, y) > \mu_{\text{diff}} + k \cdot \sigma_{\text{diff}}$$
    (Standardmäßig ist $k = 3.0$, was bei einer Normalverteilung einem Konfidenzintervall von $99.86\%$ entspricht).
-3. **Absoluthitzefilter:** Zusätzlich muss die Originaltemperatur des Pixels über der durchschnittlichen Körpertemperatur liegen ($\text{Original-Wert}(x,y) > \mu_{\text{orig}}$). Dies verhindert, dass statistische Ausreißer in ansonsten sehr kalten Bereichen (z. B. kalte Zehen) fälschlicherweise als Hotspots detektiert werden.
+
+#### B. Robustes MAD-Thresholding (Median Absolute Deviation – Bimodal-resistent)
+Bei thermografischen Aufnahmen mit stark unterkühlten Peripherien (z. B. kalten Zehen beim diabetischen Fußsyndrom) entsteht eine bimodale Temperaturverteilung. Hierbei verzerrt der kalte Pol den Mittelwert $\mu$ und künstlich die Standardabweichung $\sigma$. Als Ausweichverfahren berechnet **IGNITE** die robusten Kennzahlen:
+1. **Median:** $\tilde{\mu}_{\text{diff}} = \text{median}(X_{\text{body}})$
+2. **Median Absolute Deviation (MAD):** $\text{MAD} = \text{median}(|X_{\text{body}} - \tilde{\mu}_{\text{diff}}|)$
+3. **Invarianter Schwellenwert:** Unter Ausnutzung des Normalverteilungs-Skalierungsfaktors ($1,4826$) gilt:
+   $$\hat{\sigma}_{\text{MAD}} = 1,4826 \cdot \text{MAD}$$
+   $$\text{Schwellenwert}_{\text{MAD}} = \tilde{\mu}_{\text{diff}} + k \cdot \hat{\sigma}_{\text{MAD}}$$
+
+3. **Absoluthitzefilter:** Zusätzlich muss die Originaltemperatur des Pixels über der durchschnittlichen bzw. medianen Körpertemperatur liegen ($\text{Original-Wert}(x,y) > \text{Baseline}_{\text{orig}}$). Dies verhindert, dass statistische Ausreißer in ansonsten sehr kalten Bereichen fälschlicherweise als Hotspots detektiert werden.
 
 ---
 

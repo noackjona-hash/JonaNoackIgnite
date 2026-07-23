@@ -15,5 +15,6 @@
     "BORDER_MARGIN_PX": 10,
     "SALT": "f27fe637f8767db16a47e620343bbd8a",
     "SKIN_EMISSIVITY": 0.98,
-    "REFLECTED_TEMP_C": 20.0
+    "REFLECTED_TEMP_C": 20.0,
+    "DEFAULT_USE_MAD": false
 }

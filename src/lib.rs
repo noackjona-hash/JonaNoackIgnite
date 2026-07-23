@@ -648,52 +648,71 @@ fn threshold_statistical(
     diff_img: &ImageMatrix,
     mask: &ImageMatrix,
     k: f64,
+    use_mad: bool,
 ) -> Result<ImageMatrix, String> {
     let (h, w) = diff_img.dim();
 
-    // Zero-Allocation Parallel Reduction via Rayon
-    // Berechnet die Summen und Quadratsummen parallel über Zeilen hinweg
-    let (sum_diff, sum_orig, sum_sq_diff, count) = (0..h)
-        .into_par_iter()
-        .map(|y| {
-            let mut local_sum_diff = 0.0;
-            let mut local_sum_orig = 0.0;
-            let mut local_sum_sq_diff = 0.0;
-            let mut local_count = 0.0;
-            for x in 0..w {
-                if mask[[y, x]] > 0 {
-                    let d = diff_img[[y, x]] as f64;
-                    let o = original_img[[y, x]] as f64;
-                    local_sum_diff += d;
-                    local_sum_orig += o;
-                    local_sum_sq_diff += d * d;
-                    local_count += 1.0;
-                }
-            }
-            (local_sum_diff, local_sum_orig, local_sum_sq_diff, local_count)
-        })
-        .reduce(
-            || (0.0, 0.0, 0.0, 0.0),
-            |a, b| (a.0 + b.0, a.1 + b.1, a.2 + b.2, a.3 + b.3)
-        );
+    let mut body_diff_vals: Vec<f64> = Vec::new();
+    let mut body_orig_vals: Vec<f64> = Vec::new();
 
-    if count < 1.0 {
+    for y in 0..h {
+        for x in 0..w {
+            if mask[[y, x]] > 0 {
+                body_diff_vals.push(diff_img[[y, x]] as f64);
+                body_orig_vals.push(original_img[[y, x]] as f64);
+            }
+        }
+    }
+
+    if body_diff_vals.is_empty() {
         return Err("Body-Mask ist leer – keine Körper-Pixel für Statistik gefunden.".to_string());
     }
 
-    let n = count;
+    let (threshold_diff, mu_orig) = if use_mad {
+        let mut sorted_diff = body_diff_vals;
+        sorted_diff.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+        let len = sorted_diff.len();
+        let median_diff = if len % 2 == 0 {
+            (sorted_diff[len / 2 - 1] + sorted_diff[len / 2]) / 2.0
+        } else {
+            sorted_diff[len / 2]
+        };
 
-    // Mittelwerte µ für Top-Hat-Differenz und Originalbild
-    let mu_diff = sum_diff / n;
-    let mu_orig = sum_orig / n;
+        let mut abs_devs: Vec<f64> = sorted_diff.iter().map(|&x| (x - median_diff).abs()).collect();
+        abs_devs.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+        let mad = if len % 2 == 0 {
+            (abs_devs[len / 2 - 1] + abs_devs[len / 2]) / 2.0
+        } else {
+            abs_devs[len / 2]
+        };
 
-    // Standardabweichung σ für Top-Hat-Differenz: Var(X) = E[X^2] - (E[X])^2
-    let variance_diff = (sum_sq_diff / n) - mu_diff.powi(2);
-    // Float-Rundungsfehler abfangen (Varianz darf nicht negativ sein)
-    let sigma_diff = variance_diff.max(0.0).sqrt();
+        // Standard-Normalverteilungs-Skalierungsfaktor 1.4826
+        let sigma_mad = 1.4826 * mad;
+        let thresh = (median_diff + k * sigma_mad).clamp(0.0, 254.0);
 
-    // Adaptiver relativer Schwellenwert T = µ + k·σ, geklemmt auf [0, 254]
-    let threshold_diff = (mu_diff + k * sigma_diff).clamp(0.0, 254.0);
+        let mut sorted_orig = body_orig_vals;
+        sorted_orig.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+        let med_orig = if len % 2 == 0 {
+            (sorted_orig[len / 2 - 1] + sorted_orig[len / 2]) / 2.0
+        } else {
+            sorted_orig[len / 2]
+        };
+
+        (thresh, med_orig)
+    } else {
+        let n = body_diff_vals.len() as f64;
+        let sum_diff: f64 = body_diff_vals.iter().sum();
+        let sum_orig: f64 = body_orig_vals.iter().sum();
+        let sum_sq_diff: f64 = body_diff_vals.iter().map(|&d| d * d).sum();
+
+        let mu_diff = sum_diff / n;
+        let mu_orig = sum_orig / n;
+        let variance_diff = (sum_sq_diff / n) - mu_diff.powi(2);
+        let sigma_diff = variance_diff.max(0.0).sqrt();
+
+        let thresh = (mu_diff + k * sigma_diff).clamp(0.0, 254.0);
+        (thresh, mu_orig)
+    };
 
     let mut binary = Array2::<u8>::zeros((h, w));
     
@@ -1036,7 +1055,7 @@ fn normalize_minmax(img: &ImageMatrix) -> ImageMatrix {
 /// - Leerem Bild oder leerer Body-Mask
 /// - Internen Berechnungsfehlern (werden mit Kontext weitergereicht)
 #[pyfunction]
-#[pyo3(name = "process_thermal_pipeline")]
+#[pyo3(name = "process_thermal_pipeline", signature = (gray_array, sigma_k, tophat_factor, min_area_factor, min_circularity, otsu_min, otsu_max, dist_erosion_factor, use_mad=None))]
 fn process_thermal_pipeline<'py>(
     py: Python<'py>,
     gray_array: PyReadonlyArray2<u8>,
@@ -1047,7 +1066,9 @@ fn process_thermal_pipeline<'py>(
     otsu_min: u8,
     otsu_max: u8,
     dist_erosion_factor: f64,
+    use_mad: Option<bool>,
 ) -> PyResult<(Py<PyArray2<u8>>, Py<PyArray2<u8>>)> {
+    let use_mad_flag = use_mad.unwrap_or(false);
     // ── Schritt 0: Eingabe-Validierung ─────────────────────────────────────
     let array = gray_array.as_array();
     let shape = array.shape();
@@ -1107,8 +1128,8 @@ fn process_thermal_pipeline<'py>(
             let diff_img = calculate_tophat_difference(&img, &mask, kernel_large)
                 .map_err(|e| format!("TopHat Fehler: {}", e))?;
 
-            // ── Feature D: Statistischer Schwellenwert µ + k·σ ───────────
-            let binary_raw = threshold_statistical(&img, &diff_img, &mask, sigma_k)
+            // ── Feature D: Statistischer Schwellenwert µ + k·σ / Robust MAD ───
+            let binary_raw = threshold_statistical(&img, &diff_img, &mask, sigma_k, use_mad_flag)
                 .map_err(|e| format!("Schwellenwert Fehler: {}", e))?;
 
             let raw_hotspot_count = binary_raw.iter().filter(|&&px| px > 0).count();
