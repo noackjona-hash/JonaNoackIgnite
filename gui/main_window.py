@@ -1961,10 +1961,22 @@ class IgniteApp:
     def on_pipeline_failed(self, error):
         self.hide_loading_overlay()
         self._pipeline_running = False
-        self.status_label.configure(text="Status: Fehler!", text_color="#EF4444")
-        self.backend_label.configure(text="Backend: Fehler", text_color="#EF4444")
-        self.hotspot_label.configure(text="Hotspots: Fehler", text_color="#EF4444")
-        messagebox.showerror("Fehler", f"Pipeline-Fehler:\n{error}")
+        self.status_label.configure(text="Status: Hinweis", text_color="#EF4444")
+        self.backend_label.configure(text="Backend: Aktiv", text_color="#3B82F6")
+        self.hotspot_label.configure(text="Hotspots: 0 px", text_color="#9CA3AF")
+        
+        err_msg = str(error)
+        if "Body-Mask ist leer" in err_msg or "kein Körper im Bild" in err_msg:
+            messagebox.showwarning(
+                "Kein Gewebe erkannt",
+                "Das Wärmebild enthält keine verwertbaren Körperkonturen.\n\n"
+                "Mögliche Ursachen:\n"
+                "• Die Aufnahme zeigt nur den kühlen Hintergrund.\n"
+                "• Die Otsu-Schwellenwerte sind zu restriktiv eingestellt.\n\n"
+                "Empfehlung: Passe den Kameraabstand an oder reduziere den minimalen Otsu-Schwellenwert."
+            )
+        else:
+            messagebox.showerror("Analyse-Fehler", f"Fehler bei der Wärmebildverarbeitung:\n{err_msg}")
 
     def update_backend_label(self) -> None:
         """Fragt das aktive Backend ab und formatiert die Labelanzeige in der GUI."""

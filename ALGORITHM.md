@@ -16,7 +16,7 @@ In der medizinischen Thermografie treten häufig Artefakte durch Sensorrauschen,
 | **Lokaler Datenschutz (DSGVO)** | Inhärent | Inhärent | Oft Cloud-Zwang | 🟢 **100 % Lokal / Anonymized** |
 | **Lokale Hotspot-Isolierung** | Mäßig | ❌ Schlecht | Gut | 🟢 **Exzellent (Top-Hat)** |
 | **Laufzeit auf Consumer-Hardware** | Manuell | < 10 ms | > 500 ms (GPU nötig) | 🟢 **< 30 ms (Rust CPU / CUDA)** |
-| **Empirische Sensitivität / Spezifität** | N/A | ~70 % / ~85 % | ~95 % / ~95 % | 🟢 **100 % / 100 % (Benchmark)** |
+| **Empirische Sensitivität / Spezifität** | N/A | ~70 % / ~85 % | ~95 % / ~95 % | 🟢 **1.00 / 1.00 (Synthetischer Benchmark)** |
 
 ---
 
@@ -85,10 +85,25 @@ $$T_{\text{obj}} = \left( \frac{T_{\text{meas}}^4 - (1 - \epsilon) \cdot T_{\tex
 
 Im automatisierten klinischen Evaluierungs-Benchmark (`dataset_evaluator.py`) wurden sowohl synthetische Szenarien unter realistischen Rauschbedingungen (Gaußsches Sensorrauschen $\sigma = 2.5$, Gewebeunschärfe) als auch ein Realdatensatz von 21 klinisch-thermodynamischen Aufnahmen (`test-data/`) evaluiert:
 
-* **Synthetischer Rausch-Benchmark:** Sensitivität = $1.00$, Spezifität = $1.00$, Dice-Koeffizient = $0.88$–$0.91$, IoU = $0.78$–$0.83$.
+* **Synthetischer Rausch-Benchmark:** Sensitivität = $1.00$, Spezifität = $1.00$, Dice-Koeffizient = $0.88$–$0.91$, IoU = $0.78$–$0.83$ unter kontrolliertem Rauschen.
 * **Realer Testbild-Benchmark (`test-data/`):** 100 % Verarbeitungsrate über 21 Bilder (Auflösung bis zu $1440 \times 1080$), mit isolierter Hotspot-Abdeckung zwischen $0.08\%$ und $1.02\%$ der Körperoberfläche.
 
 Die Parameter-Sensitivitätsanalyse bestätigt, dass $k = 3.0$ den optimalen Kompromiss zwischen der Erkennung feiner Hotspots und der Rauschunterdrückung darstellt.
+
+---
+
+## 🔍 Kritische Würdigung & Grenzen des Verfahrens (Limitations & Future Work)
+
+Wissenschaftliche Transparenz ist eine Grundvoraussetzung für die medizinische Datenverarbeitung. Folgende mathematische und physikalische Einschränkungen wurden im Rahmen des Projekts identifiziert:
+
+1. **Variabilität der Haut-Emissivität ($\epsilon$):**
+   * Das physikalische Modell setzt einen konstanten Emissivitätswert von $\epsilon = 0.98$ voraus. In der klinischen Realität kann die Emissivität durch Hautfeuchtigkeit (Schweißbildung), topische Salben/Cremes sowie den Betrachtungswinkel der Infrarotkamera (Lambert’sches Kosinusgesetz) leicht schwanken.
+2. **Statistische Verteilungsannahmen ($\mu + k \cdot \sigma$):**
+   * Die mathematische Hotspot-Schwelle setzt streng genommen eine näherungsweise Gauß-Verteilung der Differenzwerte voraus. Bei komplexen anatomischen Aufnahmen mit stark kalten Peripherien kann die Temperaturverteilung bimodal sein. Als zukünftiges Feature ist ein **MAD-basierter (Median Absolute Deviation)** invarianter Schwellenwert geplant.
+3. **Erfordernis einer klinischen Facharzt-Ground-Truth:**
+   * Der synthetische Benchmark belegt die mathematische Korrektheit des Algorithmus. Eine umfassende medizinische Validierung der 21 Realbilder erfordert jedoch manuell gezeichnete Ground-Truth-Masken durch qualifizierte Dermatologen/Radiologen (Goldstandard), was Gegenstand zukünftiger klinischer Kooperationen ist.
+4. **Kontralaterale Asymmetrieanalyse:**
+   * Bei podologischen Untersuchungen (diabetischer Fuß) gilt die Temperaturdifferenz zum kontralateralen (gegenüberliegenden) Fuß als wichtiger diagnostischer Indikator. Eine automatisierte Asymmetrie-Abgleichsfunktion zwischen linkem und rechtem Fuß ist als nächste Ausbaustufe vorgesehen.
 
 ---
 
@@ -97,3 +112,4 @@ Die Parameter-Sensitivitätsanalyse bestätigt, dass $k = 3.0$ den optimalen Kom
 > [!NOTE]
 > **Forschungs-Prototyp Disclaimer (EU-MDR & DSGVO):**
 > IGNITE wurde ausschließlich zu wissenschaftlichen Forschungszwecken im Rahmen von **Jugend forscht 2026** entwickelt. Das System stellt **kein zertifiziertes Medizinprodukt** gemäß der EU-Medizinprodukte-Verordnung (MDR 2017/745) dar und ersetzt keinesfalls die eigenständige Diagnose durch qualifiziertes medizinisches Fachpersonal. Alle Bild- und Patientendaten werden ausschließlich lokal im Arbeitsspeicher verarbeitet und mittels SHA-256 pseudonymisiert.
+
