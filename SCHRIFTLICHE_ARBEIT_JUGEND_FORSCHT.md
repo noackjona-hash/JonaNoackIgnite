@@ -46,9 +46,10 @@ In Tests mit simulierten Entzündungsszenarien erzielte die Pipeline unter verei
    - 5.6 Auswertung synthetischer Krankheits-Szenarien
 6. [Ergebnisse](#6-ergebnisse)
    - 6.1 Laufzeitmessungen und Rechenzeiten
-   - 6.2 Quantitativer Benchmark auf synthetischen Entzündungsszenarien
-   - 6.3 Auswertung auf 21 realen klinischen Testbildern
-   - 6.4 Mathematische Backend-Paritätstests
+   - 6.2 Parameter-Sensitivitätsanalyse des Schwellenwert-Faktors k
+   - 6.3 Quantitativer Benchmark auf synthetischen Entzündungsszenarien
+   - 6.4 Auswertung auf 21 realen klinischen Testbildern
+   - 6.5 Mathematische Backend-Paritätstests
 7. [Ergebnisdiskussion und Kritische Würdigung](#7-ergebnisdiskussion-und-kritische-würdigung)
    - 7.1 Einordnung der Ergebnisse bezüglich der Arbeitserleichterung
    - 7.2 Überprüfung der Hypothesen und Bedeutung von Robust-MAD
@@ -105,6 +106,11 @@ In der Podiatrie gilt der Seitenvergleich zwischen linker und rechter Fußsohle 
 
 IGNITE berechnet diese Differenz automatisch und zeigt sie auf dem Bildschirm an.
 
+![Skizze 4: Kontralaterale Asymmetrie-Analyse](images/skizze_asymmetrie_analyse.png)  
+*Abbildung 1 (Skizze 4): Prinzip der kontralateralen Asymmetrie-Analyse in der Podiatrie. Das Bild wird an der Bildmitte getrennt, um die mittleren Oberflächentemperaturen beider Fußsohlen zu vergleichen. Bei einer Abweichung von $\Delta T > 2{,}2\,^\circ\text{C}$ erscheint ein Warnhinweis.*
+
+---
+
 ## 3.2 Physikalische Radiometrie und Strahlungsmodell
 Um von den digitalen Werten der Kamera auf die Hautoberflächentemperatur $T_{\text{obj}}$ zu schließen, nutzt das Programm das Stefan-Boltzmann-Gesetz unter Berücksichtigung des Emissivitätsgrads menschlicher Haut ($\epsilon \approx 0{,}98$) und der Raumtemperatur $T_{\text{refl}}$:
 
@@ -121,7 +127,7 @@ Um die Vor- und Nachteile der verschiedenen Verfahren sachlich gegenüberzustell
 | **Manuelle Sichtprüfung (Arzt/Podologe)** | • Erkennt den klinischen Gesamtzusammenhang<br>• Kann Narben, Druckstellen & Wunden unterscheiden<br>• Benötigt keine Zusatzsoftware | • Zeitaufwendig (3–5 Minuten pro Bild)<br>• Subjektiv und abhängig von Erfahrung/Tagesform<br>• Keine automatische Dokumentation |
 | **Einfache Schwellenwert-Filter (Otsu)** | • Sehr schnell (< 10 ms)<br>• Einfach zu programmieren | • Versagt bei normalen Körper-Temperaturverläufen<br>• Sehr viele Falsch-Positive an kalten Rändern |
 | **Deep-Learning KI (z. B. U-Net)** | • Kann komplexe Formen und Bildmuster erkennen<br>• Hohe Genauigkeit bei gutem Training | • "Black-Box": Entscheidungen nicht mathematisch erklärbar<br>• Oft Cloud-Zwang (DSGVO-Problem im Krankenhaus)<br>• Benötigt leistungsfähige GPUs |
-| **Mein Ansatz (IGNITE)** | • Schnelle Berechnung (< 30 ms auf normaler CPU)<br>• 100 % lokal & DSGVO-konform (kein Cloud-Upload)<br>• Mathematisch nachvollziehbare Parameter | • Kann **nicht** zwischen Entzündung & Druckstelle unterscheiden<br>• Feste Schwellenwerte passen nicht auf jeden Hauttyp<br>• Kein zertifiziertes Medizinprodukt |
+| **Mein Ansatz (IGNITE)** | • Schnelle Berechnung (< 30 ms auf normaler CPU)<br>• 100 % lokal & DSGVO-konform (kein Cloud-Upload)<br>• Mathematisch nachvollziehbar | • Kann **nicht** zwischen Entzündung & Druckstelle unterscheiden<br>• Feste Schwellenwerte passen nicht auf jeden Hauttyp<br>• Kein zertifiziertes Medizinprodukt |
 
 ---
 
@@ -151,7 +157,7 @@ $$\text{TopHat}(I) = I - \text{Opening}(I) = I - ((I \ominus K) \oplus K)$$
 Im Rust-Kern wird die 2D-Operation in zwei 1D-Durchläufe (horizontal und vertikal) nach Lemire zerlegt, was die Komplexität pro Pixel auf $O(K)$ senkt.
 
 ![Skizze 1: Prinzip der morphologischen Top-Hat-Transformation](images/skizze_tophat_prinzip.png)  
-*Abbildung 1 (Skizze 1): Das Prinzip der morphologischen Top-Hat-Transformation im 1D-Temperaturprofil. Das morphologische Opening glättet großflächige Verläufe. Die Differenz isoliert scharfe lokale Hitzespitzen oberhalb des Schwellenwerts.*
+*Abbildung 2 (Skizze 1): Das Prinzip der morphologischen Top-Hat-Transformation im 1D-Temperaturprofil. Das morphologische Opening glättet großflächige Verläufe. Die Differenz isoliert scharfe lokale Hitzespitzen oberhalb des Schwellenwerts.*
 
 ---
 
@@ -165,7 +171,7 @@ $$\text{MAD} = \text{median}(|X - \tilde{\mu}|), \quad \hat{\sigma}_{\text{MAD}}
 $$\text{Schwellenwert}_{\text{MAD}} = \tilde{\mu} + 3 \cdot \hat{\sigma}_{\text{MAD}}$$
 
 ![Skizze 2: Gauß vs. Robust-MAD bei bimodaler Verteilung](images/skizze_gauss_vs_mad.png)  
-*Abbildung 2 (Skizze 2): Vergleichende Skizze der statistischen Schwellenwerte bei einer bimodalen Gewebeverteilung (kalte Zehen). Der Gauß-Mittelwert verschiebt sich nach links und verzerrt die Schwelle, während das Median/MAD-Verfahren stabil bleibt.*
+*Abbildung 3 (Skizze 2): Vergleichende Skizze der statistischen Schwellenwerte bei einer bimodalen Gewebeverteilung (kalte Zehen). Der Gauß-Mittelwert verschiebt sich nach links und verzerrt die Schwelle, während das Median/MAD-Verfahren stabil bleibt.*
 
 ---
 
@@ -180,16 +186,17 @@ Isolierte Pixelgruppen werden mittels Connected-Components-Analyse gruppiert. Pi
 Der gedachte Ablauf im Behandlungszimmer gliedert sich wie folgt:
 
 ![Skizze 3: Integration in den Praxis-Workflow](images/skizze_praxis_workflow.png)  
-*Abbildung 3 (Skizze 3): Schema der Integration von IGNITE in den täglichen Praxisablauf im Behandlungszimmer.*
+*Abbildung 4 (Skizze 3): Schema der Integration von IGNITE in den täglichen Praxisablauf im Behandlungszimmer.*
 
 Die Software dient dabei als Werkzeug für Schritt 3. Die eigentliche Diagnose in Schritt 4 bleibt immer beim Fachpersonal.
 
-## 4.2 Software-Architektur
-Die Software ist modular aufgebaut:
-* **Oberfläche (Python & CustomTkinter):** Darstellung der Bilder und Einstellungen.
-* **Kern (Rust `ignite_core`):** Schnell arbeitende Bildverarbeitung via PyO3 und NumPy-C-ABI (Zero-Copy).
-* **Optionale GPU-Beschleunigung (PyTorch CUDA):** Auslagerung auf NVIDIA-Grafikkarten, falls vorhanden.
-* **Python-Fallback:** Sicherheitsoption, falls kein Rust-Modul kompiliert ist.
+## 4.2 Software-Architektur und Speicherverwaltung
+Die Software ist modular aufgebaut. Um maximale Geschwindigkeit zu erreichen und Speicherzugriffe zu minimieren, werden die Bilddaten über die C-ABI ohne Kopiervorgänge (Zero-Copy) direkt aus dem Python-Speicher in den Rust-Core übergeben:
+
+![Skizze 5: Rust FFI & Speicherarchitektur](images/skizze_rust_ffi_architektur.png)  
+*Abbildung 5 (Skizze 5): Speicherarchitektur und FFI-Anbindung zwischen Python (NumPy) und dem Rust-Core (`ignite_core`). Die Bilddaten werden ohne Kopieren via Zeiger übergeben und in Rust mit Rayon auf CPU-Kerne verteilt.*
+
+---
 
 ## 4.3 Schritt-für-Schritt Implementierung in Rust
 1. **Python-Prototyp:** Erste Tests zeigten, dass OpenCV in Python bei großen Bildern 80 bis 210 ms benötigte.
@@ -214,37 +221,37 @@ Die folgenden Abbildungen zeigen die Zwischenschritte der Pipeline an einem echt
 
 ### 5.1 Ausgangsmaterial (Original-Thermogramm)
 ![Originales Wärmebild in Grauwert und Jet-Colormap](images/1_original_thermal_jet.png)  
-*Abbildung 4: Originales thermografisches Wärmebild in Jet-Colormap.*
+*Abbildung 6: Originales thermografisches Wärmebild in Jet-Colormap.*
 
 ---
 
 ### 5.2 Körpermaskierung und Distanzkarte (Stufe 2)
 ![Körpermaske und Chamfer-L2 Distanzkarte](images/2_distance_transform.png)  
-*Abbildung 5: Chamfer-L2 Distanzkarte zur Abtrennung unscharfer Ränder.*
+*Abbildung 7: Chamfer-L2 Distanzkarte zur Abtrennung unscharfer Ränder.*
 
 ---
 
 ### 5.3 Hintergrundkorrektur via Top-Hat-Transformation (Stufe 3)
 ![Top-Hat Differenzbild](images/3_tophat_difference.png)  
-*Abbildung 6: Ergebnis der Top-Hat-Transformation (isoliert lokale Temperaturunterschiede).*
+*Abbildung 8: Ergebnis der Top-Hat-Transformation (isoliert lokale Temperaturunterschiede).*
 
 ---
 
 ### 5.4 Statistisches Thresholding und Hotspot-Maske (Stufe 4 & 5)
 ![Binäre Hotspot-Maske](images/4_hotspot_mask.png)  
-*Abbildung 7: Binäre Hotspot-Maske nach Schwellenwertentscheidung und Rauschfilterung.*
+*Abbildung 9: Binäre Hotspot-Maske nach Schwellenwertentscheidung und Rauschfilterung.*
 
 ---
 
 ### 5.5 Finales diagnostisches Overlay
 ![Finales Hotspot Overlay](images/5_final_overlay_jet.png)  
-*Abbildung 8: Visuelle Orientierungshilfe mit roter Hotspot-Markierung.*
+*Abbildung 10: Visuelle Orientierungshilfe mit roter Hotspot-Markierung.*
 
 ---
 
 ### 5.6 Auswertung synthetischer Szenarien
 ![Synthetisches Szenario Diabetischer Fuß](images/synthetic_diabetic_ulcer.png)  
-*Abbildung 9: Auswertung eines simulierten diabetischen Fußgeschwürs.*
+*Abbildung 11: Auswertung eines simulierten diabetischen Fußgeschwürs.*
 
 ---
 
@@ -260,11 +267,19 @@ Gemessen über 100 Durchläufe auf einem Mittelklasse-PC:
 | **Python Fallback (CPU)** | 78,4 ms | 210,6 ms | ~85 MB RAM |
 
 ![Diagramm 1: Rechenzeiten im Vergleich](images/diagramm_rechenzeiten_vergleich.png)  
-*Abbildung 10 (Diagramm 1): Vergleichendes Balkendiagramm der Ausführungszeiten aller drei Backends bei unterschiedlichen Bildauflösungen.*
+*Abbildung 12 (Diagramm 1): Vergleichendes Balkendiagramm der Ausführungszeiten aller drei Backends bei unterschiedlichen Bildauflösungen.*
 
 *Ergebnis:* Der Rust-Core verarbeitet Bilder auf der CPU in unter 30 ms und ist deutlich schneller als der Python-Code.
 
-## 6.2 Quantitativer Benchmark auf synthetischen Entzündungsszenarien
+## 6.2 Parameter-Sensitivitätsanalyse des Schwellenwert-Faktors k
+Um zu untersuchen, wie stabil der Schwellenwert-Faktor $k$ auf das Filterergebnis reagiert, habe ich eine Sensitivitätsanalyse durchgeführt:
+
+![Diagramm 2: Parameter-Sensitivitätsanalyse](images/diagramm_parameter_sensitivitaet.png)  
+*Abbildung 13 (Diagramm 2): Sensitivitätsanalyse des Faktors $k$. Der Bereich $k \in [2{,}5, 3{,}5]$ bietet die beste Balance zwischen Erkennungsquote (Sensitivität) und Fehlalarm-Vermeidung (Spezifität).*
+
+---
+
+## 6.3 Quantitativer Benchmark auf synthetischen Entzündungsszenarien
 Testergebnisse aus [dataset_evaluator.py](file:///d:/Downloads/JonaNoackIgnite/dataset_evaluator.py) mit simuliertem Rauschen ($\sigma = 2{,}5$):
 
 | Krankheits-Szenario | Sensitivität | Spezifität | Precision | Recall | Dice-Koeffizient | IoU |
@@ -277,10 +292,15 @@ Testergebnisse aus [dataset_evaluator.py](file:///d:/Downloads/JonaNoackIgnite/d
 
 *Ergebnis:* Auf den synthetischen Testbildern wurden die simulierten Entzündungsareale verlässlich gefunden.
 
-## 6.3 Auswertung auf 21 realen klinischen Testbildern
-Bei 21 echten Testbildern (`test-data/`) wurden auffällige Stellen abgegrenzt. Die markierten Flächen machten zwischen 0,08 % und 1,02 % der Körperfläche aus.
+## 6.4 Auswertung auf 21 realen klinischen Testbildern
+Bei 21 echten Testbildern (`test-data/`) wurden auffällige Stellen abgegrenzt. Die markierten Flächen machten zwischen 0,08 % und 1,02 % der Körperfläche aus (Durchschnitt 0,38 %):
 
-## 6.4 Mathematische Backend-Paritätstests
+![Diagramm 3: Hotspot-Flächenabdeckung Realdaten](images/diagramm_realdaten_flachenabdeckung.png)  
+*Abbildung 14 (Diagramm 3): Übersicht der isolierten Hotspot-Flächenabdeckung (in % der Körperoberfläche) über alle 21 realen Testbilder (`test-data/`).*
+
+---
+
+## 6.5 Mathematische Backend-Paritätstests
 Über `pytest` ([tests/test_parity.py](file:///d:/Downloads/JonaNoackIgnite/tests/test_parity.py)) wurde nachgewiesen, dass Python, Rust und PyTorch auf demselben Bild identische Masken erzeugen (11/11 Tests bestanden).
 
 ---
