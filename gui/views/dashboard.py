@@ -4,10 +4,13 @@
 import customtkinter as ctk
 from gui.theme import (
     COLOR_BG_CARD,
+    COLOR_BG_CARD_HOVER,
     COLOR_BORDER_CARD,
     COLOR_TEXT_PRIMARY,
+    COLOR_TEXT_SECONDARY,
     COLOR_TEXT_MUTED,
     COLOR_BG_MAIN,
+    COLOR_PRIMARY_ACCENT,
     FONT_FAMILY
 )
 
@@ -41,30 +44,30 @@ class DashboardView:
             panel_frame = ctk.CTkFrame(
                 grid_frame,
                 fg_color=COLOR_BG_CARD,
-                corner_radius=12,
+                corner_radius=14,
                 border_width=1,
                 border_color=COLOR_BORDER_CARD
             )
-            panel_frame.grid(row=row, column=col, padx=10, pady=10, sticky="nsew")
+            panel_frame.grid(row=row, column=col, padx=8, pady=8, sticky="nsew")
 
             title = ctk.CTkLabel(
                 panel_frame,
                 text=name,
-                font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"),
+                font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
                 text_color=COLOR_TEXT_PRIMARY,
                 anchor="w"
             )
-            title.pack(fill=ctk.X, padx=15, pady=(12, 4))
+            title.pack(fill=ctk.X, padx=14, pady=(10, 6))
 
             lbl = ctk.CTkLabel(
                 panel_frame,
-                text="\n🌡️\n\nBEREIT FÜR ANALYSE\n\nBitte laden Sie ein Wärmebild über die Seitenleiste.\n",
-                font=ctk.CTkFont(family=FONT_FAMILY, size=12),
+                text="\n🔬\n\nBEREIT FÜR ANALYSE\n\nBitte laden Sie ein Wärmebild über die Seitenleiste.\n",
+                font=ctk.CTkFont(family=FONT_FAMILY, size=11),
                 text_color=COLOR_TEXT_MUTED,
                 fg_color=COLOR_BG_MAIN,
-                corner_radius=8
+                corner_radius=10
             )
-            lbl.pack(fill=ctk.BOTH, expand=True, padx=15, pady=(0, 15))
+            lbl.pack(fill=ctk.BOTH, expand=True, padx=12, pady=(0, 12))
             self.panels[name] = lbl
 
             # Event Bindings
@@ -86,30 +89,30 @@ class DashboardView:
             panel_frame = ctk.CTkFrame(
                 tabview.tab(tab_name),
                 fg_color=COLOR_BG_CARD,
-                corner_radius=12,
+                corner_radius=14,
                 border_width=1,
                 border_color=COLOR_BORDER_CARD
             )
-            panel_frame.pack(fill=ctk.BOTH, expand=True, padx=5, pady=5)
+            panel_frame.pack(fill=ctk.BOTH, expand=True, padx=6, pady=6)
 
             title = ctk.CTkLabel(
                 panel_frame,
                 text=step_name,
-                font=ctk.CTkFont(family=FONT_FAMILY, size=15, weight="bold"),
+                font=ctk.CTkFont(family=FONT_FAMILY, size=14, weight="bold"),
                 text_color=COLOR_TEXT_PRIMARY,
                 anchor="w"
             )
-            title.pack(fill=ctk.X, padx=20, pady=(15, 5))
+            title.pack(fill=ctk.X, padx=18, pady=(14, 6))
 
             lbl = ctk.CTkLabel(
                 panel_frame,
-                text="\n\n🌡️\n\nNoch kein Wärmebild geladen.\n\nBitte laden Sie eine Bilddatei über die linke Seitenleiste.\n",
-                font=ctk.CTkFont(family=FONT_FAMILY, size=13),
+                text="\n\n🔬\n\nNoch kein Wärmebild geladen.\n\nBitte laden Sie eine Bilddatei über die Seitenleiste.\n",
+                font=ctk.CTkFont(family=FONT_FAMILY, size=12),
                 text_color=COLOR_TEXT_MUTED,
                 fg_color=COLOR_BG_MAIN,
-                corner_radius=8
+                corner_radius=10
             )
-            lbl.pack(fill=ctk.BOTH, expand=True, padx=20, pady=(0, 20))
+            lbl.pack(fill=ctk.BOTH, expand=True, padx=18, pady=(0, 18))
             self.panels_full[step_name] = lbl
 
             # Event Bindings

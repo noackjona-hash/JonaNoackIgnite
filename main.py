@@ -18,52 +18,60 @@ def _get_resource_path(relative_path: str) -> str:
 
 
 def create_instant_splash():
-    """Erstellt einen schlanken Splash-Screen mit tkinter (kein customtkinter nötig)."""
+    """Erstellt einen schlanken, hochmodernen Splash-Screen mit tkinter."""
     splash = tk.Tk()
     splash.title("IGNITE")
     splash.overrideredirect(True)
-    splash.configure(bg="#030712") # Neue Hintergrundfarbe Gray-950
+    splash.configure(bg="#07090E") # Cyber Obsidian Background
     splash.resizable(False, False)
 
-    W, H = 480, 300
+    W, H = 520, 320
     sw = splash.winfo_screenwidth()
     sh = splash.winfo_screenheight()
     x = (sw - W) // 2
     y = (sh - H) // 2
     splash.geometry(f"{W}x{H}+{x}+{y}")
 
+    # Subtile leuchtende Umrandung (Cyber Glow Border Frame)
+    border_frame = tk.Frame(splash, bg="#1E2638", bd=1)
+    border_frame.place(x=0, y=0, width=W, height=H)
+
+    inner_bg = tk.Frame(border_frame, bg="#07090E")
+    inner_bg.place(x=1, y=1, width=W-2, height=H-2)
+
     # Logo
     logo_path = _get_resource_path(os.path.join("icon", "LogoRund.png"))
     logo_img_ref = None
     try:
         from PIL import Image, ImageTk
-        img = Image.open(logo_path).resize((64, 64), Image.LANCZOS)
+        img = Image.open(logo_path).resize((72, 72), Image.LANCZOS)
         logo_img_ref = ImageTk.PhotoImage(img)
-        tk.Label(splash, image=logo_img_ref, bg="#030712").pack(pady=(36, 6))
+        tk.Label(inner_bg, image=logo_img_ref, bg="#07090E").pack(pady=(32, 8))
     except Exception as e:
         logging.debug(f"Fehler beim Laden des Splash-Logos: {e}")
-        tk.Label(splash, text="", bg="#030712", height=3).pack()
+        tk.Label(inner_bg, text="", bg="#07090E", height=3).pack()
 
-    # Font stack: Segoe UI
-    tk.Label(splash, text="IGNITE",
-             font=("Segoe UI", 30, "bold"), fg="#F8FAFC", bg="#030712").pack(pady=(0, 3))
-    tk.Label(splash, text="Medical Imaging Suite  ·  Jugend forscht 2026",
-             font=("Segoe UI", 11), fg="#94A3B8", bg="#030712").pack()
+    # Brand Title Stack
+    tk.Label(inner_bg, text="IGNITE",
+             font=("Segoe UI", 32, "bold"), fg="#F8FAFC", bg="#07090E").pack(pady=(0, 2))
+    tk.Label(inner_bg, text="Medical Imaging Suite  ·  Jugend forscht 2026",
+             font=("Segoe UI", 10, "bold"), fg="#818CF8", bg="#07090E").pack()
 
-    tk.Frame(splash, bg="#1E293B", height=1).pack(fill=tk.X, padx=40, pady=14)
+    # Trennlinie
+    tk.Frame(inner_bg, bg="#1E2638", height=1).pack(fill=tk.X, padx=50, pady=16)
 
-    status_var = tk.StringVar(value="Lade Module...")
-    tk.Label(splash, textvariable=status_var,
-             font=("Segoe UI", 11), fg="#475569", bg="#030712").pack()
+    status_var = tk.StringVar(value="Initialisiere High-Performance Engine...")
+    tk.Label(inner_bg, textvariable=status_var,
+             font=("Segoe UI", 10), fg="#94A3B8", bg="#07090E").pack(pady=(0, 10))
 
-    tk.Label(splash, text="© 2026 Jona Noack  ·  Jugend forscht",
-             font=("Segoe UI", 9), fg="#1E293B", bg="#030712").pack(pady=(10, 6))
-
-    # Fortschrittsbalken (simuliert via Canvas)
-    pbar_canvas = tk.Canvas(splash, width=360, height=3, bg="#0B0F19",
+    # Fortschrittsbalken (Canvas Glow Indicator)
+    pbar_canvas = tk.Canvas(inner_bg, width=380, height=4, bg="#0F1420",
                              highlightthickness=0, bd=0)
     pbar_canvas.pack()
-    bar = pbar_canvas.create_rectangle(0, 0, 0, 3, fill="#6366F1", outline="") # Neue Akzentfarbe Indigo
+    bar = pbar_canvas.create_rectangle(0, 0, 0, 4, fill="#6366F1", outline="")
+
+    tk.Label(inner_bg, text="© 2026 Jona Noack  ·  Fachgebiet Arbeitswelt",
+             font=("Segoe UI", 8), fg="#475569", bg="#07090E").pack(pady=(12, 4))
 
     # Referenzen sichern damit GC sie nicht löscht
     splash._logo_ref = logo_img_ref
@@ -77,8 +85,8 @@ def create_instant_splash():
 def update_splash(splash, progress: float, message: str):
     """Aktualisiert Fortschrittsbalken und Status-Label im Splash."""
     try:
-        width = int(360 * progress)
-        splash._pbar_canvas.coords(splash._pbar_bar, 0, 0, width, 3)
+        width = int(380 * progress)
+        splash._pbar_canvas.coords(splash._pbar_bar, 0, 0, width, 4)
         splash._status_var.set(message)
         splash.update()
     except Exception as e:

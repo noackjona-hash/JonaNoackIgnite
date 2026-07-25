@@ -1,0 +1,72 @@
+name: Multi-OS CI Build (Windows & Linux)
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install Linux System Dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-tk libgl1-mesa-glx libglib2.0-0 build-essential
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller maturin
+
+      - name: Build Rust Core
+        run: |
+          maturin build --release --strip
+          pip install target/wheels/*.whl
+
+      - name: Package Application (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          pyinstaller --noconfirm Ignite.spec
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" ignite_installer.iss
+
+      - name: Package Application (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          pyinstaller --noconfirm --onedir --name IGNITE-Linux --add-data "icon:icon" main.py
+          cd dist
+          tar -czvf ../IGNITE_Linux_x86_64.tar.gz IGNITE-Linux
+
+      - name: Upload Windows Artifact
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: IGNITE_Setup_Windows
+          path: IGNITE_Setup_*.exe
+
+      - name: Upload Linux Artifact
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: IGNITE_Package_Linux
+          path: IGNITE_Linux_x86_64.tar.gz

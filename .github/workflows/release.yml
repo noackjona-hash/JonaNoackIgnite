@@ -1,49 +1,121 @@
-name: Build and Release Installer
+name: Multi-OS Build and Release (Windows & Linux)
 
 on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 jobs:
-  build-release:
+  build-windows:
+    name: Build Windows Setup (.exe)
     runs-on: windows-latest
-    permissions:
-      contents: write
-
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python 3.10
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
-      - name: Install dependencies
+      - name: Install Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pyinstaller maturin
-          
-      - name: Build Rust Core
+
+      - name: Build Rust Core Wheel
         run: |
           maturin build --release --strip
           $wheel = Get-ChildItem target/wheels -Filter "*.whl" | Select-Object -First 1
           pip install $wheel.FullName
-          
+
       - name: Build PyInstaller Executable
         run: pyinstaller --noconfirm Ignite.spec
-        
+
       - name: Build Inno Setup Installer
         run: |
-          # ISCC is pre-installed on windows-latest GitHub runners
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" ignite_installer.iss
-          
-      - name: Create GitHub Release
+
+      - name: Upload Windows Setup Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: IGNITE_Windows_Setup
+          path: IGNITE_Setup_*.exe
+
+  build-linux:
+    name: Build Linux Package (.tar.gz)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-tk libgl1-mesa-glx libglib2.0-0 build-essential
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller maturin
+
+      - name: Build Rust Core
+        run: |
+          maturin build --release --strip
+          pip install target/wheels/*.whl
+
+      - name: Build Linux Standalone Executable Bundle
+        run: |
+          pyinstaller --noconfirm --onedir --name IGNITE-Linux --add-data "icon:icon" main.py
+
+      - name: Create Linux Tarball Archive
+        run: |
+          cd dist
+          tar -czvf ../IGNITE_Linux_x86_64.tar.gz IGNITE-Linux
+
+      - name: Upload Linux Setup Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: IGNITE_Linux_Package
+          path: IGNITE_Linux_x86_64.tar.gz
+
+  create-release:
+    name: Create GitHub Release
+    needs: [build-windows, build-linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download Windows Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: IGNITE_Windows_Setup
+
+      - name: Download Linux Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: IGNITE_Linux_Package
+
+      - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: IGNITE_Setup_*.exe
+          files: |
+            IGNITE_Setup_*.exe
+            IGNITE_Linux_x86_64.tar.gz
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

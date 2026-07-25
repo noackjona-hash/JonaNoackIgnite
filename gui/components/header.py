@@ -10,16 +10,21 @@ from PIL import Image
 from gui.theme import (
     COLOR_BG_CARD,
     COLOR_TEXT_PRIMARY,
+    COLOR_TEXT_SECONDARY,
     COLOR_BORDER_CARD,
     COLOR_DANGER,
-    FONT_FAMILY
+    COLOR_PRIMARY_ACCENT,
+    COLOR_SUCCESS,
+    FONT_FAMILY,
+    BADGE_STYLES
 )
 from utils import get_resource_path
+import image_processing
 
 APP_VERSION = "1.0.0"
 
 class TitleBarComponent:
-    """Erstellt eine benutzerdefinierte Titel-Leiste mit Drag-Funktion, Edge-Snapping und Window-Controls."""
+    """Erstellt eine benutzerdefinierte Titel-Leiste mit Drag-Funktion, Edge-Snapping und Status-Badges."""
 
     def __init__(self, root: ctk.CTk, title_text: str = f"IGNITE Medical Imaging Suite v{APP_VERSION} – Thermografische Analyse") -> None:
         self.root = root
@@ -30,7 +35,7 @@ class TitleBarComponent:
         self._normal_geometry = "1400x900"
         self._is_snapped = False
 
-        self.title_bar = ctk.CTkFrame(self.root, height=40, corner_radius=0, fg_color=COLOR_BG_CARD)
+        self.title_bar = ctk.CTkFrame(self.root, height=44, corner_radius=0, fg_color=COLOR_BG_CARD, border_width=1, border_color=COLOR_BORDER_CARD)
         self.title_bar.grid(row=0, column=0, columnspan=2, sticky="ew")
         self.title_bar.grid_propagate(False)
 
@@ -39,14 +44,14 @@ class TitleBarComponent:
         self._apply_taskbar_fix()
 
     def _build_ui(self) -> None:
-        # App-Logo
+        # App-Logo & Brand
         icon_png_path = get_resource_path(os.path.join("icon", "LogoRund.png"))
         if os.path.exists(icon_png_path):
             try:
                 logo_img = Image.open(icon_png_path)
-                logo_ctk = ctk.CTkImage(light_image=logo_img, dark_image=logo_img, size=(20, 20))
+                logo_ctk = ctk.CTkImage(light_image=logo_img, dark_image=logo_img, size=(22, 22))
                 lbl_icon = ctk.CTkLabel(self.title_bar, image=logo_ctk, text="")
-                lbl_icon.pack(side="left", padx=(15, 8))
+                lbl_icon.pack(side="left", padx=(14, 8))
             except Exception as e:
                 logging.debug(f"Fehler ignoriert: {e}")
 
@@ -58,7 +63,7 @@ class TitleBarComponent:
         )
         self.lbl_title.pack(side="left")
 
-        # Window Controls
+        # Window Control-Buttons (Rechts)
         def hard_exit():
             self.root.destroy()
             sys.exit(0)
@@ -67,7 +72,7 @@ class TitleBarComponent:
             self.title_bar,
             text="✕",
             width=46,
-            height=40,
+            height=44,
             fg_color="transparent",
             hover_color=COLOR_DANGER,
             text_color=COLOR_TEXT_PRIMARY,
@@ -90,7 +95,7 @@ class TitleBarComponent:
             self.title_bar,
             text="🗖",
             width=46,
-            height=40,
+            height=44,
             fg_color="transparent",
             hover_color=COLOR_BORDER_CARD,
             text_color=COLOR_TEXT_PRIMARY,
@@ -106,7 +111,7 @@ class TitleBarComponent:
             self.title_bar,
             text="—",
             width=46,
-            height=40,
+            height=44,
             fg_color="transparent",
             hover_color=COLOR_BORDER_CARD,
             text_color=COLOR_TEXT_PRIMARY,
@@ -114,6 +119,33 @@ class TitleBarComponent:
             command=minimize_window
         )
         self.btn_minimize.pack(side="right")
+
+        # Status Badge Pill (Mitte/Rechts)
+        backend_name = image_processing.get_active_backend()
+        if "GPU" in backend_name:
+            b_style = BADGE_STYLES["GPU"]
+        elif "Rust" in backend_name:
+            b_style = BADGE_STYLES["RUST"]
+        else:
+            b_style = BADGE_STYLES["PYTHON"]
+
+        self.badge_frame = ctk.CTkFrame(
+            self.title_bar,
+            fg_color=b_style["bg"],
+            border_color=b_style["border"],
+            border_width=1,
+            corner_radius=12,
+            height=26
+        )
+        self.badge_frame.pack(side="right", padx=(0, 16), pady=8)
+
+        lbl_badge = ctk.CTkLabel(
+            self.badge_frame,
+            text=b_style["label"],
+            font=(FONT_FAMILY, 10, "bold"),
+            text_color=b_style["fg"]
+        )
+        lbl_badge.pack(padx=10, pady=2)
 
     def _bind_drag_events(self) -> None:
         def get_work_area():
@@ -141,7 +173,7 @@ class TitleBarComponent:
                 self.root.geometry(self._normal_geometry)
                 self.root.update_idletasks()
                 self._offset_x = self.root.winfo_width() // 2
-                self._offset_y = event.y if event.y < 40 else 15
+                self._offset_y = event.y if event.y < 44 else 15
                 self._is_snapped = False
 
             x = self.root.winfo_x() + event.x - self._offset_x
