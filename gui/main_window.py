@@ -55,7 +55,7 @@ from gui.views.dialogs import (
 from utils import pixel_to_celsius, pseudonymize_patient, get_resource_path
 from audit_log import write_audit_entry
 
-APP_VERSION = "1.0.0"
+APP_VERSION = "3.1.13"
 
 
 class IgniteApp:

@@ -21,7 +21,7 @@ from gui.theme import (
 from utils import get_resource_path
 import image_processing
 
-APP_VERSION = "1.0.0"
+APP_VERSION = "3.1.13"
 
 class TitleBarComponent:
     """Erstellt eine benutzerdefinierte Titel-Leiste mit Drag-Funktion, Edge-Snapping und Status-Badges."""
