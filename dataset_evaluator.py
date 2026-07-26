@@ -7,12 +7,40 @@ evaluiert reale thermografische Test-Bilddaten aus test-data/.
 
 import os
 import json
+import hashlib
+from contextlib import contextmanager
 import cv2
 import numpy as np
 import image_processing
 import config
 
-def generate_clinical_scenario(scenario_type: str = "diabetic_ulcer", width: int = 400, height: int = 400, add_noise: bool = True):
+DEFAULT_BENCHMARK_SEED = 42
+DEFAULT_BENCHMARK_BACKEND = "python"
+
+
+def _scenario_seed(scenario_type: str, base_seed: int) -> int:
+    digest = hashlib.sha256(scenario_type.encode("utf-8")).digest()
+    offset = int.from_bytes(digest[:8], "little")
+    return (base_seed + offset) % (2**32)
+
+
+@contextmanager
+def _forced_backend(backend: str):
+    previous_backend = image_processing.FORCED_BACKEND
+    image_processing.FORCED_BACKEND = backend
+    try:
+        yield
+    finally:
+        image_processing.FORCED_BACKEND = previous_backend
+
+
+def generate_clinical_scenario(
+    scenario_type: str = "diabetic_ulcer",
+    width: int = 400,
+    height: int = 400,
+    add_noise: bool = True,
+    seed: int = DEFAULT_BENCHMARK_SEED,
+):
     """
     Generiert ein synthetisches Wärmebild und die dazugehörige Ground-Truth-Maske
     für klinische Entzündungsszenarien inkl. realistischer Rausch- & Gradienten-Modelle.
@@ -67,7 +95,7 @@ def generate_clinical_scenario(scenario_type: str = "diabetic_ulcer", width: int
 
     if add_noise:
         # Realistisches Gaußsches Sensorrauschen (sigma = 2.5)
-        rng = np.random.default_rng(seed=42)
+        rng = np.random.default_rng(seed=_scenario_seed(scenario_type, seed))
         noise = rng.normal(0, 2.5, size=(height, width)).astype(np.float32)
         img += noise
 
@@ -157,7 +185,10 @@ def evaluate_real_test_dataset(test_data_dir: str = "test-data"):
 
     return real_results
 
-def run_benchmark_suite():
+def run_benchmark_suite(
+    seed: int = DEFAULT_BENCHMARK_SEED,
+    backend: str = DEFAULT_BENCHMARK_BACKEND,
+):
     """
     Führt die vollständige Benchmark-Testsuite durch:
     - Synthetische Szenarien mit realistischen Rausch-Modellen
@@ -171,48 +202,56 @@ def run_benchmark_suite():
 
     print("=== IGNITE Medical Thermal Evaluation Benchmark ===")
 
-    for scenario in scenarios:
-        img, gt = generate_clinical_scenario(scenario, add_noise=True)
-        
-        # Standard µ + k·σ
-        diff_img, pred_mask_std = image_processing.run_rust_pipeline(img, use_mad=False)
-        body_mask = image_processing._extract_body_mask_cpu(img)
-        metrics_std = evaluate_metrics(pred_mask_std, gt, body_mask)
-        results[scenario] = metrics_std
+    with _forced_backend(backend):
+        for scenario in scenarios:
+            img, gt = generate_clinical_scenario(scenario, add_noise=True, seed=seed)
 
-        # Robust MAD
-        diff_img_mad, pred_mask_mad = image_processing.run_rust_pipeline(img, use_mad=True)
-        metrics_mad = evaluate_metrics(pred_mask_mad, gt, body_mask)
-        mad_comparison[scenario] = {
-            "mean_std": metrics_std,
-            "mad_robust": metrics_mad
-        }
+            # Standard µ + k·σ
+            diff_img, pred_mask_std = image_processing.run_rust_pipeline(img, use_mad=False)
+            body_mask = image_processing._extract_body_mask_cpu(img)
+            metrics_std = evaluate_metrics(pred_mask_std, gt, body_mask)
+            results[scenario] = metrics_std
 
-        print(f"Szenario [{scenario:30s}]: (Std) Sens={metrics_std['sensitivity']:.2f}, Spec={metrics_std['specificity']:.2f}, Dice={metrics_std['dice']:.2f} | (MAD) Sens={metrics_mad['sensitivity']:.2f}, Spec={metrics_mad['specificity']:.2f}, Dice={metrics_mad['dice']:.2f}")
+            # Robust MAD
+            diff_img_mad, pred_mask_mad = image_processing.run_rust_pipeline(img, use_mad=True)
+            metrics_mad = evaluate_metrics(pred_mask_mad, gt, body_mask)
+            mad_comparison[scenario] = {
+                "mean_std": metrics_std,
+                "mad_robust": metrics_mad
+            }
 
-    # Parameter-Sensitivitätsanalyse für k (1.0 bis 5.0)
-    print("\n--- Parameter-Sensitivitätsanalyse (Sigma k) ---")
-    k_analysis = {}
-    img_eval, gt_eval = generate_clinical_scenario("diabetic_ulcer", add_noise=True)
-    body_mask_eval = image_processing._extract_body_mask_cpu(img_eval)
+            print(f"Szenario [{scenario:30s}]: (Std) Sens={metrics_std['sensitivity']:.2f}, Spec={metrics_std['specificity']:.2f}, Dice={metrics_std['dice']:.2f} | (MAD) Sens={metrics_mad['sensitivity']:.2f}, Spec={metrics_mad['specificity']:.2f}, Dice={metrics_mad['dice']:.2f}")
 
-    for k_val in [1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0]:
-        diff_img, pred_mask = image_processing._python_fallback_pipeline(
-            img_eval,
-            sigma_k=k_val
-        )
-        m = evaluate_metrics(pred_mask, gt_eval, body_mask_eval)
-        k_analysis[str(k_val)] = m
-        print(f"k = {k_val:.1f} | Sensitivität: {m['sensitivity']:.4f} | Spezifität: {m['specificity']:.4f} | Dice: {m['dice']:.4f}")
+        # Parameter-Sensitivitätsanalyse für k (1.0 bis 5.0)
+        print("\n--- Parameter-Sensitivitätsanalyse (Sigma k) ---")
+        k_analysis = {}
+        img_eval, gt_eval = generate_clinical_scenario("diabetic_ulcer", add_noise=True, seed=seed)
+        body_mask_eval = image_processing._extract_body_mask_cpu(img_eval)
 
-    # Reale Testbilder aus test-data/ auswerten
-    real_dataset_results = evaluate_real_test_dataset()
+        for k_val in [1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0]:
+            diff_img, pred_mask = image_processing._python_fallback_pipeline(
+                img_eval,
+                sigma_k=k_val
+            )
+            m = evaluate_metrics(pred_mask, gt_eval, body_mask_eval)
+            k_analysis[str(k_val)] = m
+            print(f"k = {k_val:.1f} | Sensitivität: {m['sensitivity']:.4f} | Spezifität: {m['specificity']:.4f} | Dice: {m['dice']:.4f}")
+
+        # Reale Testbilder aus test-data/ auswerten
+        real_dataset_results = evaluate_real_test_dataset()
 
     output_data = {
         "scenario_results": results,
         "mad_thresholding_comparison": mad_comparison,
         "sensitivity_analysis_k": k_analysis,
-        "real_test_dataset": real_dataset_results
+        "real_test_dataset": real_dataset_results,
+        "reproducibility": {
+            "seed": seed,
+            "backend": backend,
+            "scenario_seeds": {
+                scenario: _scenario_seed(scenario, seed) for scenario in scenarios
+            }
+        }
     }
 
     # Ergebnisse speichern

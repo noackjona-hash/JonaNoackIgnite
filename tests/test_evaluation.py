@@ -4,9 +4,12 @@ from dataset_evaluator import generate_clinical_scenario, evaluate_metrics, run_
 
 def test_generate_clinical_scenario():
     img, gt = generate_clinical_scenario("diabetic_ulcer")
+    img2, gt2 = generate_clinical_scenario("diabetic_ulcer")
     assert img.shape == (400, 400)
     assert gt.shape == (400, 400)
     assert np.sum(gt) > 0
+    np.testing.assert_array_equal(img, img2)
+    np.testing.assert_array_equal(gt, gt2)
 
 def test_evaluate_metrics():
     gt = np.zeros((100, 100), dtype=np.uint8)
@@ -22,7 +25,12 @@ def test_evaluate_metrics():
     assert metrics["iou"] == 1.0
 
 def test_run_benchmark_suite():
-    res = run_benchmark_suite()
-    assert "scenario_results" in res
-    assert "diabetic_ulcer" in res["scenario_results"]
-    assert res["scenario_results"]["diabetic_ulcer"]["sensitivity"] == 1.0
+    res1 = run_benchmark_suite()
+    res2 = run_benchmark_suite()
+    assert "scenario_results" in res1
+    assert "diabetic_ulcer" in res1["scenario_results"]
+    assert res1["scenario_results"]["diabetic_ulcer"]["sensitivity"] == 1.0
+    assert res1["scenario_results"] == res2["scenario_results"]
+    assert res1["sensitivity_analysis_k"] == res2["sensitivity_analysis_k"]
+    assert res1["reproducibility"]["seed"] == 42
+    assert res1["reproducibility"]["backend"] == "python"

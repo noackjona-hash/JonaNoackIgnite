@@ -8,7 +8,8 @@ except ImportError:
 @pytest.mark.skipif(ignite_core is None, reason="Rust Core (ignite_core) is not installed")
 def test_rust_pipeline_returns_correct_types():
     # Erstelle ein 100x100 Dummy Wärmebild
-    dummy_img = np.random.randint(0, 255, size=(100, 100), dtype=np.uint8)
+    rng = np.random.default_rng(0)
+    dummy_img = rng.integers(0, 255, size=(100, 100), dtype=np.uint8)
     
     # Mache es contiguous
     dummy_img = np.ascontiguousarray(dummy_img, dtype=np.uint8)
