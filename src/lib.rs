@@ -340,6 +340,10 @@ fn morph_open(img: &ImageMatrix, kernel_size: usize) -> Result<ImageMatrix, Stri
 /// Morphologisches Closing: `close(I) = erode(dilate(I, SE), SE)`.
 ///
 /// Schließt kleine dunkle Löcher innerhalb heller Regionen.
+///
+/// Wird aktuell nicht in der Standard-Pipeline verwendet, aber als symmetrisches
+/// Gegenstück zu `morph_open` bewusst als Teil der morphologischen API vorgehalten.
+#[allow(dead_code)]
 fn morph_close(img: &ImageMatrix, kernel_size: usize) -> Result<ImageMatrix, String> {
     let dilated = dilate(img, kernel_size)?;
     erode(&dilated, kernel_size)

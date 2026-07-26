@@ -42,7 +42,7 @@ jobs:
       - name: Build Rust Core
         run: |
           maturin build --release --strip
-          pip install target/wheels/*.whl
+          pip install --no-index --find-links target/wheels ignite_core
 
       - name: Package Application (Windows)
         if: runner.os == 'Windows'
