@@ -34,7 +34,7 @@ class FullscreenImageModal(ctk.CTkToplevel):
         top_bar = ctk.CTkFrame(self, height=40, fg_color=COLOR_BG_CARD, corner_radius=0)
         top_bar.pack(fill=ctk.X, side=ctk.TOP)
         
-        ctk.CTkLabel(top_bar, text=f"🔍 Detailinspektion: {panel_name}", font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"), text_color=COLOR_TEXT_PRIMARY).pack(side=ctk.LEFT, padx=15)
+        ctk.CTkLabel(top_bar, text=f"Detailinspektion: {panel_name}", font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"), text_color=COLOR_TEXT_PRIMARY).pack(side=ctk.LEFT, padx=15)
         
         close_btn = ctk.CTkButton(top_bar, text="Schließen ✕", width=90, height=28, command=self.destroy, fg_color=COLOR_PRIMARY_ACCENT, hover_color=COLOR_HOVER_ACCENT)
         close_btn.pack(side=ctk.RIGHT, padx=10, pady=6)

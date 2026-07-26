@@ -61,7 +61,7 @@ class DashboardView:
 
             lbl = ctk.CTkLabel(
                 panel_frame,
-                text="\n🔬\n\nBEREIT FÜR ANALYSE\n\nBitte laden Sie ein Wärmebild über die Seitenleiste.\n",
+                text="\n\nBEREIT FÜR ANALYSE\n\nBitte laden Sie ein Wärmebild über die Seitenleiste.\n",
                 font=ctk.CTkFont(family=FONT_FAMILY, size=11),
                 text_color=COLOR_TEXT_MUTED,
                 fg_color=COLOR_BG_MAIN,
@@ -106,7 +106,7 @@ class DashboardView:
 
             lbl = ctk.CTkLabel(
                 panel_frame,
-                text="\n\n🔬\n\nNoch kein Wärmebild geladen.\n\nBitte laden Sie eine Bilddatei über die Seitenleiste.\n",
+                text="\n\nNoch kein Wärmebild geladen.\n\nBitte laden Sie eine Bilddatei über die Seitenleiste.\n",
                 font=ctk.CTkFont(family=FONT_FAMILY, size=12),
                 text_color=COLOR_TEXT_MUTED,
                 fg_color=COLOR_BG_MAIN,

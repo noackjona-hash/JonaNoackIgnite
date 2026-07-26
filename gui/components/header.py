@@ -135,7 +135,7 @@ class TitleBarComponent:
             fg_color=b_style["bg"],
             border_color=b_style["border"],
             border_width=1,
-            corner_radius=12,
+            corner_radius=4,
             height=26
         )
         self.badge_frame.pack(side="right", padx=(0, 16), pady=8)

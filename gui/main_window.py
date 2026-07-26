@@ -173,8 +173,8 @@ class IgniteApp:
         self.sidebar_scroll = ctk.CTkScrollableFrame(
             sidebar_frame,
             fg_color="transparent",
-            scrollbar_button_color="#27272A",
-            scrollbar_button_hover_color="#3F3F46"
+            scrollbar_button_color="#C0C0C0",
+            scrollbar_button_hover_color="#A0A0A0"
         )
         self.sidebar_scroll.pack(fill=ctk.BOTH, expand=True, padx=10, pady=5)
 
@@ -234,7 +234,7 @@ class IgniteApp:
 
         self.toggle_actions_btn = ctk.CTkButton(
             self.actions_card,
-            text="📁 Aktionen & Berichte  ▸",
+            text="Aktionen & Berichte  >",
             command=self.toggle_actions_visibility,
             font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
             fg_color="transparent",
@@ -354,10 +354,10 @@ class IgniteApp:
             command=self.clean_output_dir,
             font=ctk.CTkFont(family="Arial", size=12, weight="bold"),
             fg_color="transparent",
-            text_color="#EF4444",
+            text_color="#C42B1C",
             hover_color=("#2D1A22", "#fee2e2"),
             border_width=1,
-            border_color="#EF4444",
+            border_color="#C42B1C",
             height=32,
             corner_radius=6
         )
@@ -399,7 +399,7 @@ class IgniteApp:
 
         self.about_btn = ctk.CTkButton(
             help_row,
-            text="ℹ️ Über Ignite",
+            text="Über Ignite",
             command=self.show_about_window,
             font=ctk.CTkFont(size=11),
             fg_color="transparent",
@@ -494,9 +494,9 @@ class IgniteApp:
         steps_frame.grid_columnconfigure(2, weight=1)
 
         features = [
-            ("📁 1. Bild laden", "Wähle ein Infrarotbild aus."),
-            ("⚡ 2. Analyse", "Erkennung via Rust & GPU."),
-            ("📊 3. Statistik", "Symmetrie & ROI-Prüfung.")
+            ("1. Bild laden", "Wähle ein Infrarotbild aus."),
+            ("2. Analyse", "Erkennung via Rust & GPU."),
+            ("3. Statistik", "Symmetrie & ROI-Prüfung.")
         ]
 
         for idx, (f_title, f_desc) in enumerate(features):
@@ -608,31 +608,31 @@ class IgniteApp:
     def toggle_settings_visibility(self) -> None:
         if self.settings_visible:
             self.settings_boxes_frame.pack_forget()
-            self.toggle_settings_btn.configure(text="⚙️ Systemeinstellungen  ▸", text_color=COLOR_TEXT_SECONDARY)
+            self.toggle_settings_btn.configure(text="Systemeinstellungen  >", text_color=COLOR_TEXT_SECONDARY)
             self.settings_visible = False
         else:
             self.settings_boxes_frame.pack(fill=ctk.X, padx=8, pady=(4, 8))
-            self.toggle_settings_btn.configure(text="⚙️ Systemeinstellungen  ▾", text_color=COLOR_PRIMARY_ACCENT)
+            self.toggle_settings_btn.configure(text="Systemeinstellungen  v", text_color=COLOR_PRIMARY_ACCENT)
             self.settings_visible = True
 
     def toggle_actions_visibility(self) -> None:
         if self.actions_visible:
             self.actions_container.pack_forget()
-            self.toggle_actions_btn.configure(text="📁 Aktionen & Berichte  ▸", text_color=COLOR_TEXT_SECONDARY)
+            self.toggle_actions_btn.configure(text="Aktionen & Berichte  >", text_color=COLOR_TEXT_SECONDARY)
             self.actions_visible = False
         else:
             self.actions_container.pack(fill=ctk.X, padx=8, pady=(4, 8))
-            self.toggle_actions_btn.configure(text="📁 Aktionen & Berichte  ▾", text_color=COLOR_PRIMARY_ACCENT)
+            self.toggle_actions_btn.configure(text="Aktionen & Berichte  v", text_color=COLOR_PRIMARY_ACCENT)
             self.actions_visible = True
 
     def toggle_pipeline_parameters(self) -> None:
         if self.parameters_visible:
             self.param_sliders_frame.pack_forget()
-            self.toggle_param_btn.configure(text="📊 Parameter einblenden  ▸", text_color=COLOR_PRIMARY_ACCENT)
+            self.toggle_param_btn.configure(text="Parameter einblenden  >", text_color=COLOR_PRIMARY_ACCENT)
             self.parameters_visible = False
         else:
             self.param_sliders_frame.pack(fill=ctk.X, padx=8, pady=(4, 8))
-            self.toggle_param_btn.configure(text="📊 Parameter ausblenden  ▾", text_color=COLOR_TEXT_SECONDARY)
+            self.toggle_param_btn.configure(text="Parameter ausblenden  v", text_color=COLOR_TEXT_SECONDARY)
             self.parameters_visible = True
 
     def on_calibration_changed(self, event=None) -> None:
@@ -803,12 +803,12 @@ class IgniteApp:
         self.hide_loading_overlay()
         self.update_backend_label()
         hotspot_count = int(hotspot_mask.sum()) // 255
-        self.status_label.configure(text="Status: Analyse abgeschlossen ✓", text_color="#10B981")
+        self.status_label.configure(text="Status: Analyse abgeschlossen ✓", text_color="#107C10")
 
         if hotspot_count > 0:
-            self.hotspot_label.configure(text=f"Hotspots: {hotspot_count} Pixel", text_color="#FF0055")
+            self.hotspot_label.configure(text=f"Hotspots: {hotspot_count} Pixel", text_color="#C42B1C")
         else:
-            self.hotspot_label.configure(text="Hotspots: 0 (Unauffällig)", text_color="#10B981")
+            self.hotspot_label.configure(text="Hotspots: 0 (Unauffällig)", text_color="#107C10")
 
         for name, cv_img in self.current_images.items():
             self.display_image_in_panel(cv_img, name)
@@ -818,7 +818,7 @@ class IgniteApp:
 
     def on_pipeline_failed(self, error: Exception) -> None:
         self.hide_loading_overlay()
-        self.status_label.configure(text="Status: Fehler in Pipeline ✕", text_color="#EF4444")
+        self.status_label.configure(text="Status: Fehler in Pipeline ✕", text_color="#C42B1C")
         messagebox.showerror("Pipeline-Fehler", f"Fehler bei der Bildverarbeitung:\n{error}")
 
     def update_params(self, val=None) -> None:
@@ -1172,7 +1172,7 @@ class IgniteApp:
         ax.hist(pixels_disp, bins=128, color=COLOR_PRIMARY_ACCENT, alpha=0.7, edgecolor="none")
         ax.axvline(mean_disp, color=("#18181B" if mode != "Dark" else "#F4F4F5"), linestyle="--", linewidth=1.5,
                    label=f"Mittelwert \u03bc ({mean_disp:.1f} {unit_str})")
-        ax.axvline(thresh_disp, color="#FF0055", linestyle="-.", linewidth=2.0,
+        ax.axvline(thresh_disp, color="#C42B1C", linestyle="-.", linewidth=2.0,
                    label=f"Grenzwert µ+k\u03c3 ({thresh_disp:.1f} {unit_str})")
 
         ax.spines['bottom'].set_color(color_spine)
@@ -1201,13 +1201,13 @@ class IgniteApp:
         hotspot_count = int(self.current_raw_mask.sum()) // 255 if self.current_raw_mask is not None else 0
         self.stats_labels["hotspots"].configure(
             text=f"{hotspot_count} px",
-            text_color="#FF0055" if hotspot_count > 0 else COLOR_TEXT_PRIMARY
+            text_color="#C42B1C" if hotspot_count > 0 else COLOR_TEXT_PRIMARY
         )
 
         percentage = (hotspot_count / len(pixels)) * 100 if len(pixels) > 0 else 0
         self.stats_labels["percentage"].configure(
             text=f"{percentage:.3f} %",
-            text_color="#FF0055" if hotspot_count > 0 else COLOR_TEXT_PRIMARY
+            text_color="#C42B1C" if hotspot_count > 0 else COLOR_TEXT_PRIMARY
         )
 
         mode_analysis = self.analysis_mode_opt.get()
@@ -1244,10 +1244,10 @@ class IgniteApp:
 
                 if delta >= 15.0:
                     sym_status = "Asymmetrie detektiert \u2013 Bitte abklären"
-                    sym_color = "#FF0055"
+                    sym_color = "#C42B1C"
                 else:
                     sym_status = "Symmetrisch \u2013 Unauffällig"
-                    sym_color = "#10B981"
+                    sym_color = "#107C10"
 
                 self.stats_labels["mean_left"].configure(text=f"{mean_l_disp:.2f} {unit_str}")
                 self.stats_labels["mean_right"].configure(text=f"{mean_r_disp:.2f} {unit_str}")
@@ -1275,13 +1275,13 @@ class IgniteApp:
 
             if hotspot_count == 0:
                 diag_status = "Unauffällig \u2013 Kein Befund"
-                diag_color = "#10B981"
+                diag_color = "#107C10"
             elif hotspot_count < 150:
                 diag_status = "Grenzwertig \u2013 Verlaufsbeobachtung"
-                diag_color = "#FFA500"
+                diag_color = "#C77700"
             else:
                 diag_status = "Klinisch auffällig \u2013 Weiteres Monitoring"
-                diag_color = "#FF0055"
+                diag_color = "#C42B1C"
 
             self.stats_labels["mean_left"].configure(text=f"{num_hotspots}")
             self.stats_labels["mean_right"].configure(text=f"{max_area:,} px")
@@ -1366,13 +1366,13 @@ class IgniteApp:
 
                     if d_v >= 15.0:
                         z_diag = "Asymmetrie detektiert \u2013 Abklärung empfohlen"
-                        z_color = "#FF0055"
+                        z_color = "#C42B1C"
                     elif d_v >= 10.0:
                         z_diag = "Grenzwert \u2013 Verlaufsbeobachtung"
-                        z_color = "#FFA500"
+                        z_color = "#C77700"
                     else:
                         z_diag = "Symmetrisch \u2013 Unauffällig"
-                        z_color = "#10B981"
+                        z_color = "#107C10"
 
                     self.zonal_row_labels[key]["l"].configure(text=l_v_str)
                     self.zonal_row_labels[key]["r"].configure(text=r_v_str)
@@ -1412,13 +1412,13 @@ class IgniteApp:
 
                     if area >= 150 or mean_temp >= 180:
                         diag_text = "Klinisch relevant \u2013 Abklärung empfohlen"
-                        diag_color = "#FF0055"
+                        diag_color = "#C42B1C"
                     elif area >= 50 or mean_temp >= 140:
                         diag_text = "Grenzwertig \u2013 Verlaufsbeobachtung"
-                        diag_color = "#FFA500"
+                        diag_color = "#C77700"
                     else:
                         diag_text = "Geringfügig (Unbedenklich)"
-                        diag_color = "#10B981"
+                        diag_color = "#107C10"
 
                     ctk.CTkLabel(scroll_frame, text=f"H#{hs['index']}", font=ctk.CTkFont(size=12, weight="bold"), text_color=COLOR_TEXT_PRIMARY).grid(row=idx, column=0, padx=10, pady=8, sticky="w")
                     ctk.CTkLabel(scroll_frame, text=f"{area:,} px", font=ctk.CTkFont(size=12), text_color=COLOR_TEXT_PRIMARY).grid(row=idx, column=1, padx=10, pady=8)
@@ -1473,17 +1473,17 @@ class IgniteApp:
                 is_hotspot = self.current_raw_mask[orig_y, orig_x] > 0
 
             hotspot_str = "Hotspot detektiert" if is_hotspot else "Unauffällig"
-            hotspot_color = "#FF0055" if is_hotspot else "#0EA5E9"
+            hotspot_color = "#C42B1C" if is_hotspot else "#0067C0"
 
             self.pixel_info_label.configure(
                 text=f"X={orig_x}, Y={orig_y}  |  {temp_str}  (px={val})\nBefund: {hotspot_str}",
                 text_color=hotspot_color
             )
         else:
-            self.pixel_info_label.configure(text="Pixel: außerhalb des Bildes", text_color="#71717A")
+            self.pixel_info_label.configure(text="Pixel: außerhalb des Bildes", text_color="#767676")
 
     def on_image_leave(self, event) -> None:
-        self.pixel_info_label.configure(text="Pixel-Info: --", text_color="#71717A")
+        self.pixel_info_label.configure(text="Pixel-Info: --", text_color="#767676")
 
     def map_event_to_image_coords(self, event, panel_name: str, is_grid: bool) -> tuple[int | None, int | None]:
         if self.current_raw_original is None:
@@ -1602,7 +1602,7 @@ class IgniteApp:
 
         self.roi_info_lbl.configure(
             text=f"ROI-Ergebnis ({x2-x1}x{y2-y1} px):\nMin: {min_str}  |  Max: {max_str}\nµ: {mean_str}  |  σ: {std_str}",
-            text_color="#10B981"
+            text_color="#107C10"
         )
 
     # ── DIALOGE & EXPORTS ───────────────────────────────────────────────────
@@ -1674,10 +1674,10 @@ class IgniteApp:
                 delta = abs(mean_l - mean_r)
                 if delta >= 15.0:
                     sym_status = "ASYMMETRIE DETEKTIERT (Entzündungsverdacht!)"
-                    sym_color = "#FF0055"
+                    sym_color = "#C42B1C"
                 else:
                     sym_status = "NORMAL (Temperatursymmetrisch)"
-                    sym_color = "#10B981"
+                    sym_color = "#107C10"
 
             backend_info = image_processing.get_active_backend()
             forced = self.backend_var.get()
@@ -1733,11 +1733,11 @@ class IgniteApp:
         def get_badge_style(color_hex):
             color_hex = color_hex.upper()
             if "10B981" in color_hex or "GREEN" in color_hex:
-                return "background-color: rgba(16, 185, 129, 0.1); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.2);"
+                return "background-color: rgba(16, 185, 129, 0.1); color: #107C10; border: 1px solid rgba(16, 185, 129, 0.2);"
             elif "FFA500" in color_hex or "F59E0B" in color_hex or "ORANGE" in color_hex:
-                return "background-color: rgba(245, 158, 11, 0.1); color: #F59E0B; border: 1px solid rgba(245, 158, 11, 0.2);"
+                return "background-color: rgba(245, 158, 11, 0.1); color: #C77700; border: 1px solid rgba(245, 158, 11, 0.2);"
             else:
-                return "background-color: rgba(239, 68, 68, 0.1); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.2);"
+                return "background-color: rgba(239, 68, 68, 0.1); color: #C42B1C; border: 1px solid rgba(239, 68, 68, 0.2);"
 
         gdpr_badge = ""
         if p_name.startswith("ANON-"):
@@ -1745,7 +1745,7 @@ class IgniteApp:
             <div class="meta-item">
                 <div class="meta-label">Datenschutz-Status</div>
                 <div class="meta-value">
-                    <span class="status-badge" style="background-color: rgba(16, 185, 129, 0.1); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.2);">DSGVO-konform pseudonymisiert</span>
+                    <span class="status-badge" style="background-color: rgba(16, 185, 129, 0.1); color: #107C10; border: 1px solid rgba(16, 185, 129, 0.2);">DSGVO-konform pseudonymisiert</span>
                 </div>
             </div>"""
 
@@ -1761,7 +1761,7 @@ class IgniteApp:
             symmetry_or_hotspots_meta = f"""
             <div class="meta-item">
                 <div class="meta-label">Symmetrie-Delta (Δ)</div>
-                <div class="meta-value" style="color: #EF4444; font-weight: bold;">{delta:.2f} {unit_str}</div>
+                <div class="meta-value" style="color: #C42B1C; font-weight: bold;">{delta:.2f} {unit_str}</div>
             </div>
             <div class="meta-item">
                 <div class="meta-label">Klinischer Symmetriestatus</div>
@@ -1777,7 +1777,7 @@ class IgniteApp:
             symmetry_or_hotspots_meta = f"""
             <div class="meta-item">
                 <div class="meta-label">Hotspot-Anzahl</div>
-                <div class="meta-value" style="color: #EF4444; font-weight: bold;">{hotspots} Pixel</div>
+                <div class="meta-value" style="color: #C42B1C; font-weight: bold;">{hotspots} Pixel</div>
             </div>
             <div class="meta-item">
                 <div class="meta-label">Globaler Befund</div>
@@ -1794,26 +1794,26 @@ class IgniteApp:
     <meta charset="UTF-8">
     <title>IGNITE Befundbericht - {base_name}</title>
     <style>
-        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #09090B; color: #F4F4F5; margin: 0; padding: 40px; }}
-        .container {{ max-width: 960px; margin: 0 auto; background: #18181B; border: 1px solid #27272A; border-radius: 12px; padding: 32px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }}
-        .header {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #27272A; padding-bottom: 20px; margin-bottom: 24px; }}
-        .title {{ font-size: 24px; font-weight: bold; color: #F4F4F5; }}
-        .subtitle {{ font-size: 13px; color: #6366F1; margin-top: 4px; font-weight: 600; }}
-        .meta-grid {{ display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 32px; background: #09090B; padding: 20px; border-radius: 8px; border: 1px solid #27272A; }}
+        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #F5F5F5; color: #1A1A1A; margin: 0; padding: 40px; }}
+        .container {{ max-width: 960px; margin: 0 auto; background: #FFFFFF; border: 1px solid #D0D0D0; border-radius: 12px; padding: 32px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }}
+        .header {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #D0D0D0; padding-bottom: 20px; margin-bottom: 24px; }}
+        .title {{ font-size: 24px; font-weight: bold; color: #1A1A1A; }}
+        .subtitle {{ font-size: 13px; color: #0067C0; margin-top: 4px; font-weight: 600; }}
+        .meta-grid {{ display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 32px; background: #F5F5F5; padding: 20px; border-radius: 8px; border: 1px solid #D0D0D0; }}
         .meta-item {{ display: flex; flex-direction: column; }}
-        .meta-label {{ font-size: 11px; text-transform: uppercase; color: #71717A; font-weight: bold; letter-spacing: 0.5px; }}
-        .meta-value {{ font-size: 14px; color: #F4F4F5; margin-top: 2px; }}
+        .meta-label {{ font-size: 11px; text-transform: uppercase; color: #767676; font-weight: bold; letter-spacing: 0.5px; }}
+        .meta-value {{ font-size: 14px; color: #1A1A1A; margin-top: 2px; }}
         .status-badge {{ display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }}
-        .section-title {{ font-size: 16px; font-weight: bold; color: #F4F4F5; margin-top: 32px; margin-bottom: 16px; border-left: 4px solid #6366F1; padding-left: 10px; }}
+        .section-title {{ font-size: 16px; font-weight: bold; color: #1A1A1A; margin-top: 32px; margin-bottom: 16px; border-left: 4px solid #0067C0; padding-left: 10px; }}
         .image-grid {{ display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 32px; }}
-        .image-card {{ background: #09090B; border: 1px solid #27272A; border-radius: 8px; padding: 12px; text-align: center; }}
-        .image-card img {{ max-width: 100%; height: auto; border-radius: 6px; border: 1px solid #27272A; }}
-        .image-caption {{ font-size: 12px; font-weight: bold; color: #A1A1AA; margin-top: 8px; }}
-        table {{ width: 100%; border-collapse: collapse; margin-top: 12px; background: #09090B; border-radius: 8px; overflow: hidden; border: 1px solid #27272A; }}
-        th, td {{ padding: 12px 16px; text-align: left; border-bottom: 1px solid #27272A; font-size: 13px; }}
-        th {{ background-color: #18181B; color: #6366F1; font-weight: bold; text-transform: uppercase; font-size: 11px; }}
+        .image-card {{ background: #F5F5F5; border: 1px solid #D0D0D0; border-radius: 8px; padding: 12px; text-align: center; }}
+        .image-card img {{ max-width: 100%; height: auto; border-radius: 6px; border: 1px solid #D0D0D0; }}
+        .image-caption {{ font-size: 12px; font-weight: bold; color: #888888; margin-top: 8px; }}
+        table {{ width: 100%; border-collapse: collapse; margin-top: 12px; background: #F5F5F5; border-radius: 8px; overflow: hidden; border: 1px solid #D0D0D0; }}
+        th, td {{ padding: 12px 16px; text-align: left; border-bottom: 1px solid #D0D0D0; font-size: 13px; }}
+        th {{ background-color: #FFFFFF; color: #0067C0; font-weight: bold; text-transform: uppercase; font-size: 11px; }}
         tr:last-child td {{ border-bottom: none; }}
-        .footer {{ margin-top: 40px; padding-top: 20px; border-top: 1px solid #27272A; font-size: 11px; color: #71717A; text-align: center; }}
+        .footer {{ margin-top: 40px; padding-top: 20px; border-top: 1px solid #D0D0D0; font-size: 11px; color: #767676; text-align: center; }}
     </style>
 </head>
 <body>
@@ -1823,8 +1823,8 @@ class IgniteApp:
                 <div class="title">{h1_title}</div>
                 <div class="subtitle">Automatische Thermografie-Analyse · IGNITE Engine ({backend_info})</div>
             </div>
-            <div style="text-align: right; font-size: 12px; color: #71717A;">
-                Erstellt am:<br><strong style="color: #F4F4F5;">{now_str}</strong>
+            <div style="text-align: right; font-size: 12px; color: #767676;">
+                Erstellt am:<br><strong style="color: #1A1A1A;">{now_str}</strong>
             </div>
         </div>
 
@@ -1907,11 +1907,11 @@ class IgniteApp:
             rows_html += f"""
             <tr>
                 <td><strong>{p['filename']}</strong></td>
-                <td style="color: #EF4444; font-weight: bold;">{p['hotspots']} px</td>
+                <td style="color: #C42B1C; font-weight: bold;">{p['hotspots']} px</td>
                 <td>{delta_str}</td>
                 <td>{zonal_str}</td>
                 <td><span style="display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: bold; background-color: rgba(255,255,255,0.05); color: {p['color']}; border: 1px solid {p['color']}40;">{p['status']}</span></td>
-                <td><a href="{p['report']}" style="color: #6366F1; text-decoration: none; font-weight: bold;">Bericht öffnen &rarr;</a></td>
+                <td><a href="{p['report']}" style="color: #0067C0; text-decoration: none; font-weight: bold;">Bericht öffnen &rarr;</a></td>
             </tr>"""
 
         html_content = f"""<!DOCTYPE html>
@@ -1920,16 +1920,16 @@ class IgniteApp:
     <meta charset="UTF-8">
     <title>IGNITE Stapelverarbeitungs-Bericht</title>
     <style>
-        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #09090B; color: #F4F4F5; margin: 0; padding: 40px; }}
-        .container {{ max-width: 1000px; margin: 0 auto; background: #18181B; border: 1px solid #27272A; border-radius: 12px; padding: 32px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }}
-        .header {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #27272A; padding-bottom: 20px; margin-bottom: 24px; }}
-        .title {{ font-size: 24px; font-weight: bold; color: #F4F4F5; }}
-        .subtitle {{ font-size: 13px; color: #6366F1; margin-top: 4px; font-weight: 600; }}
-        table {{ width: 100%; border-collapse: collapse; margin-top: 20px; background: #09090B; border-radius: 8px; overflow: hidden; border: 1px solid #27272A; }}
-        th, td {{ padding: 14px 16px; text-align: left; border-bottom: 1px solid #27272A; font-size: 13px; }}
-        th {{ background-color: #18181B; color: #6366F1; font-weight: bold; text-transform: uppercase; font-size: 11px; }}
+        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #F5F5F5; color: #1A1A1A; margin: 0; padding: 40px; }}
+        .container {{ max-width: 1000px; margin: 0 auto; background: #FFFFFF; border: 1px solid #D0D0D0; border-radius: 12px; padding: 32px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }}
+        .header {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #D0D0D0; padding-bottom: 20px; margin-bottom: 24px; }}
+        .title {{ font-size: 24px; font-weight: bold; color: #1A1A1A; }}
+        .subtitle {{ font-size: 13px; color: #0067C0; margin-top: 4px; font-weight: 600; }}
+        table {{ width: 100%; border-collapse: collapse; margin-top: 20px; background: #F5F5F5; border-radius: 8px; overflow: hidden; border: 1px solid #D0D0D0; }}
+        th, td {{ padding: 14px 16px; text-align: left; border-bottom: 1px solid #D0D0D0; font-size: 13px; }}
+        th {{ background-color: #FFFFFF; color: #0067C0; font-weight: bold; text-transform: uppercase; font-size: 11px; }}
         tr:last-child td {{ border-bottom: none; }}
-        .footer {{ margin-top: 40px; padding-top: 20px; border-top: 1px solid #27272A; font-size: 11px; color: #71717A; text-align: center; }}
+        .footer {{ margin-top: 40px; padding-top: 20px; border-top: 1px solid #D0D0D0; font-size: 11px; color: #767676; text-align: center; }}
     </style>
 </head>
 <body>
@@ -1939,8 +1939,8 @@ class IgniteApp:
                 <div class="title">IGNITE Stapelverarbeitungs-Gesamtbericht</div>
                 <div class="subtitle">Automatische Serienuntersuchung · {len(patients_processed)} Wärmebilder verarbeitet</div>
             </div>
-            <div style="text-align: right; font-size: 12px; color: #71717A;">
-                Erstellt am:<br><strong style="color: #F4F4F5;">{now_str}</strong>
+            <div style="text-align: right; font-size: 12px; color: #767676;">
+                Erstellt am:<br><strong style="color: #1A1A1A;">{now_str}</strong>
             </div>
         </div>
 
@@ -1989,16 +1989,16 @@ class IgniteApp:
         progress_win.title("Stapelverarbeitung läuft")
         progress_win.geometry("400x180")
         progress_win.resizable(False, False)
-        progress_win.configure(fg_color="#09090B")
+        progress_win.configure(fg_color="#F0F0F0")
         progress_win.transient(self.root)
 
         lbl_title = ctk.CTkLabel(progress_win, text="Stapelverarbeitung läuft...", font=ctk.CTkFont(size=14, weight="bold"), text_color=COLOR_PRIMARY_ACCENT)
         lbl_title.pack(pady=(20, 10))
 
-        lbl_status = ctk.CTkLabel(progress_win, text="Initialisiere...", text_color="#F4F4F5")
+        lbl_status = ctk.CTkLabel(progress_win, text="Initialisiere...", text_color="#1A1A1A")
         lbl_status.pack(pady=5)
 
-        pbar = ctk.CTkProgressBar(progress_win, width=300, fg_color="#18181B", progress_color=COLOR_PRIMARY_ACCENT)
+        pbar = ctk.CTkProgressBar(progress_win, width=300, fg_color="#E8E8E8", progress_color=COLOR_PRIMARY_ACCENT)
         pbar.set(0.0)
         pbar.pack(pady=10)
 
@@ -2118,13 +2118,13 @@ class IgniteApp:
                         max_zonal_delta = max(d_fore, d_mid, d_heel)
                         if delta >= 15.0 or hotspot_count >= 150 or max_zonal_delta >= 15.0:
                             status_text = "Klinisch auffällig \u2013 Weiteres Monitoring"
-                            status_color = "#FF0055"
+                            status_color = "#C42B1C"
                         elif delta >= 10.0 or hotspot_count > 0 or max_zonal_delta >= 10.0:
                             status_text = "Grenzwertig \u2013 Verlaufsbeobachtung"
-                            status_color = "#FFA500"
+                            status_color = "#C77700"
                         else:
                             status_text = "Symmetrisch \u2013 Unauffällig"
-                            status_color = "#10B981"
+                            status_color = "#107C10"
                     else:
                         mean_l, mean_r = 0.0, 0.0
                         l_fore_m, r_fore_m, l_mid_m, r_mid_m, l_heel_m, r_heel_m = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
@@ -2141,13 +2141,13 @@ class IgniteApp:
 
                         if hotspot_count >= 150:
                             status_text = "Klinisch auffällig \u2013 Weiteres Monitoring"
-                            status_color = "#FF0055"
+                            status_color = "#C42B1C"
                         elif hotspot_count > 0:
                             status_text = "Grenzwertig \u2013 Verlaufsbeobachtung"
-                            status_color = "#FFA500"
+                            status_color = "#C77700"
                         else:
                             status_text = "Unauffällig \u2013 Kein Befund"
-                            status_color = "#10B981"
+                            status_color = "#107C10"
 
                     patient_report_filename = f"report_{base_name}.html"
                     patient_report_path = os.path.join(dest_dir, patient_report_filename)

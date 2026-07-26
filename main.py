@@ -18,11 +18,11 @@ def _get_resource_path(relative_path: str) -> str:
 
 
 def create_instant_splash():
-    """Erstellt einen schlanken, hochmodernen Splash-Screen mit tkinter."""
+    """Erstellt einen schlichten Standard-Splash-Screen mit tkinter."""
     splash = tk.Tk()
     splash.title("IGNITE")
     splash.overrideredirect(True)
-    splash.configure(bg="#07090E") # Cyber Obsidian Background
+    splash.configure(bg="#FFFFFF")
     splash.resizable(False, False)
 
     W, H = 520, 320
@@ -32,11 +32,11 @@ def create_instant_splash():
     y = (sh - H) // 2
     splash.geometry(f"{W}x{H}+{x}+{y}")
 
-    # Subtile leuchtende Umrandung (Cyber Glow Border Frame)
-    border_frame = tk.Frame(splash, bg="#1E2638", bd=1)
+    # Schlichter grauer Rahmen
+    border_frame = tk.Frame(splash, bg="#C0C0C0", bd=0)
     border_frame.place(x=0, y=0, width=W, height=H)
 
-    inner_bg = tk.Frame(border_frame, bg="#07090E")
+    inner_bg = tk.Frame(border_frame, bg="#FFFFFF")
     inner_bg.place(x=1, y=1, width=W-2, height=H-2)
 
     # Logo
@@ -46,32 +46,32 @@ def create_instant_splash():
         from PIL import Image, ImageTk
         img = Image.open(logo_path).resize((72, 72), Image.LANCZOS)
         logo_img_ref = ImageTk.PhotoImage(img)
-        tk.Label(inner_bg, image=logo_img_ref, bg="#07090E").pack(pady=(32, 8))
+        tk.Label(inner_bg, image=logo_img_ref, bg="#FFFFFF").pack(pady=(32, 8))
     except Exception as e:
         logging.debug(f"Fehler beim Laden des Splash-Logos: {e}")
-        tk.Label(inner_bg, text="", bg="#07090E", height=3).pack()
+        tk.Label(inner_bg, text="", bg="#FFFFFF", height=3).pack()
 
-    # Brand Title Stack
+    # Titel
     tk.Label(inner_bg, text="IGNITE",
-             font=("Segoe UI", 32, "bold"), fg="#F8FAFC", bg="#07090E").pack(pady=(0, 2))
-    tk.Label(inner_bg, text="Medical Imaging Suite  ·  Jugend forscht 2026",
-             font=("Segoe UI", 10, "bold"), fg="#818CF8", bg="#07090E").pack()
+             font=("Segoe UI", 32, "bold"), fg="#1A1A1A", bg="#FFFFFF").pack(pady=(0, 2))
+    tk.Label(inner_bg, text="Medical Imaging Suite  -  Jugend forscht 2026",
+             font=("Segoe UI", 10), fg="#444444", bg="#FFFFFF").pack()
 
     # Trennlinie
-    tk.Frame(inner_bg, bg="#1E2638", height=1).pack(fill=tk.X, padx=50, pady=16)
+    tk.Frame(inner_bg, bg="#D0D0D0", height=1).pack(fill=tk.X, padx=50, pady=16)
 
-    status_var = tk.StringVar(value="Initialisiere High-Performance Engine...")
+    status_var = tk.StringVar(value="Wird geladen...")
     tk.Label(inner_bg, textvariable=status_var,
-             font=("Segoe UI", 10), fg="#94A3B8", bg="#07090E").pack(pady=(0, 10))
+             font=("Segoe UI", 10), fg="#767676", bg="#FFFFFF").pack(pady=(0, 10))
 
-    # Fortschrittsbalken (Canvas Glow Indicator)
-    pbar_canvas = tk.Canvas(inner_bg, width=380, height=4, bg="#0F1420",
+    # Fortschrittsbalken
+    pbar_canvas = tk.Canvas(inner_bg, width=380, height=4, bg="#E8E8E8",
                              highlightthickness=0, bd=0)
     pbar_canvas.pack()
-    bar = pbar_canvas.create_rectangle(0, 0, 0, 4, fill="#6366F1", outline="")
+    bar = pbar_canvas.create_rectangle(0, 0, 0, 4, fill="#0067C0", outline="")
 
-    tk.Label(inner_bg, text="© 2026 Jona Noack  ·  Fachgebiet Arbeitswelt",
-             font=("Segoe UI", 8), fg="#475569", bg="#07090E").pack(pady=(12, 4))
+    tk.Label(inner_bg, text="(c) 2026 Jona Noack  -  Fachgebiet Arbeitswelt",
+             font=("Segoe UI", 8), fg="#999999", bg="#FFFFFF").pack(pady=(12, 4))
 
     # Referenzen sichern damit GC sie nicht löscht
     splash._logo_ref = logo_img_ref
@@ -146,7 +146,7 @@ def main():
         ctk = loaded["ctk"]
         IgniteApp = loaded["IgniteApp"]
 
-        ctk.set_appearance_mode("dark")
+        ctk.set_appearance_mode("light")
         ctk.set_default_color_theme("blue")
 
         root = ctk.CTk()

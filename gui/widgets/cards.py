@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""cards.py – Modern Obsidian Card Widgets for IGNITE Medical Imaging Suite."""
+"""cards.py – Standard Card Widgets for IGNITE Medical Imaging Suite."""
 
 import os
 import customtkinter as ctk
@@ -30,7 +30,7 @@ class AnalysisModeCard(ctk.CTkFrame):
         super().__init__(
             master,
             fg_color=COLOR_BG_CARD,
-            corner_radius=14,
+            corner_radius=8,
             border_width=1,
             border_color=COLOR_BORDER_CARD,
             **kwargs
@@ -41,7 +41,7 @@ class AnalysisModeCard(ctk.CTkFrame):
 
         mode_title = ctk.CTkLabel(
             hdr_frame,
-            text="🎯 ANALYSEMODUS",
+            text="ANALYSEMODUS",
             font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
             text_color=COLOR_CYAN
         )
@@ -69,7 +69,7 @@ class RoiCard(ctk.CTkFrame):
         super().__init__(
             master,
             fg_color=COLOR_BG_CARD,
-            corner_radius=14,
+            corner_radius=8,
             border_width=1,
             border_color=COLOR_BORDER_CARD,
             **kwargs
@@ -77,7 +77,7 @@ class RoiCard(ctk.CTkFrame):
 
         roi_title = ctk.CTkLabel(
             self,
-            text="🔍 INTERAKTIVE ROI-ANALYSE",
+            text="INTERAKTIVE ROI-ANALYSE",
             font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
             text_color=COLOR_VIOLET
         )
@@ -116,7 +116,7 @@ class SystemSettingsCard(ctk.CTkFrame):
         super().__init__(
             master,
             fg_color=COLOR_BG_CARD,
-            corner_radius=14,
+            corner_radius=8,
             border_width=1,
             border_color=COLOR_BORDER_CARD,
             **kwargs
@@ -124,7 +124,7 @@ class SystemSettingsCard(ctk.CTkFrame):
 
         self.toggle_btn = ctk.CTkButton(
             self,
-            text="⚙️ Systemeinstellungen  ▸",
+            text="Systemeinstellungen",
             command=toggle_callback,
             font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
             fg_color="transparent",
@@ -301,7 +301,7 @@ class PipelineParametersCard(ctk.CTkFrame):
         super().__init__(
             master,
             fg_color=COLOR_BG_CARD,
-            corner_radius=14,
+            corner_radius=8,
             border_width=1,
             border_color=COLOR_BORDER_CARD,
             **kwargs
@@ -309,7 +309,7 @@ class PipelineParametersCard(ctk.CTkFrame):
 
         self.toggle_btn = ctk.CTkButton(
             self,
-            text="📊 Pipeline-Parameter  ▸",
+            text="Pipeline-Parameter",
             command=toggle_callback,
             font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
             fg_color="transparent",
@@ -376,7 +376,7 @@ class AnalysisInfoCard(ctk.CTkFrame):
         super().__init__(
             master,
             fg_color=COLOR_BG_CARD,
-            corner_radius=14,
+            corner_radius=8,
             border_width=1,
             border_color=COLOR_BORDER_CARD,
             **kwargs
