@@ -2,10 +2,11 @@ import os
 import json
 import secrets
 import logging
+from typing import Dict, Any
 
 SETTINGS_FILE = "settings.json"
 
-_DEFAULT_SETTINGS = {
+_DEFAULT_SETTINGS: Dict[str, Any] = {
     "DEFAULT_SIGMA_K": 3.0,
     "DEFAULT_TOPHAT_FACTOR": 0.05,
     "DEFAULT_MIN_AREA_FACTOR": 0.0005,
@@ -28,7 +29,8 @@ _DEFAULT_SETTINGS = {
     "SALT": secrets.token_hex(16)
 }
 
-def load_settings():
+def load_settings() -> Dict[str, Any]:
+    """Lädt Konfigurationeinstellungen aus settings.json mit Fallback zu Defaults."""
     if not os.path.exists(SETTINGS_FILE):
         with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
             json.dump(_DEFAULT_SETTINGS, f, indent=4)
@@ -36,7 +38,7 @@ def load_settings():
     
     try:
         with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
-            settings = json.load(f)
+            settings: Dict[str, Any] = json.load(f)
             # Merge with defaults in case of missing keys
             updated = False
             for k, v in _DEFAULT_SETTINGS.items():
@@ -86,7 +88,7 @@ REFLECTED_TEMP_C = _settings["REFLECTED_TEMP_C"]
 
 SALT = _settings["SALT"]
 
-def init_output_dir():
+def init_output_dir() -> None:
     """Erstellt den Ausgabeordner, falls er noch nicht existiert."""
     if not os.path.exists(OUTPUT_DIR):
         os.makedirs(OUTPUT_DIR)

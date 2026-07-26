@@ -8,6 +8,10 @@ version = "1.0.0"
 description = "Ignite – Hochleistungs-Rust-Core für die thermografische Entzündungsdetektions-Pipeline"
 requires-python = ">=3.10"
 
+[project.optional-dependencies]
+gpu = ["torch>=2.0.0"]  # Nur installieren wenn GPU vorhanden
+dev = ["pytest>=7.4.0", "matplotlib>=3.8.0", "maturin>=1.4"]  # Nur für Entwicklung
+
 [tool.maturin]
 # Bindings-Typ: pyo3 (automatisches PyO3-Modul-Scaffolding)
 bindings = "pyo3"

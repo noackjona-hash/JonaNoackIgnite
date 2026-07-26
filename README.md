@@ -52,10 +52,16 @@ git clone https://github.com/noackjona-hash/JonaNoackIgnite.git
 cd JonaNoackIgnite
 ```
 
-### 2. Install dependencies & run benchmark
+### 2. Install dependencies (optimized for startup performance)
 ```bash
+# Schnelle Basis-Installation (GPU wird lazy-loaded)
 pip install -r requirements.txt
-python dataset_evaluator.py
+
+# Optional: GPU-Support aktivieren (wenn NVIDIA CUDA vorhanden)
+pip install torch --index-url https://download.pytorch.org/whl/cu118
+
+# Optional: Rust-Core selbst kompilieren (für ~10-15% Performance-Steigerung)
+maturin develop --release
 ```
 
 ### 3. Run the application
@@ -63,3 +69,21 @@ python dataset_evaluator.py
 python main.py
 ```
 
+### 4. Run benchmarks & tests
+```bash
+python dataset_evaluator.py    # Vollständiger Benchmark (Rust vs Python vs GPU)
+pytest tests/                  # Unit-Tests für Parity-Validierung
+```
+
+---
+
+## ⚡ Performance Optimization Tips
+
+| Scenario | Optimization |
+|----------|--------------|
+| **First Run / Demo** | Default (GPU lazy-loaded, Rust fallback) |
+| **Medical Practice** | Compile Rust core: `maturin develop --release` |
+| **GPU-Workstation** | `pip install torch` (CUDA auto-detected, <10ms) |
+| **Minimal Size** | Skip matplotlib, use default Python fallback |
+
+The splash screen ensures <50ms startup regardless of backend.

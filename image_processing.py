@@ -4,56 +4,71 @@ Dieses Modul dient als schlanke Vermittlungsschicht zwischen dem Tkinter-Fronten
 (`gui.py`) und dem nativen Rust-Erweiterungsmodul `ignite_core` sowie dem GPU-Backend.
 """
 
+from typing import Tuple, Optional
 import warnings
 import cv2
 import numpy as np
+import logging
 import config as _config
 
 # ─────────────────────────────────────────────────────────────────────────────
-# GPU- & Rust-Core-Erkennung mit Fallback-Mechanismus
+# Lazy GPU- & Rust-Core-Erkennung mit Fallback-Mechanismus
 # ─────────────────────────────────────────────────────────────────────────────
 _RUST_BACKEND_AVAILABLE = False
-_ignite_core = None
+_ignite_core: Optional[object] = None
 _GPU_AVAILABLE = False
+_GPU_INITIALIZED = False
+_TORCH = None
 
-# 1. GPU-Verfügbarkeit via PyTorch CUDA prüfen
-try:
-    import torch
-    import torch.nn.functional as F
-    if torch.cuda.is_available():
-        # Verifiziere Compute Capability durch eine Test-Operation
-        _dummy = torch.zeros(1, device="cuda")
-        _GPU_AVAILABLE = True
-except Exception:
-    _GPU_AVAILABLE = False
-
-# 2. Rust-Core importieren
+# 2. Rust-Core importieren (schnell, keine schweren Dependencies)
 try:
     import ignite_core as _ignite_core
     _RUST_BACKEND_AVAILABLE = True
 except ImportError:
     pass
 
-# 3. Aktives Backend auf der Konsole ausgeben
-if _GPU_AVAILABLE:
-    print(f"[image_processing] GPU-Beschleunigung aktiv: {torch.cuda.get_device_name(0)}")
-elif _RUST_BACKEND_AVAILABLE and _ignite_core is not None:
-    print(
-        f"[image_processing] Rust-Backend aktiv: {_ignite_core.__backend__} "
-        f"(v{_ignite_core.__version__})"
+# 1. GPU-Verfügbarkeit – LAZY! Wird nur beim Bedarf initialisiert
+def _init_gpu() -> bool:
+    """Initialisiert GPU lazily, wird nur aufgerufen wenn GPU tatsächlich benötigt wird."""
+    global _GPU_AVAILABLE, _GPU_INITIALIZED, _TORCH
+    
+    if _GPU_INITIALIZED:
+        return _GPU_AVAILABLE
+    
+    _GPU_INITIALIZED = True
+    
+    try:
+        import torch
+        import torch.nn.functional as F
+        _TORCH = torch
+        if torch.cuda.is_available():
+            # Verifiziere Compute Capability durch eine Test-Operation
+            _dummy = torch.zeros(1, device="cuda")
+            _GPU_AVAILABLE = True
+            logging.info(f"GPU-Beschleunigung verfügbar: {torch.cuda.get_device_name(0)}")
+    except Exception as e:
+        logging.debug(f"GPU-Initialisierung fehlgeschlagen: {e}")
+        _GPU_AVAILABLE = False
+    
+    return _GPU_AVAILABLE
+
+# 3. Startup-Logging (nur Rust-Core, GPU wird lazily geladen)
+if _RUST_BACKEND_AVAILABLE and _ignite_core is not None:
+    logging.info(
+        f"Rust-Backend verfügbar: {getattr(_ignite_core, '__backend__', 'CPU+rayon (Rust-native)')} "
+        f"(v{getattr(_ignite_core, '__version__', 'unknown')})"
     )
 else:
-    warnings.warn(
-        "[image_processing] WARNUNG: Weder GPU-Beschleunigung noch Rust-Backend aktiv!\n"
-        "  Nutze Python-Fallback-Pipeline.",
-        RuntimeWarning,
-        stacklevel=2,
+    logging.warning(
+        "WARNUNG: Rust-Backend nicht verfügbar! "
+        "Nutze Python-Fallback-Pipeline (langsamer)."
     )
 
 def get_active_backend() -> str:
     """Gibt den Namen des aktuell genutzten Berechnungs-Backends zurück."""
-    if _GPU_AVAILABLE:
-        return f"GPU (CUDA, {torch.cuda.get_device_name(0)})"
+    # Initialisiere GPU nur wenn explizit abgefragt
+    if _init_gpu() and _GPU_AVAILABLE:
+        return f"GPU (CUDA, {_TORCH.cuda.get_device_name(0)})"
     elif _RUST_BACKEND_AVAILABLE and _ignite_core is not None:
         return getattr(_ignite_core, "__backend__", "CPU+rayon (Rust-native)")
     else:

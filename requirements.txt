@@ -1,10 +1,24 @@
-numpy
-opencv-python
-customtkinter
-matplotlib
-Pillow
-pytest
+# ═══════════════════════════════════════════════════════════════════════════════
+# IGNITE: Thermografische Entzündungsdetektion – Requirements
+# ═══════════════════════════════════════════════════════════════════════════════
 
-# Optionale Backends:
-torch           # Für GPU-Beschleunigung (am besten via pytorch.org installieren je nach CUDA-Version)
-maturin         # Zum Kompilieren des Rust-Cores (ignite_core)
+# KERN-DEPENDENCIES (immer installieren)
+# ───────────────────────────────────────────────────────────────────────────────
+numpy>=1.24.0,<2.0          # Numerische Computations (FastMath, SIMD-Optimierungen)
+opencv-python>=4.8.0        # Bild I/O, Morphologie, Connected Components
+customtkinter>=5.2.0        # Modernes Dark-Mode GUI (CustomTkinter für schönere UI)
+Pillow>=10.0.0              # Bild-Rendering & PNG-Export
+
+# DOKUMENTATION & TESTING (optional, aber empfohlen für Entwicklung)
+# ───────────────────────────────────────────────────────────────────────────────
+pytest>=7.4.0               # Automatisierte Unit-Tests für CI/CD-Validierung
+matplotlib>=3.8.0           # Diagnostik-Visualisierung (kann durch custom-rendering ersetzt werden)
+
+# GPU-BACKEND (optional – nur installieren wenn CUDA/NVIDIA-Grafikkarte vorhanden)
+# ───────────────────────────────────────────────────────────────────────────────
+# Installiere mit: pip install -e ".[gpu]" 
+# torch>=2.0.0              # GPU-beschleunigte Tensoroperationen (lazy-imported, ~2GB!)
+
+# RUST-DEVELOPMENT (optional – nur für native Core-Kompilierung)
+# ───────────────────────────────────────────────────────────────────────────────
+# maturin>=1.4,<2.0         # Rust-PyO3 Compiler (wird durch cargo/maturin verwaltet)
