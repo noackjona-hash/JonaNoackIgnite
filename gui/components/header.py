@@ -63,62 +63,63 @@ class TitleBarComponent:
         )
         self.lbl_title.pack(side="left")
 
-        # Window Control-Buttons (Rechts)
-        def hard_exit():
-            self.root.destroy()
-            sys.exit(0)
+        # Standard Window Controls nur anzeigen wenn overrideredirect aktiv ist
+        if bool(self.root.wm_overrideredirect()):
+            def hard_exit():
+                self.root.destroy()
+                sys.exit(0)
 
-        self.btn_close = ctk.CTkButton(
-            self.title_bar,
-            text="✕",
-            width=46,
-            height=44,
-            fg_color="transparent",
-            hover_color=COLOR_DANGER,
-            text_color=COLOR_TEXT_PRIMARY,
-            corner_radius=0,
-            command=hard_exit
-        )
-        self.btn_close.pack(side="right")
+            self.btn_close = ctk.CTkButton(
+                self.title_bar,
+                text="✕",
+                width=46,
+                height=44,
+                fg_color="transparent",
+                hover_color=COLOR_DANGER,
+                text_color=COLOR_TEXT_PRIMARY,
+                corner_radius=0,
+                command=hard_exit
+            )
+            self.btn_close.pack(side="right")
 
-        def toggle_maximize():
-            if self.is_maximized:
-                self.root.state("normal")
-                self.is_maximized = False
-                self.btn_maximize.configure(text="🗖")
-            else:
-                self.root.state("zoomed")
-                self.is_maximized = True
-                self.btn_maximize.configure(text="🗗")
+            def toggle_maximize():
+                if self.is_maximized:
+                    self._set_maximized_state(False)
+                else:
+                    self._set_maximized_state(True)
 
-        self.btn_maximize = ctk.CTkButton(
-            self.title_bar,
-            text="🗖",
-            width=46,
-            height=44,
-            fg_color="transparent",
-            hover_color=COLOR_BORDER_CARD,
-            text_color=COLOR_TEXT_PRIMARY,
-            corner_radius=0,
-            command=toggle_maximize
-        )
-        self.btn_maximize.pack(side="right")
+            self.btn_maximize = ctk.CTkButton(
+                self.title_bar,
+                text="🗖",
+                width=46,
+                height=44,
+                fg_color="transparent",
+                hover_color=COLOR_BORDER_CARD,
+                text_color=COLOR_TEXT_PRIMARY,
+                corner_radius=0,
+                command=toggle_maximize
+            )
+            self.btn_maximize.pack(side="right")
 
-        def minimize_window():
-            self.root.iconify()
+            def minimize_window():
+                self.root.iconify()
 
-        self.btn_minimize = ctk.CTkButton(
-            self.title_bar,
-            text="—",
-            width=46,
-            height=44,
-            fg_color="transparent",
-            hover_color=COLOR_BORDER_CARD,
-            text_color=COLOR_TEXT_PRIMARY,
-            corner_radius=0,
-            command=minimize_window
-        )
-        self.btn_minimize.pack(side="right")
+            self.btn_minimize = ctk.CTkButton(
+                self.title_bar,
+                text="—",
+                width=46,
+                height=44,
+                fg_color="transparent",
+                hover_color=COLOR_BORDER_CARD,
+                text_color=COLOR_TEXT_PRIMARY,
+                corner_radius=0,
+                command=minimize_window
+            )
+            self.btn_minimize.pack(side="right")
+        else:
+            self.btn_close = None
+            self.btn_maximize = None
+            self.btn_minimize = None
 
         # Status Badge Pill (Mitte/Rechts)
         backend_name = image_processing.get_active_backend()
@@ -147,7 +148,28 @@ class TitleBarComponent:
         )
         lbl_badge.pack(padx=10, pady=2)
 
+    def _set_maximized_state(self, maximize: bool) -> None:
+        self.is_maximized = maximize
+        if sys.platform.startswith("win"):
+            try:
+                self.root.state("zoomed" if maximize else "normal")
+            except Exception:
+                pass
+        else:
+            try:
+                self.root.attributes("-zoomed", maximize)
+            except Exception:
+                try:
+                    self.root.state("normal")
+                except Exception:
+                    pass
+        if self.btn_maximize:
+            self.btn_maximize.configure(text="🗗" if maximize else "🗖")
+
     def _bind_drag_events(self) -> None:
+        if not bool(self.root.wm_overrideredirect()):
+            return
+
         def get_work_area():
             try:
                 import ctypes
@@ -166,9 +188,7 @@ class TitleBarComponent:
         def do_move(event):
             if self.is_maximized or self._is_snapped:
                 if self.is_maximized:
-                    self.root.state("normal")
-                    self.is_maximized = False
-                    self.btn_maximize.configure(text="🗖")
+                    self._set_maximized_state(False)
 
                 self.root.geometry(self._normal_geometry)
                 self.root.update_idletasks()
@@ -188,9 +208,7 @@ class TitleBarComponent:
 
             if pointer_y <= wy + snap_margin:
                 self._normal_geometry = f"{self.root.winfo_width()}x{self.root.winfo_height()}"
-                self.root.state("zoomed")
-                self.is_maximized = True
-                self.btn_maximize.configure(text="🗗")
+                self._set_maximized_state(True)
             elif pointer_x <= wx + snap_margin:
                 self._normal_geometry = f"{self.root.winfo_width()}x{self.root.winfo_height()}"
                 self.root.geometry(f"{ww//2}x{wh}+{wx}+{wy}")
@@ -208,6 +226,9 @@ class TitleBarComponent:
         self.lbl_title.bind("<ButtonRelease-1>", stop_move)
 
     def _apply_taskbar_fix(self) -> None:
+        if not bool(self.root.wm_overrideredirect()):
+            return
+
         def set_appwindow():
             try:
                 import ctypes

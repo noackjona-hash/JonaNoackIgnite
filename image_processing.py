@@ -21,9 +21,11 @@ try:
     import torch
     import torch.nn.functional as F
     if torch.cuda.is_available():
+        # Verifiziere Compute Capability durch eine Test-Operation
+        _dummy = torch.zeros(1, device="cuda")
         _GPU_AVAILABLE = True
-except ImportError:
-    pass
+except Exception:
+    _GPU_AVAILABLE = False
 
 # 2. Rust-Core importieren
 try:

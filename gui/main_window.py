@@ -63,7 +63,7 @@ class IgniteApp:
 
     def __init__(self, root: ctk.CTk) -> None:
         self.root = root
-        self.root.overrideredirect(True)
+        self.root.overrideredirect(False)
         self.root.title(f"IGNITE Medical Imaging Suite v{APP_VERSION} – Thermografische Analyse")
         self.root.geometry("1400x900")
         self.root.minsize(1200, 780)
