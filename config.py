@@ -26,6 +26,7 @@ _DEFAULT_SETTINGS: Dict[str, Any] = {
     "BORDER_MARGIN_PX": 10,
     "SKIN_EMISSIVITY": 0.98,
     "REFLECTED_TEMP_C": 20.0,
+    "UI_SCALE": 1.0,
     "SALT": secrets.token_hex(16)
 }
 
@@ -85,6 +86,11 @@ MIN_DIST_FROM_BORDER_ABS = _settings["MIN_DIST_FROM_BORDER_ABS"]
 BORDER_MARGIN_PX = _settings["BORDER_MARGIN_PX"]
 SKIN_EMISSIVITY = _settings["SKIN_EMISSIVITY"]
 REFLECTED_TEMP_C = _settings["REFLECTED_TEMP_C"]
+
+# ── UI-Skalierung ──────────────────────────────────────────────────────────────
+# Zusätzlicher Zoom-Faktor für die gesamte Oberfläche (1.0 = automatisch nach
+# Bildschirm-DPI). Werte > 1.0 vergrößern, < 1.0 verkleinern alles.
+UI_SCALE = _settings.get("UI_SCALE", 1.0)
 
 SALT = _settings["SALT"]
 

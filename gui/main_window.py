@@ -65,8 +65,7 @@ class IgniteApp:
         self.root = root
         self.root.overrideredirect(False)
         self.root.title(f"IGNITE Medical Imaging Suite v{APP_VERSION} – Thermografische Analyse")
-        self.root.geometry("1400x900")
-        self.root.minsize(1200, 780)
+        self._apply_adaptive_geometry()
         self.root.configure(fg_color=COLOR_BG_MAIN)
 
         icon_path = get_resource_path(os.path.join("icon", "LogoRund.ico"))
@@ -121,6 +120,51 @@ class IgniteApp:
         # Bindings
         self.root.bind("<Configure>", self.on_window_configure)
         self.update_backend_label()
+
+    def _apply_adaptive_geometry(self) -> None:
+        """Setzt die Startgröße so, dass das (DPI-skalierte) Fenster auf den
+        Bildschirm passt. Verhindert, dass das Hauptfenster auf HiDPI-Displays
+        über den sichtbaren Bereich hinausragt."""
+        des_w, des_h = 1400, 900
+        min_w, min_h = 1200, 780
+        try:
+            # Effektiver Fenster-Skalierungsfaktor (identisch zu main.py)
+            ui_scale = float(getattr(config, "UI_SCALE", 1.0))
+            dpi_scale = max(1.0, self.root.winfo_fpixels("1i") / 96.0)
+            ws = max(0.8, min(dpi_scale * ui_scale, 3.0))
+
+            screen_w = self.root.winfo_screenwidth()
+            screen_h = self.root.winfo_screenheight()
+            # Verfügbare logische Größe (physisch * 0.92 / Skalierung)
+            max_w = int((screen_w * 0.92) / ws)
+            max_h = int((screen_h * 0.90) / ws)
+
+            w = max(600, min(des_w, max_w))
+            h = max(500, min(des_h, max_h))
+            self.root.geometry(f"{w}x{h}")
+            self.root.minsize(min(min_w, w), min(min_h, h))
+        except Exception as e:
+            logging.debug(f"Adaptive Geometrie fehlgeschlagen: {e}")
+            self.root.geometry(f"{des_w}x{des_h}")
+            self.root.minsize(min_w, min_h)
+
+    def _effective_scaling(self) -> float:
+        """Effektiver CTk-Skalierungsfaktor (inkl. DPI) für dieses Fenster."""
+        try:
+            return float(ctk.ScalingTracker.get_widget_scaling(self.root))
+        except Exception:
+            return 1.0
+
+    def _make_display_image(self, pil_img):
+        """Erzeugt ein CTkImage, dessen Anzeige-Größe die HiDPI-Skalierung
+        berücksichtigt. Ohne diese Korrektur würde CTkImage die bereits in
+        physischen Pixeln vorliegende Vorschau erneut skalieren (zu groß)."""
+        sf = self._effective_scaling()
+        if sf <= 0:
+            sf = 1.0
+        w = max(1, int(round(pil_img.width / sf)))
+        h = max(1, int(round(pil_img.height / sf)))
+        return ctk.CTkImage(light_image=pil_img, dark_image=pil_img, size=(w, h))
 
     def setup_ui(self) -> None:
         """Erstellt das moderne Interface mit Sidebar, Cards und Tabview-Bildanzeige."""
@@ -876,7 +920,7 @@ class IgniteApp:
 
         pil_grid = pil_img.copy()
         pil_grid.thumbnail((w_grid, h_grid))
-        img_tk_grid = ctk.CTkImage(light_image=pil_grid, dark_image=pil_grid, size=pil_grid.size)
+        img_tk_grid = self._make_display_image(pil_grid)
         lbl_grid.configure(image=img_tk_grid, text="")
         lbl_grid.image = img_tk_grid
 
@@ -889,7 +933,7 @@ class IgniteApp:
 
         pil_full = pil_img.copy()
         pil_full.thumbnail((w_full, h_full))
-        img_tk_full = ctk.CTkImage(light_image=pil_full, dark_image=pil_full, size=pil_full.size)
+        img_tk_full = self._make_display_image(pil_full)
         lbl_full.configure(image=img_tk_full, text="")
         lbl_full.image = img_tk_full
 
@@ -1166,7 +1210,7 @@ class IgniteApp:
             color_spine = "#E2E8F0"
             bg_legend = "#F1F5F9"
 
-        fig = Figure(figsize=(6, 3.8), dpi=100, facecolor=bg_fig)
+        fig = Figure(figsize=(6, 3.8), dpi=int(100 * self._effective_scaling()), facecolor=bg_fig)
         ax = fig.add_subplot(111, facecolor=bg_ax)
 
         ax.hist(pixels_disp, bins=128, color=COLOR_PRIMARY_ACCENT, alpha=0.7, edgecolor="none")

@@ -56,7 +56,15 @@ class FullscreenImageModal(ctk.CTkToplevel):
         img_copy = self.pil_image.copy()
         img_copy.thumbnail((w, h))
 
-        ctk_img = ctk.CTkImage(light_image=img_copy, dark_image=img_copy, size=img_copy.size)
+        try:
+            sf = float(ctk.ScalingTracker.get_widget_scaling(self))
+        except Exception:
+            sf = 1.0
+        if sf <= 0:
+            sf = 1.0
+        disp = (max(1, int(round(img_copy.width / sf))), max(1, int(round(img_copy.height / sf))))
+
+        ctk_img = ctk.CTkImage(light_image=img_copy, dark_image=img_copy, size=disp)
         self.img_lbl.configure(image=ctk_img)
         self.img_lbl.image = ctk_img
 
