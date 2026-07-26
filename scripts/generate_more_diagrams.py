@@ -4,10 +4,19 @@ Erzeugt 5 zusätzliche wissenschaftliche Skizzen, Diagramme und Parameteranalyse
 """
 
 import os
+import sys
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+
+# Projekt-Root ermitteln, damit relative Pfade (images/, ...) sowie die Imports
+# von image_processing/config/dataset_evaluator trotz Verschiebung nach scripts/
+# weiterhin funktionieren.
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, ROOT_DIR)
+os.chdir(ROOT_DIR)
+
 import image_processing
 import config
 

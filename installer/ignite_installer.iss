@@ -28,9 +28,9 @@ VersionInfoProductName=IGNITE Medical Imaging Suite
 VersionInfoProductVersion=3.1.13
 
 ; Pfad zur Icon-Datei für den Installer selbst
-SetupIconFile=icon\LogoRund.ico
-; Speicherort und Name des fertigen Installers
-OutputDir=.
+SetupIconFile=..\icon\LogoRund.ico
+; Speicherort und Name des fertigen Installers (Repo-Root, wie zuvor)
+OutputDir=..
 OutputBaseFilename=IGNITE_Setup_v3.1.13
 Compression=lzma
 SolidCompression=yes
@@ -43,11 +43,11 @@ Name: "german"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-; Hauptanwendung (die von PyInstaller erstellte EXE)
-Source: "dist\Ignite.exe"; DestDir: "{app}"; Flags: ignoreversion
+; Hauptanwendung (die von PyInstaller erstellte EXE, liegt im Repo-Root unter dist/)
+Source: "..\dist\Ignite.exe"; DestDir: "{app}"; Flags: ignoreversion
 ; Logos/Icons für eventuelle Verknüpfungs-Referenzen mitinstallieren
-Source: "icon\LogoRund.ico"; DestDir: "{app}\icon"; Flags: ignoreversion
-Source: "icon\LogoRund.png"; DestDir: "{app}\icon"; Flags: ignoreversion
+Source: "..\icon\LogoRund.ico"; DestDir: "{app}\icon"; Flags: ignoreversion
+Source: "..\icon\LogoRund.png"; DestDir: "{app}\icon"; Flags: ignoreversion
 
 [Icons]
 ; Startmenü-Verknüpfung

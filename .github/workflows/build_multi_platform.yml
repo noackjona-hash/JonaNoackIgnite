@@ -47,8 +47,8 @@ jobs:
       - name: Package Application (Windows)
         if: runner.os == 'Windows'
         run: |
-          pyinstaller --noconfirm Ignite.spec
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" ignite_installer.iss
+          pyinstaller --noconfirm installer/Ignite.spec
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\ignite_installer.iss
 
       - name: Package Application (Linux)
         if: runner.os == 'Linux'

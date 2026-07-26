@@ -4,9 +4,16 @@ Erzeugt wissenschaftliche Diagramme, Skizzen und Ablaufpläne für die Jugend fo
 """
 
 import os
+import sys
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import numpy as np
+
+# Projekt-Root ermitteln, damit relative Pfade (images/, ...) trotz Verschiebung
+# nach scripts/ weiterhin auf das Repository-Root zeigen.
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, ROOT_DIR)
+os.chdir(ROOT_DIR)
 
 os.makedirs("images", exist_ok=True)
 

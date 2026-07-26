@@ -7,12 +7,16 @@ import os
 import subprocess
 import sys
 
+# Projekt-Root und docs/-Verzeichnis ermitteln (Arbeit liegt jetzt in docs/).
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DOCS_DIR = os.path.join(ROOT_DIR, "docs")
+
 pandoc_bin = r"C:\Users\jonan\AppData\Local\Microsoft\WinGet\Packages\JohnMacFarlane.Pandoc_Microsoft.Winget.Source_8wekyb3d8bbwe\pandoc-3.10\pandoc.exe"
 chrome_bin = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
 
-md_file = "SCHRIFTLICHE_ARBEIT_JUGEND_FORSCHT.md"
-html_file = "SCHRIFTLICHE_ARBEIT_JUGEND_FORSCHT.html"
-pdf_file = "SCHRIFTLICHE_ARBEIT_JUGEND_FORSCHT.pdf"
+md_file = os.path.join(DOCS_DIR, "SCHRIFTLICHE_ARBEIT_JUGEND_FORSCHT.md")
+html_file = os.path.join(DOCS_DIR, "SCHRIFTLICHE_ARBEIT_JUGEND_FORSCHT.html")
+pdf_file = os.path.join(DOCS_DIR, "SCHRIFTLICHE_ARBEIT_JUGEND_FORSCHT.pdf")
 
 # CSS Styling exakt nach dem Jugend forscht Leitfaden
 custom_css = """
@@ -133,7 +137,7 @@ pre code {
 }
 """
 
-css_filename = "jufo_paper_style.css"
+css_filename = os.path.join(DOCS_DIR, "jufo_paper_style.css")
 with open(css_filename, "w", encoding="utf-8") as f:
     f.write(custom_css)
 
@@ -144,7 +148,7 @@ cmd_pandoc = [
     "-o", html_file,
     "--standalone",
     "--mathjax",
-    "--css=" + css_filename,
+    "--css=" + os.path.basename(css_filename),
     "--metadata", "title=IGNITE Schriftliche Arbeit Jugend forscht 2026"
 ]
 

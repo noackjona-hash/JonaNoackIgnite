@@ -1,5 +1,11 @@
 import subprocess
 import sys
+import os
+
+# Projekt-Root ermitteln, damit `git ls-files` weiterhin das gesamte Repository
+# (nicht nur scripts/) erfasst, unabhängig vom Aufrufort.
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+os.chdir(ROOT_DIR)
 
 def get_tracked_and_untracked_files():
     """Holt alle nicht-ignorierten Dateien direkt von Git in einem Rutsch."""

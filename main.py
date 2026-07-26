@@ -96,7 +96,9 @@ def update_splash(splash, progress: float, message: str):
 # ─── Hauptprogramm ────────────────────────────────────────────────────────────
 
 def main():
-    logging.basicConfig(level=logging.INFO, filename='ignite_app.log', format='%(asctime)s - %(levelname)s - %(message)s')
+    log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
+    os.makedirs(log_dir, exist_ok=True)
+    logging.basicConfig(level=logging.INFO, filename=os.path.join(log_dir, 'ignite_app.log'), format='%(asctime)s - %(levelname)s - %(message)s')
     
     # Splash sofort zeigen – noch BEVOR schwere Imports
     splash = create_instant_splash()

@@ -25,6 +25,10 @@ build/
 # Projekt-spezifische Ausgaben
 /ignite_steps_output/
 
+# Runtime-Logs
+/logs/
+*.log
+
 # IDEs & Systemdateien
 .idea/
 .vscode/

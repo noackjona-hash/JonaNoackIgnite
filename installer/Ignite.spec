@@ -1,7 +1,12 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_all
+import os
 
-datas = [('icon', 'icon')]
+# Repository-Root ermitteln (dieses Spec-File liegt jetzt in installer/), damit
+# main.py und icon/ unabhängig vom Aufrufort korrekt gefunden werden.
+REPO_ROOT = os.path.dirname(SPECPATH)
+
+datas = [(os.path.join(REPO_ROOT, 'icon'), 'icon')]
 binaries = []
 hiddenimports = []
 tmp_ret = collect_all('customtkinter')
@@ -9,8 +14,8 @@ datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
 
 a = Analysis(
-    ['main.py'],
-    pathex=[],
+    [os.path.join(REPO_ROOT, 'main.py')],
+    pathex=[REPO_ROOT],
     binaries=binaries,
     datas=datas,
     hiddenimports=hiddenimports,
@@ -42,6 +47,6 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['icon/LogoRund.ico'],
+    icon=[os.path.join(REPO_ROOT, 'icon', 'LogoRund.ico')],
     version_file=None,
 )

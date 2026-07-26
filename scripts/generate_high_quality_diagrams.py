@@ -4,10 +4,17 @@ Erzeugt hochauflösende, publikationsreife Grafiken, Skizzen und Diagramme für 
 """
 
 import os
+import sys
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+
+# Projekt-Root ermitteln, damit relative Pfade (images/, ...) sowie der spätere
+# Import von dataset_evaluator trotz Verschiebung nach scripts/ funktionieren.
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, ROOT_DIR)
+os.chdir(ROOT_DIR)
 
 os.makedirs("images", exist_ok=True)
 

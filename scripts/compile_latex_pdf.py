@@ -7,12 +7,16 @@ import os
 import subprocess
 import sys
 
+# Projekt-Root und docs/-Verzeichnis ermitteln (Arbeit liegt jetzt in docs/).
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DOCS_DIR = os.path.join(ROOT_DIR, "docs")
+
 pandoc_bin = r"C:\Users\jonan\AppData\Local\Microsoft\WinGet\Packages\JohnMacFarlane.Pandoc_Microsoft.Winget.Source_8wekyb3d8bbwe\pandoc-3.10\pandoc.exe"
 pdflatex_bin = r"C:\Users\jonan\AppData\Local\Programs\MiKTeX\miktex\bin\x64\pdflatex.exe"
 
-md_file = "SCHRIFTLICHE_ARBEIT_JUGEND_FORSCHT.md"
-tex_file = "SCHRIFTLICHE_ARBEIT_JUGEND_FORSCHT.tex"
-pdf_file = "SCHRIFTLICHE_ARBEIT_JUGEND_FORSCHT.pdf"
+md_file = os.path.join(DOCS_DIR, "SCHRIFTLICHE_ARBEIT_JUGEND_FORSCHT.md")
+tex_file = os.path.join(DOCS_DIR, "SCHRIFTLICHE_ARBEIT_JUGEND_FORSCHT.tex")
+pdf_file = os.path.join(DOCS_DIR, "SCHRIFTLICHE_ARBEIT_JUGEND_FORSCHT.pdf")
 
 # 1. Konvertierung von Markdown nach LaTeX (.tex)
 print("[1/3] Konvertiere Markdown nach LaTeX (.tex) via Pandoc...")
@@ -48,9 +52,9 @@ cmd_pdflatex = [
     tex_file
 ]
 
-res_tex1 = subprocess.run(cmd_pdflatex, capture_output=True, text=True, env=env)
+res_tex1 = subprocess.run(cmd_pdflatex, capture_output=True, text=True, env=env, cwd=DOCS_DIR)
 # Zweiter Durchlauf für Seitenzahlen & Inhaltsverzeichnis
-res_tex2 = subprocess.run(cmd_pdflatex, capture_output=True, text=True, env=env)
+res_tex2 = subprocess.run(cmd_pdflatex, capture_output=True, text=True, env=env, cwd=DOCS_DIR)
 
 if os.path.exists(pdf_file):
     print(f"[3/3] Erfolgreich! PDF wurde via pdflatex erstellt: {os.path.abspath(pdf_file)}")

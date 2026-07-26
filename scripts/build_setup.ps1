@@ -27,6 +27,11 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+# Repository-Root ermitteln (dieses Skript liegt jetzt in scripts/) und dorthin
+# wechseln, damit Cargo.toml/pyproject.toml/dist/ weiterhin relativ gefunden werden.
+$RepoRoot = Split-Path -Parent $PSScriptRoot
+Set-Location $RepoRoot
+
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "  Ignite Core v0.1.0 – Rust Build" -ForegroundColor Cyan
 Write-Host "  Reine Rust-Implementierung (kein C++)" -ForegroundColor Cyan
@@ -38,7 +43,7 @@ Write-Host ""
 # ─────────────────────────────────────────────────────────────────────────────
 if ($Test) {
     Write-Host "Führe Smoke-Test aus..." -ForegroundColor Yellow
-    python verify_installation.py
+    python "$PSScriptRoot\verify_installation.py"
     exit 0
 }
 
@@ -135,7 +140,7 @@ if ($wheel) {
 Write-Host ""
 Write-Host "[4/4] Verifikation..." -ForegroundColor Yellow
 
-python verify_installation.py
+python "$PSScriptRoot\verify_installation.py"
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Green

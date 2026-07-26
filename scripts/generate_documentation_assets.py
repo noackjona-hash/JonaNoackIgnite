@@ -8,6 +8,14 @@ import sys
 import time
 import cv2
 import numpy as np
+
+# Projekt-Root ermitteln, damit relative Pfade (images/, test-data/, ...) sowie
+# die Imports von image_processing/config/dataset_evaluator trotz Verschiebung
+# nach scripts/ weiterhin auf das Repository-Root zeigen.
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, ROOT_DIR)
+os.chdir(ROOT_DIR)
+
 import image_processing
 import config
 

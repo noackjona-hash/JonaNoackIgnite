@@ -9,6 +9,12 @@ import time
 import customtkinter as ctk
 from PIL import ImageGrab
 
+# Projekt-Root ermitteln, damit relative Pfade (images/, ...) sowie der Import
+# von gui.main_window trotz Verschiebung nach scripts/ weiterhin funktionieren.
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, ROOT_DIR)
+os.chdir(ROOT_DIR)
+
 os.makedirs("images", exist_ok=True)
 
 try:
