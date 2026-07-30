@@ -37,6 +37,7 @@ from gui.components.thermal_canvas import ThermalCanvasWidget
 from gui.components.controls_panel import ParameterControlsPanel
 from gui.components.header import TitleBarComponent
 
+from gui.widgets.toast import ToastManager
 from gui.widgets.cards import (
     AnalysisModeCard,
     RoiCard,
@@ -67,6 +68,7 @@ class IgniteApp:
         self.root.title(f"IGNITE Medical Imaging Suite v{APP_VERSION} – Thermografische Analyse")
         self._apply_adaptive_geometry()
         self.root.configure(fg_color=COLOR_BG_MAIN)
+        self._toast = ToastManager(self.root)
 
         icon_path = get_resource_path(os.path.join("icon", "LogoRund.ico"))
         if os.path.exists(icon_path):
@@ -108,6 +110,11 @@ class IgniteApp:
         self.roi_end_x: int = 0
         self.roi_end_y: int = 0
 
+        # Undo/Redo-Stack für Pipeline-Parameter
+        self._param_undo_stack: list[dict] = []
+        self._param_redo_stack: list[dict] = []
+        self._MAX_UNDO = 20
+
         self.backend_var = tk.StringVar(value="auto")
 
         # ── 1. CUSTOM TITLEBAR HEADER COMPONENT ──────────────────────────────
@@ -120,6 +127,8 @@ class IgniteApp:
         # Bindings
         self.root.bind("<Configure>", self.on_window_configure)
         self.update_backend_label()
+        self._setup_status_bar()
+        self._setup_keyboard_shortcuts()
 
     def _apply_adaptive_geometry(self) -> None:
         """Setzt die Startgröße so, dass das (DPI-skalierte) Fenster auf den
@@ -172,6 +181,7 @@ class IgniteApp:
         self.root.grid_columnconfigure(1, weight=1)
         self.root.grid_rowconfigure(0, weight=0)
         self.root.grid_rowconfigure(1, weight=1)
+        self.root.grid_rowconfigure(2, weight=0)  # Statusleiste
 
         # ── LINKE SEITENLEISTE ───────────────────────────────────────────────
         sidebar_frame = ctk.CTkFrame(self.root, width=320, corner_radius=0, fg_color=COLOR_BG_MAIN)
@@ -760,6 +770,205 @@ class IgniteApp:
             active += " (Erzwungen)"
         self.backend_label.configure(text=f"Backend: {active}")
 
+    # ── KEYBOARD SHORTCUTS ───────────────────────────────────────────────────
+
+    def _setup_keyboard_shortcuts(self) -> None:
+        """Registriert alle Tastatur-Shortcuts für Power-User-Effizienz."""
+        self.root.bind("<Control-o>", lambda e: self.load_file())
+        self.root.bind("<Control-O>", lambda e: self.load_file())
+        self.root.bind("<Control-r>", lambda e: self.process_pipeline() if self.current_filepath else None)
+        self.root.bind("<Control-R>", lambda e: self.process_pipeline() if self.current_filepath else None)
+        self.root.bind("<Control-e>", lambda e: self.export_html_report())
+        self.root.bind("<Control-E>", lambda e: self.export_html_report())
+        self.root.bind("<Control-k>", lambda e: self._open_command_palette())
+        self.root.bind("<Control-K>", lambda e: self._open_command_palette())
+        self.root.bind("<Control-p>", lambda e: self._open_command_palette())
+        self.root.bind("<Control-P>", lambda e: self._open_command_palette())
+        self.root.bind("<F5>", lambda e: self.process_pipeline() if self.current_filepath else None)
+        self.root.bind("<Control-z>", lambda e: self._undo_params())
+        self.root.bind("<Control-Z>", lambda e: self._undo_params())
+        self.root.bind("<Control-y>", lambda e: self._redo_params())
+        self.root.bind("<Control-Y>", lambda e: self._redo_params())
+        self.root.bind("<Control-t>", lambda e: self.toggle_appearance_mode())
+        self.root.bind("<Control-T>", lambda e: self.toggle_appearance_mode())
+
+    # ── STATUS BAR ───────────────────────────────────────────────────────────
+
+    def _setup_status_bar(self) -> None:
+        """Erstellt eine permanente Status-Leiste am unteren Fensterrand."""
+        self._status_bar = ctk.CTkFrame(
+            self.root, height=28, corner_radius=0,
+            fg_color=COLOR_BG_CARD, border_width=1, border_color=COLOR_BORDER_CARD
+        )
+        self._status_bar.grid(row=2, column=0, columnspan=2, sticky="ew")
+        self._status_bar.grid_propagate(False)
+
+        self._sb_status_lbl = ctk.CTkLabel(
+            self._status_bar,
+            text="Bereit",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=10),
+            text_color=COLOR_TEXT_MUTED,
+            anchor="w"
+        )
+        self._sb_status_lbl.pack(side=ctk.LEFT, padx=12)
+
+        ctk.CTkFrame(self._status_bar, width=1, height=16, fg_color=COLOR_BORDER_CARD).pack(side=ctk.LEFT, padx=6, pady=6)
+
+        self._sb_backend_lbl = ctk.CTkLabel(
+            self._status_bar,
+            text="Backend: –",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=10),
+            text_color=COLOR_TEXT_MUTED,
+            anchor="w"
+        )
+        self._sb_backend_lbl.pack(side=ctk.LEFT, padx=4)
+
+        ctk.CTkLabel(
+            self._status_bar,
+            text="Ctrl+K  Befehle  ·  Ctrl+O  Öffnen  ·  F5  Analyse  ·  Ctrl+Z  Rückgängig",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=10),
+            text_color=COLOR_TEXT_MUTED,
+        ).pack(side=ctk.RIGHT, padx=14)
+
+        self._sb_progress = ctk.CTkProgressBar(
+            self._status_bar, width=120, height=6,
+            corner_radius=3,
+            fg_color=("#E0E0E0", "#444444"),
+            progress_color=COLOR_PRIMARY_ACCENT
+        )
+        self._sb_progress.set(0.0)
+
+    def _sb_set_status(self, text: str, color: str | None = None) -> None:
+        """Aktualisiert den Status-Text in der Status-Leiste."""
+        try:
+            self._sb_status_lbl.configure(
+                text=text,
+                text_color=color if color else COLOR_TEXT_MUTED
+            )
+        except Exception:
+            pass
+
+    def _sb_show_progress(self, value: float) -> None:
+        """Zeigt oder aktualisiert den Fortschrittsbalken in der Status-Leiste."""
+        try:
+            if value >= 1.0:
+                self._sb_progress.pack_forget()
+            else:
+                self._sb_progress.pack(side=ctk.RIGHT, padx=8, pady=4)
+                self._sb_progress.set(value)
+        except Exception:
+            pass
+
+    # ── TOAST ────────────────────────────────────────────────────────────────
+
+    def _show_toast(self, message: str, level: str = "info", duration_ms: int = 3500,
+                    action_text: str | None = None, action_callback=None) -> None:
+        """Zeigt eine nicht-blockierende Toast-Benachrichtigung."""
+        try:
+            self._toast.show(message, level=level, duration_ms=duration_ms,
+                             action_text=action_text, action_callback=action_callback)
+        except Exception:
+            pass
+
+    # ── UNDO / REDO ──────────────────────────────────────────────────────────
+
+    def _capture_param_state(self) -> dict:
+        """Nimmt den aktuellen Zustand aller Pipeline-Parameter auf."""
+        return {
+            "sigma_k": self.sigma_k_slider.get(),
+            "tophat": self.tophat_slider.get(),
+            "min_area": self.min_area_slider.get(),
+            "min_circ": self.min_circ_slider.get(),
+            "otsu_min": self.otsu_min_slider.get(),
+            "otsu_max": self.otsu_max_slider.get(),
+            "erosion": self.erosion_slider.get(),
+            "temp_offset": self.temp_offset_slider.get(),
+        }
+
+    def _apply_param_state(self, state: dict) -> None:
+        """Stellt Pipeline-Parameter aus einem gespeicherten Zustand wieder her."""
+        self.sigma_k_slider.set(state["sigma_k"])
+        self.tophat_slider.set(state["tophat"])
+        self.min_area_slider.set(state["min_area"])
+        self.min_circ_slider.set(state["min_circ"])
+        self.otsu_min_slider.set(state["otsu_min"])
+        self.otsu_max_slider.set(state["otsu_max"])
+        self.erosion_slider.set(state["erosion"])
+        self.temp_offset_slider.set(state["temp_offset"])
+        self.update_params()
+
+    def _push_undo_state(self) -> None:
+        """Speichert den aktuellen Parameter-Zustand für Undo."""
+        try:
+            state = self._capture_param_state()
+            self._param_undo_stack.append(state)
+            if len(self._param_undo_stack) > self._MAX_UNDO:
+                self._param_undo_stack.pop(0)
+            self._param_redo_stack.clear()
+        except Exception:
+            pass
+
+    def _undo_params(self) -> None:
+        """Setzt Parameter auf den letzten gespeicherten Zustand zurück."""
+        if not self._param_undo_stack:
+            self._show_toast("Kein weiterer Undo-Schritt verfügbar.", level="info")
+            return
+        current = self._capture_param_state()
+        self._param_redo_stack.append(current)
+        state = self._param_undo_stack.pop()
+        self._apply_param_state(state)
+        self._show_toast("Parameter rückgängig gemacht (Strg+Y zum Wiederholen).", level="info")
+
+    def _redo_params(self) -> None:
+        """Stellt rückgängig gemachte Parameter wieder her."""
+        if not self._param_redo_stack:
+            self._show_toast("Kein Redo-Schritt verfügbar.", level="info")
+            return
+        current = self._capture_param_state()
+        self._param_undo_stack.append(current)
+        state = self._param_redo_stack.pop()
+        self._apply_param_state(state)
+        self._show_toast("Parameter wiederhergestellt.", level="info")
+
+    # ── COMMAND PALETTE ──────────────────────────────────────────────────────
+
+    def _open_command_palette(self) -> None:
+        """Öffnet die Command Palette (Ctrl+K)."""
+        from gui.widgets.command_palette import CommandPalette
+        commands = [
+            {"label": "Wärmebild öffnen",         "desc": "Bilddatei laden und analysieren",      "shortcut": "Ctrl+O", "action": self.load_file},
+            {"label": "Analyse ausführen",          "desc": "Pipeline neu berechnen",               "shortcut": "F5",     "action": self.process_pipeline if self.current_filepath else None},
+            {"label": "HTML-Bericht exportieren",   "desc": "Ergebnisse als HTML speichern",        "shortcut": "Ctrl+E", "action": self.export_html_report},
+            {"label": "Stapelverarbeitung starten", "desc": "Ordner mit Bildern verarbeiten",       "shortcut": "",       "action": self.run_batch_processing},
+            {"label": "Ergebnisordner öffnen",      "desc": "Ausgabeverzeichnis im Explorer öffnen","shortcut": "",       "action": self.open_output_dir},
+            {"label": "Farbpalette: Graustufen",    "desc": "Thermobild in Graustufen anzeigen",    "shortcut": "",       "action": lambda: self.palette_menu.set("Graustufen") or self.on_palette_changed("Graustufen")},
+            {"label": "Farbpalette: Jet",           "desc": "Thermobild mit Regenbogen-Farben",     "shortcut": "",       "action": lambda: self.palette_menu.set("Regenbogen (Jet)") or self.on_palette_changed("Regenbogen (Jet)")},
+            {"label": "Farbpalette: Inferno",       "desc": "Thermobild mit Inferno-Palette",       "shortcut": "",       "action": lambda: self.palette_menu.set("Inferno") or self.on_palette_changed("Inferno")},
+            {"label": "Parameter zurücksetzen",     "desc": "Alle Slider auf Standardwerte",        "shortcut": "",       "action": self._reset_parameters},
+            {"label": "Parameter rückgängig",       "desc": "Letzten Parameter-Schritt rückgängig", "shortcut": "Ctrl+Z", "action": self._undo_params},
+            {"label": "Dark/Light Mode wechseln",   "desc": "Erscheinungsbild umschalten",          "shortcut": "Ctrl+T", "action": self.toggle_appearance_mode},
+            {"label": "Ordner bereinigen",          "desc": "Alle Ausgabedateien löschen",          "shortcut": "",       "action": self.clean_output_dir},
+            {"label": "Anleitung anzeigen",         "desc": "Bedienungsanleitung öffnen",           "shortcut": "",       "action": self.show_info_window},
+            {"label": "Über IGNITE",                "desc": "Versionsinformationen",                "shortcut": "",       "action": self.show_about_window},
+        ]
+        commands = [c for c in commands if c.get("action") is not None]
+        palette = CommandPalette(self.root, commands)
+        palette.grab_set()
+
+    def _reset_parameters(self) -> None:
+        """Setzt alle Pipeline-Parameter auf die konfigurierten Standardwerte zurück."""
+        self._push_undo_state()
+        self.sigma_k_slider.set(config.DEFAULT_SIGMA_K)
+        self.tophat_slider.set(config.DEFAULT_TOPHAT_FACTOR)
+        self.min_area_slider.set(config.DEFAULT_MIN_AREA_FACTOR)
+        self.min_circ_slider.set(config.DEFAULT_MIN_CIRCULARITY)
+        self.otsu_min_slider.set(config.DEFAULT_OTSU_MIN)
+        self.otsu_max_slider.set(config.DEFAULT_OTSU_MAX)
+        self.erosion_slider.set(config.DEFAULT_DIST_EROSION_FACTOR)
+        self.temp_offset_slider.set(0.0)
+        self.update_params(val=None)
+        self._show_toast("Parameter auf Standardwerte zurückgesetzt.", level="success")
+
     def load_file(self) -> None:
         file_path = filedialog.askopenfilename(
             filetypes=[
@@ -831,6 +1040,8 @@ class IgniteApp:
     def update_loading_progress(self, progress: float, step_text: str) -> None:
         self.loading_pbar.set(progress)
         self.loading_step_lbl.configure(text=step_text)
+        self._sb_show_progress(progress)
+        self._sb_set_status(step_text, color=COLOR_PRIMARY_ACCENT)
         self.root.update_idletasks()
 
     def show_loading_overlay(self) -> None:
@@ -848,6 +1059,12 @@ class IgniteApp:
         self.update_backend_label()
         hotspot_count = int(hotspot_mask.sum()) // 255
         self.status_label.configure(text="Status: Analyse abgeschlossen ✓", text_color="#107C10")
+        self._sb_show_progress(1.0)
+        self._sb_set_status(
+            f"Analyse abgeschlossen – {hotspot_count} Hotspot-Pixel erkannt",
+            color="#107C10" if hotspot_count == 0 else "#C42B1C"
+        )
+        self._sb_backend_lbl.configure(text=f"Backend: {image_processing.get_active_backend()}")
 
         if hotspot_count > 0:
             self.hotspot_label.configure(text=f"Hotspots: {hotspot_count} Pixel", text_color="#C42B1C")
@@ -863,9 +1080,14 @@ class IgniteApp:
     def on_pipeline_failed(self, error: Exception) -> None:
         self.hide_loading_overlay()
         self.status_label.configure(text="Status: Fehler in Pipeline ✕", text_color="#C42B1C")
-        messagebox.showerror("Pipeline-Fehler", f"Fehler bei der Bildverarbeitung:\n{error}")
+        self._sb_show_progress(1.0)
+        self._sb_set_status("Pipeline-Fehler", color="#C42B1C")
+        self._show_toast(f"Pipeline-Fehler: {error}", level="error", duration_ms=6000)
 
     def update_params(self, val=None) -> None:
+        # Undo-State vor Parameteränderung speichern (nur wenn Slider bewegt)
+        if val is not None:  # val=None bei programmatischen Updates
+            self._push_undo_state()
         self.sigma_k_val.configure(text=f"{self.sigma_k_slider.get():.1f}")
         self.tophat_val.configure(text=f"{self.tophat_slider.get()*100:.1f}%")
         self.min_area_val.configure(text=f"{self.min_area_slider.get()*100:.2f}%")
@@ -1664,22 +1886,23 @@ class IgniteApp:
                 config.init_output_dir()
             os.startfile(abs_path)
         except Exception as e:
-            messagebox.showerror("Fehler", f"Ausgabeordner konnte nicht geöffnet werden:\n{e}")
+            self._show_toast(f"Ausgabeordner konnte nicht geöffnet werden: {e}", level="error")
 
     def clean_output_dir(self) -> None:
-        if messagebox.askyesno("Ordner bereinigen", "Möchten Sie alle gespeicherten Ausgabedateien im Ergebnisordner wirklich löschen?"):
-            try:
-                for file in os.listdir(config.OUTPUT_DIR):
-                    file_path = os.path.join(config.OUTPUT_DIR, file)
-                    if os.path.isfile(file_path):
-                        os.remove(file_path)
-                messagebox.showinfo("Bereinigt", "Der Ausgabeordner wurde erfolgreich bereinigt.")
-            except Exception as e:
-                messagebox.showerror("Fehler", f"Fehler beim Bereinigen:\n{e}")
+        try:
+            deleted_files = []
+            for file in os.listdir(config.OUTPUT_DIR):
+                file_path = os.path.join(config.OUTPUT_DIR, file)
+                if os.path.isfile(file_path):
+                    deleted_files.append(file_path)
+                    os.remove(file_path)
+            self._show_toast(f"Ordner bereinigt – {len(deleted_files)} Dateien gelöscht.", level="success")
+        except Exception as e:
+            self._show_toast(f"Bereinigung fehlgeschlagen: {e}", level="error")
 
     def export_html_report(self) -> None:
         if self.current_filepath is None or self.current_raw_original is None:
-            messagebox.showwarning("Exportieren", "Bitte laden Sie zuerst ein Bild.")
+            self._show_toast("Bitte laden Sie zuerst ein Bild.", level="warning")
             return
 
         try:
@@ -1689,7 +1912,7 @@ class IgniteApp:
 
             body_mask = (self.current_images.get("2. Hintergrund-Maske") > 0).astype(np.uint8) if "2. Hintergrund-Maske" in self.current_images else None
             if body_mask is None or np.sum(body_mask) == 0:
-                messagebox.showerror("Fehler", "Objektmaske nicht gefunden. Bericht kann nicht erstellt werden.")
+                self._show_toast("Objektmaske nicht gefunden. Bericht kann nicht erstellt werden.", level="error")
                 return
 
             pixels = self.current_raw_original[body_mask > 0]
@@ -1762,9 +1985,9 @@ class IgniteApp:
                 t_min_c=self.t_min_celsius, t_max_c=self.t_max_celsius, unit_str=unit_str
             )
 
-            messagebox.showinfo("Export erfolgreich", f"Der HTML-Bericht wurde erfolgreich gespeichert:\n{report_filename}")
+            self._show_toast(f"Bericht erfolgreich gespeichert: {report_filename}", level="success")
         except Exception as e:
-            messagebox.showerror("Fehler", f"Bericht konnte nicht exportiert werden:\n{e}")
+            self._show_toast(f"Export fehlgeschlagen: {e}", level="error")
 
     def _write_individual_html_report(
         self, filepath, base_name, filename, mean, std, thresh, hotspots, foot_pixels,
@@ -2026,7 +2249,7 @@ class IgniteApp:
         image_files = [f for f in os.listdir(src_dir) if f.lower().endswith(valid_exts)]
 
         if not image_files:
-            messagebox.showinfo("Keine Bilder", "Keine gültigen Bilddateien im Quellordner gefunden.")
+            self._show_toast("Keine gültigen Bilddateien im Quellordner gefunden.", level="warning")
             return
 
         progress_win = ctk.CTkToplevel(self.root)
@@ -2227,10 +2450,9 @@ class IgniteApp:
                     os.startfile(os.path.abspath(dest_dir))
                 except Exception as e:
                     logging.debug(f"Fehler ignoriert: {e}")
-                messagebox.showinfo(
-                    "Stapelverarbeitung beendet",
-                    f"Erfolgreich {len(patients_processed)} Wärmebilder verarbeitet!\n\n"
-                    f"Zentraler Ergebnisbericht: batch_report.html"
+                self._show_toast(
+                    f"Stapelverarbeitung abgeschlossen – {len(patients_processed)} Wärmebilder verarbeitet.",
+                    level="success"
                 )
 
             self.root.after(0, on_done)
