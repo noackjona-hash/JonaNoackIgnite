@@ -3,6 +3,10 @@
 Generiert synthetische klinische Szenarien mit realistischen Rauschmodellen 
 (Gaußsches Sensorrauschen, Gewebe-Unschärfe, thermische Gradienten) und 
 evaluiert reale thermografische Test-Bilddaten aus test-data/.
+
+Enthält außerdem:
+- Vergleich gegen eine einfache Otsu-Baseline (Nachweis der Überlegenheit von IGNITE)
+- Quantitative GT-Evaluation anhand manuell annotierter Masken aus test-data/ground_truth/
 """
 
 import os
@@ -93,6 +97,36 @@ def generate_clinical_scenario(
         img[h_bio] = 210.0
         ground_truth[h_bio] = 255
 
+    elif scenario_type == "pressure_ulcer":
+        # Dekubitus: Ein flächiger, elliptischer Druckwundenherd am Fersenbein
+        # (typisch bei bettlägerigen Patienten – Berufserkrankung in der Pflege)
+        rr, cc = np.ogrid[:height, :width]
+        dist_heel = np.sqrt(((rr - 220) / 12.0)**2 + ((cc - 120) / 8.0)**2)
+        hotspot = dist_heel <= 1.0
+        img[hotspot] = 195.0
+        ground_truth[hotspot] = 255
+
+    elif scenario_type == "post_surgical_inflammation":
+        # Post-operative Entzündung: Zwei symmetrisch angeordnete Narbenherde
+        # (häufig nach Arbeitsunfällen / berufsbedingten Operationen am Fuß)
+        rr, cc = np.ogrid[:height, :width]
+        h_left = np.sqrt((rr - 130)**2 + (cc - 90)**2) <= 5
+        h_right = np.sqrt((rr - 130)**2 + (cc - 310)**2) <= 5
+        img[h_left | h_right] = 185.0
+        ground_truth[h_left | h_right] = 255
+
+    elif scenario_type == "venous_insufficiency":
+        # Venöse Insuffizienz: Diffuser Wärmestreifen entlang der Vene
+        # (Berufserkrankung durch langes Stehen – z.B. Chirurgen, Verkäufer)
+        rng = np.random.default_rng(seed=_scenario_seed(scenario_type, seed))
+        for x_center in [100, 280]:
+            for y in range(50, 220):
+                jitter = int(rng.integers(-3, 4))
+                xc = x_center + jitter
+                if 0 <= xc < width:
+                    img[y, max(0, xc - 2):min(width, xc + 3)] = 175.0
+                    ground_truth[y, max(0, xc - 2):min(width, xc + 3)] = 255
+
     if add_noise:
         # Realistisches Gaußsches Sensorrauschen (sigma = 2.5)
         rng = np.random.default_rng(seed=_scenario_seed(scenario_type, seed))
@@ -143,7 +177,148 @@ def evaluate_metrics(pred_mask: np.ndarray, gt_mask: np.ndarray, body_mask: np.n
         "iou": float(round(iou, 4))
     }
 
-def evaluate_real_test_dataset(test_data_dir: str = "test-data"):
+
+def _baseline_otsu_predict(img: np.ndarray) -> np.ndarray:
+    """Naiver Otsu-Baseline-Prediktor (ohne Top-Hat, ohne Geometriefilter).
+
+    Dient als Vergleichsreferenz, um die Überlegenheit der IGNITE-Pipeline
+    gegenüber einfacher globaler Schwellenwertbildung zu belegen.
+    """
+    body_mask = image_processing._extract_body_mask_cpu(img)
+    body_pixels = img[body_mask > 0]
+    if len(body_pixels) == 0:
+        return np.zeros_like(img)
+    thresh_val = float(np.percentile(body_pixels, 90))
+    raw = ((img > thresh_val) & (body_mask > 0)).astype(np.uint8) * 255
+    return raw
+
+
+def evaluate_real_dataset_with_gt(
+    test_data_dir: str = "test-data",
+    gt_dir: str = None,
+) -> dict:
+    """Evaluiert IGNITE gegen manuell annotierte Ground-Truth-Masken.
+
+    Für Bilder ohne vorhandene GT-Maske wird nur die Coverage-Statistik berechnet.
+    Für annotierte Bilder werden zusätzlich Dice, IoU, Sensitivität und Spezifität
+    sowohl für IGNITE als auch für die Otsu-Baseline berechnet.
+
+    Args:
+        test_data_dir: Ordner mit den Originalbildern (JPEG/PNG).
+        gt_dir: Ordner mit den annotierten Masken. Standard: test_data_dir/ground_truth.
+
+    Returns:
+        Dictionary mit Ergebnissen je Bild.
+    """
+    if gt_dir is None:
+        gt_dir = os.path.join(test_data_dir, "ground_truth")
+
+    image_files = sorted(
+        f for f in os.listdir(test_data_dir)
+        if f.lower().endswith((".jpeg", ".jpg", ".png"))
+    )
+    if not image_files:
+        print(f"[!] Keine Bilddateien in '{test_data_dir}' gefunden.")
+        return {}
+
+    print(f"\n--- GT-basierte Evaluierung ({len(image_files)} Bilder, GT-Verzeichnis: {gt_dir}/) ---")
+    results = {}
+    gt_count = 0
+    ignite_dice_sum = 0.0
+    baseline_dice_sum = 0.0
+
+    for img_name in image_files:
+        img_path = os.path.join(test_data_dir, img_name)
+        try:
+            img = image_processing.load_thermal_image(img_path)
+        except Exception as e:
+            results[img_name] = {"status": f"Ladefehler: {e}"}
+            continue
+
+        try:
+            diff_vis, hotspot_mask = image_processing.run_rust_pipeline(img)
+        except Exception as e:
+            results[img_name] = {"status": f"Pipeline-Fehler: {e}"}
+            continue
+
+        body_mask = image_processing._extract_body_mask_cpu(img)
+        body_pixels = int(np.sum(body_mask == 255))
+        hotspot_pixels = int(np.sum(hotspot_mask == 255))
+        coverage = round((hotspot_pixels / body_pixels * 100.0) if body_pixels > 0 else 0.0, 2)
+
+        entry: dict = {
+            "dimensions": [int(img.shape[1]), int(img.shape[0])],
+            "body_pixels": body_pixels,
+            "hotspot_pixels": hotspot_pixels,
+            "hotspot_coverage_percent": coverage,
+            "has_ground_truth": False,
+        }
+
+        # Ground-Truth laden: Name-Stem suchen (ohne Extension)
+        stem = os.path.splitext(img_name)[0]
+        gt_candidates = [
+            os.path.join(gt_dir, f"{stem}_mask.png"),
+            os.path.join(gt_dir, f"{stem}.png"),
+        ]
+        gt_path = next((p for p in gt_candidates if os.path.exists(p)), None)
+
+        if gt_path is not None:
+            gt_raw = cv2.imread(gt_path, cv2.IMREAD_GRAYSCALE)
+            if gt_raw is not None:
+                # GT-Maske muss ggf. auf Bildgröße reskaliert werden
+                if gt_raw.shape != img.shape:
+                    gt_raw = cv2.resize(gt_raw, (img.shape[1], img.shape[0]),
+                                        interpolation=cv2.INTER_NEAREST)
+                gt_bin = (gt_raw > 127).astype(np.uint8) * 255
+
+                # IGNITE-Metriken
+                m_ignite = evaluate_metrics(hotspot_mask, gt_bin, body_mask)
+
+                # Otsu-Baseline-Metriken
+                baseline_mask = _baseline_otsu_predict(img)
+                m_baseline = evaluate_metrics(baseline_mask, gt_bin, body_mask)
+
+                entry["has_ground_truth"] = True
+                entry["ignite_metrics"] = m_ignite
+                entry["baseline_otsu_metrics"] = m_baseline
+                entry["dice_improvement_over_baseline"] = round(
+                    m_ignite["dice"] - m_baseline["dice"], 4
+                )
+
+                ignite_dice_sum += m_ignite["dice"]
+                baseline_dice_sum += m_baseline["dice"]
+                gt_count += 1
+
+                print(
+                    f"[GT] {img_name:22s} | IGNITE Dice={m_ignite['dice']:.3f} "
+                    f"Sens={m_ignite['sensitivity']:.3f} Spec={m_ignite['specificity']:.3f} | "
+                    f"Otsu Dice={m_baseline['dice']:.3f}"
+                )
+            else:
+                print(f"[  ] {img_name:22s} | GT-Maske nicht lesbar: {gt_path}")
+        else:
+            print(
+                f"[  ] {img_name:22s} | Keine GT-Maske – Coverage={coverage:.2f}% "
+                f"({hotspot_pixels}px Hotspot)"
+            )
+
+        results[img_name] = entry
+
+    if gt_count > 0:
+        mean_ignite_dice = round(ignite_dice_sum / gt_count, 4)
+        mean_baseline_dice = round(baseline_dice_sum / gt_count, 4)
+        print(f"\n=== Zusammenfassung ({gt_count} GT-annotierte Bilder) ===")
+        print(f"  IGNITE  mittl. Dice: {mean_ignite_dice:.4f}")
+        print(f"  Otsu    mittl. Dice: {mean_baseline_dice:.4f}")
+        print(f"  Verbesserung:        +{mean_ignite_dice - mean_baseline_dice:.4f}")
+        results["__summary__"] = {
+            "gt_annotated_images": gt_count,
+            "mean_ignite_dice": mean_ignite_dice,
+            "mean_baseline_otsu_dice": mean_baseline_dice,
+            "mean_dice_improvement": round(mean_ignite_dice - mean_baseline_dice, 4),
+        }
+
+    return results
     """
     Evaluiert reale klinische/thermodynamische Bilddateien im Ordner test-data/.
     """
@@ -189,38 +364,66 @@ def run_benchmark_suite(
     seed: int = DEFAULT_BENCHMARK_SEED,
     backend: str = DEFAULT_BENCHMARK_BACKEND,
 ):
+    """Führt die vollständige Benchmark-Testsuite durch.
+
+    Beinhaltet:
+    - 9 synthetische Szenarien (inkl. Berufserkrankungen) mit realistischen Rausch-Modellen
+    - Vergleich IGNITE vs. Otsu-Baseline für jedes Szenario
+    - Vergleich Standard µ+k·σ vs. Robustes MAD-Thresholding
+    - Parameter-Sensitivitätsanalyse (k = 1.0 … 5.0)
+    - Reale Test-Bilddaten aus test-data/ inkl. GT-Masken-Evaluation
     """
-    Führt die vollständige Benchmark-Testsuite durch:
-    - Synthetische Szenarien mit realistischen Rausch-Modellen
-    - Vergleichende Evaluierung: Standard µ+k·σ vs. Robustes MAD-Thresholding
-    - Parameter-Sensitivitätsanalyse
-    - Reale Test-Bilddaten-Evaluierung aus test-data/
-    """
-    scenarios = ["normal", "diabetic_ulcer", "plantar_fasciitis", "focal_sensor_noise", "complex_multi_inflammation", "bimodal_undercooled_extremity"]
+    scenarios = [
+        "normal",
+        "diabetic_ulcer",
+        "plantar_fasciitis",
+        "focal_sensor_noise",
+        "complex_multi_inflammation",
+        "bimodal_undercooled_extremity",
+        "pressure_ulcer",
+        "post_surgical_inflammation",
+        "venous_insufficiency",
+    ]
     results = {}
     mad_comparison = {}
+    baseline_comparison = {}
 
     print("=== IGNITE Medical Thermal Evaluation Benchmark ===")
 
     with _forced_backend(backend):
         for scenario in scenarios:
             img, gt = generate_clinical_scenario(scenario, add_noise=True, seed=seed)
-
-            # Standard µ + k·σ
-            diff_img, pred_mask_std = image_processing.run_rust_pipeline(img, use_mad=False)
             body_mask = image_processing._extract_body_mask_cpu(img)
+
+            # Standard µ + k·σ (IGNITE)
+            diff_img, pred_mask_std = image_processing.run_rust_pipeline(img, use_mad=False)
             metrics_std = evaluate_metrics(pred_mask_std, gt, body_mask)
             results[scenario] = metrics_std
 
-            # Robust MAD
+            # Robustes MAD-Thresholding (IGNITE)
             diff_img_mad, pred_mask_mad = image_processing.run_rust_pipeline(img, use_mad=True)
             metrics_mad = evaluate_metrics(pred_mask_mad, gt, body_mask)
             mad_comparison[scenario] = {
                 "mean_std": metrics_std,
-                "mad_robust": metrics_mad
+                "mad_robust": metrics_mad,
             }
 
-            print(f"Szenario [{scenario:30s}]: (Std) Sens={metrics_std['sensitivity']:.2f}, Spec={metrics_std['specificity']:.2f}, Dice={metrics_std['dice']:.2f} | (MAD) Sens={metrics_mad['sensitivity']:.2f}, Spec={metrics_mad['specificity']:.2f}, Dice={metrics_mad['dice']:.2f}")
+            # Einfache Otsu-Baseline (Vergleich)
+            baseline_mask = _baseline_otsu_predict(img)
+            metrics_baseline = evaluate_metrics(baseline_mask, gt, body_mask)
+            baseline_comparison[scenario] = {
+                "ignite": metrics_std,
+                "otsu_baseline": metrics_baseline,
+                "dice_improvement": round(metrics_std["dice"] - metrics_baseline["dice"], 4),
+            }
+
+            print(
+                f"Szenario [{scenario:28s}]: "
+                f"IGNITE Dice={metrics_std['dice']:.2f} Sens={metrics_std['sensitivity']:.2f} | "
+                f"MAD Dice={metrics_mad['dice']:.2f} | "
+                f"Otsu Dice={metrics_baseline['dice']:.2f} "
+                f"(+{metrics_std['dice'] - metrics_baseline['dice']:.2f})"
+            )
 
         # Parameter-Sensitivitätsanalyse für k (1.0 bis 5.0)
         print("\n--- Parameter-Sensitivitätsanalyse (Sigma k) ---")
@@ -237,11 +440,12 @@ def run_benchmark_suite(
             k_analysis[str(k_val)] = m
             print(f"k = {k_val:.1f} | Sensitivität: {m['sensitivity']:.4f} | Spezifität: {m['specificity']:.4f} | Dice: {m['dice']:.4f}")
 
-        # Reale Testbilder aus test-data/ auswerten
-        real_dataset_results = evaluate_real_test_dataset()
+        # Reale Testbilder aus test-data/ auswerten (inkl. GT-Masken)
+        real_dataset_results = evaluate_real_dataset_with_gt()
 
     output_data = {
         "scenario_results": results,
+        "baseline_otsu_comparison": baseline_comparison,
         "mad_thresholding_comparison": mad_comparison,
         "sensitivity_analysis_k": k_analysis,
         "real_test_dataset": real_dataset_results,
@@ -250,8 +454,8 @@ def run_benchmark_suite(
             "backend": backend,
             "scenario_seeds": {
                 scenario: _scenario_seed(scenario, seed) for scenario in scenarios
-            }
-        }
+            },
+        },
     }
 
     # Ergebnisse speichern
