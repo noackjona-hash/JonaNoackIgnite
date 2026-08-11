@@ -43,8 +43,8 @@ Name: "german"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-; Hauptanwendung (die von PyInstaller erstellte EXE, liegt im Repo-Root unter dist/)
-Source: "..\dist\Ignite.exe"; DestDir: "{app}"; Flags: ignoreversion
+; Hauptanwendung (Ordner-Inhalt von PyInstaller --onedir, liegt in dist/IGNITE/)
+Source: "..\dist\IGNITE\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; Logos/Icons für eventuelle Verknüpfungs-Referenzen mitinstallieren
 Source: "..\icon\LogoRund.ico"; DestDir: "{app}\icon"; Flags: ignoreversion
 Source: "..\icon\LogoRund.png"; DestDir: "{app}\icon"; Flags: ignoreversion

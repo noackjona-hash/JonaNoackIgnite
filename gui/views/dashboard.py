@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """dashboard.py – 4-Panel Grid Dashboard View für IGNITE.
 
-Klare visuelle Hierarchie: Jedes Panel hat einen kompakten Header mit
-Titel, Status-Badge und einem Vollbild-Button für schnellen Zoom.
+Sauberes, professionelles Layout: Jedes Panel zeigt Schritt-Nummer + Titel
+als kompakten Titel-Streifen, darunter der Bildbereich.
 """
 
 import tkinter as tk
@@ -11,207 +11,166 @@ from gui.theme import (
     COLOR_BG_CARD,
     COLOR_BORDER_CARD,
     COLOR_TEXT_PRIMARY,
-    COLOR_TEXT_SECONDARY,
     COLOR_TEXT_MUTED,
     COLOR_BG_MAIN,
     COLOR_PRIMARY_ACCENT,
-    COLOR_HOVER_ACCENT,
-    COLOR_BG_INPUT,
-    FONT_FAMILY
+    FONT_FAMILY,
 )
 
-_PANEL_META = [
-    {
-        "key":   "1. Originalbild",
-        "label": "1  Originalbild",
-        "hint":  "Rohes Wärmebild mit gewählter Farbpalette",
-        "row": 0, "col": 0,
-    },
-    {
-        "key":   "2. Hintergrund-Maske",
-        "label": "2  Körper-Maske",
-        "hint":  "Otsu-Segmentierung + Distanztransformation",
-        "row": 0, "col": 1,
-    },
-    {
-        "key":   "3. Lokale Hitze-Differenz",
-        "label": "3  Top-Hat Differenz",
-        "hint":  "Morphologisches Top-Hat µ+kσ Thresholding",
-        "row": 1, "col": 0,
-    },
-    {
-        "key":   "4. Erkannte Hotspots (Rust)",
-        "label": "4  Hotspot-Overlay",
-        "hint":  "Erkannte Entzündungsherde mit Annotationen",
-        "row": 1, "col": 1,
-    },
+# (key, kurzname, zeile, spalte, akzentfarbe)
+_PANELS = [
+    ("1. Originalbild",             "Originalbild",       0, 0, "#007AFF"),
+    ("2. Hintergrund-Maske",        "Körper-Maske",       0, 1, "#34C759"),
+    ("3. Lokale Hitze-Differenz",   "Top-Hat Differenz",  1, 0, "#FF9500"),
+    ("4. Erkannte Hotspots (Rust)", "Hotspot-Overlay",    1, 1, "#FF3B30"),
 ]
 
-_EMPTY_TEXT = "Bereit für Analyse\n\nWärmebild über die Seitenleiste laden\noder  Strg+O  drücken."
+_EMPTY = "Wärmebild laden um\ndie Analyse zu starten\n\nStrg+O"
+
 
 class DashboardView:
-    """Verwaltet das 4-Panel Grid-Layout (Overview + Einzel-Tabs)."""
+    """Verwaltet das 4-Panel Grid-Layout und die Einzel-Tabs."""
 
     def __init__(
-        self,
-        master_tab,
-        hover_callback,
-        leave_callback,
-        roi_start_callback,
-        roi_drag_callback,
-        roi_end_callback,
+        self, master_tab,
+        hover_callback, leave_callback,
+        roi_start_callback, roi_drag_callback, roi_end_callback,
         open_fullscreen_callback=None,
     ):
-        self.panels: dict[str, ctk.CTkLabel] = {}
+        self.panels:      dict[str, ctk.CTkLabel] = {}
         self.panels_full: dict[str, ctk.CTkLabel] = {}
-        self._open_fullscreen_cb = open_fullscreen_callback
+        self._fullscreen_cb = open_fullscreen_callback
 
-        self._build_grid_tab(
-            master_tab, hover_callback, leave_callback,
-            roi_start_callback, roi_drag_callback, roi_end_callback
+        self._build_grid(
+            master_tab,
+            hover_callback, leave_callback,
+            roi_start_callback, roi_drag_callback, roi_end_callback,
         )
 
     # ── Grid-Übersicht ───────────────────────────────────────────────────────
 
-    def _build_grid_tab(self, master_tab, hover_cb, leave_cb, roi_start_cb, roi_drag_cb, roi_end_cb):
-        grid_frame = ctk.CTkFrame(master_tab, fg_color="transparent")
-        grid_frame.pack(fill=ctk.BOTH, expand=True, padx=4, pady=4)
+    def _build_grid(self, parent, hover_cb, leave_cb, roi_s, roi_d, roi_e):
+        wrap = ctk.CTkFrame(parent, fg_color="transparent")
+        wrap.pack(fill=ctk.BOTH, expand=True, padx=6, pady=6)
+        wrap.grid_columnconfigure(0, weight=1)
+        wrap.grid_columnconfigure(1, weight=1)
+        wrap.grid_rowconfigure(0, weight=1)
+        wrap.grid_rowconfigure(1, weight=1)
 
-        grid_frame.grid_columnconfigure(0, weight=1)
-        grid_frame.grid_columnconfigure(1, weight=1)
-        grid_frame.grid_rowconfigure(0, weight=1)
-        grid_frame.grid_rowconfigure(1, weight=1)
-
-        for meta in _PANEL_META:
-            self._build_panel_card(
-                parent=grid_frame,
-                meta=meta,
-                is_grid=True,
+        for key, short, row, col, color in _PANELS:
+            lbl = self._make_card(
+                wrap, key, short, color,
+                row=row, col=col, is_grid=True,
                 hover_cb=hover_cb, leave_cb=leave_cb,
-                roi_start_cb=roi_start_cb, roi_drag_cb=roi_drag_cb, roi_end_cb=roi_end_cb,
+                roi_s=roi_s, roi_d=roi_d, roi_e=roi_e,
             )
+            self.panels[key] = lbl
 
-    def _build_panel_card(
-        self, parent, meta: dict, is_grid: bool,
-        hover_cb, leave_cb, roi_start_cb, roi_drag_cb, roi_end_cb,
-        fullsize_tab_frame=None
-    ):
-        """Erstellt eine einzelne Bildkachel mit Header-Bar."""
-        key = meta["key"]
-        label_text = meta["label"]
-        hint_text = meta["hint"]
+    # ── Vollbild-Tabs ────────────────────────────────────────────────────────
+
+    def setup_fullsize_tabs(self, tabview, hover_cb, leave_cb,
+                            roi_start_cb, roi_drag_cb, roi_end_cb):
+        tab_map = {
+            "1. Originalbild":             "1. Originalbild",
+            "2. Hintergrund-Maske":        "2. Hintergrund-Maske",
+            "3. Lokale Hitze-Differenz":   "3. Lokale Hitze-Differenz",
+            "4. Erkannte Hotspots (Rust)": "4. Erkannte Hotspots",
+        }
+        for key, tab_name in tab_map.items():
+            _, short, _, _, color = next(p for p in _PANELS if p[0] == key)
+            lbl = self._make_card(
+                tabview.tab(tab_name), key, short, color,
+                row=0, col=0, is_grid=False,
+                hover_cb=hover_cb, leave_cb=leave_cb,
+                roi_s=roi_start_cb, roi_d=roi_drag_cb, roi_e=roi_end_cb,
+            )
+            self.panels_full[key] = lbl
+
+    # ── Hilfsmethode: eine Panel-Karte ───────────────────────────────────────
+
+    def _make_card(
+        self, parent, key, short_name, accent_color,
+        *, row, col, is_grid,
+        hover_cb, leave_cb, roi_s, roi_d, roi_e,
+    ) -> ctk.CTkLabel:
+        """Erstellt eine Bild-Kachel und gibt das Bild-Label zurück."""
 
         card = ctk.CTkFrame(
             parent,
             fg_color=COLOR_BG_CARD,
             corner_radius=10,
             border_width=1,
-            border_color=COLOR_BORDER_CARD
+            border_color=COLOR_BORDER_CARD,
         )
-
         if is_grid:
-            card.grid(row=meta["row"], column=meta["col"], padx=6, pady=6, sticky="nsew")
+            card.grid(row=row, column=col, padx=5, pady=5, sticky="nsew")
         else:
-            card.pack(fill=ctk.BOTH, expand=True, padx=6, pady=6)
+            card.pack(fill=ctk.BOTH, expand=True, padx=5, pady=5)
 
-        # ── Header-Leiste ────────────────────────────────────────────────────
-        header = ctk.CTkFrame(card, fg_color=COLOR_BG_INPUT, corner_radius=0, height=32)
-        header.pack(fill=ctk.X, padx=0, pady=0)
-        header.pack_propagate(False)
+        # ── Titel-Zeile mit farbigem Punkt ───────────────────────────────────
+        hdr = ctk.CTkFrame(card, fg_color="transparent", height=34)
+        hdr.pack(fill=ctk.X, padx=12, pady=(8, 0))
+        hdr.pack_propagate(False)
 
-        # Farbiger linker Akzent-Streifen (visuell unterscheidet die Panels)
-        _accent_colors = [COLOR_PRIMARY_ACCENT, "#34C759", "#FF9500", "#FF3B30"]
-        _idx = [m["key"] for m in _PANEL_META].index(key) if key in [m["key"] for m in _PANEL_META] else 0
-        accent_color = _accent_colors[_idx % len(_accent_colors)]
-
-        ctk.CTkFrame(header, width=3, fg_color=accent_color, corner_radius=0).pack(
-            side=ctk.LEFT, fill=ctk.Y, padx=(0, 8)
-        )
+        # Kleiner farbiger Kreis als Schritt-Indikator
+        _mode_idx = 0 if ctk.get_appearance_mode() == "Light" else 1
+        dot_cv = tk.Canvas(hdr, width=9, height=9,
+                           bg=COLOR_BG_CARD[_mode_idx],
+                           highlightthickness=0)
+        dot_cv.pack(side=ctk.LEFT, padx=(0, 7))
+        dot_cv.create_oval(1, 1, 8, 8, fill=accent_color, outline="")
 
         ctk.CTkLabel(
-            header,
-            text=label_text,
-            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            hdr,
+            text=short_name,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
             text_color=COLOR_TEXT_PRIMARY,
-            anchor="w"
-        ).pack(side=ctk.LEFT)
+            anchor="w",
+        ).pack(side=ctk.LEFT, fill=ctk.X, expand=True)
 
-        ctk.CTkLabel(
-            header,
-            text=hint_text,
-            font=ctk.CTkFont(family=FONT_FAMILY, size=9),
-            text_color=COLOR_TEXT_MUTED,
-            anchor="w"
-        ).pack(side=ctk.LEFT, padx=(6, 0))
-
-        # Vollbild-Button (rechtsbündig)
-        if self._open_fullscreen_cb and is_grid:
-            zoom_btn = ctk.CTkButton(
-                header,
+        if self._fullscreen_cb and is_grid:
+            ctk.CTkButton(
+                hdr,
                 text="⤢",
-                width=28, height=22,
-                font=ctk.CTkFont(family=FONT_FAMILY, size=12),
+                width=24, height=22,
+                font=ctk.CTkFont(family=FONT_FAMILY, size=11),
                 fg_color="transparent",
                 text_color=COLOR_TEXT_MUTED,
                 hover_color=COLOR_BORDER_CARD,
                 corner_radius=4,
-                command=lambda k=key: self._open_fullscreen_cb(k)
-            )
-            zoom_btn.pack(side=ctk.RIGHT, padx=4)
+                command=lambda k=key: self._fullscreen_cb(k),
+            ).pack(side=ctk.RIGHT)
 
-        # ── Bildbereich ───────────────────────────────────────────────────────
+        # Trennlinie
+        ctk.CTkFrame(card, height=1, fg_color=COLOR_BORDER_CARD).pack(
+            fill=ctk.X, padx=0, pady=(6, 0)
+        )
+
+        # ── Bild-Label ────────────────────────────────────────────────────────
         img_lbl = ctk.CTkLabel(
             card,
-            text=_EMPTY_TEXT,
+            text=_EMPTY,
             font=ctk.CTkFont(family=FONT_FAMILY, size=11),
             text_color=COLOR_TEXT_MUTED,
             fg_color="transparent",
             anchor="center",
-            justify="center"
+            justify="center",
         )
-        img_lbl.pack(fill=ctk.BOTH, expand=True, padx=0, pady=(0, 0))
+        img_lbl.pack(fill=ctk.BOTH, expand=True, pady=(0, 6))
 
-        # Event-Bindings
-        img_lbl.bind("<Motion>",        lambda e, k=key, g=is_grid: hover_cb(e, k, g))
-        img_lbl.bind("<Leave>",         leave_cb)
-        img_lbl.bind("<ButtonPress-1>", lambda e, k=key, g=is_grid: roi_start_cb(e, k, g))
-        img_lbl.bind("<B1-Motion>",     lambda e, k=key, g=is_grid: roi_drag_cb(e, k, g))
-        img_lbl.bind("<ButtonRelease-1>", lambda e, k=key, g=is_grid: roi_end_cb(e, k, g))
+        # Bindings
+        img_lbl.bind("<Motion>",          lambda e, k=key, g=is_grid: hover_cb(e, k, g))
+        img_lbl.bind("<Leave>",           leave_cb)
+        img_lbl.bind("<ButtonPress-1>",   lambda e, k=key, g=is_grid: roi_s(e, k, g))
+        img_lbl.bind("<B1-Motion>",       lambda e, k=key, g=is_grid: roi_d(e, k, g))
+        img_lbl.bind("<ButtonRelease-1>", lambda e, k=key, g=is_grid: roi_e(e, k, g))
 
-        # Rechtsklick-Kontextmenü
-        ctx_menu = tk.Menu(img_lbl, tearoff=0)
-        ctx_menu.add_command(label="Vollbild öffnen", command=lambda k=key: (
-            self._open_fullscreen_cb(k) if self._open_fullscreen_cb else None
-        ))
-        img_lbl.bind("<Button-3>", lambda e, m=ctx_menu: m.tk_popup(e.x_root, e.y_root))
+        # Kontextmenü per Rechtsklick
+        ctx = tk.Menu(img_lbl, tearoff=0)
+        ctx.add_command(
+            label="Vollbild öffnen",
+            command=lambda k=key: self._fullscreen_cb(k) if self._fullscreen_cb else None,
+        )
+        img_lbl.bind("<Button-3>", lambda e, m=ctx: m.tk_popup(e.x_root, e.y_root))
 
-        if is_grid:
-            self.panels[key] = img_lbl
-        else:
-            self.panels_full[key] = img_lbl
-
-    # ── Vollbild-Tabs ────────────────────────────────────────────────────────
-
-    def setup_fullsize_tabs(
-        self, tabview,
-        hover_cb, leave_cb, roi_start_cb, roi_drag_cb, roi_end_cb
-    ):
-        tab_mapping = {
-            "1. Originalbild":           "1. Originalbild",
-            "2. Hintergrund-Maske":      "2. Hintergrund-Maske",
-            "3. Lokale Hitze-Differenz": "3. Lokale Hitze-Differenz",
-            "4. Erkannte Hotspots (Rust)": "4. Erkannte Hotspots",
-        }
-
-        for step_key, tab_name in tab_mapping.items():
-            meta = next((m for m in _PANEL_META if m["key"] == step_key), {
-                "key": step_key, "label": step_key, "hint": "", "row": 0, "col": 0
-            })
-            self._build_panel_card(
-                parent=tabview.tab(tab_name),
-                meta=meta,
-                is_grid=False,
-                hover_cb=hover_cb, leave_cb=leave_cb,
-                roi_start_cb=roi_start_cb, roi_drag_cb=roi_drag_cb, roi_end_cb=roi_end_cb,
-            )
-
+        return img_lbl
