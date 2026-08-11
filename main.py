@@ -207,6 +207,16 @@ def main():
             logging.debug(f"UI-Skalierung konnte nicht gesetzt werden: {e}")
 
         root = ctk.CTk()
+        
+        # ZWINGE Tkinter auf die exakte Skalierung fuer Schriften.
+        # Ohne dies sind CustomTkinter-Widgets 1.0 skaliert, aber X11 skaliert
+        # die Schriften auf z.B. 3.0, was das gesamte Layout sprengt und
+        # Matplotlib crashen laesst. (96 DPI / 72 = 1.333333)
+        try:
+            target_dpi = 96.0 * ui_scale
+            root.tk.call('tk', 'scaling', target_dpi / 72.0)
+        except Exception as e:
+            logging.debug(f"tk scaling konnte nicht gesetzt werden: {e}")
 
         app = IgniteApp(root)
         root.mainloop()
