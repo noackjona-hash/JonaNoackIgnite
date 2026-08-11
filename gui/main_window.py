@@ -1445,6 +1445,9 @@ class IgniteApp:
         fig = Figure(figsize=(6, 3.8), dpi=safe_dpi, facecolor=bg_fig)
         ax = fig.add_subplot(111, facecolor=bg_ax)
 
+        import matplotlib
+        matplotlib.rcParams['axes.unicode_minus'] = False
+
         ax.hist(pixels_disp, bins=128, color=COLOR_PRIMARY_ACCENT, alpha=0.7, edgecolor="none")
         ax.axvline(mean_disp, color=("#18181B" if mode != "Dark" else "#F4F4F5"), linestyle="--", linewidth=1.5,
                    label=f"Mittelwert ({mean_disp:.1f} {unit_str})")
