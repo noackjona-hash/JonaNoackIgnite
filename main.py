@@ -93,16 +93,16 @@ def create_instant_splash():
 
     # Titel
     tk.Label(inner_bg, text="IGNITE",
-             font=("Segoe UI", fs(32), "bold"), fg="#1A1A1A", bg="#FFFFFF").pack(pady=(0, px(2)))
+             font=("Segoe UI", -fs(42), "bold"), fg="#1A1A1A", bg="#FFFFFF").pack(pady=(0, px(2)))
     tk.Label(inner_bg, text="Medical Imaging Suite  -  Jugend forscht 2026",
-             font=("Segoe UI", fs(10)), fg="#444444", bg="#FFFFFF").pack()
+             font=("Segoe UI", -fs(14)), fg="#444444", bg="#FFFFFF").pack()
 
     # Trennlinie
     tk.Frame(inner_bg, bg="#D0D0D0", height=1).pack(fill=tk.X, padx=px(50), pady=px(16))
 
     status_var = tk.StringVar(value="Wird geladen...")
     tk.Label(inner_bg, textvariable=status_var,
-             font=("Segoe UI", fs(10)), fg="#767676", bg="#FFFFFF").pack(pady=(0, px(10)))
+             font=("Segoe UI", -fs(13)), fg="#767676", bg="#FFFFFF").pack(pady=(0, px(10)))
 
     # Fortschrittsbalken
     pbar_canvas = tk.Canvas(inner_bg, width=bar_w, height=px(4), bg="#E8E8E8",
@@ -111,7 +111,7 @@ def create_instant_splash():
     bar = pbar_canvas.create_rectangle(0, 0, 0, px(4), fill="#0067C0", outline="")
 
     tk.Label(inner_bg, text="(c) 2026 Jona Noack  -  Fachgebiet Arbeitswelt",
-             font=("Segoe UI", fs(8)), fg="#999999", bg="#FFFFFF").pack(pady=(px(12), px(4)))
+             font=("Segoe UI", -fs(11)), fg="#999999", bg="#FFFFFF").pack(pady=(px(12), px(4)))
 
     # Referenzen sichern damit GC sie nicht löscht
     splash._logo_ref = logo_img_ref
@@ -186,6 +186,11 @@ def main():
             mb.showerror("Startfehler", f"Fehler beim Laden:\n{error_holder['error']}")
             return
 
+        import config
+        dpi_scale = _dpi_scale_for(splash)
+        ui_scale = dpi_scale * float(getattr(config, "UI_SCALE", 1.0))
+        ui_scale = max(0.8, min(ui_scale, 3.0))
+
         splash.destroy()
 
         ctk = loaded["ctk"]
@@ -194,22 +199,14 @@ def main():
         ctk.set_appearance_mode("light")
         ctk.set_default_color_theme("blue")
 
-        root = ctk.CTk()
-
-        # ── Deterministische UI-Skalierung ───────────────────────────────────
-        # CustomTkinters Auto-DPI-Erkennung schlaegt auf manchen Systemen fehl
-        # (alles wirkt winzig). Wir ermitteln die echte DPI selbst und setzen
-        # die Skalierung explizit; config.UI_SCALE erlaubt zusaetzlichen Zoom.
         try:
-            import config
-            dpi_scale = _dpi_scale_for(root)
-            ui_scale = dpi_scale * float(getattr(config, "UI_SCALE", 1.0))
-            ui_scale = max(0.8, min(ui_scale, 3.0))
             ctk.deactivate_automatic_dpi_awareness()
             ctk.set_widget_scaling(ui_scale)
             ctk.set_window_scaling(ui_scale)
         except Exception as e:
             logging.debug(f"UI-Skalierung konnte nicht gesetzt werden: {e}")
+
+        root = ctk.CTk()
 
         app = IgniteApp(root)
         root.mainloop()
