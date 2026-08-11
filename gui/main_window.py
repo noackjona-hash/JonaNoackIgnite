@@ -1416,10 +1416,10 @@ class IgniteApp:
         max_disp = self.to_temp_val(max_val)
         std_disp = self.to_delta_val(std_val)
 
-        unit_str = "°C"
-        unit = self.temp_unit_opt.get() if hasattr(self, "temp_unit_opt") else "Celsius (°C)"
+        unit_str = "C"
+        unit = self.temp_unit_opt.get() if hasattr(self, "temp_unit_opt") else "Celsius (C)"
         if "Fahrenheit" in unit:
-            unit_str = "°F"
+            unit_str = "F"
         elif "Kelvin" in unit:
             unit_str = "K"
 
@@ -1447,9 +1447,9 @@ class IgniteApp:
 
         ax.hist(pixels_disp, bins=128, color=COLOR_PRIMARY_ACCENT, alpha=0.7, edgecolor="none")
         ax.axvline(mean_disp, color=("#18181B" if mode != "Dark" else "#F4F4F5"), linestyle="--", linewidth=1.5,
-                   label=f"Mittelwert \u03bc ({mean_disp:.1f} {unit_str})")
+                   label=f"Mittelwert ({mean_disp:.1f} {unit_str})")
         ax.axvline(thresh_disp, color="#C42B1C", linestyle="-.", linewidth=2.0,
-                   label=f"Grenzwert µ+k\u03c3 ({thresh_disp:.1f} {unit_str})")
+                   label=f"Grenzwert ({thresh_disp:.1f} {unit_str})")
 
         ax.spines['bottom'].set_color(color_spine)
         ax.spines['top'].set_color(color_spine)
@@ -1457,7 +1457,7 @@ class IgniteApp:
         ax.spines['right'].set_color(color_spine)
         ax.tick_params(colors=color_tick, labelsize=8)
         ax.set_xlabel(f"Temperatur ({unit_str})", color=color_text, fontsize=9, fontweight="bold")
-        ax.set_ylabel("Häufigkeit", color=color_text, fontsize=9, fontweight="bold")
+        ax.set_ylabel("Haeufigkeit", color=color_text, fontsize=9, fontweight="bold")
         ax.legend(facecolor=bg_legend, edgecolor=color_spine, labelcolor=color_text, fontsize=8)
         ax.grid(color=color_grid, linestyle=":", linewidth=0.5)
 
