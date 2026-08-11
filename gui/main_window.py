@@ -1136,10 +1136,12 @@ class IgniteApp:
 
         # 1. Grid Panel
         lbl_grid = self.panels[panel_name]
-        w_grid = max(lbl_grid.winfo_width() - 30, 100)
-        h_grid = max(lbl_grid.winfo_height() - 30, 100)
-        if w_grid <= 100 or h_grid <= 100:
-            w_grid, h_grid = 420, 280
+        lbl_grid.update_idletasks()
+        w_grid = lbl_grid.winfo_width() - 30
+        h_grid = lbl_grid.winfo_height() - 30
+        if w_grid <= 50 or h_grid <= 50:
+            w_grid = max(self.root.winfo_width() // 2 - 80, 420)
+            h_grid = max(self.root.winfo_height() // 2 - 80, 280)
 
         pil_grid = pil_img.copy()
         pil_grid.thumbnail((w_grid, h_grid))
@@ -1149,10 +1151,12 @@ class IgniteApp:
 
         # 2. Fullsize Panel
         lbl_full = self.panels_full[panel_name]
-        w_full = max(lbl_full.winfo_width() - 40, 100)
-        h_full = max(lbl_full.winfo_height() - 40, 100)
-        if w_full <= 100 or h_full <= 100:
-            w_full, h_full = 800, 500
+        lbl_full.update_idletasks()
+        w_full = lbl_full.winfo_width() - 40
+        h_full = lbl_full.winfo_height() - 40
+        if w_full <= 50 or h_full <= 50:
+            w_full = max(self.root.winfo_width() - 100, 800)
+            h_full = max(self.root.winfo_height() - 100, 500)
 
         pil_full = pil_img.copy()
         pil_full.thumbnail((w_full, h_full))
@@ -1437,7 +1441,8 @@ class IgniteApp:
             color_spine = "#E2E8F0"
             bg_legend = "#F1F5F9"
 
-        fig = Figure(figsize=(6, 3.8), dpi=int(100 * self._effective_scaling()), facecolor=bg_fig)
+        safe_dpi = min(int(100 * self._effective_scaling()), 120)
+        fig = Figure(figsize=(6, 3.8), dpi=safe_dpi, facecolor=bg_fig)
         ax = fig.add_subplot(111, facecolor=bg_ax)
 
         ax.hist(pixels_disp, bins=128, color=COLOR_PRIMARY_ACCENT, alpha=0.7, edgecolor="none")
