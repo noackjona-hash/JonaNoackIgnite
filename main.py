@@ -43,6 +43,9 @@ def _enable_dpi_awareness() -> None:
 def _dpi_scale_for(win) -> float:
     """Ermittelt den DPI-Skalierungsfaktor (1.0 = 96 DPI) fuer ein Fenster."""
     try:
+        import sys
+        if sys.platform.startswith("linux"):
+            return 1.0
         return max(1.0, round(win.winfo_fpixels("1i") / 96.0, 2))
     except Exception:
         return 1.0

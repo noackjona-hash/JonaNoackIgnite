@@ -476,7 +476,8 @@ class IgniteApp:
             segmented_button_selected_hover_color=COLOR_HOVER_ACCENT,
             segmented_button_unselected_color=COLOR_BG_CARD,
             segmented_button_unselected_hover_color=COLOR_BORDER_CARD,
-            text_color=COLOR_TEXT_PRIMARY
+            text_color=COLOR_TEXT_PRIMARY,
+            command=self._on_tabview_change
         )
 
         # Welcome Frame
@@ -1169,6 +1170,10 @@ class IgniteApp:
         for name, cv_img in self.current_images.items():
             self.display_image_in_panel(cv_img, name, update_cache=False)
         self.draw_histogram()
+
+    def _on_tabview_change(self) -> None:
+        if self.current_images:
+            self.root.after(50, self.redraw_all_images)
 
     def toggle_appearance_mode(self) -> None:
         current = ctk.get_appearance_mode()
