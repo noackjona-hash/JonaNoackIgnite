@@ -1464,10 +1464,12 @@ class IgniteApp:
         ax.legend(facecolor=bg_legend, edgecolor=color_spine, labelcolor=color_text, fontsize=8)
         ax.grid(color=color_grid, linestyle=":", linewidth=0.5)
 
-        fig.tight_layout()
-
         canvas_widget = FigureCanvasTkAgg(fig, master=self.hist_container)
-        canvas_widget.draw()
+        try:
+            canvas_widget.draw()
+        except Exception as e:
+            import logging
+            logging.error(f"Fehler beim Rendern des Histogramms: {e}")
         canvas_widget.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
         # Stats Sidebar inside Tab Update
