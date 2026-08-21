@@ -1,12 +1,13 @@
+# -*- coding: utf-8 -*-
+"""main.py – IGNITE Medical Imaging Suite bootloader."""
+
 import tkinter as tk
 import threading
 import os
 import logging
 
-
 # ─── Sofortiger Splash-Screen ─────────────────────────────────────────────────
-# Öffnet sich BEVOR schwere Imports (cv2, torch, numpy, gui) geladen werden.
-# Dadurch erscheint der Splash quasi ohne Verzögerung beim Programmstart.
+# Öffnet sich BEVOR schwere Imports geladen werden.
 
 def _get_resource_path(relative_path: str) -> str:
     import sys
@@ -18,19 +19,12 @@ def _get_resource_path(relative_path: str) -> str:
 
 
 def _enable_dpi_awareness() -> None:
-    """Aktiviert unter Windows die DPI-Awareness des Prozesses.
-
-    Muss aufgerufen werden BEVOR das erste Fenster (Splash) erzeugt wird, damit
-    tkinter und CustomTkinter die echte Bildschirm-DPI erhalten. Andernfalls
-    meldet Windows faelschlich 96 DPI und die Oberflaeche wirkt auf
-    HiDPI-Displays winzig.
-    """
+    """Aktiviert unter Windows die DPI-Awareness des Prozesses."""
     import sys
     if not sys.platform.startswith("win"):
         return
     try:
         import ctypes
-        # PROCESS_SYSTEM_DPI_AWARE (1): einheitlich & scharf fuer eine Ein-Fenster-App
         ctypes.windll.shcore.SetProcessDpiAwareness(1)
     except Exception:
         try:
@@ -41,7 +35,7 @@ def _enable_dpi_awareness() -> None:
 
 
 def _dpi_scale_for(win) -> float:
-    """Ermittelt den DPI-Skalierungsfaktor (1.0 = 96 DPI) fuer ein Fenster."""
+    """Ermittelt den DPI-Skalierungsfaktor fuer ein Fenster."""
     try:
         return max(1.0, round(win.winfo_fpixels("1i") / 96.0, 2))
     except Exception:
@@ -49,74 +43,105 @@ def _dpi_scale_for(win) -> float:
 
 
 def create_instant_splash():
-    """Erstellt einen schlichten, DPI-skalierten Standard-Splash-Screen."""
+    """Erstellt einen eleganten, großzügigen Google-Style Splash-Screen."""
     splash = tk.Tk()
     splash.title("IGNITE")
     splash.overrideredirect(True)
     splash.configure(bg="#FFFFFF")
     splash.resizable(False, False)
 
-    # DPI-Skalierung ermitteln, damit der Splash auf HiDPI nicht winzig wirkt
-    s = _dpi_scale_for(splash)
-    px = lambda v: int(round(v * s))
-    fs = lambda v: max(1, int(round(v * s)))
-
-    W, H = px(520), px(320)
-    bar_w = px(380)
     sw = splash.winfo_screenwidth()
     sh = splash.winfo_screenheight()
+
+    # Großzügige Dimensionen passend zur Bildschirmauflösung
+    if sw >= 3200 or sh >= 1800:
+        W, H = 680, 420
+        bar_w = 460
+    elif sw >= 2200 or sh >= 1300:
+        W, H = 600, 380
+        bar_w = 420
+    else:
+        W, H = 540, 350
+        bar_w = 380
+
     x = (sw - W) // 2
     y = (sh - H) // 2
     splash.geometry(f"{W}x{H}+{x}+{y}")
 
-    # Schlichter grauer Rahmen
-    border_frame = tk.Frame(splash, bg="#C0C0C0", bd=0)
-    border_frame.place(x=0, y=0, width=W, height=H)
+    # Äußerer zarter Rahmen
+    border_frame = tk.Frame(splash, bg="#E1E3E1", bd=1)
+    border_frame.pack(fill=tk.BOTH, expand=True)
 
     inner_bg = tk.Frame(border_frame, bg="#FFFFFF")
-    inner_bg.place(x=1, y=1, width=W-2, height=H-2)
+    inner_bg.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
+
+    content = tk.Frame(inner_bg, bg="#FFFFFF")
+    content.pack(expand=True, padx=24, pady=24)
 
     # Logo
     logo_path = _get_resource_path(os.path.join("icon", "LogoRund.png"))
     logo_img_ref = None
     try:
         from PIL import Image, ImageTk
-        img = Image.open(logo_path).resize((px(72), px(72)), Image.LANCZOS)
+        img = Image.open(logo_path).resize((72, 72), Image.LANCZOS)
         logo_img_ref = ImageTk.PhotoImage(img)
-        tk.Label(inner_bg, image=logo_img_ref, bg="#FFFFFF").pack(pady=(px(32), px(8)))
+        tk.Label(content, image=logo_img_ref, bg="#FFFFFF").pack(pady=(0, 10))
     except Exception as e:
         logging.debug(f"Fehler beim Laden des Splash-Logos: {e}")
-        tk.Label(inner_bg, text="", bg="#FFFFFF", height=3).pack()
+        tk.Label(content, text="", bg="#FFFFFF", height=2).pack()
 
     # Titel
-    tk.Label(inner_bg, text="IGNITE",
-             font=("Segoe UI", -fs(42), "bold"), fg="#1A1A1A", bg="#FFFFFF").pack(pady=(0, px(2)))
-    tk.Label(inner_bg, text="Medical Imaging Suite  -  Jugend forscht 2026",
-             font=("Segoe UI", -fs(14)), fg="#444444", bg="#FFFFFF").pack()
+    tk.Label(
+        content,
+        text="IGNITE",
+        font=("Segoe UI", 36, "bold"),
+        fg="#1F1F1F",
+        bg="#FFFFFF"
+    ).pack()
 
-    # Trennlinie
-    tk.Frame(inner_bg, bg="#D0D0D0", height=1).pack(fill=tk.X, padx=px(50), pady=px(16))
+    tk.Label(
+        content,
+        text="Medical Imaging Suite  ·  Jugend forscht 2026",
+        font=("Segoe UI", 13),
+        fg="#5F6368",
+        bg="#FFFFFF"
+    ).pack(pady=(2, 16))
 
-    status_var = tk.StringVar(value="Wird geladen...")
-    tk.Label(inner_bg, textvariable=status_var,
-             font=("Segoe UI", -fs(13)), fg="#767676", bg="#FFFFFF").pack(pady=(0, px(10)))
+    status_var = tk.StringVar(value="Wird initialisiert…")
+    tk.Label(
+        content,
+        textvariable=status_var,
+        font=("Segoe UI", 12),
+        fg="#727775",
+        bg="#FFFFFF"
+    ).pack(pady=(0, 10))
 
     # Fortschrittsbalken
-    pbar_canvas = tk.Canvas(inner_bg, width=bar_w, height=px(4), bg="#E8E8E8",
-                             highlightthickness=0, bd=0)
+    pbar_canvas = tk.Canvas(
+        content,
+        width=bar_w,
+        height=6,
+        bg="#E9EEF6",
+        highlightthickness=0,
+        bd=0
+    )
     pbar_canvas.pack()
-    bar = pbar_canvas.create_rectangle(0, 0, 0, px(4), fill="#1A73E8", outline="")
+    bar = pbar_canvas.create_rectangle(0, 0, 0, 6, fill="#0B57D0", outline="")
 
-    tk.Label(inner_bg, text="© 2026 Jona Noack  ·  Fachgebiet Arbeitswelt",
-             font=("Segoe UI", -fs(11)), fg="#80868B", bg="#FFFFFF").pack(pady=(px(12), px(4)))
+    tk.Label(
+        content,
+        text="© 2026 Jona Noack  ·  Fachgebiet Arbeitswelt",
+        font=("Segoe UI", 11),
+        fg="#8E918F",
+        bg="#FFFFFF"
+    ).pack(pady=(16, 0))
 
-    # Referenzen sichern damit GC sie nicht löscht
     splash._logo_ref = logo_img_ref
     splash._pbar_canvas = pbar_canvas
     splash._pbar_bar = bar
     splash._status_var = status_var
     splash._pbar_width = bar_w
-    splash._pbar_height = px(4)
+    splash._pbar_height = 6
 
     return splash
 
@@ -139,10 +164,8 @@ def main():
     os.makedirs(log_dir, exist_ok=True)
     logging.basicConfig(level=logging.INFO, filename=os.path.join(log_dir, 'ignite_app.log'), format='%(asctime)s - %(levelname)s - %(message)s')
 
-    # DPI-Awareness AKTIVIEREN bevor das erste Fenster erzeugt wird
     _enable_dpi_awareness()
 
-    # Splash sofort zeigen – noch BEVOR schwere Imports
     splash = create_instant_splash()
     splash.update()
 
@@ -152,17 +175,17 @@ def main():
     def load_heavy():
         """Lädt alle schweren Abhängigkeiten im Background-Thread."""
         try:
-            splash.after(0, lambda: update_splash(splash, 0.25, "Lade Bildverarbeitung..."))
+            splash.after(0, lambda: update_splash(splash, 0.25, "Lade Bildverarbeitung…"))
 
             import customtkinter as ctk
             loaded["ctk"] = ctk
 
-            splash.after(0, lambda: update_splash(splash, 0.55, "Initialisiere GPU-Backend..."))
+            splash.after(0, lambda: update_splash(splash, 0.55, "Initialisiere Hardware-Backend…"))
 
             from gui.main_window import IgniteApp
             loaded["IgniteApp"] = IgniteApp
 
-            splash.after(0, lambda: update_splash(splash, 0.85, "Lade Benutzeroberfläche..."))
+            splash.after(0, lambda: update_splash(splash, 0.85, "Lade Google Fluid Design…"))
 
             import time
             time.sleep(0.15)
@@ -186,20 +209,20 @@ def main():
         import config
         sw = splash.winfo_screenwidth()
         sh = splash.winfo_screenheight()
-        
-        # Automatische responsive Skalierung für moderne High-DPI Displays (z.B. 1440p / 4K)
+
+        # Responsive Skalierung für High-DPI Displays (z.B. 1440p / 4K)
         if sw >= 3200 or sh >= 1800:
-            auto_scale = 1.55
+            auto_scale = 1.40
         elif sw >= 2200 or sh >= 1300:
-            auto_scale = 1.30
+            auto_scale = 1.20
         elif sw >= 1800:
-            auto_scale = 1.15
+            auto_scale = 1.10
         else:
             auto_scale = 1.0
 
-        dpi_scale = max(_dpi_scale_for(splash), auto_scale)
-        ui_scale = dpi_scale * float(getattr(config, "UI_SCALE", 1.0))
-        ui_scale = max(1.0, min(ui_scale, 2.5))
+        user_scale = float(getattr(config, "UI_SCALE", 1.0))
+        ui_scale = auto_scale * user_scale
+        ui_scale = max(1.0, min(ui_scale, 2.2))
 
         splash.destroy()
 
@@ -216,20 +239,12 @@ def main():
             logging.debug(f"UI-Skalierung konnte nicht gesetzt werden: {e}")
 
         root = ctk.CTk()
-        
-        try:
-            root.tk.call('tk', 'scaling', (96.0 * ui_scale) / 72.0)
-        except Exception as e:
-            logging.debug(f"tk scaling konnte nicht gesetzt werden: {e}")
-
         app = IgniteApp(root)
         root.mainloop()
 
-    # Background-Thread starten
     t = threading.Thread(target=load_heavy, daemon=True)
     t.start()
 
-    # Tkinter-Eventloop läuft bis _on_load_done() splash.destroy() aufruft
     splash.mainloop()
 
 

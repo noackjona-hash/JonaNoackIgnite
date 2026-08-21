@@ -38,7 +38,7 @@ class TopAppBar(ctk.CTkFrame):
     ) -> None:
         super().__init__(
             master,
-            height=72,
+            height=76,
             corner_radius=0,
             fg_color=COLOR_BG_NAV,
             border_width=0,
@@ -56,7 +56,7 @@ class TopAppBar(ctk.CTkFrame):
     def _build_ui(self) -> None:
         # Linker Bereich: Logo & App-Titel
         left_box = ctk.CTkFrame(self, fg_color="transparent")
-        left_box.pack(side=ctk.LEFT, padx=(28, 20), pady=12)
+        left_box.pack(side=ctk.LEFT, padx=(24, 16), pady=8)
 
         logo_path = get_resource_path(os.path.join("icon", "LogoRund.png"))
         if os.path.exists(logo_path):
@@ -89,18 +89,18 @@ class TopAppBar(ctk.CTkFrame):
             fg_color=COLOR_CONTAINER_BLUE,
             corner_radius=10,
             height=22
-        ).pack(side=ctk.LEFT, padx=(10, 0))
+        ).pack(side=ctk.LEFT, padx=(8, 0))
 
         ctk.CTkLabel(
             title_col,
             text="Medical Imaging Suite  ·  Jugend forscht 2026",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=13),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
             text_color=COLOR_TEXT_MUTED
         ).pack(anchor="w", pady=(2, 0))
 
         # Rechter Bereich: Backend Badge + Suchfeld + Theme + Help + Primary FAB
         right_box = ctk.CTkFrame(self, fg_color="transparent")
-        right_box.pack(side=ctk.RIGHT, padx=(20, 28), pady=12)
+        right_box.pack(side=ctk.RIGHT, padx=(16, 24), pady=12)
 
         # 1. Backend Status Pill
         self.backend_chip = ctk.CTkFrame(
@@ -109,7 +109,7 @@ class TopAppBar(ctk.CTkFrame):
             corner_radius=22,
             height=44
         )
-        self.backend_chip.pack(side=ctk.LEFT, padx=(0, 14))
+        self.backend_chip.pack(side=ctk.LEFT, padx=(0, 12))
 
         self.backend_dot = ctk.CTkFrame(
             self.backend_chip,
@@ -137,11 +137,11 @@ class TopAppBar(ctk.CTkFrame):
             fg_color=COLOR_BG_INPUT,
             hover_color=COLOR_BG_INPUT_HOVER,
             text_color=COLOR_TEXT_SECONDARY,
-            corner_radius=23,
-            height=46,
-            width=260
+            corner_radius=22,
+            height=44,
+            width=230
         )
-        self.search_btn.pack(side=ctk.LEFT, padx=(0, 14))
+        self.search_btn.pack(side=ctk.LEFT, padx=(0, 12))
 
         # 3. Theme Toggle Button
         self.theme_btn = ctk.CTkButton(
@@ -152,9 +152,9 @@ class TopAppBar(ctk.CTkFrame):
             fg_color=COLOR_BG_INPUT,
             hover_color=COLOR_BG_INPUT_HOVER,
             text_color=COLOR_TEXT_PRIMARY,
-            corner_radius=23,
-            height=46,
-            width=46
+            corner_radius=22,
+            height=44,
+            width=44
         )
         self.theme_btn.pack(side=ctk.LEFT, padx=(0, 10))
 
@@ -167,11 +167,11 @@ class TopAppBar(ctk.CTkFrame):
             fg_color=COLOR_BG_INPUT,
             hover_color=COLOR_BG_INPUT_HOVER,
             text_color=COLOR_TEXT_PRIMARY,
-            corner_radius=23,
-            height=46,
-            width=46
+            corner_radius=22,
+            height=44,
+            width=44
         )
-        self.info_btn.pack(side=ctk.LEFT, padx=(0, 16))
+        self.info_btn.pack(side=ctk.LEFT, padx=(0, 14))
 
         # 5. Primary Google Blue Action FAB Button
         self.load_btn = ctk.CTkButton(
@@ -182,9 +182,9 @@ class TopAppBar(ctk.CTkFrame):
             fg_color=COLOR_PRIMARY,
             hover_color=COLOR_PRIMARY_HOVER,
             text_color="#FFFFFF",
-            corner_radius=23,
-            height=46,
-            width=200
+            corner_radius=22,
+            height=44,
+            width=190
         )
         self.load_btn.pack(side=ctk.LEFT)
 

@@ -61,14 +61,13 @@ class DashboardView(ctk.CTkFrame):
 
         self.current_result: Optional[dict[str, Any]] = None
         self._panel_labels: dict[str, ctk.CTkLabel] = {}
-        self._cached_images: dict[str, Image.Image] = {}
 
         self._build_ui()
 
     def _build_ui(self) -> None:
         # ── 1. KPI Metriken-Leiste oben ──────────────────────────────────────
         self.kpi_bar = ctk.CTkFrame(self, fg_color="transparent")
-        self.kpi_bar.pack(fill=ctk.X, padx=18, pady=(18, 10))
+        self.kpi_bar.pack(fill=ctk.X, padx=20, pady=(16, 8))
 
         self.kpi_cards = {}
         kpi_configs = [
@@ -84,11 +83,11 @@ class DashboardView(ctk.CTkFrame):
         self.kpi_bar.grid_columnconfigure(3, weight=1)
 
         for col, (kpi_id, title, default_val, sub, bg_tonal, text_acc) in enumerate(kpi_configs):
-            card = make_material_card(self.kpi_bar, corner_radius=16, fg_color=COLOR_BG_CARD)
+            card = make_material_card(self.kpi_bar, corner_radius=18, fg_color=COLOR_BG_CARD)
             card.grid(row=0, column=col, padx=8, sticky="nsew")
 
             content = ctk.CTkFrame(card, fg_color="transparent")
-            content.pack(fill=ctk.BOTH, expand=True, padx=18, pady=14)
+            content.pack(fill=ctk.BOTH, expand=True, padx=20, pady=16)
 
             ctk.CTkLabel(
                 content,
@@ -101,7 +100,7 @@ class DashboardView(ctk.CTkFrame):
             lbl_val = ctk.CTkLabel(
                 content,
                 text=default_val,
-                font=ctk.CTkFont(family=FONT_FAMILY, size=24, weight="bold"),
+                font=ctk.CTkFont(family=FONT_FAMILY, size=26, weight="bold"),
                 text_color=COLOR_TEXT_PRIMARY,
                 anchor="w"
             )
@@ -120,7 +119,7 @@ class DashboardView(ctk.CTkFrame):
 
         # ── 2. Filter & Steuerungsleiste über dem Grid ────────────────────────
         ctrl_bar = ctk.CTkFrame(self, fg_color="transparent")
-        ctrl_bar.pack(fill=ctk.X, padx=26, pady=(6, 10))
+        ctrl_bar.pack(fill=ctk.X, padx=28, pady=(4, 10))
 
         ctk.CTkLabel(
             ctrl_bar,
@@ -134,14 +133,14 @@ class DashboardView(ctk.CTkFrame):
             ctrl_bar,
             values=["Google Turbo", "Graustufen", "Inferno", "Heiß (Hot)"],
             command=self.on_palette_change,
-            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
             fg_color=COLOR_BG_CARD,
             button_color=COLOR_PRIMARY,
             button_hover_color=COLOR_PRIMARY_HOVER,
             text_color=COLOR_TEXT_PRIMARY,
             corner_radius=10,
-            height=34,
-            width=150
+            height=36,
+            width=160
         )
         self.palette_menu.pack(side=ctk.RIGHT, padx=(10, 0))
 
@@ -157,14 +156,14 @@ class DashboardView(ctk.CTkFrame):
             ctrl_bar,
             values=["Klinische Allgemeinanalyse", "Podologische Symmetrieanalyse"],
             command=self.on_mode_change,
-            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
             fg_color=COLOR_BG_CARD,
             button_color=COLOR_PRIMARY,
             button_hover_color=COLOR_PRIMARY_HOVER,
             text_color=COLOR_TEXT_PRIMARY,
             corner_radius=10,
-            height=34,
-            width=230
+            height=36,
+            width=240
         )
         self.mode_menu.pack(side=ctk.RIGHT, padx=(10, 20))
 
@@ -177,7 +176,7 @@ class DashboardView(ctk.CTkFrame):
 
         # ── 3. Haupt-Container für Grid vs. Empty State ──────────────────────
         self.content_area = ctk.CTkFrame(self, fg_color="transparent")
-        self.content_area.pack(fill=ctk.BOTH, expand=True, padx=18, pady=(0, 18))
+        self.content_area.pack(fill=ctk.BOTH, expand=True, padx=20, pady=(0, 20))
 
         # 4-Panel Grid
         self.grid_frame = ctk.CTkFrame(self.content_area, fg_color="transparent")
@@ -188,15 +187,13 @@ class DashboardView(ctk.CTkFrame):
 
         positions = [(0, 0), (0, 1), (1, 0), (1, 1)]
         for (key, title, subtitle, color), (r, c) in zip(self.PANEL_DEFS, positions):
-            card = make_material_card(self.grid_frame, corner_radius=16, fg_color=COLOR_BG_CARD)
+            card = make_material_card(self.grid_frame, corner_radius=18, fg_color=COLOR_BG_CARD)
             card.grid(row=r, column=c, padx=8, pady=8, sticky="nsew")
 
-            # Header der Kachel
-            header = ctk.CTkFrame(card, fg_color="transparent", height=44)
-            header.pack(fill=ctk.X, padx=16, pady=(12, 6))
+            header = ctk.CTkFrame(card, fg_color="transparent", height=48)
+            header.pack(fill=ctk.X, padx=18, pady=(12, 6))
             header.pack_propagate(False)
 
-            # Farbiger Punkt als Stufen-Akzent
             dot = ctk.CTkFrame(header, width=10, height=10, corner_radius=5, fg_color=color)
             dot.pack(side=ctk.LEFT, padx=(0, 10), pady=4)
 
@@ -211,39 +208,36 @@ class DashboardView(ctk.CTkFrame):
                 anchor="w"
             ).pack(fill=ctk.X)
 
-            # Lupe Button zur Detailansicht
             _k = key
             inspect_btn = ctk.CTkButton(
                 header,
                 text="⤢ Details",
                 command=lambda k=_k: self.on_inspect_panel(k),
-                font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+                font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
                 fg_color=COLOR_CONTAINER_BLUE,
                 hover_color=COLOR_BG_CARD_VARIANT,
                 text_color=COLOR_PRIMARY,
-                corner_radius=14,
-                height=28,
-                width=76
+                corner_radius=16,
+                height=30,
+                width=84
             )
             inspect_btn.pack(side=ctk.RIGHT)
 
-            # Trennlinie
             ctk.CTkFrame(card, height=1, fg_color=COLOR_OUTLINE_VARIANT).pack(fill=ctk.X, padx=0, pady=(6, 0))
 
-            # Bildbereich
             img_lbl = ctk.CTkLabel(
                 card,
                 text="Kein Bild geladen",
-                font=ctk.CTkFont(family=FONT_FAMILY, size=12),
+                font=ctk.CTkFont(family=FONT_FAMILY, size=13),
                 text_color=COLOR_TEXT_MUTED
             )
-            img_lbl.pack(fill=ctk.BOTH, expand=True, padx=10, pady=10)
+            img_lbl.pack(fill=ctk.BOTH, expand=True, padx=12, pady=12)
             self._panel_labels[key] = img_lbl
 
         # Empty / Welcome State
         self.welcome_card = make_material_card(
             self.content_area,
-            corner_radius=20,
+            corner_radius=24,
             fg_color=COLOR_BG_CARD
         )
         self._build_welcome_state()
@@ -251,45 +245,45 @@ class DashboardView(ctk.CTkFrame):
         self.show_empty_state()
 
     def _build_welcome_state(self) -> None:
-        """Erstellt einen eleganten, minimalistischen Google-Style Startbildschirm."""
+        """Erstellt einen eleganten, responsiven Google-Style Startbildschirm."""
         center_box = ctk.CTkFrame(self.welcome_card, fg_color="transparent")
-        center_box.place(relx=0.5, rely=0.5, anchor="center")
+        center_box.pack(expand=True, padx=24, pady=24)
 
         # Icon
         ctk.CTkLabel(
             center_box,
             text="🔬",
-            font=ctk.CTkFont(size=56)
-        ).pack(pady=(0, 14))
+            font=ctk.CTkFont(size=64)
+        ).pack(pady=(0, 16))
 
         ctk.CTkLabel(
             center_box,
             text="Wärmebild zur Diagnose laden",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=24, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=26, weight="bold"),
             text_color=COLOR_TEXT_PRIMARY
-        ).pack(pady=(0, 6))
+        ).pack(pady=(0, 8))
 
         ctk.CTkLabel(
             center_box,
             text="Lade ein 8-Bit oder radiometrisches Infrarotbild (.jpg, .png, .tiff, .flir),\num automatische Entzündungs- und Symmetrieanalysen durchzuführen.",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=13),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=14),
             text_color=COLOR_TEXT_SECONDARY,
             justify="center",
-            wraplength=520
-        ).pack(pady=(0, 28))
+            wraplength=580
+        ).pack(pady=(0, 30))
 
         ctk.CTkButton(
             center_box,
             text="+  Wärmebild auswählen…",
             command=self.on_load_click,
-            font=ctk.CTkFont(family=FONT_FAMILY, size=14, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=15, weight="bold"),
             fg_color=COLOR_PRIMARY,
             hover_color=COLOR_PRIMARY_HOVER,
             text_color="#FFFFFF",
             corner_radius=24,
             height=48,
-            width=240
-        ).pack(pady=(0, 24))
+            width=260
+        ).pack(pady=(0, 28))
 
         # Schnell-Tipps Leiste
         tips_row = ctk.CTkFrame(center_box, fg_color="transparent")
@@ -301,14 +295,14 @@ class DashboardView(ctk.CTkFrame):
             ("📐 Goldstandard", "Armstrong 2.2 °C Asymmetrie")
         ]
         for icon_title, desc in tips:
-            pill = ctk.CTkFrame(tips_row, fg_color=COLOR_BG_CARD_VARIANT, corner_radius=14)
+            pill = ctk.CTkFrame(tips_row, fg_color=COLOR_BG_CARD_VARIANT, corner_radius=16)
             pill.pack(side=ctk.LEFT, padx=8)
             ctk.CTkLabel(
                 pill,
                 text=f"{icon_title} · {desc}",
-                font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+                font=ctk.CTkFont(family=FONT_FAMILY, size=12),
                 text_color=COLOR_TEXT_SECONDARY
-            ).pack(padx=14, pady=6)
+            ).pack(padx=16, pady=8)
 
     def show_empty_state(self) -> None:
         self.grid_frame.pack_forget()
