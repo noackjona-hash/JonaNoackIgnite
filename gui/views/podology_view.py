@@ -46,24 +46,24 @@ class PodologyView(ctk.CTkFrame):
 
         # ── Linke Spalte: Annotiertes Symmetrie-Bild ─────────────────────────
         self.img_card = make_material_card(self, corner_radius=16, fg_color=COLOR_BG_CARD)
-        self.img_card.grid(row=0, column=0, padx=(16, 8), pady=16, sticky="nsew")
+        self.img_card.grid(row=0, column=0, padx=(18, 10), pady=18, sticky="nsew")
 
         # Header
-        top_bar = ctk.CTkFrame(self.img_card, fg_color="transparent", height=44)
-        top_bar.pack(fill=ctk.X, padx=16, pady=(12, 6))
+        top_bar = ctk.CTkFrame(self.img_card, fg_color="transparent", height=50)
+        top_bar.pack(fill=ctk.X, padx=18, pady=(14, 8))
         top_bar.pack_propagate(False)
 
         ctk.CTkLabel(
             top_bar,
             text="PODOLOGISCHES SYMMETRIE-BILD",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
             text_color=COLOR_PRIMARY
         ).pack(side=ctk.LEFT)
 
         ctk.CTkLabel(
             top_bar,
             text="3-Zonen Bounding Boxes & Symmetrieachse",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
             text_color=COLOR_TEXT_MUTED
         ).pack(side=ctk.RIGHT)
 
@@ -72,37 +72,37 @@ class PodologyView(ctk.CTkFrame):
         self.img_lbl = ctk.CTkLabel(
             self.img_card,
             text="Keine Messdaten vorhanden",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=13),
             text_color=COLOR_TEXT_MUTED
         )
-        self.img_lbl.pack(fill=ctk.BOTH, expand=True, padx=12, pady=12)
+        self.img_lbl.pack(fill=ctk.BOTH, expand=True, padx=14, pady=14)
 
         # ── Rechte Spalte: Asymmetrie-Banner & 3-Zonen Tabelle ───────────────
         self.side_card = make_material_card(self, corner_radius=16, fg_color=COLOR_BG_CARD)
-        self.side_card.grid(row=0, column=1, padx=(8, 16), pady=16, sticky="nsew")
+        self.side_card.grid(row=0, column=1, padx=(10, 18), pady=18, sticky="nsew")
 
         scroll = ctk.CTkScrollableFrame(self.side_card, fg_color="transparent")
-        scroll.pack(fill=ctk.BOTH, expand=True, padx=12, pady=12)
+        scroll.pack(fill=ctk.BOTH, expand=True, padx=14, pady=14)
 
         # 1. Klinischer Goldstandard Banner (Armstrong 1997)
         ctk.CTkLabel(
             scroll,
             text="KLINISCHER SYMMETRIESTATUS",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=10, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
             text_color=COLOR_TEXT_MUTED,
             anchor="w"
-        ).pack(fill=ctk.X, pady=(4, 6))
+        ).pack(fill=ctk.X, pady=(4, 8))
 
-        self.asym_banner = make_material_card(scroll, corner_radius=12, fg_color=COLOR_CONTAINER_GREEN)
-        self.asym_banner.pack(fill=ctk.X, pady=(0, 16))
+        self.asym_banner = make_material_card(scroll, corner_radius=14, fg_color=COLOR_CONTAINER_GREEN)
+        self.asym_banner.pack(fill=ctk.X, pady=(0, 18))
 
         b_inner = ctk.CTkFrame(self.asym_banner, fg_color="transparent")
-        b_inner.pack(fill=ctk.X, padx=14, pady=12)
+        b_inner.pack(fill=ctk.X, padx=16, pady=14)
 
         self.asym_status_lbl = ctk.CTkLabel(
             b_inner,
             text="Physiologisch Symmetrisch",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=14, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=15, weight="bold"),
             text_color=COLOR_SUCCESS,
             anchor="w"
         )
@@ -111,42 +111,42 @@ class PodologyView(ctk.CTkFrame):
         self.asym_delta_lbl = ctk.CTkLabel(
             b_inner,
             text="Seiten-Differenz ΔT = 0.0 °C  (Grenzwert: 2.2 °C)",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
             text_color=COLOR_TEXT_PRIMARY,
             anchor="w"
         )
-        self.asym_delta_lbl.pack(fill=ctk.X, pady=(2, 0))
+        self.asym_delta_lbl.pack(fill=ctk.X, pady=(4, 0))
 
         # 2. 3-Zonen Tabelle
         ctk.CTkLabel(
             scroll,
             text="3-ZONEN TEMPERATUR-VERGLEICH",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=10, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
             text_color=COLOR_TEXT_MUTED,
             anchor="w"
-        ).pack(fill=ctk.X, pady=(4, 6))
+        ).pack(fill=ctk.X, pady=(4, 8))
 
         self.zones_box = ctk.CTkFrame(scroll, fg_color="transparent")
         self.zones_box.pack(fill=ctk.X)
 
         self.zone_rows = {}
         zones = [
-            ("fore", "Vorfuß (Ballen / Zehen)", "z.B. Druckstellen, Ulzera"),
-            ("mid",  "Mittelfuß (Längsgewölbe)", "z.B. Charcot-Fuß Frühstadium"),
-            ("heel", "Ferse (Rückfuß)", "z.B. Fersensporn, Entlastung")
+            ("fore", "Vorfuß (Ballen / Zehen)", "z. B. Druckstellen, Ulzera"),
+            ("mid",  "Mittelfuß (Längsgewölbe)", "z. B. Charcot-Fuß Frühstadium"),
+            ("heel", "Ferse (Rückfuß)", "z. B. Fersensporn, Entlastung")
         ]
 
         for z_key, title, hint in zones:
-            z_card = make_material_card(self.zones_box, corner_radius=10, fg_color=COLOR_BG_CARD_VARIANT)
+            z_card = make_material_card(self.zones_box, corner_radius=12, fg_color=COLOR_BG_CARD_VARIANT)
             z_card.pack(fill=ctk.X, pady=4)
 
             z_inner = ctk.CTkFrame(z_card, fg_color="transparent")
-            z_inner.pack(fill=ctk.X, padx=12, pady=10)
+            z_inner.pack(fill=ctk.X, padx=14, pady=12)
 
             ctk.CTkLabel(
                 z_inner,
                 text=title,
-                font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
+                font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"),
                 text_color=COLOR_TEXT_PRIMARY,
                 anchor="w"
             ).pack(fill=ctk.X)
@@ -154,10 +154,10 @@ class PodologyView(ctk.CTkFrame):
             ctk.CTkLabel(
                 z_inner,
                 text=hint,
-                font=ctk.CTkFont(family=FONT_FAMILY, size=9),
+                font=ctk.CTkFont(family=FONT_FAMILY, size=11),
                 text_color=COLOR_TEXT_MUTED,
                 anchor="w"
-            ).pack(fill=ctk.X, pady=(0, 6))
+            ).pack(fill=ctk.X, pady=(1, 6))
 
             # Grid mit Werten L vs R vs Delta
             val_grid = ctk.CTkFrame(z_inner, fg_color="transparent")
@@ -166,27 +166,27 @@ class PodologyView(ctk.CTkFrame):
             val_grid.grid_columnconfigure(1, weight=1)
             val_grid.grid_columnconfigure(2, weight=1)
 
-            lbl_l = ctk.CTkLabel(val_grid, text="L: --.- °C", font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=11), text_color=COLOR_TEXT_SECONDARY, anchor="w")
+            lbl_l = ctk.CTkLabel(val_grid, text="L: --.- °C", font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=12), text_color=COLOR_TEXT_SECONDARY, anchor="w")
             lbl_l.grid(row=0, column=0, sticky="w")
 
-            lbl_r = ctk.CTkLabel(val_grid, text="R: --.- °C", font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=11), text_color=COLOR_TEXT_SECONDARY, anchor="w")
+            lbl_r = ctk.CTkLabel(val_grid, text="R: --.- °C", font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=12), text_color=COLOR_TEXT_SECONDARY, anchor="w")
             lbl_r.grid(row=0, column=1, sticky="w")
 
-            lbl_d = ctk.CTkLabel(val_grid, text="Δ --.- °C", font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=11, weight="bold"), text_color=COLOR_SUCCESS, anchor="e")
+            lbl_d = ctk.CTkLabel(val_grid, text="Δ --.- °C", font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=12, weight="bold"), text_color=COLOR_SUCCESS, anchor="e")
             lbl_d.grid(row=0, column=2, sticky="e")
 
             self.zone_rows[z_key] = (lbl_l, lbl_r, lbl_d)
 
         # 3. Klinischer Literatur-Hinweis
-        lit_card = make_material_card(scroll, corner_radius=10, fg_color=COLOR_BG_CARD_VARIANT)
-        lit_card.pack(fill=ctk.X, pady=(16, 0))
+        lit_card = make_material_card(scroll, corner_radius=12, fg_color=COLOR_BG_CARD_VARIANT)
+        lit_card.pack(fill=ctk.X, pady=(18, 0))
         l_inner = ctk.CTkFrame(lit_card, fg_color="transparent")
-        l_inner.pack(fill=ctk.X, padx=12, pady=10)
+        l_inner.pack(fill=ctk.X, padx=14, pady=12)
 
         ctk.CTkLabel(
             l_inner,
             text="📚 Literatur-Referenz",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
             text_color=COLOR_PRIMARY,
             anchor="w"
         ).pack(fill=ctk.X)
@@ -194,10 +194,10 @@ class PodologyView(ctk.CTkFrame):
         ctk.CTkLabel(
             l_inner,
             text="Armstrong et al. (1997): Infrared Dermal Thermometry for the High-Risk Diabetic Foot. Phys. Ther. 77(2):169–175.\nDelta-T > 2.2 °C signalisiert signifikanten Entzündungsverdacht.",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=9),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
             text_color=COLOR_TEXT_MUTED,
             anchor="w",
-            wraplength=220,
+            wraplength=230,
             justify="left"
         ).pack(fill=ctk.X, pady=(4, 0))
 

@@ -74,48 +74,48 @@ class SettingsView(ctk.CTkFrame):
         self.grid_rowconfigure(0, weight=1)
 
         scroll_left = ctk.CTkScrollableFrame(self, fg_color="transparent")
-        scroll_left.grid(row=0, column=0, padx=(16, 8), pady=16, sticky="nsew")
+        scroll_left.grid(row=0, column=0, padx=(18, 10), pady=18, sticky="nsew")
 
         scroll_right = ctk.CTkScrollableFrame(self, fg_color="transparent")
-        scroll_right.grid(row=0, column=1, padx=(8, 16), pady=16, sticky="nsew")
+        scroll_right.grid(row=0, column=1, padx=(10, 18), pady=18, sticky="nsew")
 
         # ── 1. Linke Spalte: Pipeline-Parameter & Presets ─────────────────────
         param_card = make_material_card(scroll_left, corner_radius=16, fg_color=COLOR_BG_CARD)
-        param_card.pack(fill=ctk.X, pady=(0, 16))
+        param_card.pack(fill=ctk.X, pady=(0, 18))
 
         p_inner = ctk.CTkFrame(param_card, fg_color="transparent")
-        p_inner.pack(fill=ctk.X, padx=20, pady=16)
+        p_inner.pack(fill=ctk.X, padx=24, pady=20)
 
         ctk.CTkLabel(
             p_inner,
             text="PIPELINE-PARAMETER & ALGORITHMUS",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
             text_color=COLOR_PRIMARY,
             anchor="w"
         ).pack(fill=ctk.X)
 
         # Preset Auswahl Dropdown
-        ctk.CTkLabel(p_inner, text="Diagnostisches Preset:", font=ctk.CTkFont(size=11, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w", pady=(10, 2))
+        ctk.CTkLabel(p_inner, text="Diagnostisches Preset:", font=ctk.CTkFont(size=12, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w", pady=(14, 4))
         self.preset_menu = ctk.CTkOptionMenu(
             p_inner,
             values=list(self.PRESETS.keys()),
             command=self._apply_preset,
-            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"),
             fg_color=COLOR_CONTAINER_BLUE,
             button_color=COLOR_PRIMARY,
             button_hover_color=COLOR_PRIMARY_HOVER,
             text_color=COLOR_PRIMARY,
-            corner_radius=8,
-            height=32
+            corner_radius=10,
+            height=38
         )
-        self.preset_menu.pack(fill=ctk.X, pady=(0, 12))
+        self.preset_menu.pack(fill=ctk.X, pady=(0, 14))
 
-        ctk.CTkFrame(p_inner, height=1, fg_color=COLOR_OUTLINE_VARIANT).pack(fill=ctk.X, pady=(0, 8))
+        ctk.CTkFrame(p_inner, height=1, fg_color=COLOR_OUTLINE_VARIANT).pack(fill=ctk.X, pady=(0, 10))
 
         # Sliders
         s_k, l_k = make_slider_setting(
             p_inner, "Threshold Multiplikator (k)",
-            "Hotspot-Grenze T_rel = µ + k·σ (k=3 entspricht 99.86% Konfidenz)",
+            "Hotspot-Grenze T_rel = µ + k·σ (k=3 entspricht 99.86% statistischer Konfidenz)",
             1.0, 5.0, config.DEFAULT_SIGMA_K, 0.1, "",
             command=lambda v: self._on_slider_move()
         )
@@ -169,65 +169,65 @@ class SettingsView(ctk.CTkFrame):
             p_inner,
             text="Robustes MAD-Thresholding (Median Absolute Deviation)",
             command=self._on_slider_move,
-            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
             progress_color=COLOR_PRIMARY
         )
         if config.DEFAULT_USE_MAD:
             self.mad_switch.select()
-        self.mad_switch.pack(fill=ctk.X, pady=(8, 4))
+        self.mad_switch.pack(fill=ctk.X, pady=(12, 6))
 
         self.asym_switch = ctk.CTkSwitch(
             p_inner,
             text="Kontralaterale Asymmetrieprüfung aktivieren (> 2.2 °C)",
             command=self._on_slider_move,
-            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
             progress_color=COLOR_PRIMARY
         )
         if config.DEFAULT_ENABLE_ASYMMETRY:
             self.asym_switch.select()
-        self.asym_switch.pack(fill=ctk.X, pady=(4, 8))
+        self.asym_switch.pack(fill=ctk.X, pady=(6, 12))
 
         # ── 2. Rechte Spalte: Hardware, Backend & Radiometrie ────────────────
         hw_card = make_material_card(scroll_right, corner_radius=16, fg_color=COLOR_BG_CARD)
-        hw_card.pack(fill=ctk.X, pady=(0, 16))
+        hw_card.pack(fill=ctk.X, pady=(0, 18))
 
         h_inner = ctk.CTkFrame(hw_card, fg_color="transparent")
-        h_inner.pack(fill=ctk.X, padx=20, pady=16)
+        h_inner.pack(fill=ctk.X, padx=24, pady=20)
 
         ctk.CTkLabel(
             h_inner,
             text="BERECHNUNGS-BACKEND & BESCHLEUNIGUNG",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
             text_color=COLOR_PRIMARY,
             anchor="w"
         ).pack(fill=ctk.X)
 
-        ctk.CTkLabel(h_inner, text="Ausführungs-Engine:", font=ctk.CTkFont(size=11, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w", pady=(10, 2))
+        ctk.CTkLabel(h_inner, text="Ausführungs-Engine:", font=ctk.CTkFont(size=12, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w", pady=(14, 4))
         self.backend_menu = ctk.CTkOptionMenu(
             h_inner,
             values=["Automatisch (Schnellstes)", "Erzwinge Rust-CPU-Core", "Erzwinge PyTorch-GPU", "Erzwinge Python-Fallback"],
             command=self._on_backend_select,
-            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=13),
             fg_color=COLOR_BG_CARD_VARIANT,
             button_color=COLOR_PRIMARY,
             button_hover_color=COLOR_PRIMARY_HOVER,
             text_color=COLOR_TEXT_PRIMARY,
-            corner_radius=8,
-            height=32
+            corner_radius=10,
+            height=38
         )
-        self.backend_menu.pack(fill=ctk.X, pady=(0, 12))
+        self.backend_menu.pack(fill=ctk.X, pady=(0, 14))
 
         # Radiometrie Card
         radio_card = make_material_card(scroll_right, corner_radius=16, fg_color=COLOR_BG_CARD)
-        radio_card.pack(fill=ctk.X, pady=(0, 16))
+        radio_card.pack(fill=ctk.X, pady=(0, 18))
 
         r_inner = ctk.CTkFrame(radio_card, fg_color="transparent")
-        r_inner.pack(fill=ctk.X, padx=20, pady=16)
+        r_inner.pack(fill=ctk.X, padx=24, pady=20)
 
         ctk.CTkLabel(
             r_inner,
             text="RADIOMETRISCHE EMISSIVITÄTS-KORREKTUR",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
             text_color=COLOR_PRIMARY,
             anchor="w"
         ).pack(fill=ctk.X)
@@ -235,37 +235,37 @@ class SettingsView(ctk.CTkFrame):
         ctk.CTkLabel(
             r_inner,
             text="Stefan-Boltzmann Strahlungsbilanz für menschliche Haut (Jones 1998 / Steketee 1973).",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
             text_color=COLOR_TEXT_MUTED,
             anchor="w",
-            wraplength=360,
+            wraplength=380,
             justify="left"
-        ).pack(fill=ctk.X, pady=(4, 10))
+        ).pack(fill=ctk.X, pady=(4, 14))
 
         # Emissivität
-        ctk.CTkLabel(r_inner, text="Haut-Emissivitätsgrad (ε):", font=ctk.CTkFont(size=11, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w")
-        self.emissivity_entry = ctk.CTkEntry(r_inner, placeholder_text="0.98", font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=12), fg_color=COLOR_BG_CARD_VARIANT, border_color=COLOR_OUTLINE)
+        ctk.CTkLabel(r_inner, text="Haut-Emissivitätsgrad (ε):", font=ctk.CTkFont(size=12, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w")
+        self.emissivity_entry = ctk.CTkEntry(r_inner, placeholder_text="0.98", font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=13), fg_color=COLOR_BG_CARD_VARIANT, border_color=COLOR_OUTLINE, height=36)
         self.emissivity_entry.insert(0, str(config.SKIN_EMISSIVITY))
-        self.emissivity_entry.pack(fill=ctk.X, pady=(2, 10))
+        self.emissivity_entry.pack(fill=ctk.X, pady=(4, 14))
 
         # Reflektierte Temperatur
-        ctk.CTkLabel(r_inner, text="Reflektierte Umgebungstemperatur (°C):", font=ctk.CTkFont(size=11, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w")
-        self.refl_temp_entry = ctk.CTkEntry(r_inner, placeholder_text="20.0", font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=12), fg_color=COLOR_BG_CARD_VARIANT, border_color=COLOR_OUTLINE)
+        ctk.CTkLabel(r_inner, text="Reflektierte Umgebungstemperatur (°C):", font=ctk.CTkFont(size=12, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w")
+        self.refl_temp_entry = ctk.CTkEntry(r_inner, placeholder_text="20.0", font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=13), fg_color=COLOR_BG_CARD_VARIANT, border_color=COLOR_OUTLINE, height=36)
         self.refl_temp_entry.insert(0, str(config.REFLECTED_TEMP_C))
-        self.refl_temp_entry.pack(fill=ctk.X, pady=(2, 10))
+        self.refl_temp_entry.pack(fill=ctk.X, pady=(4, 14))
 
         # Reset Button
         ctk.CTkButton(
             scroll_right,
             text="↺  Standardwerte wiederherstellen",
             command=self._reset_defaults,
-            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"),
             fg_color=COLOR_CONTAINER_BLUE,
             hover_color=COLOR_OUTLINE,
             text_color=COLOR_PRIMARY,
-            corner_radius=10,
-            height=36
-        ).pack(fill=ctk.X, pady=(8, 0))
+            corner_radius=21,
+            height=42
+        ).pack(fill=ctk.X, pady=(10, 0))
 
     def _apply_preset(self, choice: str) -> None:
         p = self.PRESETS.get(choice)

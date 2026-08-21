@@ -25,7 +25,7 @@ from gui.theme import (
 class CommandPalette(ctk.CTkToplevel):
     """Google Search-Style Befehlssuche (Ctrl+K / Ctrl+P)."""
 
-    _W, _H = 580, 420
+    _W, _H = 620, 440
 
     def __init__(self, master: tk.Misc, commands: list[dict[str, Any]], **kwargs) -> None:
         super().__init__(master, **kwargs)
@@ -57,7 +57,7 @@ class CommandPalette(ctk.CTkToplevel):
 
         outer = ctk.CTkFrame(
             shadow,
-            corner_radius=16,
+            corner_radius=20,
             border_width=1,
             border_color=COLOR_OUTLINE,
             fg_color=COLOR_BG_CARD
@@ -65,16 +65,16 @@ class CommandPalette(ctk.CTkToplevel):
         outer.pack(fill=tk.BOTH, expand=True)
 
         # ── Suchzeile ────────────────────────────────────────────────────────
-        search_row = ctk.CTkFrame(outer, fg_color="transparent", height=54)
-        search_row.pack(fill=ctk.X, padx=16, pady=(12, 0))
+        search_row = ctk.CTkFrame(outer, fg_color="transparent", height=58)
+        search_row.pack(fill=ctk.X, padx=20, pady=(14, 0))
         search_row.pack_propagate(False)
 
         ctk.CTkLabel(
             search_row,
             text="⌕",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=20),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=24),
             text_color=COLOR_PRIMARY,
-            width=28
+            width=32
         ).pack(side=ctk.LEFT)
 
         self._search_var = tk.StringVar()
@@ -82,43 +82,44 @@ class CommandPalette(ctk.CTkToplevel):
             search_row,
             textvariable=self._search_var,
             placeholder_text="Befehl oder Funktion suchen…",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=14),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=15),
             border_width=0,
             fg_color="transparent",
             text_color=COLOR_TEXT_PRIMARY,
-            height=40
+            height=44
         )
-        self._search_entry.pack(side=ctk.LEFT, fill=ctk.X, expand=True, padx=10)
+        self._search_entry.pack(side=ctk.LEFT, fill=ctk.X, expand=True, padx=12)
         self._search_var.trace_add("write", lambda *_: self._on_search_changed())
 
         esc_badge = ctk.CTkLabel(
             search_row,
             text=" ESC ",
-            font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=10, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=11, weight="bold"),
             text_color=COLOR_TEXT_MUTED,
             fg_color=COLOR_BG_CARD_VARIANT,
-            corner_radius=6,
-            height=22
+            corner_radius=8,
+            height=26,
+            width=48
         )
         esc_badge.pack(side=ctk.RIGHT)
 
-        ctk.CTkFrame(outer, height=1, fg_color=COLOR_OUTLINE_VARIANT).pack(fill=ctk.X, pady=(8, 0))
+        ctk.CTkFrame(outer, height=1, fg_color=COLOR_OUTLINE_VARIANT).pack(fill=ctk.X, pady=(10, 0))
 
         # ── Ergebnisliste ────────────────────────────────────────────────────
-        self._results_scroll = ctk.CTkScrollableFrame(outer, fg_color="transparent", height=300)
-        self._results_scroll.pack(fill=ctk.BOTH, expand=True, padx=8, pady=(4, 0))
+        self._results_scroll = ctk.CTkScrollableFrame(outer, fg_color="transparent", height=320)
+        self._results_scroll.pack(fill=ctk.BOTH, expand=True, padx=12, pady=(6, 0))
 
         # ── Statusleiste ─────────────────────────────────────────────────────
-        hint = ctk.CTkFrame(outer, fg_color=COLOR_BG_CARD_VARIANT, corner_radius=0, height=28)
+        hint = ctk.CTkFrame(outer, fg_color=COLOR_BG_CARD_VARIANT, corner_radius=0, height=32)
         hint.pack(fill=ctk.X, side=ctk.BOTTOM)
         hint.pack_propagate(False)
 
         ctk.CTkLabel(
             hint,
-            text="↑↓ Navigieren   ↵ Ausführen   Esc Schließen",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=10),
+            text="↑↓ Navigieren   ·   ↵ Ausführen   ·   Esc Schließen",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
             text_color=COLOR_TEXT_MUTED
-        ).pack(side=ctk.LEFT, padx=16)
+        ).pack(side=ctk.LEFT, padx=20)
 
         self._render_results()
 
@@ -130,9 +131,9 @@ class CommandPalette(ctk.CTkToplevel):
             ctk.CTkLabel(
                 self._results_scroll,
                 text="Keine passenden Befehle gefunden.",
-                font=ctk.CTkFont(family=FONT_FAMILY, size=12),
+                font=ctk.CTkFont(family=FONT_FAMILY, size=13),
                 text_color=COLOR_TEXT_MUTED
-            ).pack(pady=30)
+            ).pack(pady=36)
             return
 
         for idx, cmd in enumerate(self._filtered):
@@ -140,16 +141,16 @@ class CommandPalette(ctk.CTkToplevel):
             bg_color = COLOR_CONTAINER_BLUE if selected else "transparent"
             text_color = COLOR_PRIMARY if selected else COLOR_TEXT_PRIMARY
 
-            row = ctk.CTkFrame(self._results_scroll, fg_color=bg_color, corner_radius=10, cursor="hand2", height=42)
+            row = ctk.CTkFrame(self._results_scroll, fg_color=bg_color, corner_radius=12, cursor="hand2", height=46)
             row.pack(fill=ctk.X, padx=4, pady=2)
             row.pack_propagate(False)
 
             content = ctk.CTkFrame(row, fg_color="transparent")
-            content.pack(fill=ctk.BOTH, expand=True, padx=12, pady=4)
+            content.pack(fill=ctk.BOTH, expand=True, padx=14, pady=6)
 
             # Icon / Dot
-            dot = ctk.CTkFrame(content, width=6, height=6, corner_radius=3, fg_color=COLOR_PRIMARY if selected else COLOR_TEXT_MUTED)
-            dot.pack(side=ctk.LEFT, padx=(0, 10))
+            dot = ctk.CTkFrame(content, width=8, height=8, corner_radius=4, fg_color=COLOR_PRIMARY if selected else COLOR_TEXT_MUTED)
+            dot.pack(side=ctk.LEFT, padx=(0, 12))
 
             lbl_col = ctk.CTkFrame(content, fg_color="transparent")
             lbl_col.pack(side=ctk.LEFT, fill=ctk.X, expand=True)
@@ -157,7 +158,7 @@ class CommandPalette(ctk.CTkToplevel):
             ctk.CTkLabel(
                 lbl_col,
                 text=cmd["label"],
-                font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
+                font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"),
                 text_color=text_color,
                 anchor="w"
             ).pack(fill=ctk.X)
@@ -166,11 +167,12 @@ class CommandPalette(ctk.CTkToplevel):
                 ctk.CTkLabel(
                     content,
                     text=cmd["shortcut"],
-                    font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=10),
+                    font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=11, weight="bold"),
                     text_color=COLOR_PRIMARY if selected else COLOR_TEXT_MUTED,
                     fg_color=COLOR_BG_CARD_VARIANT if not selected else "transparent",
-                    corner_radius=4,
-                    height=20
+                    corner_radius=6,
+                    height=22,
+                    width=60
                 ).pack(side=ctk.RIGHT)
 
             _i = idx

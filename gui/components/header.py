@@ -38,7 +38,7 @@ class TopAppBar(ctk.CTkFrame):
     ) -> None:
         super().__init__(
             master,
-            height=60,
+            height=68,
             corner_radius=0,
             fg_color=COLOR_BG_NAV,
             border_width=0,
@@ -54,17 +54,17 @@ class TopAppBar(ctk.CTkFrame):
         self._build_ui()
 
     def _build_ui(self) -> None:
-        # Linker Bereich: Logo & App-Titel
+        # Linker Bereich: Logo & App-Titel mit Google-Badge
         left_box = ctk.CTkFrame(self, fg_color="transparent")
-        left_box.pack(side=ctk.LEFT, padx=(20, 16), pady=8)
+        left_box.pack(side=ctk.LEFT, padx=(24, 16), pady=12)
 
         logo_path = get_resource_path(os.path.join("icon", "LogoRund.png"))
         if os.path.exists(logo_path):
             try:
                 logo_pil = Image.open(logo_path)
-                logo_ctk = ctk.CTkImage(light_image=logo_pil, dark_image=logo_pil, size=(28, 28))
+                logo_ctk = ctk.CTkImage(light_image=logo_pil, dark_image=logo_pil, size=(32, 32))
                 lbl_logo = ctk.CTkLabel(left_box, image=logo_ctk, text="")
-                lbl_logo.pack(side=ctk.LEFT, padx=(0, 10))
+                lbl_logo.pack(side=ctk.LEFT, padx=(0, 12))
             except Exception:
                 pass
 
@@ -77,7 +77,7 @@ class TopAppBar(ctk.CTkFrame):
         ctk.CTkLabel(
             title_row,
             text="IGNITE",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=18, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=20, weight="bold"),
             text_color=COLOR_TEXT_PRIMARY
         ).pack(side=ctk.LEFT)
 
@@ -87,75 +87,75 @@ class TopAppBar(ctk.CTkFrame):
             font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
             text_color=COLOR_PRIMARY,
             fg_color=COLOR_CONTAINER_BLUE,
-            corner_radius=6,
-            width=36,
-            height=18
-        ).pack(side=ctk.LEFT, padx=(8, 0))
+            corner_radius=8,
+            width=40,
+            height=20
+        ).pack(side=ctk.LEFT, padx=(10, 0))
 
         ctk.CTkLabel(
             title_col,
             text="Medical Imaging Suite  ·  Jugend forscht 2026",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
             text_color=COLOR_TEXT_MUTED
-        ).pack(anchor="w")
+        ).pack(anchor="w", pady=(1, 0))
 
-        # Rechter Bereich: Backend Badge + Such-Button + Theme + FAB
+        # Rechter Bereich: Backend Badge + Suchfeld + Theme + Help + Primary FAB
         right_box = ctk.CTkFrame(self, fg_color="transparent")
-        right_box.pack(side=ctk.RIGHT, padx=(16, 20), pady=8)
+        right_box.pack(side=ctk.RIGHT, padx=(16, 24), pady=12)
 
-        # 1. Backend Badge Chip
+        # 1. Backend Status Pill
         self.backend_chip = ctk.CTkFrame(
             right_box,
             fg_color=COLOR_CONTAINER_BLUE,
-            corner_radius=12,
-            height=32
+            corner_radius=18,
+            height=38
         )
-        self.backend_chip.pack(side=ctk.LEFT, padx=(0, 10))
+        self.backend_chip.pack(side=ctk.LEFT, padx=(0, 12))
 
         self.backend_dot = ctk.CTkFrame(
             self.backend_chip,
-            width=8,
-            height=8,
-            corner_radius=4,
+            width=9,
+            height=9,
+            corner_radius=5,
             fg_color=COLOR_PRIMARY
         )
-        self.backend_dot.pack(side=ctk.LEFT, padx=(10, 4), pady=4)
+        self.backend_dot.pack(side=ctk.LEFT, padx=(12, 6), pady=4)
 
         self.backend_lbl = ctk.CTkLabel(
             self.backend_chip,
             text="GPU / CUDA",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
             text_color=COLOR_TEXT_PRIMARY
         )
-        self.backend_lbl.pack(side=ctk.LEFT, padx=(0, 10), pady=4)
+        self.backend_lbl.pack(side=ctk.LEFT, padx=(0, 14), pady=4)
 
-        # 2. Command Palette Suchfeld / Button (Google Search Style)
+        # 2. Google Search Style Command Button
         self.search_btn = ctk.CTkButton(
             right_box,
             text="⌕  Befehle suchen… (Ctrl+K)",
             command=self.on_search_click,
-            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=13),
             fg_color=COLOR_BG_INPUT,
             hover_color=COLOR_BG_INPUT_HOVER,
             text_color=COLOR_TEXT_SECONDARY,
-            corner_radius=18,
-            height=36,
-            width=200
+            corner_radius=21,
+            height=42,
+            width=230
         )
-        self.search_btn.pack(side=ctk.LEFT, padx=(0, 10))
+        self.search_btn.pack(side=ctk.LEFT, padx=(0, 12))
 
         # 3. Theme Toggle Button
         self.theme_btn = ctk.CTkButton(
             right_box,
             text="🌓",
             command=self.on_theme_click,
-            font=ctk.CTkFont(family=FONT_FAMILY, size=13),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=14),
             fg_color=COLOR_BG_INPUT,
             hover_color=COLOR_BG_INPUT_HOVER,
             text_color=COLOR_TEXT_PRIMARY,
-            corner_radius=18,
-            height=36,
-            width=40
+            corner_radius=21,
+            height=42,
+            width=42
         )
         self.theme_btn.pack(side=ctk.LEFT, padx=(0, 10))
 
@@ -164,28 +164,28 @@ class TopAppBar(ctk.CTkFrame):
             right_box,
             text="?",
             command=self.on_info_click,
-            font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=14, weight="bold"),
             fg_color=COLOR_BG_INPUT,
             hover_color=COLOR_BG_INPUT_HOVER,
             text_color=COLOR_TEXT_PRIMARY,
-            corner_radius=18,
-            height=36,
-            width=40
+            corner_radius=21,
+            height=42,
+            width=42
         )
-        self.info_btn.pack(side=ctk.LEFT, padx=(0, 12))
+        self.info_btn.pack(side=ctk.LEFT, padx=(0, 14))
 
-        # 5. Primary Action FAB Button ("Wärmebild öffnen")
+        # 5. Primary Google Blue Action FAB Button
         self.load_btn = ctk.CTkButton(
             right_box,
             text="+  Wärmebild öffnen",
             command=self.on_load_click,
-            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"),
             fg_color=COLOR_PRIMARY,
             hover_color=COLOR_PRIMARY_HOVER,
             text_color="#FFFFFF",
-            corner_radius=18,
-            height=36,
-            width=160
+            corner_radius=21,
+            height=42,
+            width=180
         )
         self.load_btn.pack(side=ctk.LEFT)
 
@@ -196,7 +196,6 @@ class TopAppBar(ctk.CTkFrame):
         self.update_backend_badge()
 
     def update_backend_badge(self) -> None:
-        """Aktualisiert die Anzeige des aktiven Berechnungs-Backends."""
         backend_name = image_processing.get_active_backend()
         if "GPU" in backend_name:
             style = BACKEND_STYLES["GPU"]
