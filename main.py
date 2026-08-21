@@ -184,9 +184,22 @@ def main():
             return
 
         import config
-        dpi_scale = _dpi_scale_for(splash)
+        sw = splash.winfo_screenwidth()
+        sh = splash.winfo_screenheight()
+        
+        # Automatische responsive Skalierung für moderne High-DPI Displays (z.B. 1440p / 4K)
+        if sw >= 3200 or sh >= 1800:
+            auto_scale = 1.55
+        elif sw >= 2200 or sh >= 1300:
+            auto_scale = 1.30
+        elif sw >= 1800:
+            auto_scale = 1.15
+        else:
+            auto_scale = 1.0
+
+        dpi_scale = max(_dpi_scale_for(splash), auto_scale)
         ui_scale = dpi_scale * float(getattr(config, "UI_SCALE", 1.0))
-        ui_scale = max(0.8, min(ui_scale, 3.0))
+        ui_scale = max(1.0, min(ui_scale, 2.5))
 
         splash.destroy()
 
@@ -194,7 +207,6 @@ def main():
         IgniteApp = loaded["IgniteApp"]
 
         ctk.set_appearance_mode("light")
-        ctk.set_default_color_theme("blue")
 
         try:
             ctk.deactivate_automatic_dpi_awareness()
@@ -205,13 +217,8 @@ def main():
 
         root = ctk.CTk()
         
-        # ZWINGE Tkinter auf die exakte Skalierung fuer Schriften.
-        # Ohne dies sind CustomTkinter-Widgets 1.0 skaliert, aber X11 skaliert
-        # die Schriften auf z.B. 3.0, was das gesamte Layout sprengt und
-        # Matplotlib crashen laesst. (96 DPI / 72 = 1.333333)
         try:
-            target_dpi = 96.0 * ui_scale
-            root.tk.call('tk', 'scaling', target_dpi / 72.0)
+            root.tk.call('tk', 'scaling', (96.0 * ui_scale) / 72.0)
         except Exception as e:
             logging.debug(f"tk scaling konnte nicht gesetzt werden: {e}")
 

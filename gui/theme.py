@@ -1,98 +1,101 @@
 # -*- coding: utf-8 -*-
-"""gui/theme.py – Material Design 3 (Google Style) Theme Tokens for IGNITE.
+"""gui/theme.py – Google Material 3 / Material You Fluid Design System for IGNITE.
 
-Provides a clean, cohesive Material You / Google aesthetic for desktop medical imaging.
-All tuple tokens are in (light_mode_color, dark_mode_color) format for CustomTkinter.
+Implements the modern Google Gemini / Android Material You aesthetic:
+- Soft tinted canvas surfaces (#F0F4F9)
+- Floating elevated cards (#FFFFFF with corner_radius=24)
+- Expressive, comfortable Google Sans typography scale
+- Generous touch targets and rounded-full pill buttons
 """
 
-# ── Google Brand Colors (Google 4-Colors) ────────────────────────────────────
+# ── Google Brand Colors ───────────────────────────────────────────────────────
 GOOGLE_BLUE             = "#1A73E8"
 GOOGLE_BLUE_HOVER       = "#1557B0"
-GOOGLE_BLUE_ACTIVE      = "#174EA6"
-GOOGLE_BLUE_LIGHT       = "#8AB4F8"
+GOOGLE_BLUE_ACTIVE      = "#0B57D0"
+GOOGLE_BLUE_LIGHT       = "#D3E3FD"
 
 GOOGLE_RED              = "#EA4335"
 GOOGLE_RED_HOVER        = "#D93025"
-GOOGLE_RED_LIGHT        = "#F28B82"
+GOOGLE_RED_LIGHT        = "#F9DEDC"
 
 GOOGLE_GREEN            = "#34A853"
 GOOGLE_GREEN_HOVER      = "#1E8E3E"
-GOOGLE_GREEN_LIGHT      = "#81C995"
+GOOGLE_GREEN_LIGHT      = "#C4EED0"
 
 GOOGLE_YELLOW           = "#FBBC04"
 GOOGLE_YELLOW_HOVER     = "#F9AB00"
-GOOGLE_YELLOW_LIGHT     = "#FDD663"
+GOOGLE_YELLOW_LIGHT     = "#FFE7A5"
 
 GOOGLE_PURPLE           = "#9334E6"
 GOOGLE_CYAN             = "#12B5CB"
 
-# ── Material Surfaces & Backgrounds ──────────────────────────────────────────
-# Base app background (Google Canvas)
-COLOR_BG_APP            = ("#F8F9FA", "#1F1F1F")
+# ── Modern Material You / Google Fluid Surfaces ──────────────────────────────
+# Fluid canvas background (Google Gemini / Workspace soft tone)
+COLOR_BG_APP            = ("#F0F4F9", "#131314")
 
-# Navigation sidebar / rail
-COLOR_BG_NAV            = ("#FFFFFF", "#28292A")
+# Seamless sidebar background (matching canvas for floating nav pills)
+COLOR_BG_NAV            = ("#F0F4F9", "#131314")
 
-# Cards & elevated containers
-COLOR_BG_CARD           = ("#FFFFFF", "#2D2F31")
-COLOR_BG_CARD_VARIANT   = ("#F1F3F4", "#35363A")
-COLOR_BG_CARD_HOVER     = ("#F8F9FA", "#3C4043")
+# Floating elevated cards & containers
+COLOR_BG_CARD           = ("#FFFFFF", "#1E1F20")
+COLOR_BG_CARD_VARIANT   = ("#F8FAFD", "#282A2C")
+COLOR_BG_CARD_HOVER     = ("#F0F4F9", "#333538")
 
 # Input fields, chips, text entries
-COLOR_BG_INPUT          = ("#F1F3F4", "#303134")
-COLOR_BG_INPUT_HOVER    = ("#E8EAED", "#3C4043")
+COLOR_BG_INPUT          = ("#E9EEF6", "#282A2C")
+COLOR_BG_INPUT_HOVER    = ("#DDE3EA", "#333538")
 
-# Primary tonal containers (Google Tonal Palettes)
-COLOR_CONTAINER_BLUE    = ("#E8F0FE", "#1E3A5F")
-COLOR_CONTAINER_GREEN   = ("#E6F4EA", "#144A29")
-COLOR_CONTAINER_RED     = ("#FCE8E6", "#4A1B1A")
-COLOR_CONTAINER_YELLOW  = ("#FEF7E0", "#4A3B12")
+# Material You Tonal Containers (Active Pills & Badges)
+COLOR_CONTAINER_BLUE    = ("#D3E3FD", "#044289")  # Google Blue active container
+COLOR_CONTAINER_GREEN   = ("#C4EED0", "#0F5223")  # Google Green active container
+COLOR_CONTAINER_RED     = ("#F9DEDC", "#601410")  # Google Red warning container
+COLOR_CONTAINER_YELLOW  = ("#FFE7A5", "#4E3E00")  # Google Yellow attention container
 
-# ── Outlines & Dividers ───────────────────────────────────────────────────────
-COLOR_OUTLINE           = ("#DADCE0", "#3C4043")
-COLOR_OUTLINE_VARIANT   = ("#E8EAED", "#35363A")
-COLOR_OUTLINE_FOCUS     = ("#1A73E8", "#8AB4F8")
+# ── Outlines & Subtle Dividers ────────────────────────────────────────────────
+COLOR_OUTLINE           = ("#E1E3E1", "#333538")
+COLOR_OUTLINE_VARIANT   = ("#EDF0EE", "#282A2C")
+COLOR_OUTLINE_FOCUS     = ("#0B57D0", "#A8C7FA")
 
 # ── Text Colors ───────────────────────────────────────────────────────────────
-COLOR_TEXT_PRIMARY      = ("#202124", "#E8EAED")
-COLOR_TEXT_SECONDARY    = ("#5F6368", "#9AA0A6")
-COLOR_TEXT_MUTED        = ("#70757A", "#80868B")
+COLOR_TEXT_PRIMARY      = ("#1F1F1F", "#E3E3E3")
+COLOR_TEXT_SECONDARY    = ("#444746", "#C4C7C5")
+COLOR_TEXT_MUTED        = ("#727775", "#8E918F")
 COLOR_TEXT_ON_PRIMARY   = "#FFFFFF"
-COLOR_TEXT_ACCENT       = ("#1A73E8", "#8AB4F8")
+COLOR_TEXT_ACCENT       = ("#0B57D0", "#A8C7FA")
 
 # ── Action & Semantic Highlights ─────────────────────────────────────────────
-COLOR_PRIMARY           = GOOGLE_BLUE
-COLOR_PRIMARY_HOVER     = GOOGLE_BLUE_HOVER
-COLOR_SUCCESS           = GOOGLE_GREEN
-COLOR_WARNING           = ("#E37400", "#FBBC04")
-COLOR_DANGER            = GOOGLE_RED
+COLOR_PRIMARY           = "#0B57D0"          # Google Material 3 Primary Blue
+COLOR_PRIMARY_HOVER     = "#0842A0"
+COLOR_SUCCESS           = "#1E8E3E"          # Google Success Green
+COLOR_WARNING           = ("#B06000", "#F29900")
+COLOR_DANGER            = "#D93025"          # Google Danger Red
 
-# ── Typography ────────────────────────────────────────────────────────────────
-# Google uses Roboto / Segoe UI / Arial with spacious line heights
+# ── Typography Scale ──────────────────────────────────────────────────────────
+# Expressive Google typography
 FONT_FAMILY             = "Segoe UI"
 FONT_FAMILY_MONO        = "Consolas"
 
 # ── Backend Badges ────────────────────────────────────────────────────────────
 BACKEND_STYLES = {
     "GPU": {
-        "bg": ("#E8F0FE", "#174EA6"),
-        "fg": ("#1A73E8", "#D2E3FC"),
-        "border": ("#D2E3FC", "#1A73E8"),
-        "label": "GPU CUDA",
-        "dot": "#1A73E8"
+        "bg": ("#D3E3FD", "#044289"),
+        "fg": ("#0B57D0", "#D3E3FD"),
+        "border": ("#A8C7FA", "#0B57D0"),
+        "label": "⚡ GPU CUDA Engine",
+        "dot": "#0B57D0"
     },
     "RUST": {
-        "bg": ("#FEF7E0", "#593600"),
-        "fg": ("#B06000", "#FEEFC3"),
-        "border": ("#FEEFC3", "#FBBC04"),
-        "label": "RUST CORE",
+        "bg": ("#FFE7A5", "#4E3E00"),
+        "fg": ("#7A4B00", "#FFE7A5"),
+        "border": ("#FDD663", "#FBBC04"),
+        "label": "⚡ Rust Native Core",
         "dot": "#FBBC04"
     },
     "PYTHON": {
-        "bg": ("#F1F3F4", "#303134"),
-        "fg": ("#5F6368", "#BDC1C6"),
-        "border": ("#DADCE0", "#5F6368"),
-        "label": "PYTHON CPU",
-        "dot": "#5F6368"
+        "bg": ("#E9EEF6", "#282A2C"),
+        "fg": ("#444746", "#C4C7C5"),
+        "border": ("#E1E3E1", "#444746"),
+        "label": "⏱ Python CPU Fallback",
+        "dot": "#727775"
     }
 }

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""gui/components/navigation.py – Google Material 3 Navigation Rail for IGNITE."""
+"""gui/components/navigation.py – Google Material 3 / Material You Navigation Rail for IGNITE."""
 
 from __future__ import annotations
 import tkinter as tk
@@ -20,7 +20,7 @@ from gui.theme import (
 
 
 class NavigationRail(ctk.CTkFrame):
-    """Google Material 3 Navigations-Leiste (Links)."""
+    """Google Material You Navigations-Leiste (Links)."""
 
     NAV_ITEMS = [
         ("dashboard", "📊", "Dashboard", "4-Stufen Übersicht"),
@@ -40,7 +40,7 @@ class NavigationRail(ctk.CTkFrame):
     ) -> None:
         super().__init__(
             master,
-            width=260,
+            width=290,
             corner_radius=0,
             fg_color=COLOR_BG_NAV,
             border_width=0,
@@ -62,40 +62,40 @@ class NavigationRail(ctk.CTkFrame):
 
         # Navigations-Container
         nav_container = ctk.CTkFrame(self, fg_color="transparent")
-        nav_container.pack(fill=ctk.BOTH, expand=True, padx=14, pady=18)
+        nav_container.pack(fill=ctk.BOTH, expand=True, padx=16, pady=20)
 
         # Nav-Header Label
         ctk.CTkLabel(
             nav_container,
             text="NAVIGATION",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
             text_color=COLOR_TEXT_MUTED,
             anchor="w"
-        ).pack(fill=ctk.X, padx=14, pady=(2, 10))
+        ).pack(fill=ctk.X, padx=16, pady=(4, 12))
 
         # Nav-Items generieren
         for key, icon, title, subtitle in self.NAV_ITEMS:
             btn_frame = ctk.CTkFrame(
                 nav_container,
-                corner_radius=25,
+                corner_radius=28,
                 fg_color="transparent",
-                height=52,
+                height=56,
                 cursor="hand2"
             )
-            btn_frame.pack(fill=ctk.X, pady=3)
+            btn_frame.pack(fill=ctk.X, pady=4)
             btn_frame.pack_propagate(False)
 
             content_box = ctk.CTkFrame(btn_frame, fg_color="transparent")
-            content_box.pack(fill=ctk.BOTH, expand=True, padx=14, pady=4)
+            content_box.pack(fill=ctk.BOTH, expand=True, padx=18, pady=6)
 
             lbl_icon = ctk.CTkLabel(
                 content_box,
                 text=icon,
-                font=ctk.CTkFont(family=FONT_FAMILY, size=17),
+                font=ctk.CTkFont(family=FONT_FAMILY, size=20),
                 text_color=COLOR_TEXT_SECONDARY,
-                width=30
+                width=34
             )
-            lbl_icon.pack(side=ctk.LEFT, padx=(0, 10))
+            lbl_icon.pack(side=ctk.LEFT, padx=(0, 12))
 
             text_col = ctk.CTkFrame(content_box, fg_color="transparent")
             text_col.pack(side=ctk.LEFT, fill=ctk.X, expand=True)
@@ -103,7 +103,7 @@ class NavigationRail(ctk.CTkFrame):
             lbl_title = ctk.CTkLabel(
                 text_col,
                 text=title,
-                font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"),
+                font=ctk.CTkFont(family=FONT_FAMILY, size=15, weight="bold"),
                 text_color=COLOR_TEXT_PRIMARY,
                 anchor="w"
             )
@@ -112,7 +112,7 @@ class NavigationRail(ctk.CTkFrame):
             lbl_sub = ctk.CTkLabel(
                 text_col,
                 text=subtitle,
-                font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+                font=ctk.CTkFont(family=FONT_FAMILY, size=12),
                 text_color=COLOR_TEXT_MUTED,
                 anchor="w"
             )
@@ -127,18 +127,18 @@ class NavigationRail(ctk.CTkFrame):
 
         # Unten: Schnell-Aktionen
         bottom_box = ctk.CTkFrame(nav_container, fg_color="transparent")
-        bottom_box.pack(side=ctk.BOTTOM, fill=ctk.X, pady=(12, 0))
+        bottom_box.pack(side=ctk.BOTTOM, fill=ctk.X, pady=(16, 0))
 
         self.export_btn = ctk.CTkButton(
             bottom_box,
             text="📄  HTML-Bericht exportieren",
             command=self.on_export_report,
-            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"),
             fg_color=COLOR_CONTAINER_BLUE,
             hover_color=COLOR_BG_CARD_HOVER,
             text_color=COLOR_PRIMARY,
-            corner_radius=21,
-            height=42
+            corner_radius=23,
+            height=46
         )
         self.export_btn.pack(fill=ctk.X, pady=(0, 12))
 
@@ -146,12 +146,12 @@ class NavigationRail(ctk.CTkFrame):
         self.file_status_lbl = ctk.CTkLabel(
             bottom_box,
             text="Keine Datei geladen",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=11, slant="italic"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12, slant="italic"),
             text_color=COLOR_TEXT_MUTED,
             anchor="w",
-            wraplength=220
+            wraplength=250
         )
-        self.file_status_lbl.pack(fill=ctk.X, padx=6)
+        self.file_status_lbl.pack(fill=ctk.X, padx=8)
 
         self.select_tab("dashboard", notify=False)
 

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""gui/utils_ui.py – Google Material 3 UI Helper Utilities for IGNITE."""
+"""gui/utils_ui.py – Google Material 3 / Material You UI Helper Utilities for IGNITE."""
 
 from __future__ import annotations
 import tkinter as tk
@@ -27,13 +27,13 @@ from gui.theme import (
 
 def make_material_card(
     master,
-    corner_radius: int = 16,
+    corner_radius: int = 20,
     border_width: int = 1,
     border_color=COLOR_OUTLINE,
     fg_color=COLOR_BG_CARD,
     **kwargs
 ) -> ctk.CTkFrame:
-    """Erstellt ein standardisiertes Google Material 3 Container-Panel (Card)."""
+    """Erstellt eine flüssig gestaltete Google Material 3 / Material You Card."""
     return ctk.CTkFrame(
         master,
         corner_radius=corner_radius,
@@ -50,11 +50,11 @@ def make_status_chip(
     dot_color: str = COLOR_PRIMARY,
     bg_color=COLOR_CONTAINER_BLUE,
     text_color=COLOR_TEXT_PRIMARY,
-    corner_radius: int = 14,
-    height: int = 28,
+    corner_radius: int = 16,
+    height: int = 32,
     **kwargs
 ) -> ctk.CTkFrame:
-    """Erstellt ein elegantes Google Material Status-Chip / Pill Widget."""
+    """Erstellt ein elegantes Google Material Status-Pill Widget."""
     chip = ctk.CTkFrame(
         master,
         fg_color=bg_color,
@@ -68,20 +68,20 @@ def make_status_chip(
     # Farbiger Status-Dot
     dot = ctk.CTkFrame(
         chip,
-        width=8,
-        height=8,
-        corner_radius=4,
+        width=10,
+        height=10,
+        corner_radius=5,
         fg_color=dot_color
     )
-    dot.pack(side=ctk.LEFT, padx=(10, 6), pady=4)
+    dot.pack(side=ctk.LEFT, padx=(12, 8), pady=4)
 
     lbl = ctk.CTkLabel(
         chip,
         text=text,
-        font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
+        font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"),
         text_color=text_color
     )
-    lbl.pack(side=ctk.LEFT, padx=(0, 10), pady=2)
+    lbl.pack(side=ctk.LEFT, padx=(0, 14), pady=2)
 
     return chip
 
@@ -98,18 +98,18 @@ def make_slider_setting(
     command: Optional[Callable[[float], None]] = None,
     is_percent: bool = False,
 ) -> tuple[ctk.CTkSlider, ctk.CTkLabel]:
-    """Erstellt eine Material 3 Schieberegler-Zeile mit Titel, Beschreibung und dynamischem Wert."""
+    """Erstellt eine geräumige Material 3 Schieberegler-Zeile."""
     row_frame = ctk.CTkFrame(master, fg_color="transparent")
-    row_frame.pack(fill=ctk.X, pady=8)
+    row_frame.pack(fill=ctk.X, pady=10)
 
     # Header-Zeile mit Titel & Badge
     header = ctk.CTkFrame(row_frame, fg_color="transparent")
-    header.pack(fill=ctk.X, pady=(0, 2))
+    header.pack(fill=ctk.X, pady=(0, 4))
 
     lbl_title = ctk.CTkLabel(
         header,
         text=title,
-        font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"),
+        font=ctk.CTkFont(family=FONT_FAMILY, size=14, weight="bold"),
         text_color=COLOR_TEXT_PRIMARY,
         anchor="w"
     )
@@ -129,12 +129,12 @@ def make_slider_setting(
     val_badge = ctk.CTkLabel(
         header,
         text=_fmt(default_val),
-        font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=12, weight="bold"),
+        font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=13, weight="bold"),
         text_color=COLOR_PRIMARY,
         fg_color=COLOR_CONTAINER_BLUE,
-        corner_radius=8,
-        width=60,
-        height=24
+        corner_radius=10,
+        width=70,
+        height=28
     )
     val_badge.pack(side=ctk.RIGHT)
 
@@ -142,13 +142,13 @@ def make_slider_setting(
         lbl_desc = ctk.CTkLabel(
             row_frame,
             text=description,
-            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=13),
             text_color=COLOR_TEXT_MUTED,
             anchor="w",
-            wraplength=420,
+            wraplength=480,
             justify="left"
         )
-        lbl_desc.pack(fill=ctk.X, pady=(1, 4))
+        lbl_desc.pack(fill=ctk.X, pady=(2, 6))
 
     # Callback wrapper
     def _on_slide(val: float):
@@ -166,8 +166,9 @@ def make_slider_setting(
         progress_color=COLOR_PRIMARY,
         button_color=COLOR_PRIMARY,
         button_hover_color=COLOR_PRIMARY_HOVER,
-        height=16,
-        button_length=16,
+        height=18,
+        button_length=18,
+        button_corner_radius=9,
         command=_on_slide
     )
     slider.set(default_val)
