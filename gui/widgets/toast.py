@@ -1,42 +1,36 @@
 # -*- coding: utf-8 -*-
-"""gui/widgets/toast.py – Nicht-blockierende Toast-Benachrichtigungen für IGNITE.
-
-Zeigt dezente Hinweisfenster in der unteren rechten Ecke, die nach einer
-konfigurierbaren Zeit automatisch verschwinden – ohne den Arbeitsfluss zu unterbrechen.
-
-Verwendung:
-    toast = ToastManager(root)
-    toast.show("Analyse abgeschlossen.", level="success")
-    toast.show("Fehler beim Laden.", level="error", duration_ms=6000)
-    toast.show("Gelöscht.", level="warning", action_text="Rückgängig", action_callback=fn)
-"""
+"""gui/widgets/toast.py – Non-blocking Google Material 3 Snackbars for IGNITE."""
 
 from __future__ import annotations
 import tkinter as tk
 from typing import Callable, Literal
+import customtkinter as ctk
+
+from gui.theme import (
+    COLOR_BG_CARD,
+    COLOR_OUTLINE,
+    COLOR_TEXT_PRIMARY,
+    COLOR_PRIMARY,
+    COLOR_SUCCESS,
+    COLOR_DANGER,
+    COLOR_WARNING,
+    FONT_FAMILY,
+)
 
 
 class ToastManager:
-    """Verwaltet alle aktiven Toast-Benachrichtigungen eines Hauptfensters."""
+    """Verwaltet moderne Google Material 3 Snackbars/Toasts am unteren Bildschirmrand."""
 
-    _COLORS_DARK = {
-        "info":    {"bg": "#1E3A5F", "accent": "#4CC2FF", "text": "#E8F4FD"},
-        "success": {"bg": "#14532D", "accent": "#4ADE80", "text": "#ECFDF5"},
-        "warning": {"bg": "#78350F", "accent": "#FBBF24", "text": "#FFFBEB"},
-        "error":   {"bg": "#7F1D1D", "accent": "#F87171", "text": "#FEF2F2"},
+    _COLORS = {
+        "info":    {"dot": "#1A73E8", "bg": ("#FFFFFF", "#292A2D"), "text": ("#202124", "#E8EAED"), "border": "#1A73E8"},
+        "success": {"dot": "#34A853", "bg": ("#FFFFFF", "#292A2D"), "text": ("#202124", "#E8EAED"), "border": "#34A853"},
+        "warning": {"dot": "#FBBC04", "bg": ("#FFFFFF", "#292A2D"), "text": ("#202124", "#E8EAED"), "border": "#FBBC04"},
+        "error":   {"dot": "#EA4335", "bg": ("#FFFFFF", "#292A2D"), "text": ("#202124", "#E8EAED"), "border": "#EA4335"},
     }
-    _COLORS_LIGHT = {
-        "info":    {"bg": "#EFF6FF", "accent": "#2563EB", "text": "#1E3A5F"},
-        "success": {"bg": "#F0FDF4", "accent": "#16A34A", "text": "#14532D"},
-        "warning": {"bg": "#FFFBEB", "accent": "#D97706", "text": "#78350F"},
-        "error":   {"bg": "#FEF2F2", "accent": "#DC2626", "text": "#7F1D1D"},
-    }
-    _ICONS = {"info": "ℹ", "success": "✓", "warning": "⚠", "error": "✕"}
 
     def __init__(self, root: tk.Misc) -> None:
         self.root = root
         self._active: list[tk.Toplevel] = []
-        self._max_visible = 4
 
     def show(
         self,
@@ -46,131 +40,73 @@ class ToastManager:
         action_text: str | None = None,
         action_callback: Callable | None = None,
     ) -> None:
-        """Zeigt eine Toast-Benachrichtigung an."""
-        # Älteste entfernen wenn Maximum erreicht
-        if len(self._active) >= self._max_visible:
+        if len(self._active) >= 3:
             self._dismiss(self._active[0])
 
-        toast = self._build_toast(message, level, action_text, action_callback)
-        self._active.append(toast)
-        self._reposition_all()
-
-        if duration_ms > 0:
-            toast.after(duration_ms, lambda t=toast: self._dismiss(t))
-
-    def dismiss_all(self) -> None:
-        """Schließt alle aktiven Toasts sofort."""
-        for t in list(self._active):
-            self._dismiss(t)
-
-    # ── Interne Hilfsmethoden ────────────────────────────────────────────────
-
-    def _palette(self, level: str) -> dict:
-        try:
-            import customtkinter as ctk
-            dark = ctk.get_appearance_mode() == "Dark"
-        except Exception:
-            dark = False
-        return (self._COLORS_DARK if dark else self._COLORS_LIGHT).get(
-            level, self._COLORS_LIGHT["info"]
-        )
-
-    def _build_toast(
-        self,
-        message: str,
-        level: str,
-        action_text: str | None,
-        action_callback: Callable | None,
-    ) -> tk.Toplevel:
-        pal = self._palette(level)
-        bg = pal["bg"]
-        accent = pal["accent"]
-        text_color = pal["text"]
-        icon = self._ICONS.get(level, "ℹ")
-        font_family = "Segoe UI"
+        cfg = self._COLORS.get(level, self._COLORS["info"])
+        is_dark = ctk.get_appearance_mode() == "Dark"
+        bg = cfg["bg"][1] if is_dark else cfg["bg"][0]
+        fg = cfg["text"][1] if is_dark else cfg["text"][0]
 
         toast = tk.Toplevel(self.root)
         toast.overrideredirect(True)
         toast.attributes("-topmost", True)
-        toast.configure(bg=bg)
+        toast.configure(bg="#000000")
         toast.transient(self.root)
 
-        # Äußerer Rahmen mit farbigem Akzent-Streifen links
-        outer = tk.Frame(toast, bg=accent, padx=3, pady=0)
+        outer = tk.Frame(toast, bg="#000000", padx=1, pady=1)
         outer.pack(fill=tk.BOTH, expand=True)
 
         inner = tk.Frame(outer, bg=bg, padx=14, pady=10)
         inner.pack(fill=tk.BOTH, expand=True)
 
-        # Icon + Nachricht + Schließen-Button
         row = tk.Frame(inner, bg=bg)
         row.pack(fill=tk.X)
 
+        # Farbiger Status-Dot
+        dot_canvas = tk.Canvas(row, width=10, height=10, bg=bg, highlightthickness=0)
+        dot_canvas.pack(side=tk.LEFT, padx=(0, 8))
+        dot_canvas.create_oval(1, 1, 9, 9, fill=cfg["dot"], outline="")
+
+        # Nachricht
         tk.Label(
-            row, text=icon, fg=accent, bg=bg,
-            font=(font_family, 14, "bold"), width=2
-        ).pack(side=tk.LEFT)
+            row,
+            text=message,
+            fg=fg,
+            bg=bg,
+            font=(FONT_FAMILY, 10),
+            justify=tk.LEFT,
+            wraplength=300
+        ).pack(side=tk.LEFT, fill=tk.X, expand=True)
 
-        tk.Label(
-            row, text=message, fg=text_color, bg=bg,
-            font=(font_family, 11), justify=tk.LEFT,
-            wraplength=280, anchor="w"
-        ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(6, 0))
+        # Schließen Button
+        close_lbl = tk.Label(row, text="✕", fg="#80868B", bg=bg, cursor="hand2", font=(FONT_FAMILY, 9))
+        close_lbl.pack(side=tk.RIGHT, padx=(8, 0))
+        close_lbl.bind("<Button-1>", lambda e, t=toast: self._dismiss(t))
 
-        close = tk.Label(
-            row, text="✕", fg="#94A3B8", bg=bg,
-            cursor="hand2", font=(font_family, 10)
-        )
-        close.pack(side=tk.RIGHT, padx=(8, 0))
-        close.bind("<Button-1>", lambda e, t=toast: self._dismiss(t))
+        self._active.append(toast)
+        self._reposition()
 
-        # Optionaler Aktions-Link
-        if action_text and action_callback:
-            def _on_action(t=toast):
-                action_callback()
-                self._dismiss(t)
+        if duration_ms > 0:
+            toast.after(duration_ms, lambda t=toast: self._dismiss(t))
 
-            act_row = tk.Frame(inner, bg=bg)
-            act_row.pack(fill=tk.X, pady=(6, 0))
-
-            act = tk.Label(
-                act_row, text=action_text, fg=accent, bg=bg,
-                cursor="hand2", font=(font_family, 10, "underline")
-            )
-            act.pack(side=tk.LEFT, padx=(20, 0))
-            act.bind("<Button-1>", lambda e: _on_action())
-
-        return toast
-
-    def _reposition_all(self) -> None:
-        """Stapelt alle aktiven Toasts rechts unten, von unten nach oben."""
+    def _reposition(self) -> None:
         try:
             self.root.update_idletasks()
-        except Exception:
-            return
+            rx, ry = self.root.winfo_x(), self.root.winfo_y()
+            rw, rh = self.root.winfo_width(), self.root.winfo_height()
 
-        rx = self.root.winfo_x()
-        ry = self.root.winfo_y()
-        rw = self.root.winfo_width()
-        rh = self.root.winfo_height()
-
-        margin_right = 20
-        margin_bottom = 36   # Platz für Status-Leiste
-        gap = 6
-
-        y = ry + rh - margin_bottom
-
-        for toast in reversed(self._active):
-            try:
+            y = ry + rh - 40
+            for toast in reversed(self._active):
                 toast.update_idletasks()
-                tw = max(toast.winfo_reqwidth(), 340)
-                th = max(toast.winfo_reqheight(), 64)
-                x = rx + rw - tw - margin_right
+                tw = max(toast.winfo_reqwidth(), 320)
+                th = max(toast.winfo_reqheight(), 44)
+                x = rx + rw - tw - 24
                 y -= th
                 toast.geometry(f"{tw}x{th}+{x}+{y}")
-                y -= gap
-            except Exception:
-                pass
+                y -= 8
+        except Exception:
+            pass
 
     def _dismiss(self, toast: tk.Toplevel) -> None:
         if toast in self._active:
@@ -179,4 +115,4 @@ class ToastManager:
             toast.destroy()
         except Exception:
             pass
-        self._reposition_all()
+        self._reposition()

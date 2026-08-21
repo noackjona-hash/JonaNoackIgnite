@@ -1,9 +1,14 @@
 # -*- coding: utf-8 -*-
-"""gui.widgets package – Wiederverwendbare UI-Komponenten für IGNITE.
+"""gui/widgets package."""
 
-Exportiert:
-- cards.py           : Sidebar-Karten (Modus, ROI, Einstellungen, Parameter, Info)
-- toast.py           : Nicht-blockierende Toast-Benachrichtigungen (ToastManager)
-- command_palette.py : Command Palette / Ctrl+K-Dialog (CommandPalette)
-"""
+from gui.widgets.toast import ToastManager
+from gui.widgets.command_palette import CommandPalette
+from gui.widgets.dialogs import AboutModal, HelpModal, PatientExportModal
 
+__all__ = [
+    "ToastManager",
+    "CommandPalette",
+    "AboutModal",
+    "HelpModal",
+    "PatientExportModal"
+]

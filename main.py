@@ -105,10 +105,10 @@ def create_instant_splash():
     pbar_canvas = tk.Canvas(inner_bg, width=bar_w, height=px(4), bg="#E8E8E8",
                              highlightthickness=0, bd=0)
     pbar_canvas.pack()
-    bar = pbar_canvas.create_rectangle(0, 0, 0, px(4), fill="#0067C0", outline="")
+    bar = pbar_canvas.create_rectangle(0, 0, 0, px(4), fill="#1A73E8", outline="")
 
-    tk.Label(inner_bg, text="(c) 2026 Jona Noack  -  Fachgebiet Arbeitswelt",
-             font=("Segoe UI", -fs(11)), fg="#999999", bg="#FFFFFF").pack(pady=(px(12), px(4)))
+    tk.Label(inner_bg, text="© 2026 Jona Noack  ·  Fachgebiet Arbeitswelt",
+             font=("Segoe UI", -fs(11)), fg="#80868B", bg="#FFFFFF").pack(pady=(px(12), px(4)))
 
     # Referenzen sichern damit GC sie nicht löscht
     splash._logo_ref = logo_img_ref

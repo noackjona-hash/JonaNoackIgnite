@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+"""gui package – Google Material 3 Frontend for IGNITE Medical Imaging Suite."""
+
 def _patch_customtkinter_linux():
     try:
         from customtkinter.windows.widgets.ctk_scrollable_frame import CTkScrollableFrame
@@ -29,14 +32,6 @@ def _patch_customtkinter_linux():
 
 _patch_customtkinter_linux()
 
-from gui.services.export_service import ExportService
-from gui.services.processing_service import ThermalProcessingService
-from gui.components.controls_panel import ParameterControlsPanel
-from gui.components.thermal_canvas import ThermalCanvasWidget
+from gui.main_window import IgniteApp
 
-__all__ = [
-    "ExportService",
-    "ThermalProcessingService",
-    "ParameterControlsPanel",
-    "ThermalCanvasWidget",
-]
+__all__ = ["IgniteApp"]

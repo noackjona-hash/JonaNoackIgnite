@@ -1,6 +1,7 @@
-"""gui.components package."""
+# -*- coding: utf-8 -*-
+"""gui/components package."""
 
-from gui.components.controls_panel import ParameterControlsPanel
-from gui.components.thermal_canvas import ThermalCanvasWidget
+from gui.components.header import TopAppBar
+from gui.components.navigation import NavigationRail
 
-__all__ = ["ParameterControlsPanel", "ThermalCanvasWidget"]
+__all__ = ["TopAppBar", "NavigationRail"]
