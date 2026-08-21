@@ -50,6 +50,7 @@ class DashboardView(ctk.CTkFrame):
         on_inspect_panel: Callable[[str], None],
         on_palette_change: Callable[[str], None],
         on_mode_change: Callable[[str], None],
+        on_load_demo: Optional[Callable[[str], None]] = None,
         **kwargs
     ) -> None:
         super().__init__(master, fg_color="transparent", **kwargs)
@@ -58,6 +59,7 @@ class DashboardView(ctk.CTkFrame):
         self.on_inspect_panel = on_inspect_panel
         self.on_palette_change = on_palette_change
         self.on_mode_change = on_mode_change
+        self.on_load_demo = on_load_demo
 
         self.current_result: Optional[dict[str, Any]] = None
         self._panel_labels: dict[str, ctk.CTkLabel] = {}
@@ -272,8 +274,11 @@ class DashboardView(ctk.CTkFrame):
             wraplength=580
         ).pack(pady=(0, 30))
 
+        btn_row = ctk.CTkFrame(center_box, fg_color="transparent")
+        btn_row.pack(pady=(0, 24))
+
         ctk.CTkButton(
-            center_box,
+            btn_row,
             text="+  Wärmebild auswählen…",
             command=self.on_load_click,
             font=ctk.CTkFont(family=FONT_FAMILY, size=15, weight="bold"),
@@ -282,12 +287,47 @@ class DashboardView(ctk.CTkFrame):
             text_color="#FFFFFF",
             corner_radius=24,
             height=48,
-            width=260
-        ).pack(pady=(0, 28))
+            width=240
+        ).pack(side=ctk.LEFT, padx=6)
+
+        # 1-Klick Demo-Bild Schnellstart
+        demo_box = ctk.CTkFrame(center_box, fg_color="transparent")
+        demo_box.pack(pady=(0, 24))
+
+        ctk.CTkLabel(
+            demo_box,
+            text="— oder 1-Klick Beispieldaten testen —",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
+            text_color=COLOR_TEXT_MUTED
+        ).pack(pady=(0, 10))
+
+        demos = [
+            ("🦶 Diabetischer Fuß", "test-data/bild (4).jpeg"),
+            ("🔥 Entzündungsherd",  "test-data/bild (1).jpeg"),
+            ("✓ Normalbefund",     "test-data/bild (15).jpeg")
+        ]
+
+        demo_btns_row = ctk.CTkFrame(demo_box, fg_color="transparent")
+        demo_btns_row.pack()
+
+        for d_title, d_path in demos:
+            if hasattr(self, "on_load_demo") and self.on_load_demo:
+                _p = d_path
+                ctk.CTkButton(
+                    demo_btns_row,
+                    text=f"🧪 {d_title}",
+                    command=lambda p=_p: self.on_load_demo(p),
+                    font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
+                    fg_color=COLOR_CONTAINER_BLUE,
+                    hover_color=COLOR_BG_CARD_VARIANT,
+                    text_color=COLOR_PRIMARY,
+                    corner_radius=18,
+                    height=36
+                ).pack(side=ctk.LEFT, padx=6)
 
         # Schnell-Tipps Leiste
         tips_row = ctk.CTkFrame(center_box, fg_color="transparent")
-        tips_row.pack(pady=(12, 0))
+        tips_row.pack(pady=(8, 0))
 
         tips = [
             ("⚡ High-Speed", "Rust & CUDA Beschleunigung"),

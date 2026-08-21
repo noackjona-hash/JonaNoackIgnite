@@ -114,7 +114,8 @@ class IgniteApp:
             on_load_click=self.load_file,
             on_inspect_panel=self._on_inspect_from_dashboard,
             on_palette_change=self._on_palette_changed,
-            on_mode_change=self._on_mode_changed
+            on_mode_change=self._on_mode_changed,
+            on_load_demo=self.load_demo_image
         )
         self.views["dashboard"] = self.dashboard_view
 
@@ -285,6 +286,22 @@ class IgniteApp:
             self._set_status(f"Datei geladen: {fname}", is_loading=False)
             self.run_pipeline()
 
+    def load_demo_image(self, file_path: str) -> None:
+        """Lädt ein Beispieldaten-Wärmebild direkt mit 1 Klick."""
+        abs_p = get_resource_path(file_path) if not os.path.isabs(file_path) else file_path
+        if not os.path.exists(abs_p):
+            abs_p = os.path.abspath(file_path)
+
+        if os.path.exists(abs_p):
+            self.current_image_path = abs_p
+            fname = os.path.basename(abs_p)
+            self.nav_rail.update_loaded_file(fname)
+            self._set_status(f"Demo geladen: {fname}", is_loading=False)
+            self.run_pipeline()
+            self.toast.show(f"Beispielbild '{fname}' erfolgreich geladen.", level="success")
+        else:
+            self.toast.show(f"Beispielbild nicht gefunden: {file_path}", level="error")
+
     def run_pipeline(self) -> None:
         """Startet die Bildverarbeitungs-Pipeline im Hintergrund."""
         if not self.current_image_path:
@@ -420,6 +437,9 @@ class IgniteApp:
         """Öffnet die Google Search-Style Befehlspalette."""
         commands = [
             {"label": "Wärmebild öffnen…",              "desc": "Neue Infrarot-Aufnahme laden",         "shortcut": "Ctrl+O", "action": self.load_file},
+            {"label": "🧪 Demo: Diabetischer Fuß (Asymmetrie)", "desc": "Lade Testbild 4 (Asymmetrie-Befund)", "shortcut": "", "action": lambda: self.load_demo_image("test-data/bild (4).jpeg")},
+            {"label": "🧪 Demo: Entzündungsherd (Hotspot)",     "desc": "Lade Testbild 1 (Lokaler Hotspot)",   "shortcut": "", "action": lambda: self.load_demo_image("test-data/bild (1).jpeg")},
+            {"label": "🧪 Demo: Normalbefund (Symmetrisch)",    "desc": "Lade Testbild 15 (Physiologischer Fuß)","shortcut": "", "action": lambda: self.load_demo_image("test-data/bild (15).jpeg")},
             {"label": "Analyse neu berechnen",           "desc": "Pipeline mit aktuellen Parametern ausführen", "shortcut": "F5", "action": self.run_pipeline},
             {"label": "HTML-Befundbericht exportieren",  "desc": "Klinischen Bericht als HTML speichern", "shortcut": "Ctrl+E", "action": self.request_export_report},
             {"label": "Ansicht: Dashboard",              "desc": "4-Stufen Pipeline-Übersicht öffnen",   "shortcut": "",       "action": lambda: self.nav_rail.select_tab("dashboard")},

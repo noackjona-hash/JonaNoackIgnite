@@ -29,6 +29,7 @@ GOOGLE_YELLOW_LIGHT     = "#FFE7A5"
 GOOGLE_PURPLE           = "#9334E6"
 GOOGLE_CYAN             = "#12B5CB"
 
+
 # ── Modern Material You / Google Fluid Surfaces ──────────────────────────────
 # Fluid canvas background (Google Gemini / Workspace soft tone)
 COLOR_BG_APP            = ("#F0F4F9", "#131314")

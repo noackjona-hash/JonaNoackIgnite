@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""gui/views/settings_view.py – Settings & Algorithm Tuning for IGNITE."""
+"""gui/views/settings_view.py – Comprehensive Google Material You Settings for IGNITE."""
 
 from __future__ import annotations
 import tkinter as tk
@@ -19,6 +19,7 @@ from gui.theme import (
     COLOR_PRIMARY,
     COLOR_PRIMARY_HOVER,
     COLOR_CONTAINER_BLUE,
+    COLOR_CONTAINER_GREEN,
     FONT_FAMILY,
     FONT_FAMILY_MONO,
 )
@@ -26,28 +27,41 @@ from gui.utils_ui import make_material_card, make_slider_setting
 
 
 class SettingsView(ctk.CTkFrame):
-    """Einstellungs- und Parameter-Steuerung im Google Material 3 Design."""
+    """Umfassendes Einstellungs- und Parameter-Center im Google Material You Design."""
+
+    CATEGORIES = [
+        ("algo",     "🎛️", "Algorithmus",   "Hotspot-Erkennung & Schwellen"),
+        ("podology", "🦶", "Podologie",     "Asymmetrie- & 3-Zonen-Modell"),
+        ("radio",    "🌡️", "Radiometrie",   "Kamera- & Strahlungsphysik"),
+        ("visual",   "🎨", "Anzeige",       "Farben, Colorbar & Overlays"),
+        ("hardware", "⚡", "Performance",   "Rechen-Engine & Threads"),
+        ("privacy",  "🛡️", "Datenschutz",   "DSGVO, Audit-Trail & Export"),
+    ]
 
     PRESETS = {
-        "Standard (Jugend forscht)": {
+        "Standard (Jugend forscht 2026)": {
             "sigma_k": 3.0, "tophat_factor": 0.05, "min_area_factor": 0.0005,
             "min_circularity": 0.08, "otsu_min": 35, "otsu_max": 50, "dist_erosion_factor": 0.05,
-            "use_mad": False, "enable_asymmetry": True
+            "use_mad": False, "enable_asymmetry": True, "asym_thresh": 2.2, "alpha": 0.5,
+            "emissivity": 0.98, "refl_temp": 20.0, "cutoff_y": 0.65
         },
-        "Hochempfindlich (Früherkennung)": {
+        "Hochempfindlich (Frühdiagnose)": {
             "sigma_k": 2.2, "tophat_factor": 0.04, "min_area_factor": 0.0002,
             "min_circularity": 0.04, "otsu_min": 30, "otsu_max": 45, "dist_erosion_factor": 0.03,
-            "use_mad": False, "enable_asymmetry": True
+            "use_mad": False, "enable_asymmetry": True, "asym_thresh": 1.8, "alpha": 0.6,
+            "emissivity": 0.98, "refl_temp": 20.0, "cutoff_y": 0.65
         },
         "Podologie / Diabetischer Fuß": {
             "sigma_k": 3.0, "tophat_factor": 0.06, "min_area_factor": 0.0008,
             "min_circularity": 0.10, "otsu_min": 35, "otsu_max": 55, "dist_erosion_factor": 0.05,
-            "use_mad": True, "enable_asymmetry": True
+            "use_mad": True, "enable_asymmetry": True, "asym_thresh": 2.2, "alpha": 0.5,
+            "emissivity": 0.98, "refl_temp": 20.0, "cutoff_y": 0.70
         },
-        "Robust / Rauschunterdrückung": {
-            "sigma_k": 3.5, "tophat_factor": 0.05, "min_area_factor": 0.0010,
-            "min_circularity": 0.12, "otsu_min": 40, "otsu_max": 60, "dist_erosion_factor": 0.08,
-            "use_mad": True, "enable_asymmetry": True
+        "Rauschunterdrückung (Robust)": {
+            "sigma_k": 3.6, "tophat_factor": 0.05, "min_area_factor": 0.0012,
+            "min_circularity": 0.14, "otsu_min": 40, "otsu_max": 65, "dist_erosion_factor": 0.08,
+            "use_mad": True, "enable_asymmetry": True, "asym_thresh": 2.5, "alpha": 0.4,
+            "emissivity": 0.98, "refl_temp": 20.0, "cutoff_y": 0.60
         }
     }
 
@@ -65,239 +79,419 @@ class SettingsView(ctk.CTkFrame):
         self.on_backend_changed = on_backend_changed
         self.on_notify = on_notify
 
+        self.active_category = "algo"
         self.sliders: dict[str, tuple[ctk.CTkSlider, ctk.CTkLabel]] = {}
+        self.switches: dict[str, ctk.CTkSwitch] = {}
+        self.entries: dict[str, ctk.CTkEntry] = {}
+        self.dropdowns: dict[str, ctk.CTkOptionMenu] = {}
+        self._cat_buttons: dict[str, tuple[ctk.CTkFrame, ctk.CTkLabel, ctk.CTkLabel]] = {}
+
         self._build_ui()
 
     def _build_ui(self) -> None:
-        self.grid_columnconfigure(0, weight=1)
-        self.grid_columnconfigure(1, weight=1)
+        self.grid_columnconfigure(0, weight=0)  # Linke Kategorie-Leiste
+        self.grid_columnconfigure(1, weight=1)  # Rechter Einstellungsbereich
         self.grid_rowconfigure(0, weight=1)
 
-        scroll_left = ctk.CTkScrollableFrame(self, fg_color="transparent")
-        scroll_left.grid(row=0, column=0, padx=(18, 10), pady=18, sticky="nsew")
+        # ── 1. Linke Kategorien-Leiste ────────────────────────────────────────
+        cat_card = make_material_card(self, corner_radius=20, fg_color=COLOR_BG_CARD)
+        cat_card.grid(row=0, column=0, padx=(20, 10), pady=20, sticky="nsew")
+        cat_card.configure(width=260)
+        cat_card.pack_propagate(False)
 
-        scroll_right = ctk.CTkScrollableFrame(self, fg_color="transparent")
-        scroll_right.grid(row=0, column=1, padx=(10, 18), pady=18, sticky="nsew")
-
-        # ── 1. Linke Spalte: Pipeline-Parameter & Presets ─────────────────────
-        param_card = make_material_card(scroll_left, corner_radius=16, fg_color=COLOR_BG_CARD)
-        param_card.pack(fill=ctk.X, pady=(0, 18))
-
-        p_inner = ctk.CTkFrame(param_card, fg_color="transparent")
-        p_inner.pack(fill=ctk.X, padx=24, pady=20)
+        cat_inner = ctk.CTkFrame(cat_card, fg_color="transparent")
+        cat_inner.pack(fill=ctk.BOTH, expand=True, padx=14, pady=16)
 
         ctk.CTkLabel(
-            p_inner,
-            text="PIPELINE-PARAMETER & ALGORITHMUS",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
-            text_color=COLOR_PRIMARY,
+            cat_inner,
+            text="EINSTELLUNGEN",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            text_color=COLOR_TEXT_MUTED,
             anchor="w"
-        ).pack(fill=ctk.X)
+        ).pack(fill=ctk.X, padx=12, pady=(2, 10))
 
-        # Preset Auswahl Dropdown
-        ctk.CTkLabel(p_inner, text="Diagnostisches Preset:", font=ctk.CTkFont(size=12, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w", pady=(14, 4))
+        for cat_id, icon, title, subtitle in self.CATEGORIES:
+            btn_frame = ctk.CTkFrame(
+                cat_inner,
+                corner_radius=22,
+                fg_color="transparent",
+                height=48,
+                cursor="hand2"
+            )
+            btn_frame.pack(fill=ctk.X, pady=3)
+            btn_frame.pack_propagate(False)
+
+            content = ctk.CTkFrame(btn_frame, fg_color="transparent")
+            content.pack(fill=ctk.BOTH, expand=True, padx=14, pady=4)
+
+            lbl_icon = ctk.CTkLabel(content, text=icon, font=ctk.CTkFont(size=16), width=24)
+            lbl_icon.pack(side=ctk.LEFT, padx=(0, 8))
+
+            lbl_title = ctk.CTkLabel(
+                content,
+                text=title,
+                font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"),
+                text_color=COLOR_TEXT_PRIMARY,
+                anchor="w"
+            )
+            lbl_title.pack(side=ctk.LEFT, fill=ctk.X, expand=True)
+
+            _cid = cat_id
+            for w in [btn_frame, content, lbl_icon, lbl_title]:
+                w.bind("<Button-1>", lambda e, c=_cid: self.select_category(c))
+
+            self._cat_buttons[cat_id] = (btn_frame, lbl_icon, lbl_title)
+
+        # Unten: Reset Defaults Button
+        ctk.CTkButton(
+            cat_inner,
+            text="↺  Standardwerte",
+            command=self._reset_defaults,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
+            fg_color=COLOR_CONTAINER_BLUE,
+            hover_color=COLOR_OUTLINE,
+            text_color=COLOR_PRIMARY,
+            corner_radius=20,
+            height=40
+        ).pack(side=ctk.BOTTOM, fill=ctk.X, pady=(10, 0))
+
+        # ── 2. Rechter Hauptbereich für Einstellungs-Panels ───────────────────
+        self.right_container = make_material_card(self, corner_radius=20, fg_color=COLOR_BG_CARD)
+        self.right_container.grid(row=0, column=1, padx=(10, 20), pady=20, sticky="nsew")
+
+        # Header mit Presets & Suchzeile
+        top_header = ctk.CTkFrame(self.right_container, fg_color="transparent", height=54)
+        top_header.pack(fill=ctk.X, padx=22, pady=(16, 8))
+        top_header.pack_propagate(False)
+
+        self.cat_title_lbl = ctk.CTkLabel(
+            top_header,
+            text="🎛️  Algorithmus & Hotspot-Erkennung",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=16, weight="bold"),
+            text_color=COLOR_PRIMARY
+        )
+        self.cat_title_lbl.pack(side=ctk.LEFT)
+
+        # Preset Dropdown rechts
         self.preset_menu = ctk.CTkOptionMenu(
-            p_inner,
+            top_header,
             values=list(self.PRESETS.keys()),
             command=self._apply_preset,
-            font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
             fg_color=COLOR_CONTAINER_BLUE,
             button_color=COLOR_PRIMARY,
             button_hover_color=COLOR_PRIMARY_HOVER,
             text_color=COLOR_PRIMARY,
             corner_radius=10,
-            height=38
+            height=36,
+            width=260
         )
-        self.preset_menu.pack(fill=ctk.X, pady=(0, 14))
+        self.preset_menu.pack(side=ctk.RIGHT)
 
-        ctk.CTkFrame(p_inner, height=1, fg_color=COLOR_OUTLINE_VARIANT).pack(fill=ctk.X, pady=(0, 10))
+        ctk.CTkLabel(
+            top_header,
+            text="Preset:",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
+            text_color=COLOR_TEXT_SECONDARY
+        ).pack(side=ctk.RIGHT, padx=(0, 8))
 
-        # Sliders
+        ctk.CTkFrame(self.right_container, height=1, fg_color=COLOR_OUTLINE_VARIANT).pack(fill=ctk.X)
+
+        # Scrollbarer Inhalt für Einstellungs-Karten
+        self.scroll_body = ctk.CTkScrollableFrame(self.right_container, fg_color="transparent")
+        self.scroll_body.pack(fill=ctk.BOTH, expand=True, padx=20, pady=16)
+
+        # Panels aufbauen
+        self.category_panels: dict[str, ctk.CTkFrame] = {}
+        self._build_algo_panel()
+        self._build_podology_panel()
+        self._build_radiometry_panel()
+        self._build_visual_panel()
+        self._build_hardware_panel()
+        self._build_privacy_panel()
+
+        self.select_category("algo")
+
+    def select_category(self, cat_id: str) -> None:
+        self.active_category = cat_id
+        for cid, (frame, icon_lbl, title_lbl) in self._cat_buttons.items():
+            if cid == cat_id:
+                frame.configure(fg_color=COLOR_CONTAINER_BLUE)
+                title_lbl.configure(text_color=COLOR_PRIMARY)
+            else:
+                frame.configure(fg_color="transparent")
+                title_lbl.configure(text_color=COLOR_TEXT_PRIMARY)
+
+        # Titel aktualisieren
+        for cid, icon, title, subtitle in self.CATEGORIES:
+            if cid == cat_id:
+                self.cat_title_lbl.configure(text=f"{icon}  {title} – {subtitle}")
+                break
+
+        # Panel umschalten
+        for cid, panel in self.category_panels.items():
+            if cid == cat_id:
+                panel.pack(fill=ctk.BOTH, expand=True)
+            else:
+                panel.pack_forget()
+
+    # ── Panels ───────────────────────────────────────────────────────────────
+
+    def _build_algo_panel(self) -> None:
+        panel = ctk.CTkFrame(self.scroll_body, fg_color="transparent")
+        self.category_panels["algo"] = panel
+
+        card = make_material_card(panel, corner_radius=16, fg_color=COLOR_BG_CARD_VARIANT)
+        card.pack(fill=ctk.X, pady=6)
+        c_inner = ctk.CTkFrame(card, fg_color="transparent")
+        c_inner.pack(fill=ctk.X, padx=20, pady=16)
+
         s_k, l_k = make_slider_setting(
-            p_inner, "Threshold Multiplikator (k)",
-            "Hotspot-Grenze T_rel = µ + k·σ (k=3 entspricht 99.86% statistischer Konfidenz)",
+            c_inner, "Threshold-Faktor k",
+            "Multiplikator für adaptive Schwelle T_rel = µ + k·σ (k=3.0 entspricht 99.86% Konfidenz)",
             1.0, 5.0, config.DEFAULT_SIGMA_K, 0.1, "",
-            command=lambda v: self._on_slider_move()
+            command=lambda v: self._on_change()
         )
         self.sliders["sigma_k"] = (s_k, l_k)
 
         s_th, l_th = make_slider_setting(
-            p_inner, "Top-Hat Kernel (%)",
-            "Größe der morphologischen Öffnung relativ zu min(B, H)",
-            0.01, 0.15, config.DEFAULT_TOPHAT_FACTOR, 0.005, "",
-            command=lambda v: self._on_slider_move(),
+            c_inner, "Morphologischer Top-Hat Kernel (%)",
+            "Größe der morphologischen Öffnung relativ zu min(B, H) zur Extraktion lokaler Hitzekontraste",
+            0.01, 0.20, config.DEFAULT_TOPHAT_FACTOR, 0.005, "",
+            command=lambda v: self._on_change(),
             is_percent=True
         )
         self.sliders["tophat_factor"] = (s_th, l_th)
 
         s_ma, l_ma = make_slider_setting(
-            p_inner, "Min. Hotspot-Fläche (%)",
-            "Unterdrückt isolierte thermische Rauschpixel unterhalb dieser Fläche",
+            c_inner, "Minimale Hotspot-Fläche (%)",
+            "Unterdrückt isolierte thermische Rauschpixel unterhalb dieser relativen Fläche",
             0.0001, 0.005, config.DEFAULT_MIN_AREA_FACTOR, 0.0001, "",
-            command=lambda v: self._on_slider_move(),
+            command=lambda v: self._on_change(),
             is_percent=True
         )
         self.sliders["min_area_factor"] = (s_ma, l_ma)
 
         s_mc, l_mc = make_slider_setting(
-            p_inner, "Min. Circularity (Formfaktor)",
-            "Filtert längliche Randartefakte und Reflexionen",
-            0.01, 0.50, config.DEFAULT_MIN_CIRCULARITY, 0.01, "",
-            command=lambda v: self._on_slider_move()
+            c_inner, "Minimale Circularity (Formfaktor 4π·A/U²)",
+            "Filtert längliche Randartefakte, Schatten und Reflexionen",
+            0.01, 0.60, config.DEFAULT_MIN_CIRCULARITY, 0.01, "",
+            command=lambda v: self._on_change()
         )
         self.sliders["min_circularity"] = (s_mc, l_mc)
 
         s_er, l_er = make_slider_setting(
-            p_inner, "Distanz-Erosionsfaktor",
-            "Entfernt Artefakte am Übergang zwischen Haut und Hintergrund",
-            0.01, 0.20, config.DEFAULT_DIST_EROSION_FACTOR, 0.005, "",
-            command=lambda v: self._on_slider_move(),
+            c_inner, "Distanz-Erosionsfaktor",
+            "Entfernt Übergangsartefakte an den anatomischen Außenkanten des Gewebes",
+            0.01, 0.25, config.DEFAULT_DIST_EROSION_FACTOR, 0.005, "",
+            command=lambda v: self._on_change(),
             is_percent=True
         )
         self.sliders["dist_erosion_factor"] = (s_er, l_er)
 
-        s_to, l_to = make_slider_setting(
-            p_inner, "Temperatur-Kalibrierungs-Offset",
-            "Manuelle Nullpunktverschiebung bei Sensordrift",
-            -20.0, 20.0, 0.0, 0.5, "°C",
-            command=lambda v: self._on_slider_move()
-        )
-        self.sliders["temp_offset"] = (s_to, l_to)
-
         # Switches
-        self.mad_switch = ctk.CTkSwitch(
-            p_inner,
-            text="Robustes MAD-Thresholding (Median Absolute Deviation)",
-            command=self._on_slider_move,
+        sw_mad = ctk.CTkSwitch(
+            c_inner,
+            text="Robustes MAD-Thresholding (Median Absolute Deviation statt Standardabweichung σ)",
+            command=self._on_change,
             font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
             progress_color=COLOR_PRIMARY
         )
         if config.DEFAULT_USE_MAD:
-            self.mad_switch.select()
-        self.mad_switch.pack(fill=ctk.X, pady=(12, 6))
+            sw_mad.select()
+        sw_mad.pack(fill=ctk.X, pady=(10, 4))
+        self.switches["use_mad"] = sw_mad
 
-        self.asym_switch = ctk.CTkSwitch(
-            p_inner,
-            text="Kontralaterale Asymmetrieprüfung aktivieren (> 2.2 °C)",
-            command=self._on_slider_move,
+    def _build_podology_panel(self) -> None:
+        panel = ctk.CTkFrame(self.scroll_body, fg_color="transparent")
+        self.category_panels["podology"] = panel
+
+        card = make_material_card(panel, corner_radius=16, fg_color=COLOR_BG_CARD_VARIANT)
+        card.pack(fill=ctk.X, pady=6)
+        c_inner = ctk.CTkFrame(card, fg_color="transparent")
+        c_inner.pack(fill=ctk.X, padx=20, pady=16)
+
+        s_asym, l_asym = make_slider_setting(
+            c_inner, "Armstrong Asymmetrie-Grenzwert ΔT (°C)",
+            "Klinischer Goldstandard nach Armstrong et al. (1997). Werte über dieser Differenz gelten als pathologisch.",
+            0.5, 5.0, config.ASYMMETRY_THRESHOLD_C, 0.1, "°C",
+            command=lambda v: self._on_change()
+        )
+        self.sliders["asym_thresh"] = (s_asym, l_asym)
+
+        s_cut, l_cut = make_slider_setting(
+            c_inner, "Anatomischer Knöchel-Cutoff Y (%)",
+            "Schneidet thermische Einflüsse von Unterschenkeln und Knöcheln oberhalb dieser Höhe ab",
+            0.40, 0.90, config.ANATOMICAL_LOWER_CUTOFF_Y, 0.05, "",
+            command=lambda v: self._on_change(),
+            is_percent=True
+        )
+        self.sliders["cutoff_y"] = (s_cut, l_cut)
+
+        sw_asym = ctk.CTkSwitch(
+            c_inner,
+            text="Kontralaterale Seitenvergleichs-Analyse aktivieren (Links vs. Rechts)",
+            command=self._on_change,
             font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
             progress_color=COLOR_PRIMARY
         )
         if config.DEFAULT_ENABLE_ASYMMETRY:
-            self.asym_switch.select()
-        self.asym_switch.pack(fill=ctk.X, pady=(6, 12))
+            sw_asym.select()
+        sw_asym.pack(fill=ctk.X, pady=(10, 4))
+        self.switches["enable_asymmetry"] = sw_asym
 
-        # ── 2. Rechte Spalte: Hardware, Backend & Radiometrie ────────────────
-        hw_card = make_material_card(scroll_right, corner_radius=16, fg_color=COLOR_BG_CARD)
-        hw_card.pack(fill=ctk.X, pady=(0, 18))
+    def _build_radiometry_panel(self) -> None:
+        panel = ctk.CTkFrame(self.scroll_body, fg_color="transparent")
+        self.category_panels["radio"] = panel
 
-        h_inner = ctk.CTkFrame(hw_card, fg_color="transparent")
-        h_inner.pack(fill=ctk.X, padx=24, pady=20)
+        card = make_material_card(panel, corner_radius=16, fg_color=COLOR_BG_CARD_VARIANT)
+        card.pack(fill=ctk.X, pady=6)
+        c_inner = ctk.CTkFrame(card, fg_color="transparent")
+        c_inner.pack(fill=ctk.X, padx=20, pady=16)
 
-        ctk.CTkLabel(
-            h_inner,
-            text="BERECHNUNGS-BACKEND & BESCHLEUNIGUNG",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
-            text_color=COLOR_PRIMARY,
-            anchor="w"
-        ).pack(fill=ctk.X)
+        ctk.CTkLabel(c_inner, text="Stefan-Boltzmann Strahlungsmodell & Sensor-Kalibrierung", font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"), text_color=COLOR_PRIMARY).pack(anchor="w", pady=(0, 10))
 
-        ctk.CTkLabel(h_inner, text="Ausführungs-Engine:", font=ctk.CTkFont(size=12, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w", pady=(14, 4))
-        self.backend_menu = ctk.CTkOptionMenu(
-            h_inner,
+        # Emissivität
+        ctk.CTkLabel(c_inner, text="Haut-Emissivitätsgrad (ε):", font=ctk.CTkFont(size=12, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w")
+        e_em = ctk.CTkEntry(c_inner, font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=13), fg_color=COLOR_BG_CARD, border_color=COLOR_OUTLINE, height=36)
+        e_em.insert(0, str(config.SKIN_EMISSIVITY))
+        e_em.pack(fill=ctk.X, pady=(2, 10))
+        self.entries["emissivity"] = e_em
+
+        # Reflektierte Temperatur
+        ctk.CTkLabel(c_inner, text="Reflektierte Umgebungstemperatur (°C):", font=ctk.CTkFont(size=12, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w")
+        e_refl = ctk.CTkEntry(c_inner, font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=13), fg_color=COLOR_BG_CARD, border_color=COLOR_OUTLINE, height=36)
+        e_refl.insert(0, str(config.REFLECTED_TEMP_C))
+        e_refl.pack(fill=ctk.X, pady=(2, 10))
+        self.entries["reflected_temp"] = e_refl
+
+        s_off, l_off = make_slider_setting(
+            c_inner, "Kalibrierungs-Nullpunktverschiebung",
+            "Manuelle Temperatur-Offsetkorrektur bei Sensordrift",
+            -20.0, 20.0, 0.0, 0.5, "°C",
+            command=lambda v: self._on_change()
+        )
+        self.sliders["temp_offset"] = (s_off, l_off)
+
+    def _build_visual_panel(self) -> None:
+        panel = ctk.CTkFrame(self.scroll_body, fg_color="transparent")
+        self.category_panels["visual"] = panel
+
+        card = make_material_card(panel, corner_radius=16, fg_color=COLOR_BG_CARD_VARIANT)
+        card.pack(fill=ctk.X, pady=6)
+        c_inner = ctk.CTkFrame(card, fg_color="transparent")
+        c_inner.pack(fill=ctk.X, padx=20, pady=16)
+
+        s_al, l_al = make_slider_setting(
+            c_inner, "Overlay Alpha-Deckkraft (%)",
+            "Transparenz der roten Hotspot-Markierung über dem Wärmebild",
+            0.1, 1.0, 0.5, 0.05, "",
+            command=lambda v: self._on_change(),
+            is_percent=True
+        )
+        self.sliders["alpha"] = (s_al, l_al)
+
+        s_lw, l_lw = make_slider_setting(
+            c_inner, "Bounding-Box Linienstärke",
+            "Linienstärke in Pixeln für diagnostische Rechtecke",
+            1.0, 6.0, 2.0, 1.0, "px",
+            command=lambda v: self._on_change()
+        )
+        self.sliders["line_width"] = (s_lw, l_lw)
+
+    def _build_hardware_panel(self) -> None:
+        panel = ctk.CTkFrame(self.scroll_body, fg_color="transparent")
+        self.category_panels["hardware"] = panel
+
+        card = make_material_card(panel, corner_radius=16, fg_color=COLOR_BG_CARD_VARIANT)
+        card.pack(fill=ctk.X, pady=6)
+        c_inner = ctk.CTkFrame(card, fg_color="transparent")
+        c_inner.pack(fill=ctk.X, padx=20, pady=16)
+
+        ctk.CTkLabel(c_inner, text="Ausführungs-Engine:", font=ctk.CTkFont(size=12, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w", pady=(0, 4))
+        be_menu = ctk.CTkOptionMenu(
+            c_inner,
             values=["Automatisch (Schnellstes)", "Erzwinge Rust-CPU-Core", "Erzwinge PyTorch-GPU", "Erzwinge Python-Fallback"],
             command=self._on_backend_select,
             font=ctk.CTkFont(family=FONT_FAMILY, size=13),
-            fg_color=COLOR_BG_CARD_VARIANT,
+            fg_color=COLOR_BG_CARD,
             button_color=COLOR_PRIMARY,
             button_hover_color=COLOR_PRIMARY_HOVER,
             text_color=COLOR_TEXT_PRIMARY,
             corner_radius=10,
             height=38
         )
-        self.backend_menu.pack(fill=ctk.X, pady=(0, 14))
+        be_menu.pack(fill=ctk.X, pady=(0, 12))
+        self.dropdowns["backend"] = be_menu
 
-        # Radiometrie Card
-        radio_card = make_material_card(scroll_right, corner_radius=16, fg_color=COLOR_BG_CARD)
-        radio_card.pack(fill=ctk.X, pady=(0, 18))
+        ctk.CTkLabel(c_inner, text="Echtzeit-Debounce Verzögerung (ms):", font=ctk.CTkFont(size=12, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w")
+        s_deb, l_deb = make_slider_setting(
+            c_inner, "Neuberechnungs-Verzögerung",
+            "Zeit in Millisekunden vor Ausführung nach Slider-Bewegung",
+            50, 600, 200, 25, "ms",
+            command=lambda v: None
+        )
+        self.sliders["debounce_ms"] = (s_deb, l_deb)
 
-        r_inner = ctk.CTkFrame(radio_card, fg_color="transparent")
-        r_inner.pack(fill=ctk.X, padx=24, pady=20)
+    def _build_privacy_panel(self) -> None:
+        panel = ctk.CTkFrame(self.scroll_body, fg_color="transparent")
+        self.category_panels["privacy"] = panel
 
-        ctk.CTkLabel(
-            r_inner,
-            text="RADIOMETRISCHE EMISSIVITÄTS-KORREKTUR",
+        card = make_material_card(panel, corner_radius=16, fg_color=COLOR_BG_CARD_VARIANT)
+        card.pack(fill=ctk.X, pady=6)
+        c_inner = ctk.CTkFrame(card, fg_color="transparent")
+        c_inner.pack(fill=ctk.X, padx=20, pady=16)
+
+        ctk.CTkLabel(c_inner, text="Datenschutz & DSGVO-Pseudonymisierung", font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"), text_color=COLOR_PRIMARY).pack(anchor="w", pady=(0, 8))
+
+        sw_dsgvo = ctk.CTkSwitch(
+            c_inner,
+            text="Automatische SHA-256 Pseudonymisierung bei Berichtsexport (ANON-XXXX)",
             font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
-            text_color=COLOR_PRIMARY,
-            anchor="w"
-        ).pack(fill=ctk.X)
+            progress_color=COLOR_PRIMARY
+        )
+        sw_dsgvo.select()
+        sw_dsgvo.pack(fill=ctk.X, pady=6)
+        self.switches["dsgvo_anon"] = sw_dsgvo
 
-        ctk.CTkLabel(
-            r_inner,
-            text="Stefan-Boltzmann Strahlungsbilanz für menschliche Haut (Jones 1998 / Steketee 1973).",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
-            text_color=COLOR_TEXT_MUTED,
-            anchor="w",
-            wraplength=380,
-            justify="left"
-        ).pack(fill=ctk.X, pady=(4, 14))
+        sw_audit = ctk.CTkSwitch(
+            c_inner,
+            text="Klinischen Audit-Trail in CSV protokollieren (ignite_audit_trail.csv)",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
+            progress_color=COLOR_PRIMARY
+        )
+        sw_audit.select()
+        sw_audit.pack(fill=ctk.X, pady=6)
+        self.switches["audit_log"] = sw_audit
 
-        # Emissivität
-        ctk.CTkLabel(r_inner, text="Haut-Emissivitätsgrad (ε):", font=ctk.CTkFont(size=12, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w")
-        self.emissivity_entry = ctk.CTkEntry(r_inner, placeholder_text="0.98", font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=13), fg_color=COLOR_BG_CARD_VARIANT, border_color=COLOR_OUTLINE, height=36)
-        self.emissivity_entry.insert(0, str(config.SKIN_EMISSIVITY))
-        self.emissivity_entry.pack(fill=ctk.X, pady=(4, 14))
-
-        # Reflektierte Temperatur
-        ctk.CTkLabel(r_inner, text="Reflektierte Umgebungstemperatur (°C):", font=ctk.CTkFont(size=12, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w")
-        self.refl_temp_entry = ctk.CTkEntry(r_inner, placeholder_text="20.0", font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=13), fg_color=COLOR_BG_CARD_VARIANT, border_color=COLOR_OUTLINE, height=36)
-        self.refl_temp_entry.insert(0, str(config.REFLECTED_TEMP_C))
-        self.refl_temp_entry.pack(fill=ctk.X, pady=(4, 14))
-
-        # Reset Button
-        ctk.CTkButton(
-            scroll_right,
-            text="↺  Standardwerte wiederherstellen",
-            command=self._reset_defaults,
-            font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"),
-            fg_color=COLOR_CONTAINER_BLUE,
-            hover_color=COLOR_OUTLINE,
-            text_color=COLOR_PRIMARY,
-            corner_radius=21,
-            height=42
-        ).pack(fill=ctk.X, pady=(10, 0))
+    # ── Callbacks ─────────────────────────────────────────────────────────────
 
     def _apply_preset(self, choice: str) -> None:
         p = self.PRESETS.get(choice)
         if not p:
             return
 
-        self.sliders["sigma_k"][0].set(p["sigma_k"])
-        self.sliders["tophat_factor"][0].set(p["tophat_factor"])
-        self.sliders["min_area_factor"][0].set(p["min_area_factor"])
-        self.sliders["min_circularity"][0].set(p["min_circularity"])
-        self.sliders["dist_erosion_factor"][0].set(p["dist_erosion_factor"])
+        for k in ["sigma_k", "tophat_factor", "min_area_factor", "min_circularity", "dist_erosion_factor", "asym_thresh", "cutoff_y", "alpha"]:
+            if k in p and k in self.sliders:
+                slider, label = self.sliders[k]
+                slider.set(p[k])
+                if k in ("tophat_factor", "min_area_factor", "dist_erosion_factor", "cutoff_y", "alpha"):
+                    label.configure(text=f"{p[k]*100:.1f} %")
+                else:
+                    label.configure(text=f"{p[k]:.1f}".rstrip('0').rstrip('.'))
 
         if p.get("use_mad", False):
-            self.mad_switch.select()
+            self.switches["use_mad"].select()
         else:
-            self.mad_switch.deselect()
-
-        # Labels aktualisieren
-        for k, (slider, label) in self.sliders.items():
-            val = slider.get()
-            if k in ("tophat_factor", "min_area_factor", "dist_erosion_factor"):
-                label.configure(text=f"{val*100:.1f} %")
-            else:
-                label.configure(text=f"{val:.2f}".rstrip('0').rstrip('.'))
+            self.switches["use_mad"].deselect()
 
         self.on_notify(f"Preset '{choice}' angewendet.", "info")
         self.on_param_changed()
 
     def _reset_defaults(self) -> None:
-        self._apply_preset("Standard (Jugend forscht)")
+        self._apply_preset("Standard (Jugend forscht 2026)")
 
-    def _on_slider_move(self) -> None:
+    def _on_change(self) -> None:
         self.on_param_changed()
 
     def _on_backend_select(self, choice: str) -> None:
@@ -313,9 +507,9 @@ class SettingsView(ctk.CTkFrame):
         self.on_notify(f"Backend umgestellt auf: {choice}", "info")
 
     def get_params(self) -> dict[str, Any]:
-        """Liest alle Parameter strukturiert aus."""
+        """Liest alle Parameter aus."""
         try:
-            em = float(self.emissivity_entry.get().replace(",", "."))
+            em = float(self.entries["emissivity"].get().replace(",", "."))
         except Exception:
             em = config.SKIN_EMISSIVITY
 
@@ -325,10 +519,13 @@ class SettingsView(ctk.CTkFrame):
             "min_area_factor": float(self.sliders["min_area_factor"][0].get()),
             "min_circularity": float(self.sliders["min_circularity"][0].get()),
             "dist_erosion_factor": float(self.sliders["dist_erosion_factor"][0].get()),
-            "temp_offset": float(self.sliders["temp_offset"][0].get()),
-            "use_mad": self.mad_switch.get() == 1,
-            "enable_asymmetry": self.asym_switch.get() == 1,
+            "temp_offset": float(self.sliders.get("temp_offset", (None,))[0].get() if "temp_offset" in self.sliders else 0.0),
+            "use_mad": self.switches["use_mad"].get() == 1 if "use_mad" in self.switches else False,
+            "enable_asymmetry": self.switches["enable_asymmetry"].get() == 1 if "enable_asymmetry" in self.switches else True,
             "emissivity": em,
             "otsu_min": config.DEFAULT_OTSU_MIN,
-            "otsu_max": config.DEFAULT_OTSU_MAX
+            "otsu_max": config.DEFAULT_OTSU_MAX,
+            "asym_thresh": float(self.sliders.get("asym_thresh", (None,))[0].get() if "asym_thresh" in self.sliders else 2.2),
+            "cutoff_y": float(self.sliders.get("cutoff_y", (None,))[0].get() if "cutoff_y" in self.sliders else 0.65),
+            "alpha": float(self.sliders.get("alpha", (None,))[0].get() if "alpha" in self.sliders else 0.5),
         }
