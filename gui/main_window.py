@@ -40,8 +40,10 @@ from gui.views.settings_view import SettingsView
 from gui.widgets.toast import ToastManager
 from gui.widgets.command_palette import CommandPalette
 from gui.widgets.dialogs import AboutModal, HelpModal, PatientExportModal
+from gui.widgets.annotator_dialog import GroundTruthAnnotatorDialog
 from gui.services.processing_service import ThermalProcessingService
 from gui.services.export_service import ExportService
+from gui.services.scientific_report_service import ScientificReportService
 from utils import get_resource_path
 
 APP_VERSION = "3.2.0"
@@ -125,7 +127,11 @@ class IgniteApp:
         )
         self.views["single"] = self.single_view
 
-        self.analytics_view = AnalyticsView(self.view_container)
+        self.analytics_view = AnalyticsView(
+            self.view_container,
+            on_open_annotator=self.open_ground_truth_annotator,
+            on_export_jury_report=self.generate_scientific_jury_report
+        )
         self.views["analytics"] = self.analytics_view
 
         self.podology_view = PodologyView(self.view_container)
@@ -238,6 +244,10 @@ class IgniteApp:
         self.root.bind("<Control-P>", lambda e: self.open_command_palette())
         self.root.bind("<Control-e>", lambda e: self.request_export_report())
         self.root.bind("<Control-E>", lambda e: self.request_export_report())
+        self.root.bind("<Control-j>", lambda e: self.generate_scientific_jury_report())
+        self.root.bind("<Control-J>", lambda e: self.generate_scientific_jury_report())
+        self.root.bind("<Control-g>", lambda e: self.open_ground_truth_annotator())
+        self.root.bind("<Control-G>", lambda e: self.open_ground_truth_annotator())
         self.root.bind("<Control-t>", lambda e: self.toggle_appearance_mode())
         self.root.bind("<Control-T>", lambda e: self.toggle_appearance_mode())
         self.root.bind("<F5>", lambda e: self.run_pipeline())
@@ -451,12 +461,46 @@ class IgniteApp:
             {"label": "Farbpalette: Turbo",              "desc": "Hochdynamische Turbo-Palette",         "shortcut": "",       "action": lambda: self._on_palette_changed("Turbo")},
             {"label": "Farbpalette: Graustufen",         "desc": "Monochrome Temperatur-Intensität",    "shortcut": "",       "action": lambda: self._on_palette_changed("Graustufen")},
             {"label": "Farbpalette: Inferno",            "desc": "Thermische Strahlungsfarben",          "shortcut": "",       "action": lambda: self._on_palette_changed("Inferno")},
+            {"label": "Wissenschaftlichen Jury-Report generieren", "desc": "Evaluationsdossier für Jugend forscht 2026 erstellen", "shortcut": "Ctrl+J", "action": self.generate_scientific_jury_report},
+            {"label": "Ground-Truth Annotator öffnen",  "desc": "Interaktives Annotieren & Validieren von Testmasken", "shortcut": "Ctrl+G", "action": self.open_ground_truth_annotator},
             {"label": "Design wechseln (Hell/Dunkel)",   "desc": "Erscheinungsmodus umschalten",         "shortcut": "Ctrl+T", "action": self.toggle_appearance_mode},
             {"label": "Bedienungsanleitung anzeigen",    "desc": "Dokumentation und Schnelleinstieg",    "shortcut": "",       "action": self.show_help_dialog},
             {"label": "Über IGNITE",                     "desc": "Versions- und Projektinformationen",   "shortcut": "",       "action": self.show_about_dialog},
         ]
         palette = CommandPalette(self.root, commands)
         palette.grab_set()
+
+    def open_ground_truth_annotator(self) -> None:
+        """Öffnet den interaktiven Ground-Truth Annotator."""
+        img_path = self.current_image_path
+        if not img_path or not os.path.exists(img_path):
+            img_path = os.path.abspath("test-data/bild (4).jpeg")
+            if not os.path.exists(img_path):
+                img_path = os.path.abspath("test-data/bild (1).jpeg")
+
+        if not os.path.exists(img_path):
+            self._show_toast("Bitte zuerst ein Wärmebild laden.", level="warning")
+            return
+
+        annotator = GroundTruthAnnotatorDialog(
+            self.root,
+            image_path=img_path,
+            on_saved=lambda p: self._show_toast(f"Ground-Truth gespeichert: {os.path.basename(p)}", level="success")
+        )
+        annotator.grab_set()
+
+    def generate_scientific_jury_report(self) -> None:
+        """Generiert das vollständige wissenschaftliche Jury-Dossier für Jugend forscht."""
+        self._set_status("Generiere wissenschaftlichen Jury-Report...", is_loading=True)
+        try:
+            report_path = ScientificReportService.run_full_evaluation_and_generate_html()
+            self._set_status("Bereit", is_loading=False)
+            self._show_toast(f"Jury-Report exportiert: {os.path.basename(report_path)}", level="success")
+            import webbrowser
+            webbrowser.open(f"file://{os.path.abspath(report_path)}")
+        except Exception as e:
+            self._set_status("Bereit", is_loading=False)
+            self._show_toast(f"Fehler bei Report-Erstellung: {e}", level="error")
 
     def request_export_report(self) -> None:
         if not self.current_result:

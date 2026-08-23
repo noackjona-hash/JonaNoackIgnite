@@ -131,3 +131,81 @@ def test_multi_otsu_tissue_segmentation():
     assert mask[10, 10] == 0
     # Kernbereich muss maskiert sein
     assert mask[100, 100] == 255
+
+
+def test_bilateral_asymmetry_mapping():
+    """Testet die bilaterale Registrierung und das räumliche ΔT-Asymmetriebild."""
+    img = np.zeros((300, 400), dtype=np.uint8)
+    body_mask = np.zeros((300, 400), dtype=np.uint8)
+
+    # Linker Fuß
+    cv2.rectangle(body_mask, (60, 50), (140, 250), 255, -1)
+    img[50:250, 60:140] = 150
+
+    # Rechter Fuß
+    cv2.rectangle(body_mask, (260, 50), (340, 250), 255, -1)
+    img[50:250, 260:340] = 150
+
+    # Hotspot nur im linken Fuß (simulierter diabetischer Ulkus)
+    img[80:120, 80:120] = 230
+
+    res = image_processing.compute_bilateral_asymmetry_map(img, body_mask, 20.0, 40.0)
+
+    assert res["valid"] is True
+    assert res["max_delta_t"] > 2.2  # Überschreitet Armstrong-Schwelle
+    assert res["high_risk_area_px"] > 0
+    assert res["hotspot_coord"] is not None
+
+
+def test_hysteresis_thresholding_connectivity():
+    """Testet, dass Hysterese schwache Pixel nur bei Verbindung mit starkem Kern behält."""
+    diff = np.zeros((100, 100), dtype=np.uint8)
+    mask = np.ones((100, 100), dtype=np.uint8) * 255
+
+    # 1. Echter Entzündungsherd: Starker Kern (240) + schwacher Rand (80)
+    diff[45:55, 45:55] = 240  # Stark (> thresh_high)
+    diff[40:60, 40:60] = np.maximum(diff[40:60, 40:60], 80)  # Schwach verbunden (> thresh_low)
+
+    # 2. Isoliertes schwaches Rauschen (80, kein starker Kern)
+    diff[10:15, 10:15] = 80
+
+    hyst = image_processing.apply_hysteresis_thresholding(diff, mask, k_high=3.5, k_low=1.0)
+
+    # Verbundener Herd muss aktiv sein
+    assert hyst[50, 50] == 255
+    assert hyst[42, 42] == 255
+    # Isoliertes Rauschen muss eliminiert sein
+    assert hyst[12, 12] == 0
+
+
+def test_pennes_bioheat_flux_computation():
+    """Testet die Berechnung von Wärmeflussdichte und Wärmequellendichte."""
+    img = np.full((120, 120), 100, dtype=np.uint8)
+    mask = np.ones((120, 120), dtype=np.uint8) * 255
+
+    # Hotspot-Zentrum
+    img[50:70, 50:70] = 220
+
+    res = image_processing.compute_pennes_bioheat_flux(img, mask, 20.0, 40.0, k_tissue=0.37)
+
+    assert "flux_magnitude" in res
+    assert "heat_source_density" in res
+    assert res["max_flux_mw_cm2"] > 0.0
+    assert res["max_heat_source"] != 0.0
+
+
+def test_frangi_vesselness_filter():
+    """Testet, dass der Frangi-Filter linienförmige Gefäße erkennt."""
+    img = np.full((150, 150), 80, dtype=np.uint8)
+    mask = np.ones((150, 150), dtype=np.uint8) * 255
+
+    # Zeichne eine helle tubuläre Linie (Vene)
+    cv2.line(img, (20, 75), (130, 75), 200, thickness=3)
+
+    vesselness = image_processing.compute_frangi_vesselness_filter(img, mask, sigmas=(1.0, 2.0))
+
+    assert vesselness.shape == img.shape
+    # Entlang der Gefäßlinie muss Vesselness signifikant sein
+    assert vesselness[75, 75] > 50
+    # Im flachen Hintergrund nahe Null
+    assert vesselness[20, 20] < 20

@@ -34,7 +34,7 @@ _DEFAULT_SETTINGS: Dict[str, Any] = {
     "REFLECTED_TEMP_C": 20.0,
     "UI_SCALE": 1.0,
     "SALT": secrets.token_hex(16),
-    # ── Neue erweiterte Algorithmus-Parameter (v3.3) ───────────────────────────
+    # ── Neue erweiterte Algorithmus-Parameter (v3.3 & v3.4) ───────────────────
     "DEFAULT_MULTISCALE_TOPHAT": True,
     "DEFAULT_MULTISCALE_FACTORS": [0.025, 0.050, 0.100],
     "DEFAULT_ENABLE_PCA_ALIGNMENT": True,
@@ -42,7 +42,17 @@ _DEFAULT_SETTINGS: Dict[str, Any] = {
     "DEFAULT_ENABLE_MULTI_OTSU": True,
     "TSI_WEIGHT_DELTA_T": 0.45,
     "TSI_WEIGHT_AREA": 0.35,
-    "TSI_WEIGHT_GRADIENT": 0.20
+    "TSI_WEIGHT_GRADIENT": 0.20,
+    "DEFAULT_ENABLE_HYSTERESIS": True,
+    "DEFAULT_HYSTERESIS_K_HIGH": 3.2,
+    "DEFAULT_HYSTERESIS_K_LOW": 1.8,
+    "DEFAULT_ENABLE_BIOHEAT": True,
+    "TISSUE_THERMAL_CONDUCTIVITY": 0.37,  # W/(m·K) Pennes Gewebeleitfähigkeit
+    "DEFAULT_ENABLE_FRANGI": True,
+    "FRANGI_SCALE_RANGE": [1.0, 2.0, 3.0],
+    "FRANGI_BETA": 0.5,
+    "FRANGI_C": 15.0,
+    "DEFAULT_ENABLE_BILATERAL_MAP": True
 }
 
 def load_settings() -> Dict[str, Any]:
@@ -107,10 +117,19 @@ DEFAULT_MULTISCALE_TOPHAT = _settings.get("DEFAULT_MULTISCALE_TOPHAT", True)
 DEFAULT_MULTISCALE_FACTORS = tuple(_settings.get("DEFAULT_MULTISCALE_FACTORS", [0.025, 0.050, 0.100]))
 DEFAULT_ENABLE_PCA_ALIGNMENT = _settings.get("DEFAULT_ENABLE_PCA_ALIGNMENT", True)
 DEFAULT_ENABLE_GRADIENT_DIVERGENCE = _settings.get("DEFAULT_ENABLE_GRADIENT_DIVERGENCE", True)
-DEFAULT_ENABLE_MULTI_OTSU = _settings.get("DEFAULT_ENABLE_MULTI_OTSU", True)
 TSI_WEIGHT_DELTA_T = _settings.get("TSI_WEIGHT_DELTA_T", 0.45)
 TSI_WEIGHT_AREA = _settings.get("TSI_WEIGHT_AREA", 0.35)
 TSI_WEIGHT_GRADIENT = _settings.get("TSI_WEIGHT_GRADIENT", 0.20)
+DEFAULT_ENABLE_HYSTERESIS = _settings.get("DEFAULT_ENABLE_HYSTERESIS", True)
+DEFAULT_HYSTERESIS_K_HIGH = _settings.get("DEFAULT_HYSTERESIS_K_HIGH", 3.2)
+DEFAULT_HYSTERESIS_K_LOW = _settings.get("DEFAULT_HYSTERESIS_K_LOW", 1.8)
+DEFAULT_ENABLE_BIOHEAT = _settings.get("DEFAULT_ENABLE_BIOHEAT", True)
+TISSUE_THERMAL_CONDUCTIVITY = _settings.get("TISSUE_THERMAL_CONDUCTIVITY", 0.37)
+DEFAULT_ENABLE_FRANGI = _settings.get("DEFAULT_ENABLE_FRANGI", True)
+FRANGI_SCALE_RANGE = tuple(_settings.get("FRANGI_SCALE_RANGE", [1.0, 2.0, 3.0]))
+FRANGI_BETA = _settings.get("FRANGI_BETA", 0.5)
+FRANGI_C = _settings.get("FRANGI_C", 15.0)
+DEFAULT_ENABLE_BILATERAL_MAP = _settings.get("DEFAULT_ENABLE_BILATERAL_MAP", True)
 
 # ── UI-Skalierung ──────────────────────────────────────────────────────────────
 UI_SCALE = _settings.get("UI_SCALE", 1.0)

@@ -1,29 +1,30 @@
 # -*- coding: utf-8 -*-
-"""gui/views/analytics_view.py – Statistical Temperature Histogram & Metrics for IGNITE."""
+"""gui/views/analytics_view.py – Statistical Analytics & Jury Benchmark for IGNITE."""
 
 from __future__ import annotations
 import tkinter as tk
-from typing import Callable, Any, Optional
+from typing import Optional, Any, Callable
 import customtkinter as ctk
 import numpy as np
 import matplotlib
-matplotlib.use("TkAgg")
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
+import config
 from gui.theme import (
     COLOR_BG_CARD,
     COLOR_BG_CARD_VARIANT,
+    COLOR_BG_CARD_HOVER,
     COLOR_OUTLINE,
     COLOR_OUTLINE_VARIANT,
     COLOR_TEXT_PRIMARY,
     COLOR_TEXT_SECONDARY,
     COLOR_TEXT_MUTED,
     COLOR_PRIMARY,
+    COLOR_PRIMARY_HOVER,
     COLOR_SUCCESS,
     COLOR_DANGER,
-    COLOR_WARNING,
-    COLOR_CONTAINER_BLUE,
     FONT_FAMILY,
     FONT_FAMILY_MONO,
     RADIUS_CARD,
@@ -35,10 +36,19 @@ from utils import pixel_to_celsius
 
 
 class AnalyticsView(ctk.CTkFrame):
-    """Diagnostische Statistik & Temperatur-Histogramm im High-Contrast Clinical Design."""
+    """Diagnostische Statistik, Temperatur-Histogramm & Jury-Evaluationsbereich."""
 
-    def __init__(self, master, **kwargs) -> None:
+    def __init__(
+        self,
+        master,
+        on_open_annotator: Optional[Callable[[], None]] = None,
+        on_export_jury_report: Optional[Callable[[], None]] = None,
+        **kwargs
+    ) -> None:
         super().__init__(master, fg_color="transparent", **kwargs)
+
+        self.on_open_annotator = on_open_annotator
+        self.on_export_jury_report = on_export_jury_report
 
         self.current_result: Optional[dict[str, Any]] = None
         self._canvas_tk: Optional[FigureCanvasTkAgg] = None
@@ -78,12 +88,13 @@ class AnalyticsView(ctk.CTkFrame):
         self.chart_host = ctk.CTkFrame(self.chart_card, fg_color="transparent")
         self.chart_host.pack(fill=ctk.BOTH, expand=True, padx=10, pady=10)
 
-        # ── Rechte Spalte: Quantitative Metriken & Herde-Tabelle ─────────────
+        # ── Rechte Spalte: Quantitative Metriken & Jury Actions ──────────────
         self.metrics_card = make_material_card(self, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD)
         self.metrics_card.grid(row=0, column=1, padx=(6, 14), pady=14, sticky="nsew")
+        self.metrics_card.configure(width=400)
 
-        scroll = ctk.CTkScrollableFrame(self.metrics_card, fg_color="transparent")
-        scroll.pack(fill=ctk.BOTH, expand=True, padx=12, pady=12)
+        scroll = ctk.CTkScrollableFrame(self.metrics_card, fg_color="transparent", width=370)
+        scroll.pack(fill=ctk.BOTH, expand=True, padx=8, pady=10)
 
         # 1. Statistische Kennzahlen
         ctk.CTkLabel(
@@ -92,10 +103,10 @@ class AnalyticsView(ctk.CTkFrame):
             font=ctk.CTkFont(family=FONT_FAMILY, size=10, weight="bold"),
             text_color=COLOR_TEXT_MUTED,
             anchor="w"
-        ).pack(fill=ctk.X, pady=(2, 6))
+        ).pack(fill=ctk.X, padx=4, pady=(2, 6))
 
         self.stats_table_card = make_material_card(scroll, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD_VARIANT)
-        self.stats_table_card.pack(fill=ctk.X, pady=(0, 14))
+        self.stats_table_card.pack(fill=ctk.X, padx=4, pady=(0, 14))
 
         st_inner = ctk.CTkFrame(self.stats_table_card, fg_color="transparent")
         st_inner.pack(fill=ctk.X, padx=14, pady=12)
@@ -127,10 +138,10 @@ class AnalyticsView(ctk.CTkFrame):
             font=ctk.CTkFont(family=FONT_FAMILY, size=10, weight="bold"),
             text_color=COLOR_TEXT_MUTED,
             anchor="w"
-        ).pack(fill=ctk.X, pady=(4, 6))
+        ).pack(fill=ctk.X, padx=4, pady=(4, 6))
 
         self.hotspot_list_frame = ctk.CTkFrame(scroll, fg_color="transparent")
-        self.hotspot_list_frame.pack(fill=ctk.X)
+        self.hotspot_list_frame.pack(fill=ctk.X, padx=4)
 
         self.no_hotspots_lbl = ctk.CTkLabel(
             self.hotspot_list_frame,
@@ -139,6 +150,54 @@ class AnalyticsView(ctk.CTkFrame):
             text_color=COLOR_TEXT_MUTED
         )
         self.no_hotspots_lbl.pack(pady=10)
+
+        # 3. Wissenschaftliche Evaluation & Jury-Dossier
+        ctk.CTkLabel(
+            scroll,
+            text="WISSENSCHAFTLICHE JURY-EVALUATION",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=10, weight="bold"),
+            text_color=COLOR_TEXT_MUTED,
+            anchor="w"
+        ).pack(fill=ctk.X, padx=4, pady=(14, 6))
+
+        jury_box = make_material_card(scroll, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD_VARIANT)
+        jury_box.pack(fill=ctk.X, padx=4, pady=(0, 4))
+
+        j_inner = ctk.CTkFrame(jury_box, fg_color="transparent")
+        j_inner.pack(fill=ctk.X, padx=14, pady=12)
+
+        ctk.CTkButton(
+            j_inner,
+            text="Jury-Evaluationsbericht exportieren (HTML)",
+            command=self._on_click_jury_report,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
+            fg_color=COLOR_PRIMARY,
+            hover_color=COLOR_PRIMARY_HOVER,
+            corner_radius=RADIUS_BUTTON,
+            height=34
+        ).pack(fill=ctk.X, pady=(0, 6))
+
+        ctk.CTkButton(
+            j_inner,
+            text="Ground-Truth Annotator öffnen",
+            command=self._on_click_annotator,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+            fg_color=COLOR_BG_CARD,
+            hover_color=COLOR_BG_CARD_HOVER,
+            text_color=COLOR_TEXT_PRIMARY,
+            border_width=1,
+            border_color=COLOR_OUTLINE,
+            corner_radius=RADIUS_BUTTON,
+            height=32
+        ).pack(fill=ctk.X)
+
+    def _on_click_jury_report(self) -> None:
+        if self.on_export_jury_report:
+            self.on_export_jury_report()
+
+    def _on_click_annotator(self) -> None:
+        if self.on_open_annotator:
+            self.on_open_annotator()
 
     def show_results(self, result: dict[str, Any]) -> None:
         self.current_result = result
@@ -198,13 +257,13 @@ class AnalyticsView(ctk.CTkFrame):
 
                 ctk.CTkLabel(
                     c_inner,
-                    text=f"Herd #{spot.get('index', idx+1)}",
+                    text=f"Herd #{spot.get('id', idx+1)}",
                     font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
                     text_color=COLOR_DANGER
                 ).pack(side=ctk.LEFT)
 
-                max_t = pixel_to_celsius(spot.get("max_raw", 0), t_min, t_max)
-                area = spot.get("area", 0)
+                max_t = pixel_to_celsius(spot.get("max_intensity", 0), t_min, t_max)
+                area = spot.get("area_px", 0)
                 ctk.CTkLabel(
                     c_inner,
                     text=f"Max: {max_t:.1f} °C  ·  Fläche: {area:,} px",
@@ -245,9 +304,9 @@ class AnalyticsView(ctk.CTkFrame):
             temps_c, bins=45, color="#0284C7", alpha=0.85, edgecolor=bg_color, linewidth=0.5
         )
 
-        mean_c = np.mean(temps_c)
-        std_c = np.std(temps_c)
-        k = self.current_result.get("params", {}).get("sigma_k", 3.0)
+        mean_c = float(np.mean(temps_c))
+        std_c = float(np.std(temps_c))
+        k = float(self.current_result.get("params", {}).get("sigma_k", 3.0))
         thresh_c = mean_c + k * std_c
 
         # Hotspot-Balken rot einfärben

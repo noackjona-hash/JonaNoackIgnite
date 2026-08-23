@@ -43,6 +43,9 @@ class SingleInspectView(ctk.CTkFrame):
         ("1. Originalbild",             "1. Original"),
         ("2. Hintergrund-Maske",        "2. Gewebe-Maske"),
         ("3. Lokale Hitze-Differenz",   "3. Top-Hat Diff"),
+        ("5. Pennes Bioheat",           "Pennes Bioheat"),
+        ("6. Frangi-Venen",             "Frangi-Venen"),
+        ("7. Bilaterale Asymmetrie",    "Asymmetrie-Map"),
     ]
 
     def __init__(
@@ -283,6 +286,28 @@ class SingleInspectView(ctk.CTkFrame):
             raw = cv2.cvtColor(self.current_result["body_mask"], cv2.COLOR_GRAY2BGR)
         elif self.active_stage_key == "3. Lokale Hitze-Differenz":
             raw = cv2.cvtColor(self.current_result["heat_diff"], cv2.COLOR_GRAY2BGR)
+        elif self.active_stage_key == "5. Pennes Bioheat":
+            bio_res = self.current_result.get("bioheat_results", {})
+            flux_mag = bio_res.get("flux_magnitude")
+            if flux_mag is not None:
+                norm_flux = cv2.normalize(flux_mag, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+                raw = apply_colormap_to_image(norm_flux, "Inferno")
+            else:
+                raw = self.current_result["overlay_bgr"]
+        elif self.active_stage_key == "6. Frangi-Venen":
+            frangi_map = self.current_result.get("frangi_vesselness")
+            if frangi_map is not None:
+                raw = apply_colormap_to_image(frangi_map, "Inferno")
+            else:
+                raw = self.current_result["overlay_bgr"]
+        elif self.active_stage_key == "7. Bilaterale Asymmetrie":
+            asym_res = self.current_result.get("bilateral_map_results", {})
+            asym_map = asym_res.get("asymmetry_map")
+            if asym_map is not None and asym_res.get("valid"):
+                norm_asym = np.clip(asym_map / 4.0 * 255.0, 0, 255).astype(np.uint8)
+                raw = apply_colormap_to_image(norm_asym, "Turbo")
+            else:
+                raw = self.current_result["overlay_bgr"]
         else:
             raw = self.current_result["overlay_bgr"]
 

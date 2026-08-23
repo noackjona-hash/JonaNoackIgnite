@@ -404,7 +404,237 @@ def compute_thermal_severity_index(
     }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 7. GEOMETRISCHER RAUSCHFILTER
+# 7. BILATERALE KONTRALATERALE REGISTRIERUNG & ASYMMETRIE-MAPPING
+# ─────────────────────────────────────────────────────────────────────────────
+def compute_bilateral_asymmetry_map(
+    img: np.ndarray,
+    body_mask: np.ndarray,
+    temp_min_c: float = _config.DEFAULT_TEMP_MIN,
+    temp_max_c: float = _config.DEFAULT_TEMP_MAX
+) -> dict[str, Any]:
+    """
+    Registriert linken und gespiegelten rechten Fuß anatomisch und berechnet das räumliche
+    ΔT(x,y) Asymmetrie-Differenzbild nach Armstrong / Ring & Ammer Goldstandard.
+    """
+    h, w = img.shape[:2]
+    mid_x = w // 2
+    temp_range = max(1.0, temp_max_c - temp_min_c)
+
+    left_mask = (body_mask[:, :mid_x] > 0).astype(np.uint8) * 255
+    right_mask = (body_mask[:, mid_x:] > 0).astype(np.uint8) * 255
+
+    num_l, _, stats_l, _ = cv2.connectedComponentsWithStats(left_mask)
+    num_r, _, stats_r, _ = cv2.connectedComponentsWithStats(right_mask)
+
+    if num_l <= 1 or num_r <= 1:
+        return {
+            "valid": False,
+            "asymmetry_map": np.zeros((h, w), dtype=np.float32),
+            "max_delta_t": 0.0,
+            "mean_delta_t": 0.0,
+            "high_risk_area_px": 0,
+            "hotspot_coord": None
+        }
+
+    l_idx = 1 + int(np.argmax(stats_l[1:, cv2.CC_STAT_AREA]))
+    r_idx = 1 + int(np.argmax(stats_r[1:, cv2.CC_STAT_AREA]))
+
+    lx, ly, lw, lh = int(stats_l[l_idx, cv2.CC_STAT_LEFT]), int(stats_l[l_idx, cv2.CC_STAT_TOP]), int(stats_l[l_idx, cv2.CC_STAT_WIDTH]), int(stats_l[l_idx, cv2.CC_STAT_HEIGHT])
+    rx, ry, rw, rh = int(stats_r[r_idx, cv2.CC_STAT_LEFT]) + mid_x, int(stats_r[r_idx, cv2.CC_STAT_TOP]), int(stats_r[r_idx, cv2.CC_STAT_WIDTH]), int(stats_r[r_idx, cv2.CC_STAT_HEIGHT])
+
+    crop_l = temp_min_c + (img[ly:ly+lh, lx:lx+lw].astype(np.float32) / 255.0) * temp_range
+    mask_l = (body_mask[ly:ly+lh, lx:lx+lw] > 0)
+
+    crop_r = temp_min_c + (img[ry:ry+rh, rx:rx+rw].astype(np.float32) / 255.0) * temp_range
+    mask_r = (body_mask[ry:ry+rh, rx:rx+rw] > 0)
+
+    crop_r_mirrored = cv2.flip(crop_r, 1)
+    mask_r_mirrored = cv2.flip(mask_r.astype(np.uint8), 1) > 0
+
+    target_h, target_w = max(lh, rh), max(lw, rw)
+    norm_l = cv2.resize(crop_l, (target_w, target_h), interpolation=cv2.INTER_LINEAR)
+    norm_mask_l = cv2.resize(mask_l.astype(np.uint8), (target_w, target_h), interpolation=cv2.INTER_NEAREST) > 0
+
+    norm_r = cv2.resize(crop_r_mirrored, (target_w, target_h), interpolation=cv2.INTER_LINEAR)
+    norm_mask_r = cv2.resize(mask_r_mirrored.astype(np.uint8), (target_w, target_h), interpolation=cv2.INTER_NEAREST) > 0
+
+    valid_overlap = norm_mask_l & norm_mask_r
+    delta_t_map = np.abs(norm_l - norm_r) * valid_overlap.astype(np.float32)
+
+    max_delta = float(np.max(delta_t_map)) if np.any(valid_overlap) else 0.0
+    mean_delta = float(np.mean(delta_t_map[valid_overlap])) if np.any(valid_overlap) else 0.0
+    high_risk_px = int(np.sum((delta_t_map >= _config.ASYMMETRY_THRESHOLD_C) & valid_overlap))
+
+    if max_delta > 0:
+        max_y, max_x = np.unravel_index(np.argmax(delta_t_map), delta_t_map.shape)
+        hotspot_pt = (int(max_x), int(max_y))
+    else:
+        hotspot_pt = None
+
+    return {
+        "valid": True,
+        "asymmetry_map": delta_t_map,
+        "max_delta_t": round(max_delta, 2),
+        "mean_delta_t": round(mean_delta, 2),
+        "high_risk_area_px": high_risk_px,
+        "hotspot_coord": hotspot_pt,
+        "norm_dimensions": (target_w, target_h)
+    }
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 8. ADAPTIVE DOPPEL-SCHWELLENWERT-HYSTERESE
+# ─────────────────────────────────────────────────────────────────────────────
+def apply_hysteresis_thresholding(
+    diff_img: np.ndarray,
+    mask: np.ndarray,
+    k_high: float = _config.DEFAULT_HYSTERESIS_K_HIGH,
+    k_low: float = _config.DEFAULT_HYSTERESIS_K_LOW,
+    use_mad: bool = False
+) -> np.ndarray:
+    """
+    Adaptive Hysterese-Segmentierung mit morphologischer Geodäten-Rekonstruktion.
+    Starke Schwellenwerte erfassen gesicherte Entzündungskerne, schwache Schwellenwerte
+    integrieren angrenzende perifokale Hyperämiezellen ohne Sensorrauschen.
+    """
+    if mask is None or np.sum(mask > 0) == 0:
+        return np.zeros_like(diff_img, dtype=np.uint8)
+
+    valid_pixels = diff_img[mask > 0]
+    if len(valid_pixels) == 0:
+        return np.zeros_like(diff_img, dtype=np.uint8)
+
+    if use_mad:
+        med = float(np.median(valid_pixels))
+        mad = float(np.median(np.abs(valid_pixels - med)))
+        sigma = max(1e-5, 1.4826 * mad)
+        thresh_high = med + k_high * sigma
+        thresh_low = med + k_low * sigma
+    else:
+        mean_v = float(np.mean(valid_pixels))
+        sigma = max(1e-5, float(np.std(valid_pixels)))
+        thresh_high = mean_v + k_high * sigma
+        thresh_low = mean_v + k_low * sigma
+
+    strong_mask = ((diff_img >= thresh_high) & (mask > 0)).astype(np.uint8) * 255
+    weak_mask = ((diff_img >= thresh_low) & (mask > 0)).astype(np.uint8) * 255
+
+    num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(weak_mask)
+    final_hysteresis = np.zeros_like(diff_img, dtype=np.uint8)
+
+    for i in range(1, num_labels):
+        comp = (labels == i)
+        if np.any(strong_mask[comp] > 0):
+            final_hysteresis[comp] = 255
+
+    return final_hysteresis
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 9. PENNES BIOHEAT WÄRMEFLUSSDICHTE & ENTZÜNDUNGSQUELLENDICHTE
+# ─────────────────────────────────────────────────────────────────────────────
+def compute_pennes_bioheat_flux(
+    img: np.ndarray,
+    mask: Optional[np.ndarray] = None,
+    temp_min_c: float = _config.DEFAULT_TEMP_MIN,
+    temp_max_c: float = _config.DEFAULT_TEMP_MAX,
+    k_tissue: float = _config.TISSUE_THERMAL_CONDUCTIVITY
+) -> dict[str, Any]:
+    """
+    Berechnet die thermische Wärmeflussdichte q = -k * grad(T) und die
+    metabolische Wärmequellendichte Q = -div(q) = k * Lap(T) nach der Pennes-Bioheat-Gleichung.
+    """
+    temp_range = max(1.0, temp_max_c - temp_min_c)
+    temp_c = temp_min_c + (img.astype(np.float32) / 255.0) * temp_range
+
+    dx_m = 0.001
+    grad_x = cv2.Sobel(temp_c, cv2.CV_32F, 1, 0, ksize=3) / (8.0 * dx_m)
+    grad_y = cv2.Sobel(temp_c, cv2.CV_32F, 0, 1, ksize=3) / (8.0 * dx_m)
+
+    flux_x = -k_tissue * grad_x * 0.1
+    flux_y = -k_tissue * grad_y * 0.1
+    flux_mag = np.sqrt(flux_x**2 + flux_y**2)
+
+    laplacian = cv2.Laplacian(temp_c, cv2.CV_32F, ksize=3) / (dx_m**2)
+    q_source = (k_tissue * laplacian) * 1e-4
+
+    if mask is not None and np.sum(mask > 0) > 0:
+        valid = mask > 0
+        mean_flux = float(np.mean(flux_mag[valid]))
+        max_flux = float(np.max(flux_mag[valid]))
+        mean_source = float(np.mean(q_source[valid]))
+        max_source = float(np.max(q_source[valid]))
+    else:
+        mean_flux = float(np.mean(flux_mag))
+        max_flux = float(np.max(flux_mag))
+        mean_source = float(np.mean(q_source))
+        max_source = float(np.max(q_source))
+
+    return {
+        "flux_magnitude": flux_mag,
+        "heat_source_density": q_source,
+        "mean_flux_mw_cm2": round(mean_flux, 2),
+        "max_flux_mw_cm2": round(max_flux, 2),
+        "mean_heat_source": round(mean_source, 2),
+        "max_heat_source": round(max_source, 2)
+    }
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 10. FRANGI-HESSIAN GEFÄSS- & LINEARITÄTSFILTER
+# ─────────────────────────────────────────────────────────────────────────────
+def compute_frangi_vesselness_filter(
+    img: np.ndarray,
+    mask: Optional[np.ndarray] = None,
+    sigmas: tuple[float, ...] = _config.FRANGI_SCALE_RANGE,
+    beta: float = _config.FRANGI_BETA,
+    c: float = _config.FRANGI_C
+) -> np.ndarray:
+    """
+    Frangi Vesselness Filter basierend auf Eigenwerten der Hesse-Matrix.
+    Identifiziert tubuläre oberflächliche Venenstrukturen zur Vermeidung von False Positives.
+    """
+    img_f = img.astype(np.float32)
+    max_vesselness = np.zeros_like(img_f)
+
+    for sigma in sigmas:
+        ksize = int(2 * np.ceil(2 * sigma) + 1)
+        smoothed = cv2.GaussianBlur(img_f, (ksize, ksize), sigma)
+
+        hxx = cv2.Sobel(smoothed, cv2.CV_32F, 2, 0, ksize=3)
+        hyy = cv2.Sobel(smoothed, cv2.CV_32F, 0, 2, ksize=3)
+        hxy = cv2.Sobel(smoothed, cv2.CV_32F, 1, 1, ksize=3)
+
+        hxx *= (sigma ** 2)
+        hyy *= (sigma ** 2)
+        hxy *= (sigma ** 2)
+
+        tmp = np.sqrt(np.maximum(0.0, (hxx - hyy)**2 + 4 * hxy**2))
+        lambda1 = 0.5 * (hxx + hyy - tmp)
+        lambda2 = 0.5 * (hxx + hyy + tmp)
+
+        swap = np.abs(lambda1) > np.abs(lambda2)
+        l1 = np.where(swap, lambda2, lambda1)
+        l2 = np.where(swap, lambda1, lambda2)
+
+        rb = np.abs(l1) / (np.abs(l2) + 1e-6)
+        s = np.sqrt(l1**2 + l2**2)
+
+        vesselness = np.exp(- (rb**2) / (2 * (beta**2))) * (1.0 - np.exp(- (s**2) / (2 * (c**2))))
+        vesselness[l2 >= 0] = 0.0
+
+        max_vesselness = np.maximum(max_vesselness, vesselness)
+
+    if mask is not None:
+        max_vesselness[mask == 0] = 0.0
+
+    v_min, v_max = max_vesselness.min(), max_vesselness.max()
+    if v_max - v_min > 1e-6:
+        v_norm = ((max_vesselness - v_min) / (v_max - v_min) * 255.0).astype(np.uint8)
+    else:
+        v_norm = np.zeros_like(img, dtype=np.uint8)
+
+    return v_norm
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 11. GEOMETRISCHER RAUSCHFILTER
 # ─────────────────────────────────────────────────────────────────────────────
 def _filter_geometric_noise(
     binary_raw: np.ndarray,

@@ -127,7 +127,30 @@ class ThermalProcessingService:
                     std_pixel=std_val
                 )
 
-                # 9. Diagnostisches Overlay erzeugen
+                # 9. Bilaterale Kontralaterale Registrierungs- & Subtraktionskarte
+                bilateral_map_results = image_processing.compute_bilateral_asymmetry_map(
+                    calibrated_img, body_mask_vis, t_min_c, t_max_c
+                )
+
+                # 10. Pennes Bioheat Wärmeflussdichte-Vektorfeld
+                bioheat_results = image_processing.compute_pennes_bioheat_flux(
+                    calibrated_img, body_mask_vis, t_min_c, t_max_c
+                )
+
+                # 11. Frangi Vesselness Filter (Gefäß- & Venenstruktur-Erkennung)
+                frangi_vesselness = image_processing.compute_frangi_vesselness_filter(
+                    calibrated_img, body_mask_vis
+                )
+
+                # 12. Adaptive Doppel-Schwellenwert-Hysterese
+                hysteresis_mask = image_processing.apply_hysteresis_thresholding(
+                    diff_vis, body_mask_vis,
+                    k_high=params.get("hysteresis_k_high", config.DEFAULT_HYSTERESIS_K_HIGH),
+                    k_low=params.get("hysteresis_k_low", config.DEFAULT_HYSTERESIS_K_LOW),
+                    use_mad=bool(params.get("use_mad", config.DEFAULT_USE_MAD))
+                )
+
+                # 13. Diagnostisches Overlay erzeugen
                 overlay_bgr = cls._render_overlay(
                     calibrated_img, body_mask_vis, hotspot_mask,
                     colormap_name=colormap_name,
@@ -148,6 +171,10 @@ class ThermalProcessingService:
                     "body_mask": body_mask_vis,
                     "heat_diff": diff_vis,
                     "hotspot_mask": hotspot_mask,
+                    "hysteresis_mask": hysteresis_mask,
+                    "frangi_vesselness": frangi_vesselness,
+                    "bilateral_map_results": bilateral_map_results,
+                    "bioheat_results": bioheat_results,
                     "overlay_rgb": overlay_rgb,
                     "overlay_bgr": overlay_bgr,
                     "asym_results": asym_results,
