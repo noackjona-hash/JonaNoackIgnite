@@ -51,7 +51,7 @@ class ThermalProcessingService:
                         return
 
                 if on_progress:
-                    on_progress(0.35, "Kalibriere Temperatur-Offset...")
+                    on_progress(0.30, "Kalibriere Temperatur-Offset...")
 
                 # 2. Kalibrierungs-Offset anwenden
                 to = params.get("temp_offset", 0.0)
@@ -65,9 +65,9 @@ class ThermalProcessingService:
 
                 if on_progress:
                     backend_name = image_processing.get_active_backend()
-                    on_progress(0.60, f"Berechne Hotspots ({backend_name})...")
+                    on_progress(0.55, f"Berechne Multi-Skalen Hotspots ({backend_name})...")
 
-                # 3. Rust / GPU / Python Pipeline ausführen
+                # 3. Multi-Scale Hotspot Pipeline ausführen
                 diff_vis, hotspot_mask = image_processing.run_rust_pipeline(
                     calibrated_img,
                     sigma_k=params.get("sigma_k", config.DEFAULT_SIGMA_K),
@@ -85,31 +85,24 @@ class ThermalProcessingService:
                         return
 
                 if on_progress:
-                    on_progress(0.85, "Analysiere Symmetrie & Zonen...")
+                    on_progress(0.75, "Analysiere PCA-Ausrichtung & thermische Gradienten...")
 
                 body_mask_vis = (diff_vis > 0).astype(np.uint8) * 255
 
-                # 4. Asymmetrie-Analyse
+                # 4. Thermischer Gradientenfluss & Laplace-Divergenz
+                gradient_results = image_processing.compute_thermal_gradients_and_divergence(
+                    calibrated_img, body_mask_vis
+                )
+
+                # 5. Kontralaterale Asymmetrie-Analyse inklusive PCA-Ausrichtung
                 asym_results = image_processing.compute_contralateral_asymmetry(
                     calibrated_img, body_mask_vis, t_min_c, t_max_c, config.ASYMMETRY_THRESHOLD_C
                 )
+                pca_results = asym_results.get("pca")
 
-                # 5. Zonen & Hotspot-Objekte
-                zonal_stats = cls._compute_zonal_stats(calibrated_img, body_mask_vis)
+                # 6. Zonen-Statistiken (PCA-unterstützt) & Hotspot-Objekte
+                zonal_stats = cls._compute_zonal_stats(calibrated_img, body_mask_vis, pca_results)
                 general_hotspots = cls._compute_general_hotspots(calibrated_img, hotspot_mask)
-
-                # 6. Diagnostisches Overlay erzeugen
-                overlay_bgr = cls._render_overlay(
-                    calibrated_img, body_mask_vis, hotspot_mask,
-                    colormap_name=colormap_name,
-                    analysis_mode=analysis_mode,
-                    zonal_stats=zonal_stats,
-                    general_hotspots=general_hotspots,
-                    asym_results=asym_results,
-                    t_min_c=t_min_c,
-                    t_max_c=t_max_c
-                )
-                overlay_rgb = cv2.cvtColor(overlay_bgr, cv2.COLOR_BGR2RGB)
 
                 # 7. Pixel-Statistiken über Gewebe
                 body_pixels = calibrated_img[body_mask_vis > 0]
@@ -124,6 +117,29 @@ class ThermalProcessingService:
                 hotspot_pixels = int(np.sum(hotspot_mask == 255))
                 hotspot_ratio = (hotspot_pixels / len(body_pixels)) * 100.0 if len(body_pixels) > 0 else 0.0
 
+                # 8. Evidenzbasierter Thermal Severity Index (TSI)
+                delta_t = asym_results.get("delta_t_c", 0.0)
+                tsi_results = image_processing.compute_thermal_severity_index(
+                    delta_t_c=delta_t,
+                    hotspot_pixel_count=hotspot_pixels,
+                    body_pixel_count=len(body_pixels),
+                    max_gradient=gradient_results.get("max_gradient", 0.0),
+                    std_pixel=std_val
+                )
+
+                # 9. Diagnostisches Overlay erzeugen
+                overlay_bgr = cls._render_overlay(
+                    calibrated_img, body_mask_vis, hotspot_mask,
+                    colormap_name=colormap_name,
+                    analysis_mode=analysis_mode,
+                    zonal_stats=zonal_stats,
+                    general_hotspots=general_hotspots,
+                    asym_results=asym_results,
+                    t_min_c=t_min_c,
+                    t_max_c=t_max_c
+                )
+                overlay_rgb = cv2.cvtColor(overlay_bgr, cv2.COLOR_BGR2RGB)
+
                 result = {
                     "job_id": job_id,
                     "image_path": image_path,
@@ -137,6 +153,9 @@ class ThermalProcessingService:
                     "asym_results": asym_results,
                     "zonal_stats": zonal_stats,
                     "general_hotspots": general_hotspots,
+                    "gradient_results": gradient_results,
+                    "pca_results": pca_results,
+                    "tsi_results": tsi_results,
                     "body_pixel_count": len(body_pixels),
                     "hotspot_pixel_count": hotspot_pixels,
                     "hotspot_ratio": hotspot_ratio,
@@ -167,14 +186,37 @@ class ThermalProcessingService:
         return job_id
 
     @staticmethod
-    def _compute_zonal_stats(img: np.ndarray, body_mask: np.ndarray) -> dict[str, Any]:
-        """Berechnet das klinische 3-Zonen-Modell für linken und rechten Fuß."""
+    def _compute_zonal_stats(img: np.ndarray, body_mask: np.ndarray, pca_results: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+        """Berechnet das klinische 3-Zonen-Modell mit bevorzugter PCA-Hauptachsenorientierung."""
+        if pca_results and pca_results.get("left", {}).get("exists") and pca_results.get("right", {}).get("exists"):
+            l_info = pca_results["left"]
+            r_info = pca_results["right"]
+            return {
+                "left": {
+                    "fore": l_info["fore_c"],
+                    "mid": l_info["mid_c"],
+                    "heel": l_info["heel_c"],
+                    "exists": True,
+                    "bbox": l_info.get("bbox"),
+                    "angle_deg": l_info.get("angle_deg", 0.0)
+                },
+                "right": {
+                    "fore": r_info["fore_c"],
+                    "mid": r_info["mid_c"],
+                    "heel": r_info["heel_c"],
+                    "exists": True,
+                    "bbox": r_info.get("bbox"),
+                    "angle_deg": r_info.get("angle_deg", 0.0)
+                }
+            }
+
+        # Fallback Bounding-Box
         h, w = img.shape[:2]
         mid_x = w // 2
 
         stats = {
-            "left": {"fore": 0.0, "mid": 0.0, "heel": 0.0, "exists": False, "bbox": None},
-            "right": {"fore": 0.0, "mid": 0.0, "heel": 0.0, "exists": False, "bbox": None}
+            "left": {"fore": 0.0, "mid": 0.0, "heel": 0.0, "exists": False, "bbox": None, "angle_deg": 0.0},
+            "right": {"fore": 0.0, "mid": 0.0, "heel": 0.0, "exists": False, "bbox": None, "angle_deg": 0.0}
         }
 
         # Linker Fuß
@@ -239,22 +281,19 @@ class ThermalProcessingService:
             max_val = float(np.max(pixels)) if len(pixels) > 0 else 0.0
 
             hotspots.append({
-                "index": i,
-                "area": area,
-                "mean_raw": mean_val,
-                "max_raw": max_val,
+                "id": i,
                 "bbox": (x, y, w, h),
-                "center": (float(centroids[i][0]), float(centroids[i][1]))
+                "area_px": area,
+                "mean_intensity": mean_val,
+                "max_intensity": max_val,
+                "center": (int(centroids[i][0]), int(centroids[i][1]))
             })
-
-        hotspots.sort(key=lambda item: item["area"], reverse=True)
-        for idx, item in enumerate(hotspots, start=1):
-            item["index"] = idx
         return hotspots
 
-    @staticmethod
+    @classmethod
     def _render_overlay(
-        img: np.ndarray,
+        cls,
+        calibrated_img: np.ndarray,
         body_mask: np.ndarray,
         hotspot_mask: np.ndarray,
         colormap_name: str,
@@ -265,57 +304,32 @@ class ThermalProcessingService:
         t_min_c: float,
         t_max_c: float
     ) -> np.ndarray:
-        """Rendert ein klares medizinisches Visualisierungs-Overlay."""
+        """Erzeugt das diagnostische Overlay mit Bounding-Boxen und Annotationen."""
         # Colormap anwenden
-        if colormap_name in ("Google Turbo", "Turbo", "Regenbogen (Jet)", "Jet"):
-            base = cv2.applyColorMap(img, cv2.COLORMAP_TURBO if hasattr(cv2, "COLORMAP_TURBO") else cv2.COLORMAP_JET)
-        elif colormap_name in ("Inferno", "Thermisch"):
-            base = cv2.applyColorMap(img, cv2.COLORMAP_INFERNO)
-        elif colormap_name in ("Heiß (Hot)", "Hot"):
-            base = cv2.applyColorMap(img, cv2.COLORMAP_HOT)
-        else:
-            base = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+        from gui.utils_ui import apply_colormap_to_image
+        base_rgb = apply_colormap_to_image(calibrated_img, colormap_name)
+        base_bgr = cv2.cvtColor(base_rgb, cv2.COLOR_RGB2BGR)
 
-        # Hotspot Neon-Rot Overlay (30% Base + 70% Rot)
-        red_layer = np.zeros_like(base)
-        red_layer[:] = [40, 40, 245]  # BGR
-        blended = cv2.addWeighted(base, 0.35, red_layer, 0.65, 0)
-        annotated = np.where(hotspot_mask[:, :, None] == 255, blended, base).astype(np.uint8)
+        # Rote Hotspots einblenden
+        red_layer = np.zeros_like(base_bgr)
+        red_layer[:] = [0, 0, 255]
+        blended = cv2.addWeighted(base_bgr, 0.4, red_layer, 0.6, 0)
+        overlay = np.where(hotspot_mask[:, :, None] == 255, blended, base_bgr).astype(np.uint8)
 
-        h, w = img.shape[:2]
+        # Hotspot Bounding-Boxen
+        for hs in general_hotspots:
+            x, y, w, h = hs["bbox"]
+            cv2.rectangle(overlay, (x, y), (x + w, y + h), (0, 0, 255), 1)
 
+        # Podologie-Zonen markieren falls im Podologie-Modus
         if analysis_mode == "Podologische Symmetrieanalyse":
-            mid_x = w // 2
-            # Symmetrie-Mittelachse
-            cv2.line(annotated, (mid_x, 0), (mid_x, h), (200, 200, 200), 1, cv2.LINE_AA)
+            for side in ["left", "right"]:
+                info = zonal_stats.get(side, {})
+                if info.get("exists") and info.get("bbox"):
+                    bx, by, bw, bh = info["bbox"]
+                    cv2.rectangle(overlay, (bx, by), (bx + bw, by + bh), (255, 200, 0), 1)
+                    h3 = bh // 3
+                    cv2.line(overlay, (bx, by + h3), (bx + bw, by + h3), (255, 200, 0), 1)
+                    cv2.line(overlay, (bx, by + 2 * h3), (bx + bw, by + 2 * h3), (255, 200, 0), 1)
 
-            # Zonen-Bounding Boxes zeichnen
-            for side, color_box in [("left", (0, 220, 100)), ("right", (0, 220, 100))]:
-                side_info = zonal_stats.get(side, {})
-                if side_info.get("exists") and side_info.get("bbox"):
-                    bx, by, bw, bh = side_info["bbox"]
-                    cv2.rectangle(annotated, (bx, by), (bx + bw, by + bh), color_box, 1)
-
-                    # Zonenlinien (3 Zonen)
-                    hz = bh // 3
-                    cv2.line(annotated, (bx, by + hz), (bx + bw, by + hz), (255, 180, 0), 1, cv2.LINE_AA)
-                    cv2.line(annotated, (bx, by + 2 * hz), (bx + bw, by + 2 * hz), (255, 180, 0), 1, cv2.LINE_AA)
-
-            # Asymmetrie-Banner oben
-            if asym_results.get("status"):
-                delta_t = asym_results.get("delta_t_c", 0.0)
-                is_asym = asym_results.get("is_asymmetric", False)
-                banner_color = (30, 30, 210) if is_asym else (25, 140, 45)
-                cv2.rectangle(annotated, (0, 0), (w, 28), banner_color, -1)
-
-                label = f"SYMMETRIE: Delta-T = {delta_t:.1f} C  ({'PATHOLOGISCH >2.2 C' if is_asym else 'NORMAL PHYSIOLOGISCH'})"
-                cv2.putText(annotated, label, (12, 19), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255, 255, 255), 1, cv2.LINE_AA)
-        else:
-            # Allgemeine Hotspots einrahmen
-            for hs in general_hotspots:
-                bx, by, bw, bh = hs["bbox"]
-                idx = hs["index"]
-                cv2.rectangle(annotated, (bx, by), (bx + bw, by + bh), (255, 165, 0), 1)
-                cv2.putText(annotated, f"H#{idx}", (bx, max(12, by - 4)), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 165, 0), 1, cv2.LINE_AA)
-
-        return annotated
+        return overlay

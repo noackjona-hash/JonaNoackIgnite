@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""gui/widgets/toast.py – Non-blocking Google Material 3 Snackbars for IGNITE."""
+"""gui/widgets/toast.py – Non-blocking Clinical Workstation Notifications for IGNITE."""
 
 from __future__ import annotations
 import tkinter as tk
@@ -19,13 +19,13 @@ from gui.theme import (
 
 
 class ToastManager:
-    """Verwaltet moderne Google Material 3 Snackbars/Toasts am unteren Bildschirmrand."""
+    """Verwaltet diskrete Status-Benachrichtigungen am unteren Bildschirmrand."""
 
     _COLORS = {
-        "info":    {"dot": "#1A73E8", "bg": ("#FFFFFF", "#292A2D"), "text": ("#202124", "#E8EAED"), "border": "#1A73E8"},
-        "success": {"dot": "#34A853", "bg": ("#FFFFFF", "#292A2D"), "text": ("#202124", "#E8EAED"), "border": "#34A853"},
-        "warning": {"dot": "#FBBC04", "bg": ("#FFFFFF", "#292A2D"), "text": ("#202124", "#E8EAED"), "border": "#FBBC04"},
-        "error":   {"dot": "#EA4335", "bg": ("#FFFFFF", "#292A2D"), "text": ("#202124", "#E8EAED"), "border": "#EA4335"},
+        "info":    {"dot": "#0284C7", "bg": ("#FFFFFF", "#131923"), "text": ("#0F172A", "#F8FAFC"), "border": ("#CBD5E1", "#243044")},
+        "success": {"dot": "#16A34A", "bg": ("#FFFFFF", "#131923"), "text": ("#0F172A", "#F8FAFC"), "border": ("#86EFAC", "#064E2B")},
+        "warning": {"dot": "#D97706", "bg": ("#FFFFFF", "#131923"), "text": ("#0F172A", "#F8FAFC"), "border": ("#FDE68A", "#4D3600")},
+        "error":   {"dot": "#DC2626", "bg": ("#FFFFFF", "#131923"), "text": ("#0F172A", "#F8FAFC"), "border": ("#FECACA", "#5A1313")},
     }
 
     def __init__(self, root: tk.Misc) -> None:
@@ -47,26 +47,27 @@ class ToastManager:
         is_dark = ctk.get_appearance_mode() == "Dark"
         bg = cfg["bg"][1] if is_dark else cfg["bg"][0]
         fg = cfg["text"][1] if is_dark else cfg["text"][0]
+        border_col = cfg["border"][1] if is_dark else cfg["border"][0]
 
         toast = tk.Toplevel(self.root)
         toast.overrideredirect(True)
         toast.attributes("-topmost", True)
-        toast.configure(bg="#000000")
+        toast.configure(bg=border_col)
         toast.transient(self.root)
 
-        outer = tk.Frame(toast, bg="#000000", padx=1, pady=1)
+        outer = tk.Frame(toast, bg=border_col, padx=1, pady=1)
         outer.pack(fill=tk.BOTH, expand=True)
 
-        inner = tk.Frame(outer, bg=bg, padx=14, pady=10)
+        inner = tk.Frame(outer, bg=bg, padx=12, pady=8)
         inner.pack(fill=tk.BOTH, expand=True)
 
         row = tk.Frame(inner, bg=bg)
         row.pack(fill=tk.X)
 
-        # Farbiger Status-Dot
-        dot_canvas = tk.Canvas(row, width=10, height=10, bg=bg, highlightthickness=0)
+        # Status-Dot
+        dot_canvas = tk.Canvas(row, width=8, height=8, bg=bg, highlightthickness=0)
         dot_canvas.pack(side=tk.LEFT, padx=(0, 8))
-        dot_canvas.create_oval(1, 1, 9, 9, fill=cfg["dot"], outline="")
+        dot_canvas.create_oval(1, 1, 7, 7, fill=cfg["dot"], outline="")
 
         # Nachricht
         tk.Label(
@@ -80,7 +81,7 @@ class ToastManager:
         ).pack(side=tk.LEFT, fill=tk.X, expand=True)
 
         # Schließen Button
-        close_lbl = tk.Label(row, text="✕", fg="#80868B", bg=bg, cursor="hand2", font=(FONT_FAMILY, 9))
+        close_lbl = tk.Label(row, text="✕", fg="#64748B", bg=bg, cursor="hand2", font=(FONT_FAMILY, 9))
         close_lbl.pack(side=tk.RIGHT, padx=(8, 0))
         close_lbl.bind("<Button-1>", lambda e, t=toast: self._dismiss(t))
 
@@ -96,15 +97,15 @@ class ToastManager:
             rx, ry = self.root.winfo_x(), self.root.winfo_y()
             rw, rh = self.root.winfo_width(), self.root.winfo_height()
 
-            y = ry + rh - 40
+            y = ry + rh - 36
             for toast in reversed(self._active):
                 toast.update_idletasks()
-                tw = max(toast.winfo_reqwidth(), 320)
-                th = max(toast.winfo_reqheight(), 44)
-                x = rx + rw - tw - 24
+                tw = max(toast.winfo_reqwidth(), 300)
+                th = max(toast.winfo_reqheight(), 38)
+                x = rx + rw - tw - 20
                 y -= th
                 toast.geometry(f"{tw}x{th}+{x}+{y}")
-                y -= 8
+                y -= 6
         except Exception:
             pass
 

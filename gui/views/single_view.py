@@ -14,6 +14,7 @@ from PIL import Image
 from gui.theme import (
     COLOR_BG_CARD,
     COLOR_BG_CARD_VARIANT,
+    COLOR_BG_CARD_HOVER,
     COLOR_OUTLINE,
     COLOR_OUTLINE_VARIANT,
     COLOR_TEXT_PRIMARY,
@@ -26,6 +27,9 @@ from gui.theme import (
     COLOR_DANGER,
     FONT_FAMILY,
     FONT_FAMILY_MONO,
+    RADIUS_CARD,
+    RADIUS_BUTTON,
+    RADIUS_BADGE,
 )
 from gui.utils_ui import make_material_card, make_display_ctk_image, apply_colormap_to_image
 from utils import pixel_to_celsius
@@ -52,7 +56,7 @@ class SingleInspectView(ctk.CTkFrame):
         self.on_load_click = on_load_click
         self.current_result: Optional[dict[str, Any]] = None
         self.active_stage_key: str = "4. Erkannte Hotspots (Rust)"
-        self.palette_name: str = "Google Turbo"
+        self.palette_name: str = "Turbo"
 
         # ROI State
         self.roi_drag_start: Optional[tuple[int, int]] = None
@@ -66,29 +70,29 @@ class SingleInspectView(ctk.CTkFrame):
         self._build_ui()
 
     def _build_ui(self) -> None:
-        self.grid_columnconfigure(0, weight=3)
-        self.grid_columnconfigure(1, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_columnconfigure(1, weight=0, minsize=380)
         self.grid_rowconfigure(0, weight=1)
 
         # ── Linker Bereich: Bildanzeige ──────────────────────────────────────
-        self.canvas_card = make_material_card(self, corner_radius=20, fg_color=COLOR_BG_CARD)
-        self.canvas_card.grid(row=0, column=0, padx=(20, 10), pady=20, sticky="nsew")
+        self.canvas_card = make_material_card(self, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD)
+        self.canvas_card.grid(row=0, column=0, padx=(14, 6), pady=14, sticky="nsew")
 
         # Header mit Segmented Buttons & Quick Actions
-        top_bar = ctk.CTkFrame(self.canvas_card, fg_color="transparent", height=54)
-        top_bar.pack(fill=ctk.X, padx=20, pady=(14, 8))
+        top_bar = ctk.CTkFrame(self.canvas_card, fg_color="transparent", height=46)
+        top_bar.pack(fill=ctk.X, padx=14, pady=(10, 6))
         top_bar.pack_propagate(False)
 
-        # Segmented Stage Switcher Pills
+        # Segmented Stage Switcher
         self.stage_seg = ctk.CTkSegmentedButton(
             top_bar,
             values=[title for _, title in self.STAGES],
             command=self._on_segment_changed,
-            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
             selected_color=COLOR_PRIMARY,
             selected_hover_color=COLOR_PRIMARY_HOVER,
-            corner_radius=18,
-            height=36
+            corner_radius=RADIUS_BUTTON,
+            height=30
         )
         self.stage_seg.set("Hotspot-Overlay")
         self.stage_seg.pack(side=ctk.LEFT)
@@ -96,32 +100,36 @@ class SingleInspectView(ctk.CTkFrame):
         # Rechter Button: Snapshot exportieren
         self.snapshot_btn = ctk.CTkButton(
             top_bar,
-            text="📷  Snapshot speichern",
+            text="Snapshot exportieren",
             command=self.save_snapshot,
-            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
-            fg_color=COLOR_CONTAINER_BLUE,
-            hover_color=COLOR_OUTLINE,
-            text_color=COLOR_PRIMARY,
-            corner_radius=18,
-            height=36,
-            width=160
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            fg_color=COLOR_BG_CARD_VARIANT,
+            hover_color=COLOR_BG_CARD_HOVER,
+            text_color=COLOR_TEXT_PRIMARY,
+            border_width=1,
+            border_color=COLOR_OUTLINE,
+            corner_radius=RADIUS_BUTTON,
+            height=30,
+            width=140
         )
         self.snapshot_btn.pack(side=ctk.RIGHT)
 
         # Reset ROI Button
         self.reset_roi_btn = ctk.CTkButton(
             top_bar,
-            text="✕  ROI löschen",
+            text="ROI zurücksetzen",
             command=self.clear_roi,
-            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
             fg_color=COLOR_BG_CARD_VARIANT,
-            hover_color=COLOR_OUTLINE,
-            text_color=COLOR_TEXT_SECONDARY,
-            corner_radius=18,
-            height=36,
-            width=120
+            hover_color=COLOR_BG_CARD_HOVER,
+            text_color=COLOR_TEXT_MUTED,
+            border_width=1,
+            border_color=COLOR_OUTLINE,
+            corner_radius=RADIUS_BUTTON,
+            height=30,
+            width=110
         )
-        self.reset_roi_btn.pack(side=ctk.RIGHT, padx=(0, 10))
+        self.reset_roi_btn.pack(side=ctk.RIGHT, padx=(0, 6))
 
         ctk.CTkFrame(self.canvas_card, height=1, fg_color=COLOR_OUTLINE_VARIANT).pack(fill=ctk.X)
 
@@ -129,10 +137,10 @@ class SingleInspectView(ctk.CTkFrame):
         self.img_lbl = ctk.CTkLabel(
             self.canvas_card,
             text="Kein Bild geladen",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=14),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=13),
             text_color=COLOR_TEXT_MUTED
         )
-        self.img_lbl.pack(fill=ctk.BOTH, expand=True, padx=16, pady=(12, 6))
+        self.img_lbl.pack(fill=ctk.BOTH, expand=True, padx=10, pady=(8, 4))
 
         self.img_lbl.bind("<Motion>", self._on_mouse_move)
         self.img_lbl.bind("<Leave>", self._on_mouse_leave)
@@ -141,31 +149,31 @@ class SingleInspectView(ctk.CTkFrame):
         self.img_lbl.bind("<ButtonRelease-1>", self._on_mouse_up)
 
         # ── Rechter Bereich: Live Pixel & ROI Sidebar ────────────────────────
-        self.sidebar_card = make_material_card(self, corner_radius=20, fg_color=COLOR_BG_CARD)
-        self.sidebar_card.grid(row=0, column=1, padx=(10, 20), pady=20, sticky="nsew")
+        self.sidebar_card = make_material_card(self, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD)
+        self.sidebar_card.grid(row=0, column=1, padx=(6, 14), pady=14, sticky="nsew")
 
         side_scroll = ctk.CTkScrollableFrame(self.sidebar_card, fg_color="transparent")
-        side_scroll.pack(fill=ctk.BOTH, expand=True, padx=16, pady=16)
+        side_scroll.pack(fill=ctk.BOTH, expand=True, padx=12, pady=12)
 
         # 1. Live Fadenkreuz & Pixel Tooltip
         ctk.CTkLabel(
             side_scroll,
             text="LIVE-PIXELMESSUNG",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=10, weight="bold"),
             text_color=COLOR_TEXT_MUTED,
             anchor="w"
-        ).pack(fill=ctk.X, pady=(4, 8))
+        ).pack(fill=ctk.X, pady=(2, 6))
 
-        self.pixel_box = make_material_card(side_scroll, corner_radius=14, fg_color=COLOR_BG_CARD_VARIANT)
-        self.pixel_box.pack(fill=ctk.X, pady=(0, 18))
+        self.pixel_box = make_material_card(side_scroll, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD_VARIANT)
+        self.pixel_box.pack(fill=ctk.X, pady=(0, 14))
 
         p_inner = ctk.CTkFrame(self.pixel_box, fg_color="transparent")
-        p_inner.pack(fill=ctk.X, padx=18, pady=16)
+        p_inner.pack(fill=ctk.X, padx=14, pady=12)
 
         self.live_temp_lbl = ctk.CTkLabel(
             p_inner,
             text="--.- °C",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=28, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=24, weight="bold"),
             text_color=COLOR_TEXT_PRIMARY,
             anchor="w"
         )
@@ -174,45 +182,45 @@ class SingleInspectView(ctk.CTkFrame):
         self.live_coord_lbl = ctk.CTkLabel(
             p_inner,
             text="Koordinaten: X=--, Y=--",
-            font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=12),
+            font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=11),
             text_color=COLOR_TEXT_SECONDARY,
             anchor="w"
         )
-        self.live_coord_lbl.pack(fill=ctk.X, pady=(4, 0))
+        self.live_coord_lbl.pack(fill=ctk.X, pady=(2, 0))
 
         self.live_status_lbl = ctk.CTkLabel(
             p_inner,
-            text="Befund: Bewege Cursor über Bild",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=13),
+            text="Befund: Cursor über Bild bewegen",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
             text_color=COLOR_TEXT_MUTED,
             anchor="w"
         )
-        self.live_status_lbl.pack(fill=ctk.X, pady=(4, 0))
+        self.live_status_lbl.pack(fill=ctk.X, pady=(2, 0))
 
         # 2. ROI Messbox
         ctk.CTkLabel(
             side_scroll,
             text="REGION OF INTEREST (ROI)",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=10, weight="bold"),
             text_color=COLOR_TEXT_MUTED,
             anchor="w"
-        ).pack(fill=ctk.X, pady=(4, 8))
+        ).pack(fill=ctk.X, pady=(4, 6))
 
-        self.roi_card = make_material_card(side_scroll, corner_radius=14, fg_color=COLOR_BG_CARD_VARIANT)
-        self.roi_card.pack(fill=ctk.X, pady=(0, 18))
+        self.roi_card = make_material_card(side_scroll, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD_VARIANT)
+        self.roi_card.pack(fill=ctk.X, pady=(0, 14))
 
         r_inner = ctk.CTkFrame(self.roi_card, fg_color="transparent")
-        r_inner.pack(fill=ctk.X, padx=18, pady=16)
+        r_inner.pack(fill=ctk.X, padx=14, pady=12)
 
         self.roi_title_lbl = ctk.CTkLabel(
             r_inner,
             text="Rechteck mit Maus aufziehen",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=13, slant="italic"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
             text_color=COLOR_TEXT_MUTED,
             anchor="w",
-            wraplength=220
+            wraplength=200
         )
-        self.roi_title_lbl.pack(fill=ctk.X, pady=(0, 10))
+        self.roi_title_lbl.pack(fill=ctk.X, pady=(0, 8))
 
         self.roi_stats_rows = {}
         for key, name in [
@@ -223,36 +231,27 @@ class SingleInspectView(ctk.CTkFrame):
             ("area", "Fläche (Pixel):")
         ]:
             row = ctk.CTkFrame(r_inner, fg_color="transparent")
-            row.pack(fill=ctk.X, pady=4)
-            ctk.CTkLabel(row, text=name, font=ctk.CTkFont(family=FONT_FAMILY, size=13), text_color=COLOR_TEXT_SECONDARY).pack(side=ctk.LEFT)
-            lbl = ctk.CTkLabel(row, text="--", font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=13, weight="bold"), text_color=COLOR_TEXT_PRIMARY)
+            row.pack(fill=ctk.X, pady=2)
+            ctk.CTkLabel(row, text=name, font=ctk.CTkFont(family=FONT_FAMILY, size=12), text_color=COLOR_TEXT_SECONDARY).pack(side=ctk.LEFT)
+            lbl = ctk.CTkLabel(row, text="--", font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=12, weight="bold"), text_color=COLOR_TEXT_PRIMARY)
             lbl.pack(side=ctk.RIGHT)
             self.roi_stats_rows[key] = lbl
 
-        # 3. Quick Tipp
-        hint_card = make_material_card(side_scroll, corner_radius=14, fg_color=COLOR_BG_CARD_VARIANT)
-        hint_card.pack(fill=ctk.X, pady=(4, 0))
-        h_inner = ctk.CTkFrame(hint_card, fg_color="transparent")
-        h_inner.pack(fill=ctk.X, padx=18, pady=16)
+        # 3. Quick Tipp / Bedienhinweis
+        hint_box = ctk.CTkFrame(side_scroll, fg_color="transparent")
+        hint_box.pack(fill=ctk.X, pady=(4, 0))
 
         ctk.CTkLabel(
-            h_inner,
-            text="💡 Intuitive Gesten",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"),
-            text_color=COLOR_PRIMARY,
-            anchor="w"
-        ).pack(fill=ctk.X)
-        ctk.CTkLabel(
-            h_inner,
-            text="Ziehe mit gedrückter linker Maustaste ein beliebiges Rechteck auf, um Entzündungen punktgenau auszuwerten.",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
-            text_color=COLOR_TEXT_SECONDARY,
+            hint_box,
+            text="Bedienhinweis: Mit gedrückter linker Maustaste auf dem Wärmebild einen Messbereich aufziehen.",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+            text_color=COLOR_TEXT_MUTED,
             anchor="w",
-            wraplength=220,
+            wraplength=210,
             justify="left"
-        ).pack(fill=ctk.X, pady=(4, 0))
+        ).pack(fill=ctk.X)
 
-    def show_results(self, result: dict[str, Any], palette_name: str = "Google Turbo", target_stage: str | None = None) -> None:
+    def show_results(self, result: dict[str, Any], palette_name: str = "Turbo", target_stage: str | None = None) -> None:
         self.current_result = result
         self.palette_name = palette_name
         if target_stage:
@@ -302,8 +301,8 @@ class SingleInspectView(ctk.CTkFrame):
         self._rendered_pil = pil_img
 
         self.img_lbl.update_idletasks()
-        w = max(self.img_lbl.winfo_width() - 20, 300)
-        h = max(self.img_lbl.winfo_height() - 20, 200)
+        w = max(self.img_lbl.winfo_width() - 16, 300)
+        h = max(self.img_lbl.winfo_height() - 16, 200)
 
         orig_w, orig_h = pil_img.size
         ratio = min(w / orig_w, h / orig_h)
@@ -364,16 +363,16 @@ class SingleInspectView(ctk.CTkFrame):
         self.live_coord_lbl.configure(text=f"Koordinaten: X={x}, Y={y} (px={raw_val})")
 
         if is_hotspot:
-            self.live_status_lbl.configure(text="Befund: ⚠️ Hotspot detektiert", text_color=COLOR_DANGER)
+            self.live_status_lbl.configure(text="Befund: Hyperthermie / Hotspot", text_color=COLOR_DANGER)
         elif is_body:
-            self.live_status_lbl.configure(text="Befund: ✓ Physiologisches Gewebe", text_color=COLOR_SUCCESS)
+            self.live_status_lbl.configure(text="Befund: Physiologisches Gewebe", text_color=COLOR_SUCCESS)
         else:
             self.live_status_lbl.configure(text="Befund: Hintergrund / Umfeld", text_color=COLOR_TEXT_MUTED)
 
     def _on_mouse_leave(self, event) -> None:
         self.live_temp_lbl.configure(text="--.- °C")
         self.live_coord_lbl.configure(text="Koordinaten: X=--, Y=--")
-        self.live_status_lbl.configure(text="Befund: Bewege Cursor über Bild", text_color=COLOR_TEXT_MUTED)
+        self.live_status_lbl.configure(text="Befund: Cursor über Bild bewegen", text_color=COLOR_TEXT_MUTED)
 
     def _on_mouse_down(self, event) -> None:
         coords = self._event_to_img_coords(event)
@@ -428,7 +427,7 @@ class SingleInspectView(ctk.CTkFrame):
         max_c = pixel_to_celsius(max_px, t_min, t_max)
         area_px = (x2 - x1) * (y2 - y1)
 
-        self.roi_title_lbl.configure(text=f"Auswahl: {x2-x1}x{y2-y1} px", font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"), text_color=COLOR_PRIMARY)
+        self.roi_title_lbl.configure(text=f"Auswahl: {x2-x1}x{y2-y1} px", font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"), text_color=COLOR_TEXT_PRIMARY)
         self.roi_stats_rows["mean"].configure(text=f"{mean_c:.2f} °C")
         self.roi_stats_rows["std"].configure(text=f"±{std_c:.2f} °C")
         self.roi_stats_rows["min"].configure(text=f"{min_c:.1f} °C")
@@ -439,7 +438,7 @@ class SingleInspectView(ctk.CTkFrame):
         self.roi_box = None
         self.roi_drag_start = None
         self.roi_drag_current = None
-        self.roi_title_lbl.configure(text="Rechteck mit Maus aufziehen", font=ctk.CTkFont(family=FONT_FAMILY, size=13, slant="italic"), text_color=COLOR_TEXT_MUTED)
+        self.roi_title_lbl.configure(text="Rechteck mit Maus aufziehen", font=ctk.CTkFont(family=FONT_FAMILY, size=12), text_color=COLOR_TEXT_MUTED)
         for lbl in self.roi_stats_rows.values():
             lbl.configure(text="--")
         self.redraw()

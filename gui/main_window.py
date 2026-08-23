@@ -79,7 +79,7 @@ class IgniteApp:
         self.root.grid_rowconfigure(0, weight=0)  # Top App Bar
         self.root.grid_rowconfigure(1, weight=1)  # Main Workspace
         self.root.grid_rowconfigure(2, weight=0)  # Status Bar
-        self.root.grid_columnconfigure(0, weight=0)  # Navigation Rail
+        self.root.grid_columnconfigure(0, weight=0, minsize=230)  # Navigation Rail
         self.root.grid_columnconfigure(1, weight=1)  # View Container
 
         # ── 2. Top App Bar ───────────────────────────────────────────────────
@@ -167,10 +167,10 @@ class IgniteApp:
             x = (sw - w) // 2
             y = (sh - h) // 2
             self.root.geometry(f"{w}x{h}+{x}+{y}")
-            self.root.minsize(1000, 680)
+            self.root.minsize(1180, 720)
         except Exception:
             self.root.geometry("1300x840")
-            self.root.minsize(1000, 680)
+            self.root.minsize(1180, 720)
 
     def _set_app_icon(self) -> None:
         icon_path = get_resource_path(os.path.join("icon", "LogoRund.ico"))
@@ -434,24 +434,24 @@ class IgniteApp:
         self.root.after(50, self._redraw_active_view)
 
     def open_command_palette(self) -> None:
-        """Öffnet die Google Search-Style Befehlspalette."""
+        """Öffnet die Befehlspalette."""
         commands = [
             {"label": "Wärmebild öffnen…",              "desc": "Neue Infrarot-Aufnahme laden",         "shortcut": "Ctrl+O", "action": self.load_file},
-            {"label": "🧪 Demo: Diabetischer Fuß (Asymmetrie)", "desc": "Lade Testbild 4 (Asymmetrie-Befund)", "shortcut": "", "action": lambda: self.load_demo_image("test-data/bild (4).jpeg")},
-            {"label": "🧪 Demo: Entzündungsherd (Hotspot)",     "desc": "Lade Testbild 1 (Lokaler Hotspot)",   "shortcut": "", "action": lambda: self.load_demo_image("test-data/bild (1).jpeg")},
-            {"label": "🧪 Demo: Normalbefund (Symmetrisch)",    "desc": "Lade Testbild 15 (Physiologischer Fuß)","shortcut": "", "action": lambda: self.load_demo_image("test-data/bild (15).jpeg")},
+            {"label": "Beispiel: Diabetischer Fuß",      "desc": "Lade Testbild 4 (Asymmetrie-Befund)", "shortcut": "", "action": lambda: self.load_demo_image("test-data/bild (4).jpeg")},
+            {"label": "Beispiel: Entzündungsherd",      "desc": "Lade Testbild 1 (Lokaler Hotspot)",   "shortcut": "", "action": lambda: self.load_demo_image("test-data/bild (1).jpeg")},
+            {"label": "Beispiel: Normalbefund",         "desc": "Lade Testbild 15 (Physiologischer Fuß)","shortcut": "", "action": lambda: self.load_demo_image("test-data/bild (15).jpeg")},
             {"label": "Analyse neu berechnen",           "desc": "Pipeline mit aktuellen Parametern ausführen", "shortcut": "F5", "action": self.run_pipeline},
             {"label": "HTML-Befundbericht exportieren",  "desc": "Klinischen Bericht als HTML speichern", "shortcut": "Ctrl+E", "action": self.request_export_report},
             {"label": "Ansicht: Dashboard",              "desc": "4-Stufen Pipeline-Übersicht öffnen",   "shortcut": "",       "action": lambda: self.nav_rail.select_tab("dashboard")},
             {"label": "Ansicht: Inspektion & ROI",       "desc": "Einzelbild und ROI-Messung öffnen",    "shortcut": "",       "action": lambda: self.nav_rail.select_tab("single")},
             {"label": "Ansicht: Statistik-Histogramm",   "desc": "Temperatur-Verteilung und Metriken",   "shortcut": "",       "action": lambda: self.nav_rail.select_tab("analytics")},
             {"label": "Ansicht: Podologie & Zonen",      "desc": "3-Zonen Fußthermografie & Symmetrie",  "shortcut": "",       "action": lambda: self.nav_rail.select_tab("podology")},
-            {"label": "Ansicht: Stapelverarbeitung",     "desc": "Serienanalyse über Bildordner starten", "shortcut": "",       "action": lambda: self.nav_rail.select_tab("batch")},
+            {"label": "Ansicht: Serienanalyse",          "desc": "Stapelverarbeitung über Bildordner starten", "shortcut": "",       "action": lambda: self.nav_rail.select_tab("batch")},
             {"label": "Ansicht: Einstellungen",          "desc": "Algorithmus-Parameter anpassen",       "shortcut": "",       "action": lambda: self.nav_rail.select_tab("settings")},
-            {"label": "Farbpalette: Google Turbo",       "desc": "Moderne hochdynamische Turbo-Palette", "shortcut": "",       "action": lambda: self._on_palette_changed("Google Turbo")},
+            {"label": "Farbpalette: Turbo",              "desc": "Hochdynamische Turbo-Palette",         "shortcut": "",       "action": lambda: self._on_palette_changed("Turbo")},
             {"label": "Farbpalette: Graustufen",         "desc": "Monochrome Temperatur-Intensität",    "shortcut": "",       "action": lambda: self._on_palette_changed("Graustufen")},
             {"label": "Farbpalette: Inferno",            "desc": "Thermische Strahlungsfarben",          "shortcut": "",       "action": lambda: self._on_palette_changed("Inferno")},
-            {"label": "Design wechseln (Hell/Dunkel)",   "desc": "Google Light/Dark Theme umschalten",   "shortcut": "Ctrl+T", "action": self.toggle_appearance_mode},
+            {"label": "Design wechseln (Hell/Dunkel)",   "desc": "Erscheinungsmodus umschalten",         "shortcut": "Ctrl+T", "action": self.toggle_appearance_mode},
             {"label": "Bedienungsanleitung anzeigen",    "desc": "Dokumentation und Schnelleinstieg",    "shortcut": "",       "action": self.show_help_dialog},
             {"label": "Über IGNITE",                     "desc": "Versions- und Projektinformationen",   "shortcut": "",       "action": self.show_about_dialog},
         ]

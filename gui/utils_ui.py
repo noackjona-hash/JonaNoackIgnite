@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""gui/utils_ui.py – Google Material 3 / Material You UI Helper Utilities for IGNITE."""
+"""gui/utils_ui.py – UI Helper Utilities for IGNITE Medical Imaging Suite."""
 
 from __future__ import annotations
 import tkinter as tk
@@ -22,18 +22,21 @@ from gui.theme import (
     COLOR_CONTAINER_BLUE,
     FONT_FAMILY,
     FONT_FAMILY_MONO,
+    RADIUS_CARD,
+    RADIUS_BADGE,
+    RADIUS_BUTTON,
 )
 
 
 def make_material_card(
     master,
-    corner_radius: int = 20,
+    corner_radius: int = RADIUS_CARD,
     border_width: int = 1,
     border_color=COLOR_OUTLINE,
     fg_color=COLOR_BG_CARD,
     **kwargs
 ) -> ctk.CTkFrame:
-    """Erstellt eine flüssig gestaltete Google Material 3 / Material You Card."""
+    """Erstellt ein präzises, kontraststarkes Workstation-Panel."""
     return ctk.CTkFrame(
         master,
         corner_radius=corner_radius,
@@ -50,11 +53,11 @@ def make_status_chip(
     dot_color: str = COLOR_PRIMARY,
     bg_color=COLOR_CONTAINER_BLUE,
     text_color=COLOR_TEXT_PRIMARY,
-    corner_radius: int = 16,
-    height: int = 32,
+    corner_radius: int = RADIUS_BADGE,
+    height: int = 26,
     **kwargs
 ) -> ctk.CTkFrame:
-    """Erstellt ein elegantes Google Material Status-Pill Widget."""
+    """Erstellt ein kompaktes, professionelles Status-Badge."""
     chip = ctk.CTkFrame(
         master,
         fg_color=bg_color,
@@ -65,23 +68,22 @@ def make_status_chip(
     )
     chip.pack_propagate(False)
 
-    # Farbiger Status-Dot
     dot = ctk.CTkFrame(
         chip,
-        width=10,
-        height=10,
-        corner_radius=5,
+        width=7,
+        height=7,
+        corner_radius=3,
         fg_color=dot_color
     )
-    dot.pack(side=ctk.LEFT, padx=(12, 8), pady=4)
+    dot.pack(side=ctk.LEFT, padx=(8, 6), pady=4)
 
     lbl = ctk.CTkLabel(
         chip,
         text=text,
-        font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"),
+        font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
         text_color=text_color
     )
-    lbl.pack(side=ctk.LEFT, padx=(0, 14), pady=2)
+    lbl.pack(side=ctk.LEFT, padx=(0, 8), pady=2)
 
     return chip
 
@@ -98,9 +100,9 @@ def make_slider_setting(
     command: Optional[Callable[[float], None]] = None,
     is_percent: bool = False,
 ) -> tuple[ctk.CTkSlider, ctk.CTkLabel]:
-    """Erstellt eine geräumige Material 3 Schieberegler-Zeile."""
+    """Erstellt eine technische Parameter-Schiebereglerzeile."""
     row_frame = ctk.CTkFrame(master, fg_color="transparent")
-    row_frame.pack(fill=ctk.X, pady=10)
+    row_frame.pack(fill=ctk.X, pady=8)
 
     # Header-Zeile mit Titel & Badge
     header = ctk.CTkFrame(row_frame, fg_color="transparent")
@@ -109,7 +111,7 @@ def make_slider_setting(
     lbl_title = ctk.CTkLabel(
         header,
         text=title,
-        font=ctk.CTkFont(family=FONT_FAMILY, size=14, weight="bold"),
+        font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"),
         text_color=COLOR_TEXT_PRIMARY,
         anchor="w"
     )
@@ -129,12 +131,12 @@ def make_slider_setting(
     val_badge = ctk.CTkLabel(
         header,
         text=_fmt(default_val),
-        font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=13, weight="bold"),
+        font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=12, weight="bold"),
         text_color=COLOR_PRIMARY,
-        fg_color=COLOR_CONTAINER_BLUE,
-        corner_radius=10,
-        width=70,
-        height=28
+        fg_color=COLOR_BG_CARD_VARIANT,
+        corner_radius=RADIUS_BADGE,
+        width=64,
+        height=24
     )
     val_badge.pack(side=ctk.RIGHT)
 
@@ -142,13 +144,13 @@ def make_slider_setting(
         lbl_desc = ctk.CTkLabel(
             row_frame,
             text=description,
-            font=ctk.CTkFont(family=FONT_FAMILY, size=13),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
             text_color=COLOR_TEXT_MUTED,
             anchor="w",
             wraplength=480,
             justify="left"
         )
-        lbl_desc.pack(fill=ctk.X, pady=(2, 6))
+        lbl_desc.pack(fill=ctk.X, pady=(1, 4))
 
     # Callback wrapper
     def _on_slide(val: float):
@@ -166,13 +168,13 @@ def make_slider_setting(
         progress_color=COLOR_PRIMARY,
         button_color=COLOR_PRIMARY,
         button_hover_color=COLOR_PRIMARY_HOVER,
-        height=18,
-        button_length=18,
-        button_corner_radius=9,
+        height=16,
+        button_length=16,
+        button_corner_radius=4,
         command=_on_slide
     )
     slider.set(default_val)
-    slider.pack(fill=ctk.X, pady=(2, 4))
+    slider.pack(fill=ctk.X, pady=(2, 2))
 
     return slider, val_badge
 
@@ -182,7 +184,7 @@ def apply_colormap_to_image(img_gray: np.ndarray, colormap_name: str) -> np.ndar
     if len(img_gray.shape) == 3 and img_gray.shape[2] == 3:
         img_gray = cv2.cvtColor(img_gray, cv2.COLOR_RGB2GRAY)
 
-    if colormap_name in ("Google Turbo", "Turbo", "Regenbogen (Jet)", "Jet"):
+    if colormap_name in ("Turbo", "Google Turbo", "Regenbogen (Jet)", "Jet"):
         try:
             return cv2.applyColorMap(img_gray, cv2.COLORMAP_TURBO)
         except Exception:

@@ -50,7 +50,7 @@ class ExportService:
         notes: str = "",
         output_filepath: Optional[str] = None
     ) -> str:
-        """Erzeugt einen eigenständigen, modernen Google Material Design HTML-Befundbericht."""
+        """Erzeugt einen eigenständigen, modernen High-Contrast HTML-Befundbericht."""
         image_path = analysis_result.get("image_path", "Unbekannt")
         base_name = os.path.splitext(os.path.basename(image_path))[0]
 
@@ -87,6 +87,19 @@ class ExportService:
         delta_t = asym.get("delta_t_c", 0.0)
         is_asymmetric = asym.get("is_asymmetric", False)
 
+        tsi = analysis_result.get("tsi_results", {})
+        tsi_score = tsi.get("score", 0.0)
+        tsi_tier_name = tsi.get("tier_name", "Stufe 0: Physiologischer Normalbefund")
+        tsi_tier_desc = tsi.get("tier_desc", "Keine Auffälligkeiten.")
+        tsi_color = tsi.get("color", "#16A34A")
+
+        grads = analysis_result.get("gradient_results", {})
+        max_grad = grads.get("max_gradient", 0.0)
+
+        pca = analysis_result.get("pca_results")
+        pca_l_ang = pca.get("left", {}).get("angle_deg", 0.0) if pca else 0.0
+        pca_r_ang = pca.get("right", {}).get("angle_deg", 0.0) if pca else 0.0
+
         # Base64-Bilder einbetten
         b64_orig = cls._cv_to_base64(analysis_result.get("calibrated_original", np.zeros((10, 10), dtype=np.uint8)))
         b64_mask = cls._cv_to_base64(analysis_result.get("body_mask", np.zeros((10, 10), dtype=np.uint8)))
@@ -97,25 +110,25 @@ class ExportService:
         if analysis_mode == "Podologische Symmetrieanalyse":
             if is_asymmetric:
                 status_text = "Pathologische Asymmetrie (ΔT > 2.2 °C)"
-                status_color = "#EA4335"
-                status_bg = "#FCE8E6"
+                status_color = "#DC2626"
+                status_bg = "#FEF2F2"
             else:
                 status_text = "Physiologisch symmetrisch (Normalbefund)"
-                status_color = "#34A853"
-                status_bg = "#E6F4EA"
+                status_color = "#16A34A"
+                status_bg = "#F0FDF4"
         else:
             if hotspot_px >= 150:
                 status_text = "Klinisch auffällige Hyperthermie-Hotspots"
-                status_color = "#EA4335"
-                status_bg = "#FCE8E6"
+                status_color = "#DC2626"
+                status_bg = "#FEF2F2"
             elif hotspot_px > 0:
                 status_text = "Geringfügige thermische Abweichung"
-                status_color = "#E37400"
-                status_bg = "#FEF7E0"
+                status_color = "#D97706"
+                status_bg = "#FFFBEB"
             else:
                 status_text = "Unauffällig / Keine Entzündungsherde"
-                status_color = "#34A853"
-                status_bg = "#E6F4EA"
+                status_color = "#16A34A"
+                status_bg = "#F0FDF4"
 
         # Zonen-Tabelle HTML
         zonal = analysis_result.get("zonal_stats", {})
@@ -134,7 +147,7 @@ class ExportService:
             d_heel_c = abs(l_heel_c - r_heel_c)
 
             zonal_html = f"""
-            <div class="card" style="margin-top: 24px;">
+            <div class="card" style="margin-top: 20px;">
                 <div class="card-title">Podologischer 3-Zonen-Symmetrievergleich</div>
                 <table>
                     <thead>
@@ -151,21 +164,21 @@ class ExportService:
                             <td><strong>Vorfuß (Ballen / Zehen)</strong></td>
                             <td>{l_fore_c:.1f} °C</td>
                             <td>{r_fore_c:.1f} °C</td>
-                            <td><strong style="color: {'#EA4335' if d_fore_c > 2.2 else '#202124'};">{d_fore_c:.2f} °C</strong></td>
+                            <td><strong style="color: {'#DC2626' if d_fore_c > 2.2 else '#0F172A'};">{d_fore_c:.2f} °C</strong></td>
                             <td><span class="chip {'chip-danger' if d_fore_c > 2.2 else 'chip-success'}">{'Asymmetrie' if d_fore_c > 2.2 else 'Symmetrisch'}</span></td>
                         </tr>
                         <tr>
                             <td><strong>Mittelfuß (Längsgewölbe)</strong></td>
                             <td>{l_mid_c:.1f} °C</td>
                             <td>{r_mid_c:.1f} °C</td>
-                            <td><strong style="color: {'#EA4335' if d_mid_c > 2.2 else '#202124'};">{d_mid_c:.2f} °C</strong></td>
+                            <td><strong style="color: {'#DC2626' if d_mid_c > 2.2 else '#0F172A'};">{d_mid_c:.2f} °C</strong></td>
                             <td><span class="chip {'chip-danger' if d_mid_c > 2.2 else 'chip-success'}">{'Asymmetrie' if d_mid_c > 2.2 else 'Symmetrisch'}</span></td>
                         </tr>
                         <tr>
                             <td><strong>Ferse (Rückfuß)</strong></td>
                             <td>{l_heel_c:.1f} °C</td>
                             <td>{r_heel_c:.1f} °C</td>
-                            <td><strong style="color: {'#EA4335' if d_heel_c > 2.2 else '#202124'};">{d_heel_c:.2f} °C</strong></td>
+                            <td><strong style="color: {'#DC2626' if d_heel_c > 2.2 else '#0F172A'};">{d_heel_c:.2f} °C</strong></td>
                             <td><span class="chip {'chip-danger' if d_heel_c > 2.2 else 'chip-success'}">{'Asymmetrie' if d_heel_c > 2.2 else 'Symmetrisch'}</span></td>
                         </tr>
                     </tbody>
@@ -180,82 +193,82 @@ class ExportService:
     <title>IGNITE Befundbericht – {base_name}</title>
     <style>
         :root {{
-            --google-blue: #1A73E8;
-            --google-red: #EA4335;
-            --google-green: #34A853;
-            --google-yellow: #FBBC04;
-            --bg-app: #F8F9FA;
+            --primary: #0284C7;
+            --danger: #DC2626;
+            --success: #16A34A;
+            --warning: #D97706;
+            --bg-app: #F8FAFC;
             --surface: #FFFFFF;
-            --outline: #DADCE0;
-            --text-main: #202124;
-            --text-secondary: #5F6368;
+            --surface-variant: #F1F5F9;
+            --outline: #E2E8F0;
+            --text-main: #0F172A;
+            --text-secondary: #475569;
+            --text-muted: #64748B;
         }}
-        * {{ box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }}
+        * {{ box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }}
         body {{ background-color: var(--bg-app); color: var(--text-main); padding: 32px 16px; line-height: 1.5; }}
-        .container {{ max-width: 980px; margin: 0 auto; }}
+        .container {{ max-width: 960px; margin: 0 auto; }}
         
         /* Header */
         .app-header {{
             background: var(--surface);
             border: 1px solid var(--outline);
-            border-radius: 16px;
-            padding: 24px 28px;
+            border-radius: 8px;
+            padding: 20px 24px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
-            box-shadow: 0 1px 3px rgba(60,64,67,0.08);
+            margin-bottom: 16px;
         }}
-        .brand-title {{ font-size: 22px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 8px; }}
-        .brand-dot {{ width: 10px; height: 10px; border-radius: 50%; background-color: var(--google-blue); display: inline-block; }}
-        .brand-sub {{ font-size: 13px; color: var(--text-secondary); margin-top: 2px; }}
+        .brand-title {{ font-size: 20px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 8px; }}
+        .brand-dot {{ width: 8px; height: 8px; border-radius: 4px; background-color: var(--primary); display: inline-block; }}
+        .brand-sub {{ font-size: 12px; color: var(--text-muted); margin-top: 2px; }}
         
         /* Cards */
         .card {{
             background: var(--surface);
             border: 1px solid var(--outline);
-            border-radius: 16px;
-            padding: 24px 28px;
-            margin-bottom: 20px;
-            box-shadow: 0 1px 3px rgba(60,64,67,0.08);
+            border-radius: 8px;
+            padding: 20px 24px;
+            margin-bottom: 16px;
         }}
         .card-title {{
-            font-size: 15px;
+            font-size: 14px;
             font-weight: 700;
             color: var(--text-main);
-            margin-bottom: 16px;
+            margin-bottom: 14px;
             display: flex;
             align-items: center;
             gap: 8px;
         }}
         
         /* Grids */
-        .meta-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }}
-        .meta-item {{ background: #F8F9FA; padding: 12px 16px; border-radius: 10px; border: 1px solid #E8EAED; }}
-        .meta-label {{ font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); font-weight: 600; }}
-        .meta-val {{ font-size: 14px; font-weight: 600; color: var(--text-main); margin-top: 4px; }}
+        .meta-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }}
+        .meta-item {{ background: var(--surface-variant); padding: 10px 14px; border-radius: 6px; border: 1px solid var(--outline); }}
+        .meta-label {{ font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); font-weight: 600; }}
+        .meta-val {{ font-size: 13px; font-weight: 600; color: var(--text-main); margin-top: 2px; }}
         
         /* Chips */
-        .chip {{ display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }}
-        .chip-success {{ background: #E6F4EA; color: #137333; }}
-        .chip-danger {{ background: #FCE8E6; color: #C5221F; }}
-        .chip-warning {{ background: #FEF7E0; color: #B06000; }}
-        .chip-blue {{ background: #E8F0FE; color: #174EA6; }}
+        .chip {{ display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }}
+        .chip-success {{ background: #DCFCE7; color: #166534; }}
+        .chip-danger {{ background: #FEE2E2; color: #991B1B; }}
+        .chip-warning {{ background: #FEF3C7; color: #92400E; }}
+        .chip-blue {{ background: #E0F2FE; color: #075985; }}
         
         /* Image Grid */
-        .img-grid {{ display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 12px; }}
-        .img-card {{ background: #F8F9FA; border: 1px solid #E8EAED; border-radius: 12px; padding: 12px; text-align: center; }}
-        .img-card img {{ width: 100%; height: auto; border-radius: 8px; display: block; }}
-        .img-caption {{ font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-top: 8px; }}
+        .img-grid {{ display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 8px; }}
+        .img-card {{ background: var(--surface-variant); border: 1px solid var(--outline); border-radius: 6px; padding: 10px; text-align: center; }}
+        .img-card img {{ width: 100%; height: auto; border-radius: 4px; display: block; }}
+        .img-caption {{ font-size: 11px; font-weight: 600; color: var(--text-secondary); margin-top: 6px; }}
         
         /* Table */
-        table {{ width: 100%; border-collapse: collapse; margin-top: 10px; }}
-        th, td {{ padding: 12px 16px; text-align: left; font-size: 13px; border-bottom: 1px solid var(--outline); }}
-        th {{ background-color: #F8F9FA; font-weight: 600; color: var(--text-secondary); font-size: 11px; text-transform: uppercase; }}
+        table {{ width: 100%; border-collapse: collapse; margin-top: 8px; }}
+        th, td {{ padding: 10px 14px; text-align: left; font-size: 12px; border-bottom: 1px solid var(--outline); }}
+        th {{ background-color: var(--surface-variant); font-weight: 600; color: var(--text-secondary); font-size: 11px; text-transform: uppercase; }}
         tr:last-child td {{ border-bottom: none; }}
         
         /* Footer */
-        .footer {{ text-align: center; font-size: 11px; color: var(--text-secondary); padding: 24px 0 10px; }}
+        .footer {{ text-align: center; font-size: 11px; color: var(--text-muted); padding: 20px 0 8px; }}
         
         @media print {{
             body {{ padding: 0; background: #FFF; }}
@@ -273,7 +286,7 @@ class ExportService:
             </div>
             <div style="text-align: right;">
                 <span class="chip chip-blue">{backend}</span>
-                <div style="font-size: 12px; color: var(--text-secondary); margin-top: 6px;">{now_str}</div>
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">{now_str}</div>
             </div>
         </div>
 
@@ -303,12 +316,12 @@ class ExportService:
         <!-- Diagnostische Ergebnisse Card -->
         <div class="card">
             <div class="card-title">Quantitative Analyse & Befund</div>
-            <div style="background: {status_bg}; border: 1px solid {status_color}30; border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="background: {status_bg}; border: 1px solid {status_color}40; border-radius: 6px; padding: 14px 18px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
                 <div>
                     <div style="font-size: 11px; text-transform: uppercase; font-weight: 700; color: {status_color};">Globales Fazit</div>
-                    <div style="font-size: 16px; font-weight: 700; color: {status_color}; margin-top: 2px;">{status_text}</div>
+                    <div style="font-size: 15px; font-weight: 700; color: {status_color}; margin-top: 2px;">{status_text}</div>
                 </div>
-                <span class="chip" style="background: {status_color}; color: #FFF; font-size: 12px; padding: 6px 14px;">
+                <span class="chip" style="background: {status_color}; color: #FFF; font-size: 11px; padding: 4px 10px;">
                     ΔT = {delta_t:.1f} °C
                 </span>
             </div>
@@ -329,6 +342,24 @@ class ExportService:
                 <div class="meta-item">
                     <div class="meta-label">Hotspot-Fläche</div>
                     <div class="meta-val">{hotspot_px:,} px ({hotspot_ratio:.2f} %)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Thermal Severity Index & Risiko-Klassifikation -->
+        <div class="card">
+            <div class="card-title">Klinischer Thermal Severity Index (TSI) & IWGDF-Risiko</div>
+            <div style="display: flex; gap: 16px; align-items: center; background: var(--surface-variant); padding: 14px 18px; border-radius: 6px; border: 1px solid var(--outline);">
+                <div style="font-size: 26px; font-weight: 800; font-family: monospace; color: {tsi_color};">
+                    {tsi_score:.1f} <span style="font-size: 13px; font-weight: 500; color: var(--text-muted);">/ 10</span>
+                </div>
+                <div style="flex: 1;">
+                    <div style="font-size: 13px; font-weight: 700; color: {tsi_color};">{tsi_tier_name}</div>
+                    <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">{tsi_tier_desc}</div>
+                </div>
+                <div style="text-align: right; font-size: 11px; color: var(--text-muted);">
+                    <div>Therm. Gradient: <strong>{max_grad:.1f}</strong></div>
+                    <div>PCA-Achsen: <strong>L {pca_l_ang:+.1f}° · R {pca_r_ang:+.1f}°</strong></div>
                 </div>
             </div>
         </div>
@@ -413,10 +444,10 @@ class ExportService:
             rows += f"""
             <tr>
                 <td><strong>{fname}</strong></td>
-                <td><strong style="color: {'#EA4335' if hotspot_px > 0 else '#34A853'};">{hotspot_px:,} px</strong></td>
+                <td><strong style="color: {'#DC2626' if hotspot_px > 0 else '#16A34A'};">{hotspot_px:,} px</strong></td>
                 <td>{delta_t:.2f} °C</td>
                 <td><span class="chip {badge_class}">{status_text}</span></td>
-                <td><a href="{report_name}" style="color: #1A73E8; text-decoration: none; font-weight: 600;">Bericht öffnen &rarr;</a></td>
+                <td><a href="{report_name}" style="color: #0284C7; text-decoration: none; font-weight: 600;">Bericht öffnen &rarr;</a></td>
             </tr>"""
 
         html = f"""<!DOCTYPE html>
@@ -425,17 +456,17 @@ class ExportService:
     <meta charset="UTF-8">
     <title>IGNITE Stapelverarbeitungs-Übersicht</title>
     <style>
-        body {{ font-family: 'Segoe UI', Roboto, sans-serif; background: #F8F9FA; color: #202124; padding: 40px 20px; }}
-        .container {{ max-width: 1000px; margin: 0 auto; background: #FFF; border: 1px solid #DADCE0; border-radius: 16px; padding: 32px; box-shadow: 0 1px 3px rgba(60,64,67,0.08); }}
-        .header {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #E8EAED; padding-bottom: 20px; margin-bottom: 24px; }}
-        .title {{ font-size: 24px; font-weight: 700; color: #202124; }}
-        .sub {{ font-size: 13px; color: #5F6368; }}
-        table {{ width: 100%; border-collapse: collapse; margin-top: 16px; }}
-        th, td {{ padding: 14px 16px; text-align: left; border-bottom: 1px solid #DADCE0; font-size: 13px; }}
-        th {{ background: #F8F9FA; color: #5F6368; font-weight: 600; text-transform: uppercase; font-size: 11px; }}
-        .chip {{ display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }}
-        .chip-success {{ background: #E6F4EA; color: #137333; }}
-        .chip-danger {{ background: #FCE8E6; color: #C5221F; }}
+        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #F8FAFC; color: #0F172A; padding: 32px 16px; }}
+        .container {{ max-width: 960px; margin: 0 auto; background: #FFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 24px; }}
+        .header {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #E2E8F0; padding-bottom: 16px; margin-bottom: 20px; }}
+        .title {{ font-size: 20px; font-weight: 700; color: #0F172A; }}
+        .sub {{ font-size: 12px; color: #64748B; }}
+        table {{ width: 100%; border-collapse: collapse; margin-top: 12px; }}
+        th, td {{ padding: 10px 14px; text-align: left; border-bottom: 1px solid #E2E8F0; font-size: 12px; }}
+        th {{ background: #F1F5F9; color: #475569; font-weight: 600; text-transform: uppercase; font-size: 11px; }}
+        .chip {{ display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }}
+        .chip-success {{ background: #DCFCE7; color: #166534; }}
+        .chip-danger {{ background: #FEE2E2; color: #991B1B; }}
     </style>
 </head>
 <body>
@@ -443,9 +474,9 @@ class ExportService:
         <div class="header">
             <div>
                 <div class="title">IGNITE Serienuntersuchungs-Bericht</div>
-                <div class="sub">{len(results_list)} Wärmebilder erfolgreich automatisiert analysiert</div>
+                <div class="sub">{len(results_list)} Wärmebilder erfolgreich analysiert</div>
             </div>
-            <div style="font-size: 12px; color: #5F6368;">Erstellt: <strong>{now_str}</strong></div>
+            <div style="font-size: 12px; color: #64748B;">Erstellt: <strong>{now_str}</strong></div>
         </div>
         <table>
             <thead>

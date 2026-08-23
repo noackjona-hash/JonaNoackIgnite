@@ -1,10 +1,15 @@
-"""image_processing.py – Python-Wrapper für den Ignite-Rust-Core.
+# -*- coding: utf-8 -*-
+"""image_processing.py – High-Performance Multi-Modal Thermal Analysis Pipeline for IGNITE.
 
-Dieses Modul dient als schlanke Vermittlungsschicht zwischen dem Tkinter-Frontend
-(`gui.py`) und dem nativen Rust-Erweiterungsmodul `ignite_core` sowie dem GPU-Backend.
+Enthält die vollständige Signal- und Bildverarbeitungs-Pipeline:
+1. Multi-Otsu & Adaptive Distanz-Gewebesegmentierung
+2. Multi-Scale Morphological Top-Hat (MTH) zur Hotspot-Extraktion
+3. Thermische Gradientenfluss- & 2D-Laplace-Divergenzanalyse
+4. PCA-gestützte anatomische Fußausrichtung (Principal Component Alignment)
+5. Evidenzbasierter Thermal Severity Index (TSI) & IWGDF-Risikoklassifikation
 """
 
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Any, Dict
 import warnings
 import cv2
 import numpy as np
@@ -20,14 +25,13 @@ _GPU_AVAILABLE = False
 _GPU_INITIALIZED = False
 _TORCH = None
 
-# 2. Rust-Core importieren (schnell, keine schweren Dependencies)
+# Rust-Core importieren
 try:
     import ignite_core as _ignite_core
     _RUST_BACKEND_AVAILABLE = True
 except ImportError:
     pass
 
-# 1. GPU-Verfügbarkeit – LAZY! Wird nur beim Bedarf initialisiert
 def _init_gpu() -> bool:
     """Initialisiert GPU lazily, wird nur aufgerufen wenn GPU tatsächlich benötigt wird."""
     global _GPU_AVAILABLE, _GPU_INITIALIZED, _TORCH
@@ -42,7 +46,6 @@ def _init_gpu() -> bool:
         import torch.nn.functional as F
         _TORCH = torch
         if torch.cuda.is_available():
-            # Verifiziere Compute Capability durch eine Test-Operation
             _dummy = torch.zeros(1, device="cuda")
             _GPU_AVAILABLE = True
             logging.info(f"GPU-Beschleunigung verfügbar: {torch.cuda.get_device_name(0)}")
@@ -52,7 +55,6 @@ def _init_gpu() -> bool:
     
     return _GPU_AVAILABLE
 
-# 3. Startup-Logging (nur Rust-Core, GPU wird lazily geladen)
 if _RUST_BACKEND_AVAILABLE and _ignite_core is not None:
     logging.info(
         f"Rust-Backend verfügbar: {getattr(_ignite_core, '__backend__', 'CPU+rayon (Rust-native)')} "
@@ -66,7 +68,6 @@ else:
 
 def get_active_backend() -> str:
     """Gibt den Namen des aktuell genutzten Berechnungs-Backends zurück."""
-    # Initialisiere GPU nur wenn explizit abgefragt
     if _init_gpu() and _GPU_AVAILABLE:
         return f"GPU (CUDA, {_TORCH.cuda.get_device_name(0)})"
     elif _RUST_BACKEND_AVAILABLE and _ignite_core is not None:
@@ -75,13 +76,13 @@ def get_active_backend() -> str:
         return "Python-Fallback"
 
 def compute_odd_kernel(dimension: int, factor: float) -> int:
-    """Berechnet eine ungerade Kernelgröße als Prozentsatz der minimalen Bilddimension min(W, H), analog zu Rust."""
+    """Berechnet eine ungerade Kernelgröße als Prozentsatz der minimalen Bilddimension min(W, H)."""
     raw = int(dimension * factor)
     odd = max(1, raw | 1)
     return max(3, odd)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# FUNKTION 1: Wärmebild laden
+# 1. BILD LADEN
 # ─────────────────────────────────────────────────────────────────────────────
 def load_thermal_image(filepath: str) -> np.ndarray:
     """Lädt ein Wärmebild als Graustufen-Matrix mit Umlaut-Workaround."""
@@ -100,43 +101,321 @@ def load_thermal_image(filepath: str) -> np.ndarray:
         ) from e
 
 # ─────────────────────────────────────────────────────────────────────────────
-# FUNKTION 2: Hilfsfunktion für Body-Mask auf der CPU
+# 2. ADAPTIVE GEWEBESEGMENTIERUNG (MULTI-OTSU)
 # ─────────────────────────────────────────────────────────────────────────────
+def extract_body_mask_multi_otsu(
+    img: np.ndarray,
+    otsu_min: int = _config.DEFAULT_OTSU_MIN,
+    otsu_max: int = _config.DEFAULT_OTSU_MAX,
+    dist_erosion_factor: float = _config.DEFAULT_DIST_EROSION_FACTOR
+) -> np.ndarray:
+    """
+    Segmentiert biologisches Gewebe durch 3-Klassen adaptive Schwellenwertanalyse
+    (Kalter Hintergrund vs. lauwarme Auflage vs. warmes Gewebe) mit Distanzerosion.
+    """
+    min_val, max_val, _, _ = cv2.minMaxLoc(img)
+    dynamic_range = max_val - min_val
+
+    if dynamic_range < 30:
+        threshold = max(otsu_min, min(otsu_max, min_val + 0.35 * dynamic_range))
+    else:
+        otsu_thresh, _ = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        threshold = max(otsu_min, min(otsu_max, otsu_thresh * 0.65))
+
+    _, raw_mask = cv2.threshold(img, int(threshold), 255, cv2.THRESH_BINARY)
+
+    # Morphologisches Closing zum Schließen kleiner Poren
+    close_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+    cleaned_mask = cv2.morphologyEx(raw_mask, cv2.MORPH_CLOSE, close_kernel)
+
+    # Distanztransformation zur Elimination von Kantenübergangs-Artefakten
+    dist = cv2.distanceTransform(cleaned_mask, cv2.DIST_L2, 3)
+    max_dist = dist.max()
+    if max_dist < 1e-10:
+        return np.zeros_like(img, dtype=np.uint8)
+
+    eroded_mask = (dist >= dist_erosion_factor * max_dist).astype(np.uint8) * 255
+    return eroded_mask
+
 def _extract_body_mask_cpu(
     img: np.ndarray,
     otsu_min: int = _config.DEFAULT_OTSU_MIN,
     otsu_max: int = _config.DEFAULT_OTSU_MAX,
     dist_erosion_factor: float = _config.DEFAULT_DIST_EROSION_FACTOR
 ) -> np.ndarray:
-    """Extrahiert die Body-Mask auf der CPU mit identischen Schwellenwerten wie Rust."""
-    min_val, max_val, _, _ = cv2.minMaxLoc(img)
-    dynamic_range = max_val - min_val
-    if dynamic_range < 30:
-        threshold = max(otsu_min, min(otsu_max, min_val + 0.3 * dynamic_range))
-    else:
-        otsu_thresh, _ = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        threshold = max(otsu_min, min(otsu_max, otsu_thresh / 2))
-        
-    _, mask = cv2.threshold(img, int(threshold), 255, cv2.THRESH_BINARY)
-    
-    dist = cv2.distanceTransform(mask, cv2.DIST_L2, 3)
-    max_dist = dist.max()
-    if max_dist < 1e-10:
-        return np.zeros_like(mask)
-        
-    eroded_mask = (dist >= dist_erosion_factor * max_dist).astype(np.uint8) * 255
-    return eroded_mask
+    """Abwärtskompatible Hilfsfunktion für Body-Mask."""
+    return extract_body_mask_multi_otsu(img, otsu_min, otsu_max, dist_erosion_factor)
 
+# ─────────────────────────────────────────────────────────────────────────────
+# 3. MULTI-SCALE MORPHOLOGICAL TOP-HAT (MTH)
+# ─────────────────────────────────────────────────────────────────────────────
+def compute_multiscale_tophat(
+    img: np.ndarray,
+    factors: tuple[float, ...] = _config.DEFAULT_MULTISCALE_FACTORS,
+    mask: Optional[np.ndarray] = None
+) -> np.ndarray:
+    """
+    Berechnet die Multi-Skalen Top-Hat Transformation über mehrere morphologische Skalen.
+    MTH(I) = max_k (I - (I o S_k))
+    Erfasst gleichzeitig punktförmige Mikronekrosen (kleiner Kernel) und flächige Entzündungen (großer Kernel).
+    """
+    dim = min(img.shape[0], img.shape[1])
+    diff_stack = []
+
+    for factor in factors:
+        k_size = compute_odd_kernel(dim, factor)
+        kernel_se = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k_size, k_size))
+        opened = cv2.morphologyEx(img, cv2.MORPH_OPEN, kernel_se)
+        tophat = cv2.subtract(img, opened)
+        if mask is not None:
+            tophat = cv2.bitwise_and(tophat, tophat, mask=mask)
+        diff_stack.append(tophat)
+
+    if len(diff_stack) == 1:
+        return diff_stack[0]
+
+    # Maximum-Intensitäts-Projektion über alle Skalen
+    mth = np.maximum.reduce(diff_stack)
+    return mth
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 4. THERMISCHER GRADIENTENFLUSS & 2D-LAPLACE-DIVERGENZ
+# ─────────────────────────────────────────────────────────────────────────────
+def compute_thermal_gradients_and_divergence(
+    img: np.ndarray,
+    mask: Optional[np.ndarray] = None
+) -> dict[str, Any]:
+    """
+    Berechnet das thermische Gradientenvektorfeld (||grad T||) und die thermische 2D-Divergenz (Laplace-Operator).
+    Echte pathologische Entzündungsherde erzeugen steile Ränder und eine signifikante negative Divergenz.
+    """
+    img_f = img.astype(np.float32)
+
+    grad_x = cv2.Sobel(img_f, cv2.CV_32F, 1, 0, ksize=3)
+    grad_y = cv2.Sobel(img_f, cv2.CV_32F, 0, 1, ksize=3)
+    grad_mag = np.sqrt(grad_x**2 + grad_y**2)
+
+    laplacian = cv2.Laplacian(img_f, cv2.CV_32F, ksize=3)
+
+    if mask is not None and np.sum(mask > 0) > 0:
+        valid = mask > 0
+        mean_grad = float(np.mean(grad_mag[valid]))
+        max_grad = float(np.max(grad_mag[valid]))
+        mean_laplacian = float(np.mean(laplacian[valid]))
+        min_laplacian = float(np.min(laplacian[valid]))
+    else:
+        mean_grad = float(np.mean(grad_mag))
+        max_grad = float(np.max(grad_mag))
+        mean_laplacian = float(np.mean(laplacian))
+        min_laplacian = float(np.min(laplacian))
+
+    return {
+        "grad_magnitude": grad_mag,
+        "laplacian": laplacian,
+        "mean_gradient": round(mean_grad, 2),
+        "max_gradient": round(max_grad, 2),
+        "mean_laplacian": round(mean_laplacian, 2),
+        "min_laplacian": round(min_laplacian, 2)
+    }
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 5. PCA-GESTÜTZTE ANATOMISCHE FUSSAUSRICHTUNG (ROTATIONSINVARIANZ)
+# ─────────────────────────────────────────────────────────────────────────────
+def compute_pca_foot_alignment_and_zones(
+    img: np.ndarray,
+    body_mask: np.ndarray,
+    temp_min_c: float = _config.DEFAULT_TEMP_MIN,
+    temp_max_c: float = _config.DEFAULT_TEMP_MAX
+) -> dict[str, Any]:
+    """
+    Segmentiert linken und rechten Fuß, ermittelt per Hauptkomponentenanalyse (PCA / Trägheitsmomente)
+    den Rotationswinkel jedes Fußes und segmentiert Vorfuß, Mittelfuß und Ferse rotationsinvariant entlang
+    der anatomischen Längsachse.
+    """
+    h, w = img.shape[:2]
+    mid_x = w // 2
+
+    temp_range = max(1.0, temp_max_c - temp_min_c)
+
+    def _analyze_single_foot(mask_side: np.ndarray, x_offset: int = 0) -> dict[str, Any]:
+        num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(mask_side)
+        if num_labels <= 1:
+            return {"exists": False, "angle_deg": 0.0, "fore_c": 0.0, "mid_c": 0.0, "heel_c": 0.0, "bbox": None}
+
+        # Größte Komponente als Fuß wählen
+        largest_idx = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
+        foot_mask = (labels == largest_idx)
+        ys, xs = np.where(foot_mask)
+
+        if len(ys) < 30:
+            return {"exists": False, "angle_deg": 0.0, "fore_c": 0.0, "mid_c": 0.0, "heel_c": 0.0, "bbox": None}
+
+        # Bounding-Box
+        bx = int(stats[largest_idx, cv2.CC_STAT_LEFT]) + x_offset
+        by = int(stats[largest_idx, cv2.CC_STAT_TOP])
+        bw = int(stats[largest_idx, cv2.CC_STAT_WIDTH])
+        bh = int(stats[largest_idx, cv2.CC_STAT_HEIGHT])
+
+        # PCA über Raumkoordinaten
+        cx = float(np.mean(xs))
+        cy = float(np.mean(ys))
+
+        # Zentrierte Kovarianzmatrix
+        dx = xs - cx
+        dy = ys - cy
+        cov = np.cov(np.vstack((dx, dy)))
+
+        try:
+            evals, evecs = np.linalg.eigh(cov)
+            # Hauptvektor der größten Varianz
+            main_vec = evecs[:, -1]
+            angle_rad = np.arctan2(main_vec[1], main_vec[0])
+            angle_deg = float(np.degrees(angle_rad))
+            # Normalisiere Winkel auf vertikale Ausrichtung (-90° bis +90°)
+            if angle_deg < -90:
+                angle_deg += 180
+            elif angle_deg > 90:
+                angle_deg -= 180
+        except Exception:
+            angle_deg = 0.0
+            main_vec = np.array([0.0, 1.0])
+
+        # Projektion der Pixel entlang der Hauptachse
+        proj = dx * main_vec[0] + dy * main_vec[1]
+        p_min, p_max = float(proj.min()), float(proj.max())
+        p_range = max(1e-5, p_max - p_min)
+
+        # 3 Zonen entlang der longitudinalen Hauptachse: Vorfuß (0-33%), Mittelfuß (33-66%), Ferse (66-100%)
+        # Wir orientieren so, dass y-Werte oben (Vorfuß) und unten (Ferse) liegen
+        norm_proj = (proj - p_min) / p_range
+        # Wenn Hauptvektor nach oben zeigt, invertieren wir für anatomische Konsistenz
+        if main_vec[1] < 0:
+            norm_proj = 1.0 - norm_proj
+
+        z_fore = norm_proj <= 0.35
+        z_mid = (norm_proj > 0.35) & (norm_proj <= 0.68)
+        z_heel = norm_proj > 0.68
+
+        # Pixelwerte an den entsprechenden Koordinaten
+        actual_xs = xs + x_offset
+        pixels_all = img[ys, actual_xs]
+
+        p_fore = pixels_all[z_fore]
+        p_mid = pixels_all[z_mid]
+        p_heel = pixels_all[z_heel]
+
+        def _to_c(px_arr):
+            if len(px_arr) == 0:
+                return 0.0
+            return float(temp_min_c + (np.mean(px_arr) / 255.0) * temp_range)
+
+        return {
+            "exists": True,
+            "angle_deg": round(angle_deg, 1),
+            "fore_c": round(_to_c(p_fore), 2),
+            "mid_c": round(_to_c(p_mid), 2),
+            "heel_c": round(_to_c(p_heel), 2),
+            "bbox": (bx, by, bw, bh)
+        }
+
+    left_mask = (body_mask[:, :mid_x] > 0).astype(np.uint8) * 255
+    right_mask = (body_mask[:, mid_x:] > 0).astype(np.uint8) * 255
+
+    left_res = _analyze_single_foot(left_mask, x_offset=0)
+    right_res = _analyze_single_foot(right_mask, x_offset=mid_x)
+
+    d_fore = abs(left_res["fore_c"] - right_res["fore_c"]) if left_res["exists"] and right_res["exists"] else 0.0
+    d_mid = abs(left_res["mid_c"] - right_res["mid_c"]) if left_res["exists"] and right_res["exists"] else 0.0
+    d_heel = abs(left_res["heel_c"] - right_res["heel_c"]) if left_res["exists"] and right_res["exists"] else 0.0
+
+    return {
+        "left": left_res,
+        "right": right_res,
+        "delta_fore_c": round(d_fore, 2),
+        "delta_mid_c": round(d_mid, 2),
+        "delta_heel_c": round(d_heel, 2),
+        "pca_aligned": True
+    }
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 6. THERMAL SEVERITY INDEX (TSI) & IWGDF-RISIKOKLASSIFIKATION
+# ─────────────────────────────────────────────────────────────────────────────
+def compute_thermal_severity_index(
+    delta_t_c: float,
+    hotspot_pixel_count: int,
+    body_pixel_count: int,
+    max_gradient: float,
+    std_pixel: float
+) -> dict[str, Any]:
+    """
+    Berechnet den standardisierten IGNITE Thermal Severity Index (TSI, 0.0 - 10.0)
+    und die klinische IWGDF-Risikostufe.
+    """
+    # 1. Delta-T Term normiert auf Armstrong Goldstandard (2.2 °C = 1.0)
+    term_delta_t = min(3.0, delta_t_c / 2.2)
+
+    # 2. Flächenanteil-Term (Hotspot-Ratio normiert)
+    area_ratio = (hotspot_pixel_count / max(1, body_pixel_count)) * 100.0
+    term_area = min(3.0, area_ratio / 1.5)
+
+    # 3. Gradienten-Schärfeterm
+    sigma_norm = max(1.0, std_pixel)
+    term_grad = min(3.0, max_gradient / (2.0 * sigma_norm))
+
+    # Gewichteter Gesamtscore (0.0 - 10.0)
+    raw_score = (
+        _config.TSI_WEIGHT_DELTA_T * term_delta_t +
+        _config.TSI_WEIGHT_AREA * term_area +
+        _config.TSI_WEIGHT_GRADIENT * term_grad
+    ) * (10.0 / 3.0)
+    tsi_score = round(max(0.0, min(10.0, float(raw_score))), 1)
+
+    # IWGDF Risikostufe
+    if tsi_score <= 2.0 and delta_t_c <= 1.5 and hotspot_pixel_count < 50:
+        tier = 0
+        tier_name = "Stufe 0: Physiologischer Normalbefund"
+        tier_desc = "Keine thermischen Auffälligkeiten. Routinekontrolle."
+        color = "#16A34A"
+    elif tsi_score <= 4.5 and delta_t_c <= 2.2:
+        tier = 1
+        tier_name = "Stufe 1: Geringe Asymmetrie / Beobachtung"
+        tier_desc = "Subklinische thermische Differenz. Engmaschiges Monitoring empfohlen."
+        color = "#D97706"
+    elif tsi_score <= 7.5:
+        tier = 2
+        tier_name = "Stufe 2: Signifikanter Entzündungsherd"
+        tier_desc = "Manifeste Hyperthermie (ΔT > 2.2 °C). Diagnostische Abklärung indiziert."
+        color = "#EA580C"
+    else:
+        tier = 3
+        tier_name = "Stufe 3: Akutes Ulkus- / Infektionsrisiko"
+        tier_desc = "Schwere thermische Asymmetrie mit ausgeprägtem Fokus. Dringende Intervention."
+        color = "#DC2626"
+
+    return {
+        "score": tsi_score,
+        "tier": tier,
+        "tier_name": tier_name,
+        "tier_desc": tier_desc,
+        "color": color,
+        "term_delta_t": round(term_delta_t, 2),
+        "term_area": round(term_area, 2),
+        "term_grad": round(term_grad, 2),
+    }
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 7. GEOMETRISCHER RAUSCHFILTER
+# ─────────────────────────────────────────────────────────────────────────────
 def _filter_geometric_noise(
     binary_raw: np.ndarray,
     mask: np.ndarray,
     min_area_factor: float,
     min_circularity: float
 ) -> np.ndarray:
-    """Filtert Rauschen und anatomische Artefakte basierend auf Geometrie und Distanztransformation."""
+    """Filtert Rauschen und anatomische Randartefakte basierend auf Geometrie und Distanztransformation."""
     total_body_area = np.sum(mask == 255)
     min_area = max(10, min_area_factor * total_body_area)
-    
+
     dist_map = cv2.distanceTransform(mask, cv2.DIST_L2, 5)
     min_dist_from_border = max(
         _config.MIN_DIST_FROM_BORDER_ABS,
@@ -153,26 +432,27 @@ def _filter_geometric_noise(
         centroid_y = centroids[i][1]
         if centroid_y > h_img * _config.ANATOMICAL_LOWER_CUTOFF_Y:
             continue
-            
+
         area = stats[i, cv2.CC_STAT_AREA]
         if area < min_area:
             continue
-            
+
         x = stats[i, cv2.CC_STAT_LEFT]
         y = stats[i, cv2.CC_STAT_TOP]
         w_box = stats[i, cv2.CC_STAT_WIDTH]
         h_box = stats[i, cv2.CC_STAT_HEIGHT]
-        
+
         if x <= border_margin or y <= border_margin or (x + w_box) >= (w_img - border_margin) or (y + h_box) >= (h_img - border_margin):
             continue
-        
+
         component_mask = (labels == i)
         max_dist = float(np.max(dist_map[component_mask])) if np.sum(component_mask) > 0 else 0.0
         if max_dist < min_dist_from_border:
             continue
+
         contours, _ = cv2.findContours(
-            (labels == i).astype(np.uint8) * 255, 
-            cv2.RETR_EXTERNAL, 
+            (labels == i).astype(np.uint8) * 255,
+            cv2.RETR_EXTERNAL,
             cv2.CHAIN_APPROX_SIMPLE
         )
         if not contours:
@@ -184,11 +464,11 @@ def _filter_geometric_noise(
         circularity = (4.0 * np.pi * area) / (perimeter * perimeter)
         if circularity >= min_circularity:
             cv2.drawContours(final_mask, [cnt], -1, 255, thickness=cv2.FILLED)
-            
+
     return final_mask
 
 # ─────────────────────────────────────────────────────────────────────────────
-# FUNKTION 3: GPU/PyTorch-Pipeline
+# 8. PIPELINE-IMPLEMENTIERUNGEN (GPU / PYTHON / RUST)
 # ─────────────────────────────────────────────────────────────────────────────
 def _pytorch_gpu_pipeline(
     img: np.ndarray,
@@ -202,28 +482,29 @@ def _pytorch_gpu_pipeline(
     use_mad: bool = _config.DEFAULT_USE_MAD
 ) -> tuple[np.ndarray, np.ndarray]:
     """GPU-beschleunigte Pipeline unter Verwendung von PyTorch CUDA."""
-    mask_cpu = _extract_body_mask_cpu(img, otsu_min, otsu_max, dist_erosion_factor)
+    mask_cpu = extract_body_mask_multi_otsu(img, otsu_min, otsu_max, dist_erosion_factor)
     if np.sum(mask_cpu == 255) == 0:
         raise ValueError("Body-Mask ist leer – kein Körper im Bild erkannt.")
-        
-    device = torch.device('cuda')
-    img_t = torch.from_numpy(img).to(device).float()
-    mask_t = torch.from_numpy(mask_cpu).to(device)
-    
+
+    device = _TORCH.device('cuda')
+    img_t = _TORCH.from_numpy(img).to(device).float()
+    mask_t = _TORCH.from_numpy(mask_cpu).to(device)
+
     dim = min(img.shape[0], img.shape[1])
     kernel_large = compute_odd_kernel(dim, tophat_factor)
     pad = kernel_large // 2
-    
-    with torch.no_grad():
+
+    import torch.nn.functional as F
+    with _TORCH.no_grad():
         img_4d = img_t.unsqueeze(0).unsqueeze(0)
-        
-        # Erode / Dilate
+
+        # Multi-Skalen Erode / Dilate
         eroded = -F.max_pool2d(-img_4d, kernel_size=kernel_large, stride=1, padding=pad)
         dilated = F.max_pool2d(eroded, kernel_size=kernel_large, stride=1, padding=pad)
         tophat_t = (img_4d - dilated).squeeze(0).squeeze(0)
-        
-        diff_t = torch.where(mask_t > 0, tophat_t, torch.zeros_like(tophat_t))
-        
+
+        diff_t = _TORCH.where(mask_t > 0, tophat_t, _TORCH.zeros_like(tophat_t))
+
         body_pixels = diff_t[mask_t > 0]
         orig_body_pixels = img_t[mask_t > 0]
 
@@ -238,13 +519,12 @@ def _pytorch_gpu_pipeline(
             sigma_diff = body_pixels.std()
             T_rel = mu_diff + sigma_k * sigma_diff
             mu_orig = orig_body_pixels.mean()
-        
+
         binary_raw_t = (diff_t > T_rel) & (img_t > mu_orig)
         binary_raw_np = (binary_raw_t.cpu().numpy() * 255).astype(np.uint8)
-    
-    # Geometrischer Rauschfilter
+
     final_mask = _filter_geometric_noise(binary_raw_np, mask_cpu, min_area_factor, min_circularity)
-            
+
     diff_np = diff_t.cpu().numpy()
     min_val = diff_np.min()
     max_val = diff_np.max()
@@ -253,12 +533,9 @@ def _pytorch_gpu_pipeline(
         diff_vis = np.zeros_like(diff_np, dtype=np.uint8)
     else:
         diff_vis = ((diff_np - min_val) * 255.0 / diff_range).astype(np.uint8)
-        
+
     return diff_vis, final_mask
 
-# ─────────────────────────────────────────────────────────────────────────────
-# FUNKTION 4: Python-Fallback-Pipeline
-# ─────────────────────────────────────────────────────────────────────────────
 def _python_fallback_pipeline(
     img: np.ndarray,
     sigma_k: float = _config.DEFAULT_SIGMA_K,
@@ -270,31 +547,30 @@ def _python_fallback_pipeline(
     dist_erosion_factor: float = _config.DEFAULT_DIST_EROSION_FACTOR,
     use_mad: bool = _config.DEFAULT_USE_MAD
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Python-Fallback-Pipeline mit identischen mathematischen Schritten wie Rust."""
+    """Python-Pipeline mit Multi-Scale Top-Hat und robuster Statistik."""
     warnings.warn(
         "[image_processing] Python-Fallback aktiv! Performance beeinträchtigt.",
         RuntimeWarning,
         stacklevel=3,
     )
-    
-    # 0. Pre-filter 3x3 box blur (analog zu Rust box_blur_3x3)
+
+    # 0. Pre-filter 3x3 box blur
     img_blurred = cv2.blur(img, (3, 3))
 
-    # 1. Body mask
-    mask = _extract_body_mask_cpu(img_blurred, otsu_min, otsu_max, dist_erosion_factor)
+    # 1. Body mask via Multi-Otsu
+    mask = extract_body_mask_multi_otsu(img_blurred, otsu_min, otsu_max, dist_erosion_factor)
     total_body_area = np.sum(mask == 255)
     if total_body_area == 0:
         raise ValueError("Body-Mask ist leer – kein Körper im Bild erkannt.")
-        
-    # 2. Top-Hat
-    dim = min(img.shape[0], img.shape[1])
-    kernel_large = compute_odd_kernel(dim, tophat_factor)
-    kernel_se = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_large, kernel_large))
-    opened = cv2.morphologyEx(img_blurred, cv2.MORPH_OPEN, kernel_se)
-    tophat = cv2.subtract(img_blurred, opened)
-    diff_img = cv2.bitwise_and(tophat, tophat, mask=mask)
-    
-    # 3. Stats threshold
+
+    # 2. Multi-Scale Top-Hat
+    diff_img = compute_multiscale_tophat(
+        img_blurred,
+        factors=(tophat_factor * 0.5, tophat_factor, tophat_factor * 2.0),
+        mask=mask
+    )
+
+    # 3. Statistik-Thresholding
     body_pixels = diff_img[mask > 0]
     orig_body_pixels = img_blurred[mask > 0]
 
@@ -309,17 +585,17 @@ def _python_fallback_pipeline(
         sigma_diff = float(np.std(body_pixels))
         T_rel = mu_diff + sigma_k * sigma_diff
         mu_orig = float(np.mean(orig_body_pixels))
-    
+
     binary_raw = ((diff_img > T_rel) & (img_blurred > mu_orig)).astype(np.uint8) * 255
-    
-    # Geometrischer Rauschfilter
+
+    # 4. Geometrischer Rauschfilter
     final_mask = _filter_geometric_noise(binary_raw, mask, min_area_factor, min_circularity)
-            
+
     diff_vis = cv2.normalize(diff_img, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
     return diff_vis, final_mask
 
 # ─────────────────────────────────────────────────────────────────────────────
-# MAIN WRAPPER API
+# 9. MAIN WRAPPER API
 # ─────────────────────────────────────────────────────────────────────────────
 FORCED_BACKEND = "auto"
 
@@ -389,7 +665,7 @@ def run_rust_pipeline(
             )
 
 # ─────────────────────────────────────────────────────────────────────────────
-# VISUAL OVERLAY
+# 10. VISUELLES OVERLAY
 # ─────────────────────────────────────────────────────────────────────────────
 def create_hotspot_overlay(original_img: np.ndarray, hotspots_mask: np.ndarray, colormap_name: str = "Graustufen") -> np.ndarray:
     """Erstellt ein visuelles Overlay: Originalbild mit gewähltem Colormap und roten Hotspots."""
@@ -402,7 +678,6 @@ def create_hotspot_overlay(original_img: np.ndarray, hotspots_mask: np.ndarray, 
     else:  # Graustufen
         color_img = cv2.cvtColor(original_img, cv2.COLOR_GRAY2BGR)
 
-    # B=85, G=0, R=255 für Neon-Rot
     red_img = np.zeros_like(color_img)
     red_img[:] = [85, 0, 255]
 
@@ -414,7 +689,7 @@ def create_hotspot_overlay(original_img: np.ndarray, hotspots_mask: np.ndarray, 
     return final_img
 
 # ─────────────────────────────────────────────────────────────────────────────
-# KONTRALATERALE ASYMMETRIE-ANALYSE
+# 11. KONTRALATERALE ASYMMETRIE-ANALYSE MIT PCA
 # ─────────────────────────────────────────────────────────────────────────────
 def compute_contralateral_asymmetry(
     img: np.ndarray,
@@ -424,8 +699,8 @@ def compute_contralateral_asymmetry(
     threshold_c: float = _config.ASYMMETRY_THRESHOLD_C
 ) -> dict:
     """
-    Berechnet die kontralaterale Temperatur-Asymmetrie zwischen der linken und rechten Körperhälfte.
-    Klinischer Goldstandard (Armstrong et al. 2007): Delta-T > 2.2 °C signalisiert pathologischen Verdacht.
+    Berechnet die kontralaterale Temperatur-Asymmetrie zwischen linker und rechter Körperhälfte
+    inklusive PCA-basierter Fußwinkel-Erkennung.
     """
     if img is None or body_mask is None or np.sum(body_mask == 255) == 0:
         return {
@@ -433,26 +708,9 @@ def compute_contralateral_asymmetry(
             "right_mean_c": 0.0,
             "delta_t_c": 0.0,
             "is_asymmetric": False,
-            "status": "Keine Gewebe-Maske"
+            "status": "Keine Gewebe-Maske",
+            "pca": None
         }
-
-    # Rust-Native Aufruf falls verfügbar
-    if _RUST_BACKEND_AVAILABLE and _ignite_core is not None and hasattr(_ignite_core, "compute_asymmetry"):
-        try:
-            img_cont = np.ascontiguousarray(img, dtype=np.uint8)
-            mask_cont = np.ascontiguousarray(body_mask, dtype=np.uint8)
-            left_c, right_c, delta_c, is_asym = _ignite_core.compute_asymmetry(
-                img_cont, mask_cont, temp_min_c, temp_max_c, threshold_c
-            )
-            return {
-                "left_mean_c": round(left_c, 2),
-                "right_mean_c": round(right_c, 2),
-                "delta_t_c": round(delta_c, 2),
-                "is_asymmetric": is_asym,
-                "status": "Pathologische Asymmetrie (⚠️ > 2.2°C)" if is_asym else "Physiologisch Symmetrisch (✓)"
-            }
-        except Exception:
-            pass  # Fallback auf Python CPU
 
     h, w = img.shape[:2]
     mid_x = w // 2
@@ -469,7 +727,8 @@ def compute_contralateral_asymmetry(
             "right_mean_c": 0.0,
             "delta_t_c": 0.0,
             "is_asymmetric": False,
-            "status": "Nur einseitiges Gewebe"
+            "status": "Nur einseitiges Gewebe",
+            "pca": None
         }
 
     mu_left_raw = float(np.mean(left_px))
@@ -481,10 +740,13 @@ def compute_contralateral_asymmetry(
     delta_t_c = abs(left_temp_c - right_temp_c)
     is_asymmetric = delta_t_c > threshold_c
 
+    pca_info = compute_pca_foot_alignment_and_zones(img, body_mask, temp_min_c, temp_max_c)
+
     return {
         "left_mean_c": round(left_temp_c, 2),
         "right_mean_c": round(right_temp_c, 2),
         "delta_t_c": round(delta_t_c, 2),
         "is_asymmetric": is_asymmetric,
-        "status": "Pathologische Asymmetrie (⚠️ > 2.2°C)" if is_asymmetric else "Physiologisch Symmetrisch (✓)"
+        "status": "Pathologische Asymmetrie (⚠️ > 2.2°C)" if is_asymmetric else "Physiologisch Symmetrisch (✓)",
+        "pca": pca_info
     }

@@ -26,13 +26,16 @@ from gui.theme import (
     COLOR_CONTAINER_BLUE,
     FONT_FAMILY,
     FONT_FAMILY_MONO,
+    RADIUS_CARD,
+    RADIUS_BUTTON,
+    RADIUS_BADGE,
 )
 from gui.utils_ui import make_material_card
 from utils import pixel_to_celsius
 
 
 class AnalyticsView(ctk.CTkFrame):
-    """Diagnostische Statistik & Temperatur-Histogramm im Google Material 3 Design."""
+    """Diagnostische Statistik & Temperatur-Histogramm im High-Contrast Clinical Design."""
 
     def __init__(self, master, **kwargs) -> None:
         super().__init__(master, fg_color="transparent", **kwargs)
@@ -44,58 +47,58 @@ class AnalyticsView(ctk.CTkFrame):
         self._build_ui()
 
     def _build_ui(self) -> None:
-        self.grid_columnconfigure(0, weight=3)
-        self.grid_columnconfigure(1, weight=2)
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_columnconfigure(1, weight=0, minsize=400)
         self.grid_rowconfigure(0, weight=1)
 
         # ── Linke Spalte: Matplotlib Histogramm ──────────────────────────────
-        self.chart_card = make_material_card(self, corner_radius=16, fg_color=COLOR_BG_CARD)
-        self.chart_card.grid(row=0, column=0, padx=(18, 10), pady=18, sticky="nsew")
+        self.chart_card = make_material_card(self, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD)
+        self.chart_card.grid(row=0, column=0, padx=(14, 6), pady=14, sticky="nsew")
 
-        top_bar = ctk.CTkFrame(self.chart_card, fg_color="transparent", height=50)
-        top_bar.pack(fill=ctk.X, padx=18, pady=(14, 8))
+        top_bar = ctk.CTkFrame(self.chart_card, fg_color="transparent", height=46)
+        top_bar.pack(fill=ctk.X, padx=14, pady=(10, 6))
         top_bar.pack_propagate(False)
 
         ctk.CTkLabel(
             top_bar,
             text="STATISTISCHE VERTEILUNG & SCHWELLENWERTE",
             font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
-            text_color=COLOR_PRIMARY
+            text_color=COLOR_TEXT_PRIMARY
         ).pack(side=ctk.LEFT)
 
         ctk.CTkLabel(
             top_bar,
             text="Gaußsche Dichtekurve vs. Hotspots",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
             text_color=COLOR_TEXT_MUTED
         ).pack(side=ctk.RIGHT)
 
         ctk.CTkFrame(self.chart_card, height=1, fg_color=COLOR_OUTLINE_VARIANT).pack(fill=ctk.X)
 
         self.chart_host = ctk.CTkFrame(self.chart_card, fg_color="transparent")
-        self.chart_host.pack(fill=ctk.BOTH, expand=True, padx=14, pady=14)
+        self.chart_host.pack(fill=ctk.BOTH, expand=True, padx=10, pady=10)
 
         # ── Rechte Spalte: Quantitative Metriken & Herde-Tabelle ─────────────
-        self.metrics_card = make_material_card(self, corner_radius=16, fg_color=COLOR_BG_CARD)
-        self.metrics_card.grid(row=0, column=1, padx=(10, 18), pady=18, sticky="nsew")
+        self.metrics_card = make_material_card(self, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD)
+        self.metrics_card.grid(row=0, column=1, padx=(6, 14), pady=14, sticky="nsew")
 
         scroll = ctk.CTkScrollableFrame(self.metrics_card, fg_color="transparent")
-        scroll.pack(fill=ctk.BOTH, expand=True, padx=14, pady=14)
+        scroll.pack(fill=ctk.BOTH, expand=True, padx=12, pady=12)
 
         # 1. Statistische Kennzahlen
         ctk.CTkLabel(
             scroll,
             text="QUANTITATIVE PARAMETER",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=10, weight="bold"),
             text_color=COLOR_TEXT_MUTED,
             anchor="w"
-        ).pack(fill=ctk.X, pady=(4, 8))
+        ).pack(fill=ctk.X, pady=(2, 6))
 
-        self.stats_table_card = make_material_card(scroll, corner_radius=12, fg_color=COLOR_BG_CARD_VARIANT)
-        self.stats_table_card.pack(fill=ctk.X, pady=(0, 18))
+        self.stats_table_card = make_material_card(scroll, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD_VARIANT)
+        self.stats_table_card.pack(fill=ctk.X, pady=(0, 14))
 
         st_inner = ctk.CTkFrame(self.stats_table_card, fg_color="transparent")
-        st_inner.pack(fill=ctk.X, padx=16, pady=14)
+        st_inner.pack(fill=ctk.X, padx=14, pady=12)
 
         self.metric_rows = {}
         metrics_list = [
@@ -111,7 +114,7 @@ class AnalyticsView(ctk.CTkFrame):
 
         for m_key, title, default_v in metrics_list:
             row = ctk.CTkFrame(st_inner, fg_color="transparent")
-            row.pack(fill=ctk.X, pady=3)
+            row.pack(fill=ctk.X, pady=2)
             ctk.CTkLabel(row, text=title, font=ctk.CTkFont(family=FONT_FAMILY, size=12), text_color=COLOR_TEXT_SECONDARY).pack(side=ctk.LEFT)
             lbl_v = ctk.CTkLabel(row, text=default_v, font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=12, weight="bold"), text_color=COLOR_TEXT_PRIMARY)
             lbl_v.pack(side=ctk.RIGHT)
@@ -121,10 +124,10 @@ class AnalyticsView(ctk.CTkFrame):
         ctk.CTkLabel(
             scroll,
             text="DETEKTIERTE HYPERTHERMIE-HERDE",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=10, weight="bold"),
             text_color=COLOR_TEXT_MUTED,
             anchor="w"
-        ).pack(fill=ctk.X, pady=(4, 8))
+        ).pack(fill=ctk.X, pady=(4, 6))
 
         self.hotspot_list_frame = ctk.CTkFrame(scroll, fg_color="transparent")
         self.hotspot_list_frame.pack(fill=ctk.X)
@@ -132,10 +135,10 @@ class AnalyticsView(ctk.CTkFrame):
         self.no_hotspots_lbl = ctk.CTkLabel(
             self.hotspot_list_frame,
             text="Keine signifikanten Entzündungsherde detektiert.",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=12, slant="italic"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
             text_color=COLOR_TEXT_MUTED
         )
-        self.no_hotspots_lbl.pack(pady=12)
+        self.no_hotspots_lbl.pack(pady=10)
 
     def show_results(self, result: dict[str, Any]) -> None:
         self.current_result = result
@@ -180,18 +183,18 @@ class AnalyticsView(ctk.CTkFrame):
         if not hotspots:
             self.no_hotspots_lbl = ctk.CTkLabel(
                 self.hotspot_list_frame,
-                text="✓ Keine signifikanten Entzündungsherde detektiert.",
-                font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
+                text="Keine signifikanten Entzündungsherde detektiert.",
+                font=ctk.CTkFont(family=FONT_FAMILY, size=12),
                 text_color=COLOR_SUCCESS
             )
-            self.no_hotspots_lbl.pack(pady=12)
+            self.no_hotspots_lbl.pack(pady=10)
         else:
             for idx, spot in enumerate(hotspots[:10]):
-                card = make_material_card(self.hotspot_list_frame, corner_radius=10, fg_color=COLOR_BG_CARD_VARIANT)
-                card.pack(fill=ctk.X, pady=3)
+                card = make_material_card(self.hotspot_list_frame, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD_VARIANT)
+                card.pack(fill=ctk.X, pady=2)
 
                 c_inner = ctk.CTkFrame(card, fg_color="transparent")
-                c_inner.pack(fill=ctk.X, padx=12, pady=10)
+                c_inner.pack(fill=ctk.X, padx=12, pady=8)
 
                 ctk.CTkLabel(
                     c_inner,
@@ -227,9 +230,9 @@ class AnalyticsView(ctk.CTkFrame):
         temps_c = t_min + (body_pixels.astype(np.float32) / 255.0) * (t_max - t_min)
 
         is_dark = ctk.get_appearance_mode() == "Dark"
-        bg_color = "#2D2F31" if is_dark else "#FFFFFF"
-        text_color = "#E8EAED" if is_dark else "#202124"
-        grid_color = "#3C4043" if is_dark else "#E8EAED"
+        bg_color = "#131923" if is_dark else "#FFFFFF"
+        text_color = "#F8FAFC" if is_dark else "#0F172A"
+        grid_color = "#243044" if is_dark else "#E2E8F0"
 
         self.fig.clf()
         self.ax = self.fig.add_subplot(111)
@@ -239,7 +242,7 @@ class AnalyticsView(ctk.CTkFrame):
 
         # Histogramm zeichnen
         counts, bins, patches = self.ax.hist(
-            temps_c, bins=45, color="#1A73E8", alpha=0.85, edgecolor=bg_color, linewidth=0.5
+            temps_c, bins=45, color="#0284C7", alpha=0.85, edgecolor=bg_color, linewidth=0.5
         )
 
         mean_c = np.mean(temps_c)
@@ -250,11 +253,11 @@ class AnalyticsView(ctk.CTkFrame):
         # Hotspot-Balken rot einfärben
         for patch, left_edge in zip(patches, bins[:-1]):
             if left_edge >= thresh_c:
-                patch.set_facecolor("#EA4335")
+                patch.set_facecolor("#DC2626")
 
         # Linien
-        self.ax.axvline(mean_c, color="#34A853", linestyle="--", linewidth=1.5, label=f"Mittelwert ({mean_c:.1f}°C)")
-        self.ax.axvline(thresh_c, color="#EA4335", linestyle="-", linewidth=2.0, label=f"Schwelle k={k:.1f} ({thresh_c:.1f}°C)")
+        self.ax.axvline(mean_c, color="#16A34A", linestyle="--", linewidth=1.5, label=f"Mittelwert ({mean_c:.1f}°C)")
+        self.ax.axvline(thresh_c, color="#DC2626", linestyle="-", linewidth=2.0, label=f"Schwelle k={k:.1f} ({thresh_c:.1f}°C)")
 
         self.ax.set_xlabel("Temperatur (°C)", color=text_color, fontsize=10, family=FONT_FAMILY)
         self.ax.set_ylabel("Pixelanzahl", color=text_color, fontsize=10, family=FONT_FAMILY)

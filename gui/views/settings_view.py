@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""gui/views/settings_view.py – Comprehensive Google Material You Settings for IGNITE."""
+"""gui/views/settings_view.py – Comprehensive High-Contrast Settings for IGNITE."""
 
 from __future__ import annotations
 import tkinter as tk
@@ -11,6 +11,7 @@ import image_processing
 from gui.theme import (
     COLOR_BG_CARD,
     COLOR_BG_CARD_VARIANT,
+    COLOR_BG_CARD_HOVER,
     COLOR_OUTLINE,
     COLOR_OUTLINE_VARIANT,
     COLOR_TEXT_PRIMARY,
@@ -18,24 +19,27 @@ from gui.theme import (
     COLOR_TEXT_MUTED,
     COLOR_PRIMARY,
     COLOR_PRIMARY_HOVER,
+    COLOR_CONTAINER_ACTIVE,
     COLOR_CONTAINER_BLUE,
-    COLOR_CONTAINER_GREEN,
     FONT_FAMILY,
     FONT_FAMILY_MONO,
+    RADIUS_CARD,
+    RADIUS_BUTTON,
+    RADIUS_BADGE,
 )
 from gui.utils_ui import make_material_card, make_slider_setting
 
 
 class SettingsView(ctk.CTkFrame):
-    """Umfassendes Einstellungs- und Parameter-Center im Google Material You Design."""
+    """Umfassendes Einstellungs- und Parameter-Center im High-Contrast Clinical Design."""
 
     CATEGORIES = [
-        ("algo",     "🎛️", "Algorithmus",   "Hotspot-Erkennung & Schwellen"),
-        ("podology", "🦶", "Podologie",     "Asymmetrie- & 3-Zonen-Modell"),
-        ("radio",    "🌡️", "Radiometrie",   "Kamera- & Strahlungsphysik"),
-        ("visual",   "🎨", "Anzeige",       "Farben, Colorbar & Overlays"),
-        ("hardware", "⚡", "Performance",   "Rechen-Engine & Threads"),
-        ("privacy",  "🛡️", "Datenschutz",   "DSGVO, Audit-Trail & Export"),
+        ("algo",     "Algorithmus & Hotspots"),
+        ("podology", "Podologie & Symmetrie"),
+        ("radio",    "Radiometrie & Physik"),
+        ("visual",   "Anzeige & Overlays"),
+        ("hardware", "Performance & Engine"),
+        ("privacy",  "Datenschutz & DSGVO"),
     ]
 
     PRESETS = {
@@ -84,91 +88,96 @@ class SettingsView(ctk.CTkFrame):
         self.switches: dict[str, ctk.CTkSwitch] = {}
         self.entries: dict[str, ctk.CTkEntry] = {}
         self.dropdowns: dict[str, ctk.CTkOptionMenu] = {}
-        self._cat_buttons: dict[str, tuple[ctk.CTkFrame, ctk.CTkLabel, ctk.CTkLabel]] = {}
+        self._cat_buttons: dict[str, tuple[ctk.CTkFrame, ctk.CTkFrame, ctk.CTkLabel]] = {}
 
         self._build_ui()
 
     def _build_ui(self) -> None:
-        self.grid_columnconfigure(0, weight=0)  # Linke Kategorie-Leiste
+        self.grid_columnconfigure(0, weight=0, minsize=200)  # Linke Kategorie-Leiste
         self.grid_columnconfigure(1, weight=1)  # Rechter Einstellungsbereich
         self.grid_rowconfigure(0, weight=1)
 
         # ── 1. Linke Kategorien-Leiste ────────────────────────────────────────
-        cat_card = make_material_card(self, corner_radius=20, fg_color=COLOR_BG_CARD)
-        cat_card.grid(row=0, column=0, padx=(20, 10), pady=20, sticky="nsew")
-        cat_card.configure(width=260)
+        cat_card = make_material_card(self, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD)
+        cat_card.grid(row=0, column=0, padx=(14, 6), pady=14, sticky="nsew")
+        cat_card.configure(width=200)
         cat_card.pack_propagate(False)
 
         cat_inner = ctk.CTkFrame(cat_card, fg_color="transparent")
-        cat_inner.pack(fill=ctk.BOTH, expand=True, padx=14, pady=16)
+        cat_inner.pack(fill=ctk.BOTH, expand=True, padx=10, pady=12)
 
         ctk.CTkLabel(
             cat_inner,
             text="EINSTELLUNGEN",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=10, weight="bold"),
             text_color=COLOR_TEXT_MUTED,
             anchor="w"
-        ).pack(fill=ctk.X, padx=12, pady=(2, 10))
+        ).pack(fill=ctk.X, padx=10, pady=(2, 8))
 
-        for cat_id, icon, title, subtitle in self.CATEGORIES:
+        for cat_id, title in self.CATEGORIES:
             btn_frame = ctk.CTkFrame(
                 cat_inner,
-                corner_radius=22,
+                corner_radius=RADIUS_BUTTON,
                 fg_color="transparent",
-                height=48,
+                height=38,
                 cursor="hand2"
             )
-            btn_frame.pack(fill=ctk.X, pady=3)
+            btn_frame.pack(fill=ctk.X, pady=2)
             btn_frame.pack_propagate(False)
 
             content = ctk.CTkFrame(btn_frame, fg_color="transparent")
-            content.pack(fill=ctk.BOTH, expand=True, padx=14, pady=4)
+            content.pack(fill=ctk.BOTH, expand=True, padx=8, pady=4)
 
-            lbl_icon = ctk.CTkLabel(content, text=icon, font=ctk.CTkFont(size=16), width=24)
-            lbl_icon.pack(side=ctk.LEFT, padx=(0, 8))
+            ind_bar = ctk.CTkFrame(content, width=3, corner_radius=2, fg_color="transparent")
+            ind_bar.pack(side=ctk.LEFT, fill=ctk.Y, padx=(0, 8), pady=2)
 
             lbl_title = ctk.CTkLabel(
                 content,
                 text=title,
-                font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"),
-                text_color=COLOR_TEXT_PRIMARY,
+                font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
+                text_color=COLOR_TEXT_SECONDARY,
+                height=22,
                 anchor="w"
             )
             lbl_title.pack(side=ctk.LEFT, fill=ctk.X, expand=True)
 
             _cid = cat_id
-            for w in [btn_frame, content, lbl_icon, lbl_title]:
+            for w in [btn_frame, content, ind_bar, lbl_title]:
                 w.bind("<Button-1>", lambda e, c=_cid: self.select_category(c))
+                w.bind("<Enter>", lambda e, c=_cid: self._on_cat_hover(c, True))
+                w.bind("<Leave>", lambda e, c=_cid: self._on_cat_hover(c, False))
 
-            self._cat_buttons[cat_id] = (btn_frame, lbl_icon, lbl_title)
+            self._cat_buttons[cat_id] = (btn_frame, ind_bar, lbl_title)
 
         # Unten: Reset Defaults Button
         ctk.CTkButton(
             cat_inner,
-            text="↺  Standardwerte",
+            text="Standardwerte",
             command=self._reset_defaults,
-            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
-            fg_color=COLOR_CONTAINER_BLUE,
-            hover_color=COLOR_OUTLINE,
-            text_color=COLOR_PRIMARY,
-            corner_radius=20,
-            height=40
-        ).pack(side=ctk.BOTTOM, fill=ctk.X, pady=(10, 0))
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            fg_color=COLOR_BG_CARD_VARIANT,
+            hover_color=COLOR_BG_CARD_HOVER,
+            border_width=1,
+            border_color=COLOR_OUTLINE,
+            text_color=COLOR_TEXT_PRIMARY,
+            corner_radius=RADIUS_BUTTON,
+            height=32
+        ).pack(side=ctk.BOTTOM, fill=ctk.X, pady=(8, 0))
 
         # ── 2. Rechter Hauptbereich für Einstellungs-Panels ───────────────────
-        self.right_container = make_material_card(self, corner_radius=20, fg_color=COLOR_BG_CARD)
-        self.right_container.grid(row=0, column=1, padx=(10, 20), pady=20, sticky="nsew")
+        self.right_container = make_material_card(self, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD)
+        self.right_container.grid(row=0, column=1, padx=(6, 14), pady=14, sticky="nsew")
 
         # Header mit Presets & Suchzeile
-        top_header = ctk.CTkFrame(self.right_container, fg_color="transparent", height=54)
-        top_header.pack(fill=ctk.X, padx=22, pady=(16, 8))
+        top_header = ctk.CTkFrame(self.right_container, fg_color="transparent", height=46)
+        top_header.pack(fill=ctk.X, padx=16, pady=(10, 6))
         top_header.pack_propagate(False)
 
         self.cat_title_lbl = ctk.CTkLabel(
             top_header,
-            text="🎛️  Algorithmus & Hotspot-Erkennung",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=16, weight="bold"),
-            text_color=COLOR_PRIMARY
+            text="Algorithmus & Hotspots",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=14, weight="bold"),
+            text_color=COLOR_TEXT_PRIMARY
         )
         self.cat_title_lbl.pack(side=ctk.LEFT)
 
@@ -177,29 +186,29 @@ class SettingsView(ctk.CTkFrame):
             top_header,
             values=list(self.PRESETS.keys()),
             command=self._apply_preset,
-            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
-            fg_color=COLOR_CONTAINER_BLUE,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            fg_color=COLOR_BG_CARD_VARIANT,
             button_color=COLOR_PRIMARY,
             button_hover_color=COLOR_PRIMARY_HOVER,
-            text_color=COLOR_PRIMARY,
-            corner_radius=10,
-            height=36,
-            width=260
+            text_color=COLOR_TEXT_PRIMARY,
+            corner_radius=RADIUS_BUTTON,
+            height=30,
+            width=230
         )
         self.preset_menu.pack(side=ctk.RIGHT)
 
         ctk.CTkLabel(
             top_header,
-            text="Preset:",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
-            text_color=COLOR_TEXT_SECONDARY
-        ).pack(side=ctk.RIGHT, padx=(0, 8))
+            text="Profil:",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+            text_color=COLOR_TEXT_MUTED
+        ).pack(side=ctk.RIGHT, padx=(0, 6))
 
         ctk.CTkFrame(self.right_container, height=1, fg_color=COLOR_OUTLINE_VARIANT).pack(fill=ctk.X)
 
         # Scrollbarer Inhalt für Einstellungs-Karten
         self.scroll_body = ctk.CTkScrollableFrame(self.right_container, fg_color="transparent")
-        self.scroll_body.pack(fill=ctk.BOTH, expand=True, padx=20, pady=16)
+        self.scroll_body.pack(fill=ctk.BOTH, expand=True, padx=14, pady=12)
 
         # Panels aufbauen
         self.category_panels: dict[str, ctk.CTkFrame] = {}
@@ -212,20 +221,28 @@ class SettingsView(ctk.CTkFrame):
 
         self.select_category("algo")
 
+    def _on_cat_hover(self, cat_id: str, is_hovering: bool) -> None:
+        if cat_id == self.active_category:
+            return
+        frame, _, _ = self._cat_buttons[cat_id]
+        frame.configure(fg_color=COLOR_BG_CARD_HOVER if is_hovering else "transparent")
+
     def select_category(self, cat_id: str) -> None:
         self.active_category = cat_id
-        for cid, (frame, icon_lbl, title_lbl) in self._cat_buttons.items():
+        for cid, (frame, ind_bar, title_lbl) in self._cat_buttons.items():
             if cid == cat_id:
-                frame.configure(fg_color=COLOR_CONTAINER_BLUE)
-                title_lbl.configure(text_color=COLOR_PRIMARY)
+                frame.configure(fg_color=COLOR_CONTAINER_ACTIVE)
+                ind_bar.configure(fg_color=COLOR_PRIMARY)
+                title_lbl.configure(text_color=COLOR_TEXT_PRIMARY)
             else:
                 frame.configure(fg_color="transparent")
-                title_lbl.configure(text_color=COLOR_TEXT_PRIMARY)
+                ind_bar.configure(fg_color="transparent")
+                title_lbl.configure(text_color=COLOR_TEXT_SECONDARY)
 
         # Titel aktualisieren
-        for cid, icon, title, subtitle in self.CATEGORIES:
+        for cid, title in self.CATEGORIES:
             if cid == cat_id:
-                self.cat_title_lbl.configure(text=f"{icon}  {title} – {subtitle}")
+                self.cat_title_lbl.configure(text=title)
                 break
 
         # Panel umschalten
@@ -241,10 +258,10 @@ class SettingsView(ctk.CTkFrame):
         panel = ctk.CTkFrame(self.scroll_body, fg_color="transparent")
         self.category_panels["algo"] = panel
 
-        card = make_material_card(panel, corner_radius=16, fg_color=COLOR_BG_CARD_VARIANT)
-        card.pack(fill=ctk.X, pady=6)
+        card = make_material_card(panel, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD_VARIANT)
+        card.pack(fill=ctk.X, pady=4)
         c_inner = ctk.CTkFrame(card, fg_color="transparent")
-        c_inner.pack(fill=ctk.X, padx=20, pady=16)
+        c_inner.pack(fill=ctk.X, padx=16, pady=12)
 
         s_k, l_k = make_slider_setting(
             c_inner, "Threshold-Faktor k",
@@ -299,17 +316,17 @@ class SettingsView(ctk.CTkFrame):
         )
         if config.DEFAULT_USE_MAD:
             sw_mad.select()
-        sw_mad.pack(fill=ctk.X, pady=(10, 4))
+        sw_mad.pack(fill=ctk.X, pady=(8, 2))
         self.switches["use_mad"] = sw_mad
 
     def _build_podology_panel(self) -> None:
         panel = ctk.CTkFrame(self.scroll_body, fg_color="transparent")
         self.category_panels["podology"] = panel
 
-        card = make_material_card(panel, corner_radius=16, fg_color=COLOR_BG_CARD_VARIANT)
-        card.pack(fill=ctk.X, pady=6)
+        card = make_material_card(panel, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD_VARIANT)
+        card.pack(fill=ctk.X, pady=4)
         c_inner = ctk.CTkFrame(card, fg_color="transparent")
-        c_inner.pack(fill=ctk.X, padx=20, pady=16)
+        c_inner.pack(fill=ctk.X, padx=16, pady=12)
 
         s_asym, l_asym = make_slider_setting(
             c_inner, "Armstrong Asymmetrie-Grenzwert ΔT (°C)",
@@ -337,32 +354,32 @@ class SettingsView(ctk.CTkFrame):
         )
         if config.DEFAULT_ENABLE_ASYMMETRY:
             sw_asym.select()
-        sw_asym.pack(fill=ctk.X, pady=(10, 4))
+        sw_asym.pack(fill=ctk.X, pady=(8, 2))
         self.switches["enable_asymmetry"] = sw_asym
 
     def _build_radiometry_panel(self) -> None:
         panel = ctk.CTkFrame(self.scroll_body, fg_color="transparent")
         self.category_panels["radio"] = panel
 
-        card = make_material_card(panel, corner_radius=16, fg_color=COLOR_BG_CARD_VARIANT)
-        card.pack(fill=ctk.X, pady=6)
+        card = make_material_card(panel, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD_VARIANT)
+        card.pack(fill=ctk.X, pady=4)
         c_inner = ctk.CTkFrame(card, fg_color="transparent")
-        c_inner.pack(fill=ctk.X, padx=20, pady=16)
+        c_inner.pack(fill=ctk.X, padx=16, pady=12)
 
-        ctk.CTkLabel(c_inner, text="Stefan-Boltzmann Strahlungsmodell & Sensor-Kalibrierung", font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"), text_color=COLOR_PRIMARY).pack(anchor="w", pady=(0, 10))
+        ctk.CTkLabel(c_inner, text="Stefan-Boltzmann Strahlungsmodell & Sensor-Kalibrierung", font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"), text_color=COLOR_TEXT_PRIMARY).pack(anchor="w", pady=(0, 8))
 
         # Emissivität
-        ctk.CTkLabel(c_inner, text="Haut-Emissivitätsgrad (ε):", font=ctk.CTkFont(size=12, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w")
-        e_em = ctk.CTkEntry(c_inner, font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=13), fg_color=COLOR_BG_CARD, border_color=COLOR_OUTLINE, height=36)
+        ctk.CTkLabel(c_inner, text="Haut-Emissivitätsgrad (ε):", font=ctk.CTkFont(size=11, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w")
+        e_em = ctk.CTkEntry(c_inner, font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=12), fg_color=COLOR_BG_CARD, border_color=COLOR_OUTLINE, height=32)
         e_em.insert(0, str(config.SKIN_EMISSIVITY))
-        e_em.pack(fill=ctk.X, pady=(2, 10))
+        e_em.pack(fill=ctk.X, pady=(2, 8))
         self.entries["emissivity"] = e_em
 
         # Reflektierte Temperatur
-        ctk.CTkLabel(c_inner, text="Reflektierte Umgebungstemperatur (°C):", font=ctk.CTkFont(size=12, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w")
-        e_refl = ctk.CTkEntry(c_inner, font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=13), fg_color=COLOR_BG_CARD, border_color=COLOR_OUTLINE, height=36)
+        ctk.CTkLabel(c_inner, text="Reflektierte Umgebungstemperatur (°C):", font=ctk.CTkFont(size=11, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w")
+        e_refl = ctk.CTkEntry(c_inner, font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=12), fg_color=COLOR_BG_CARD, border_color=COLOR_OUTLINE, height=32)
         e_refl.insert(0, str(config.REFLECTED_TEMP_C))
-        e_refl.pack(fill=ctk.X, pady=(2, 10))
+        e_refl.pack(fill=ctk.X, pady=(2, 8))
         self.entries["reflected_temp"] = e_refl
 
         s_off, l_off = make_slider_setting(
@@ -377,10 +394,10 @@ class SettingsView(ctk.CTkFrame):
         panel = ctk.CTkFrame(self.scroll_body, fg_color="transparent")
         self.category_panels["visual"] = panel
 
-        card = make_material_card(panel, corner_radius=16, fg_color=COLOR_BG_CARD_VARIANT)
-        card.pack(fill=ctk.X, pady=6)
+        card = make_material_card(panel, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD_VARIANT)
+        card.pack(fill=ctk.X, pady=4)
         c_inner = ctk.CTkFrame(card, fg_color="transparent")
-        c_inner.pack(fill=ctk.X, padx=20, pady=16)
+        c_inner.pack(fill=ctk.X, padx=16, pady=12)
 
         s_al, l_al = make_slider_setting(
             c_inner, "Overlay Alpha-Deckkraft (%)",
@@ -403,28 +420,28 @@ class SettingsView(ctk.CTkFrame):
         panel = ctk.CTkFrame(self.scroll_body, fg_color="transparent")
         self.category_panels["hardware"] = panel
 
-        card = make_material_card(panel, corner_radius=16, fg_color=COLOR_BG_CARD_VARIANT)
-        card.pack(fill=ctk.X, pady=6)
+        card = make_material_card(panel, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD_VARIANT)
+        card.pack(fill=ctk.X, pady=4)
         c_inner = ctk.CTkFrame(card, fg_color="transparent")
-        c_inner.pack(fill=ctk.X, padx=20, pady=16)
+        c_inner.pack(fill=ctk.X, padx=16, pady=12)
 
-        ctk.CTkLabel(c_inner, text="Ausführungs-Engine:", font=ctk.CTkFont(size=12, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w", pady=(0, 4))
+        ctk.CTkLabel(c_inner, text="Ausführungs-Engine:", font=ctk.CTkFont(size=11, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w", pady=(0, 4))
         be_menu = ctk.CTkOptionMenu(
             c_inner,
             values=["Automatisch (Schnellstes)", "Erzwinge Rust-CPU-Core", "Erzwinge PyTorch-GPU", "Erzwinge Python-Fallback"],
             command=self._on_backend_select,
-            font=ctk.CTkFont(family=FONT_FAMILY, size=13),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
             fg_color=COLOR_BG_CARD,
             button_color=COLOR_PRIMARY,
             button_hover_color=COLOR_PRIMARY_HOVER,
             text_color=COLOR_TEXT_PRIMARY,
-            corner_radius=10,
-            height=38
+            corner_radius=RADIUS_BUTTON,
+            height=32
         )
-        be_menu.pack(fill=ctk.X, pady=(0, 12))
+        be_menu.pack(fill=ctk.X, pady=(0, 10))
         self.dropdowns["backend"] = be_menu
 
-        ctk.CTkLabel(c_inner, text="Echtzeit-Debounce Verzögerung (ms):", font=ctk.CTkFont(size=12, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w")
+        ctk.CTkLabel(c_inner, text="Echtzeit-Debounce Verzögerung (ms):", font=ctk.CTkFont(size=11, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w")
         s_deb, l_deb = make_slider_setting(
             c_inner, "Neuberechnungs-Verzögerung",
             "Zeit in Millisekunden vor Ausführung nach Slider-Bewegung",
@@ -437,12 +454,12 @@ class SettingsView(ctk.CTkFrame):
         panel = ctk.CTkFrame(self.scroll_body, fg_color="transparent")
         self.category_panels["privacy"] = panel
 
-        card = make_material_card(panel, corner_radius=16, fg_color=COLOR_BG_CARD_VARIANT)
-        card.pack(fill=ctk.X, pady=6)
+        card = make_material_card(panel, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD_VARIANT)
+        card.pack(fill=ctk.X, pady=4)
         c_inner = ctk.CTkFrame(card, fg_color="transparent")
-        c_inner.pack(fill=ctk.X, padx=20, pady=16)
+        c_inner.pack(fill=ctk.X, padx=16, pady=12)
 
-        ctk.CTkLabel(c_inner, text="Datenschutz & DSGVO-Pseudonymisierung", font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"), text_color=COLOR_PRIMARY).pack(anchor="w", pady=(0, 8))
+        ctk.CTkLabel(c_inner, text="Datenschutz & DSGVO-Pseudonymisierung", font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"), text_color=COLOR_TEXT_PRIMARY).pack(anchor="w", pady=(0, 8))
 
         sw_dsgvo = ctk.CTkSwitch(
             c_inner,
@@ -451,7 +468,7 @@ class SettingsView(ctk.CTkFrame):
             progress_color=COLOR_PRIMARY
         )
         sw_dsgvo.select()
-        sw_dsgvo.pack(fill=ctk.X, pady=6)
+        sw_dsgvo.pack(fill=ctk.X, pady=4)
         self.switches["dsgvo_anon"] = sw_dsgvo
 
         sw_audit = ctk.CTkSwitch(
@@ -461,7 +478,7 @@ class SettingsView(ctk.CTkFrame):
             progress_color=COLOR_PRIMARY
         )
         sw_audit.select()
-        sw_audit.pack(fill=ctk.X, pady=6)
+        sw_audit.pack(fill=ctk.X, pady=4)
         self.switches["audit_log"] = sw_audit
 
     # ── Callbacks ─────────────────────────────────────────────────────────────

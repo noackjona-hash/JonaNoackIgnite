@@ -43,105 +43,104 @@ def _dpi_scale_for(win) -> float:
 
 
 def create_instant_splash():
-    """Erstellt einen eleganten, großzügigen Google-Style Splash-Screen."""
+    """Erstellt einen klaren, professionellen Workstation Splash-Screen."""
     splash = tk.Tk()
     splash.title("IGNITE")
     splash.overrideredirect(True)
-    splash.configure(bg="#FFFFFF")
+    splash.configure(bg="#0F172A")
     splash.resizable(False, False)
 
     sw = splash.winfo_screenwidth()
     sh = splash.winfo_screenheight()
 
-    # Großzügige Dimensionen passend zur Bildschirmauflösung
     if sw >= 3200 or sh >= 1800:
-        W, H = 680, 420
-        bar_w = 460
-    elif sw >= 2200 or sh >= 1300:
-        W, H = 600, 380
+        W, H = 640, 380
         bar_w = 420
-    else:
-        W, H = 540, 350
+    elif sw >= 2200 or sh >= 1300:
+        W, H = 560, 340
         bar_w = 380
+    else:
+        W, H = 500, 310
+        bar_w = 340
 
     x = (sw - W) // 2
     y = (sh - H) // 2
     splash.geometry(f"{W}x{H}+{x}+{y}")
 
     # Äußerer zarter Rahmen
-    border_frame = tk.Frame(splash, bg="#E1E3E1", bd=1)
+    border_frame = tk.Frame(splash, bg="#334155", bd=1)
     border_frame.pack(fill=tk.BOTH, expand=True)
 
-    inner_bg = tk.Frame(border_frame, bg="#FFFFFF")
-    inner_bg.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
+    inner_bg = tk.Frame(border_frame, bg="#0F172A")
+    inner_bg.pack(fill=tk.BOTH, expand=True, padx=1, pady=1)
 
-    content = tk.Frame(inner_bg, bg="#FFFFFF")
-    content.pack(expand=True, padx=24, pady=24)
+    content = tk.Frame(inner_bg, bg="#0F172A")
+    content.pack(expand=True, padx=20, pady=20)
 
     # Logo
     logo_path = _get_resource_path(os.path.join("icon", "LogoRund.png"))
     logo_img_ref = None
     try:
         from PIL import Image, ImageTk
-        img = Image.open(logo_path).resize((72, 72), Image.LANCZOS)
+        img = Image.open(logo_path).resize((56, 56), Image.LANCZOS)
         logo_img_ref = ImageTk.PhotoImage(img)
-        tk.Label(content, image=logo_img_ref, bg="#FFFFFF").pack(pady=(0, 10))
+        tk.Label(content, image=logo_img_ref, bg="#0F172A").pack(pady=(0, 8))
     except Exception as e:
         logging.debug(f"Fehler beim Laden des Splash-Logos: {e}")
-        tk.Label(content, text="", bg="#FFFFFF", height=2).pack()
+        tk.Label(content, text="", bg="#0F172A", height=1).pack()
 
     # Titel
     tk.Label(
         content,
         text="IGNITE",
-        font=("Segoe UI", 36, "bold"),
-        fg="#1F1F1F",
-        bg="#FFFFFF"
+        font=("Segoe UI", 28, "bold"),
+        fg="#F8FAFC",
+        bg="#0F172A"
     ).pack()
 
     tk.Label(
         content,
         text="Medical Imaging Suite  ·  Jugend forscht 2026",
-        font=("Segoe UI", 13),
-        fg="#5F6368",
-        bg="#FFFFFF"
-    ).pack(pady=(2, 16))
+        font=("Segoe UI", 11),
+        fg="#94A3B8",
+        bg="#0F172A"
+    ).pack(pady=(2, 14))
 
-    status_var = tk.StringVar(value="Wird initialisiert…")
+    status_var = tk.StringVar(value="Initialisierung…")
     tk.Label(
         content,
         textvariable=status_var,
-        font=("Segoe UI", 12),
-        fg="#727775",
-        bg="#FFFFFF"
-    ).pack(pady=(0, 10))
+        font=("Segoe UI", 11),
+        fg="#64748B",
+        bg="#0F172A"
+    ).pack(pady=(0, 8))
 
     # Fortschrittsbalken
     pbar_canvas = tk.Canvas(
         content,
         width=bar_w,
-        height=6,
-        bg="#E9EEF6",
+        height=4,
+        bg="#1E293B",
         highlightthickness=0,
         bd=0
     )
     pbar_canvas.pack()
-    bar = pbar_canvas.create_rectangle(0, 0, 0, 6, fill="#0B57D0", outline="")
+    bar = pbar_canvas.create_rectangle(0, 0, 0, 4, fill="#0284C7", outline="")
 
     tk.Label(
         content,
         text="© 2026 Jona Noack  ·  Fachgebiet Arbeitswelt",
-        font=("Segoe UI", 11),
-        fg="#8E918F",
-        bg="#FFFFFF"
-    ).pack(pady=(16, 0))
+        font=("Segoe UI", 10),
+        fg="#475569",
+        bg="#0F172A"
+    ).pack(pady=(14, 0))
 
     splash._logo_ref = logo_img_ref
     splash._pbar_canvas = pbar_canvas
     splash._pbar_bar = bar
     splash._status_var = status_var
     splash._pbar_width = bar_w
-    splash._pbar_height = 6
+    splash._pbar_height = 4
 
     return splash
 
@@ -185,7 +184,7 @@ def main():
             from gui.main_window import IgniteApp
             loaded["IgniteApp"] = IgniteApp
 
-            splash.after(0, lambda: update_splash(splash, 0.85, "Lade Google Fluid Design…"))
+            splash.after(0, lambda: update_splash(splash, 0.85, "Lade Benutzeroberfläche…"))
 
             import time
             time.sleep(0.15)
@@ -229,7 +228,7 @@ def main():
         ctk = loaded["ctk"]
         IgniteApp = loaded["IgniteApp"]
 
-        ctk.set_appearance_mode("light")
+        ctk.set_appearance_mode("system")
 
         try:
             ctk.deactivate_automatic_dpi_awareness()

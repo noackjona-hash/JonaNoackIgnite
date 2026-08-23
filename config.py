@@ -33,7 +33,16 @@ _DEFAULT_SETTINGS: Dict[str, Any] = {
     "SKIN_EMISSIVITY": 0.98,
     "REFLECTED_TEMP_C": 20.0,
     "UI_SCALE": 1.0,
-    "SALT": secrets.token_hex(16)
+    "SALT": secrets.token_hex(16),
+    # ── Neue erweiterte Algorithmus-Parameter (v3.3) ───────────────────────────
+    "DEFAULT_MULTISCALE_TOPHAT": True,
+    "DEFAULT_MULTISCALE_FACTORS": [0.025, 0.050, 0.100],
+    "DEFAULT_ENABLE_PCA_ALIGNMENT": True,
+    "DEFAULT_ENABLE_GRADIENT_DIVERGENCE": True,
+    "DEFAULT_ENABLE_MULTI_OTSU": True,
+    "TSI_WEIGHT_DELTA_T": 0.45,
+    "TSI_WEIGHT_AREA": 0.35,
+    "TSI_WEIGHT_GRADIENT": 0.20
 }
 
 def load_settings() -> Dict[str, Any]:
@@ -93,9 +102,17 @@ BORDER_MARGIN_PX = _settings["BORDER_MARGIN_PX"]
 SKIN_EMISSIVITY = _settings["SKIN_EMISSIVITY"]
 REFLECTED_TEMP_C = _settings["REFLECTED_TEMP_C"]
 
+# ── Erweiterte Algorithmus-Konstanten ──────────────────────────────────────────
+DEFAULT_MULTISCALE_TOPHAT = _settings.get("DEFAULT_MULTISCALE_TOPHAT", True)
+DEFAULT_MULTISCALE_FACTORS = tuple(_settings.get("DEFAULT_MULTISCALE_FACTORS", [0.025, 0.050, 0.100]))
+DEFAULT_ENABLE_PCA_ALIGNMENT = _settings.get("DEFAULT_ENABLE_PCA_ALIGNMENT", True)
+DEFAULT_ENABLE_GRADIENT_DIVERGENCE = _settings.get("DEFAULT_ENABLE_GRADIENT_DIVERGENCE", True)
+DEFAULT_ENABLE_MULTI_OTSU = _settings.get("DEFAULT_ENABLE_MULTI_OTSU", True)
+TSI_WEIGHT_DELTA_T = _settings.get("TSI_WEIGHT_DELTA_T", 0.45)
+TSI_WEIGHT_AREA = _settings.get("TSI_WEIGHT_AREA", 0.35)
+TSI_WEIGHT_GRADIENT = _settings.get("TSI_WEIGHT_GRADIENT", 0.20)
+
 # ── UI-Skalierung ──────────────────────────────────────────────────────────────
-# Zusätzlicher Zoom-Faktor für die gesamte Oberfläche (1.0 = automatisch nach
-# Bildschirm-DPI). Werte > 1.0 vergrößern, < 1.0 verkleinern alles.
 UI_SCALE = _settings.get("UI_SCALE", 1.0)
 
 SALT = _settings["SALT"]

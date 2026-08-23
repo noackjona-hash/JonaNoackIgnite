@@ -15,6 +15,7 @@ import image_processing
 from gui.theme import (
     COLOR_BG_CARD,
     COLOR_BG_CARD_VARIANT,
+    COLOR_BG_CARD_HOVER,
     COLOR_OUTLINE,
     COLOR_OUTLINE_VARIANT,
     COLOR_TEXT_PRIMARY,
@@ -28,13 +29,16 @@ from gui.theme import (
     COLOR_CONTAINER_BLUE,
     FONT_FAMILY,
     FONT_FAMILY_MONO,
+    RADIUS_CARD,
+    RADIUS_BUTTON,
+    RADIUS_BADGE,
 )
 from gui.utils_ui import make_material_card
 from gui.services.export_service import ExportService
 
 
 class BatchView(ctk.CTkFrame):
-    """Serienuntersuchung & Ordner-Stapelverarbeitung im Google Material 3 Design."""
+    """Serienuntersuchung & Ordner-Stapelverarbeitung im High-Contrast Clinical Design."""
 
     def __init__(
         self,
@@ -62,97 +66,99 @@ class BatchView(ctk.CTkFrame):
         self.grid_rowconfigure(1, weight=1)
 
         # ── Obere Konfigurationskarte ─────────────────────────────────────────
-        config_card = make_material_card(self, corner_radius=16, fg_color=COLOR_BG_CARD)
-        config_card.grid(row=0, column=0, padx=18, pady=(18, 10), sticky="ew")
+        config_card = make_material_card(self, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD)
+        config_card.grid(row=0, column=0, padx=14, pady=(14, 6), sticky="ew")
 
         c_inner = ctk.CTkFrame(config_card, fg_color="transparent")
-        c_inner.pack(fill=ctk.X, padx=24, pady=20)
+        c_inner.pack(fill=ctk.X, padx=18, pady=16)
 
         ctk.CTkLabel(
             c_inner,
             text="SERIENUNTERSUCHUNG & STAPELVERARBEITUNG",
             font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
-            text_color=COLOR_PRIMARY,
+            text_color=COLOR_TEXT_PRIMARY,
             anchor="w"
-        ).pack(fill=ctk.X, pady=(0, 14))
+        ).pack(fill=ctk.X, pady=(0, 10))
 
         # Quell- und Zielordner Zeilen
         grid_paths = ctk.CTkFrame(c_inner, fg_color="transparent")
-        grid_paths.pack(fill=ctk.X, pady=(0, 14))
+        grid_paths.pack(fill=ctk.X, pady=(0, 10))
         grid_paths.grid_columnconfigure(1, weight=1)
 
         # Quellordner
-        ctk.CTkLabel(grid_paths, text="Quellordner:", font=ctk.CTkFont(size=12, weight="bold"), text_color=COLOR_TEXT_SECONDARY).grid(row=0, column=0, sticky="w", padx=(0, 12), pady=6)
-        self.src_entry = ctk.CTkEntry(grid_paths, textvariable=self.src_dir_var, font=ctk.CTkFont(family=FONT_FAMILY, size=12), fg_color=COLOR_BG_CARD_VARIANT, border_color=COLOR_OUTLINE, height=36)
-        self.src_entry.grid(row=0, column=1, sticky="ew", pady=6)
-        ctk.CTkButton(grid_paths, text="Durchsuchen…", width=120, height=36, corner_radius=18, command=self._browse_src, fg_color=COLOR_CONTAINER_BLUE, text_color=COLOR_PRIMARY, font=ctk.CTkFont(size=12, weight="bold")).grid(row=0, column=2, padx=(10, 0), pady=6)
+        ctk.CTkLabel(grid_paths, text="Quellordner:", font=ctk.CTkFont(size=12, weight="bold"), text_color=COLOR_TEXT_SECONDARY).grid(row=0, column=0, sticky="w", padx=(0, 10), pady=4)
+        self.src_entry = ctk.CTkEntry(grid_paths, textvariable=self.src_dir_var, font=ctk.CTkFont(family=FONT_FAMILY, size=12), fg_color=COLOR_BG_CARD_VARIANT, border_color=COLOR_OUTLINE, height=32)
+        self.src_entry.grid(row=0, column=1, sticky="ew", pady=4)
+        ctk.CTkButton(grid_paths, text="Durchsuchen…", width=100, height=32, corner_radius=RADIUS_BUTTON, command=self._browse_src, fg_color=COLOR_BG_CARD_VARIANT, hover_color=COLOR_BG_CARD_HOVER, border_width=1, border_color=COLOR_OUTLINE, text_color=COLOR_TEXT_PRIMARY, font=ctk.CTkFont(size=11)).grid(row=0, column=2, padx=(8, 0), pady=4)
 
         # Zielordner
-        ctk.CTkLabel(grid_paths, text="Ausgabeordner:", font=ctk.CTkFont(size=12, weight="bold"), text_color=COLOR_TEXT_SECONDARY).grid(row=1, column=0, sticky="w", padx=(0, 12), pady=6)
-        self.dest_entry = ctk.CTkEntry(grid_paths, textvariable=self.dest_dir_var, font=ctk.CTkFont(family=FONT_FAMILY, size=12), fg_color=COLOR_BG_CARD_VARIANT, border_color=COLOR_OUTLINE, height=36)
-        self.dest_entry.grid(row=1, column=1, sticky="ew", pady=6)
-        ctk.CTkButton(grid_paths, text="Durchsuchen…", width=120, height=36, corner_radius=18, command=self._browse_dest, fg_color=COLOR_CONTAINER_BLUE, text_color=COLOR_PRIMARY, font=ctk.CTkFont(size=12, weight="bold")).grid(row=1, column=2, padx=(10, 0), pady=6)
+        ctk.CTkLabel(grid_paths, text="Ausgabeordner:", font=ctk.CTkFont(size=12, weight="bold"), text_color=COLOR_TEXT_SECONDARY).grid(row=1, column=0, sticky="w", padx=(0, 10), pady=4)
+        self.dest_entry = ctk.CTkEntry(grid_paths, textvariable=self.dest_dir_var, font=ctk.CTkFont(family=FONT_FAMILY, size=12), fg_color=COLOR_BG_CARD_VARIANT, border_color=COLOR_OUTLINE, height=32)
+        self.dest_entry.grid(row=1, column=1, sticky="ew", pady=4)
+        ctk.CTkButton(grid_paths, text="Durchsuchen…", width=100, height=32, corner_radius=RADIUS_BUTTON, command=self._browse_dest, fg_color=COLOR_BG_CARD_VARIANT, hover_color=COLOR_BG_CARD_HOVER, border_width=1, border_color=COLOR_OUTLINE, text_color=COLOR_TEXT_PRIMARY, font=ctk.CTkFont(size=11)).grid(row=1, column=2, padx=(8, 0), pady=4)
 
         # Start / Stop Button Bar
         btn_bar = ctk.CTkFrame(c_inner, fg_color="transparent")
-        btn_bar.pack(fill=ctk.X, pady=(10, 0))
+        btn_bar.pack(fill=ctk.X, pady=(6, 0))
 
         self.start_btn = ctk.CTkButton(
             btn_bar,
-            text="▶  Stapelverarbeitung starten",
+            text="Stapelverarbeitung starten",
             command=self.toggle_batch,
-            font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
             fg_color=COLOR_PRIMARY,
             hover_color=COLOR_PRIMARY_HOVER,
             text_color="#FFFFFF",
-            corner_radius=21,
-            height=42,
-            width=240
+            corner_radius=RADIUS_BUTTON,
+            height=34,
+            width=200
         )
         self.start_btn.pack(side=ctk.LEFT)
 
         self.open_dest_btn = ctk.CTkButton(
             btn_bar,
-            text="📁  Ausgabeordner öffnen",
+            text="Ausgabeordner öffnen",
             command=self._open_dest_folder,
-            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
             fg_color=COLOR_BG_CARD_VARIANT,
-            hover_color=COLOR_OUTLINE,
+            hover_color=COLOR_BG_CARD_HOVER,
+            border_width=1,
+            border_color=COLOR_OUTLINE,
             text_color=COLOR_TEXT_PRIMARY,
-            corner_radius=21,
-            height=42,
-            width=200
+            corner_radius=RADIUS_BUTTON,
+            height=34,
+            width=160
         )
-        self.open_dest_btn.pack(side=ctk.LEFT, padx=(12, 0))
+        self.open_dest_btn.pack(side=ctk.LEFT, padx=(10, 0))
 
         # Fortschrittsbalken
-        self.pbar = ctk.CTkProgressBar(c_inner, height=8, fg_color=COLOR_OUTLINE_VARIANT, progress_color=COLOR_PRIMARY)
+        self.pbar = ctk.CTkProgressBar(c_inner, height=6, fg_color=COLOR_OUTLINE_VARIANT, progress_color=COLOR_PRIMARY)
         self.pbar.set(0.0)
-        self.pbar.pack(fill=ctk.X, pady=(16, 6))
+        self.pbar.pack(fill=ctk.X, pady=(12, 4))
 
         self.status_lbl = ctk.CTkLabel(
             c_inner,
             text="Bereit für Serienanalyse",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
             text_color=COLOR_TEXT_MUTED,
             anchor="w"
         )
         self.status_lbl.pack(fill=ctk.X)
 
         # ── Untere Ergebnistabelle ────────────────────────────────────────────
-        self.results_card = make_material_card(self, corner_radius=16, fg_color=COLOR_BG_CARD)
-        self.results_card.grid(row=1, column=0, padx=18, pady=(10, 18), sticky="nsew")
+        self.results_card = make_material_card(self, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD)
+        self.results_card.grid(row=1, column=0, padx=14, pady=(6, 14), sticky="nsew")
 
         r_inner = ctk.CTkFrame(self.results_card, fg_color="transparent")
-        r_inner.pack(fill=ctk.BOTH, expand=True, padx=24, pady=20)
+        r_inner.pack(fill=ctk.BOTH, expand=True, padx=18, pady=16)
 
         ctk.CTkLabel(
             r_inner,
             text="VERARBEITETE WÄRMEBILDER",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=10, weight="bold"),
             text_color=COLOR_TEXT_MUTED,
             anchor="w"
-        ).pack(fill=ctk.X, pady=(0, 10))
+        ).pack(fill=ctk.X, pady=(0, 8))
 
         self.results_scroll = ctk.CTkScrollableFrame(r_inner, fg_color="transparent")
         self.results_scroll.pack(fill=ctk.BOTH, expand=True)
@@ -160,10 +166,10 @@ class BatchView(ctk.CTkFrame):
         self.empty_table_lbl = ctk.CTkLabel(
             self.results_scroll,
             text="Noch keine Batch-Ergebnisse vorhanden. Klicke auf 'Stapelverarbeitung starten'.",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=13, slant="italic"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
             text_color=COLOR_TEXT_MUTED
         )
-        self.empty_table_lbl.pack(pady=40)
+        self.empty_table_lbl.pack(pady=30)
 
     def _browse_src(self) -> None:
         p = filedialog.askdirectory(title="Quellordner für Wärmebilder wählen")
@@ -202,7 +208,7 @@ class BatchView(ctk.CTkFrame):
 
         self.is_running = True
         self._cancel_requested = False
-        self.start_btn.configure(text="⏹  Abbrechen", fg_color=COLOR_DANGER, hover_color="#C5221F")
+        self.start_btn.configure(text="Abbrechen", fg_color=COLOR_DANGER, hover_color="#B91C1C")
         self._processed_items.clear()
         self.empty_table_lbl.pack_forget()
 
@@ -304,11 +310,11 @@ class BatchView(ctk.CTkFrame):
         self.status_lbl.configure(text=text)
 
     def _add_result_row(self, item: dict[str, Any]) -> None:
-        card = make_material_card(self.results_scroll, corner_radius=10, fg_color=COLOR_BG_CARD_VARIANT)
-        card.pack(fill=ctk.X, pady=3)
+        card = make_material_card(self.results_scroll, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD_VARIANT)
+        card.pack(fill=ctk.X, pady=2)
 
         row = ctk.CTkFrame(card, fg_color="transparent")
-        row.pack(fill=ctk.X, padx=16, pady=10)
+        row.pack(fill=ctk.X, padx=14, pady=8)
 
         ctk.CTkLabel(
             row,
@@ -327,6 +333,6 @@ class BatchView(ctk.CTkFrame):
 
     def _on_batch_finished(self) -> None:
         self.is_running = False
-        self.start_btn.configure(text="▶  Stapelverarbeitung starten", fg_color=COLOR_PRIMARY, hover_color=COLOR_PRIMARY_HOVER)
+        self.start_btn.configure(text="Stapelverarbeitung starten", fg_color=COLOR_PRIMARY, hover_color=COLOR_PRIMARY_HOVER)
         self.status_lbl.configure(text=f"Fertig! {len(self._processed_items)} Bilder verarbeitet.")
         self.on_notify(f"Stapelverarbeitung abgeschlossen: {len(self._processed_items)} Bilder analysiert.", "success")

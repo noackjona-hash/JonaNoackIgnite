@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""gui/widgets/dialogs.py – Google Material 3 Modals & Dialogs for IGNITE."""
+"""gui/widgets/dialogs.py – High-Contrast Modals & Dialogs for IGNITE."""
 
 from __future__ import annotations
 import tkinter as tk
@@ -10,6 +10,7 @@ from gui.theme import (
     COLOR_BG_APP,
     COLOR_BG_CARD,
     COLOR_BG_CARD_VARIANT,
+    COLOR_BG_CARD_HOVER,
     COLOR_OUTLINE,
     COLOR_OUTLINE_VARIANT,
     COLOR_TEXT_PRIMARY,
@@ -17,149 +18,144 @@ from gui.theme import (
     COLOR_TEXT_MUTED,
     COLOR_PRIMARY,
     COLOR_PRIMARY_HOVER,
-    COLOR_CONTAINER_BLUE,
-    COLOR_CONTAINER_GREEN,
     FONT_FAMILY,
     FONT_FAMILY_MONO,
+    RADIUS_CARD,
+    RADIUS_BUTTON,
+    RADIUS_BADGE,
 )
 from gui.utils_ui import make_material_card
 
 
 class AboutModal(ctk.CTkToplevel):
-    """Google Material 3 Info-Dialog über IGNITE."""
+    """Info-Dialog über IGNITE im High-Contrast Clinical Design."""
 
     def __init__(self, master, **kwargs) -> None:
         super().__init__(master, **kwargs)
 
         self.title("Über IGNITE")
-        self.geometry("560x460")
+        self.geometry("540x440")
         self.resizable(False, False)
         self.transient(master)
         self.configure(fg_color=COLOR_BG_APP)
 
-        container = make_material_card(self, corner_radius=20, fg_color=COLOR_BG_CARD)
-        container.pack(fill=ctk.BOTH, expand=True, padx=20, pady=20)
+        container = make_material_card(self, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD)
+        container.pack(fill=ctk.BOTH, expand=True, padx=14, pady=14)
 
         inner = ctk.CTkFrame(container, fg_color="transparent")
-        inner.pack(fill=ctk.BOTH, expand=True, padx=24, pady=24)
+        inner.pack(fill=ctk.BOTH, expand=True, padx=18, pady=18)
 
         # Header
         ctk.CTkLabel(
             inner,
-            text="🔬",
-            font=ctk.CTkFont(size=40)
-        ).pack(pady=(0, 6))
-
-        ctk.CTkLabel(
-            inner,
             text="IGNITE Medical Imaging Suite",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=22, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=18, weight="bold"),
             text_color=COLOR_TEXT_PRIMARY
-        ).pack()
+        ).pack(pady=(4, 2))
 
         ctk.CTkLabel(
             inner,
-            text="v3.2 · Jugend forscht 2026 (Fachgebiet Arbeitswelt)",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
+            text="Version 3.2 · Jugend forscht 2026 (Fachgebiet Arbeitswelt)",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
             text_color=COLOR_PRIMARY
-        ).pack(pady=(3, 16))
+        ).pack(pady=(0, 14))
 
         # Info Box
-        info_card = make_material_card(inner, corner_radius=12, fg_color=COLOR_BG_CARD_VARIANT)
-        info_card.pack(fill=ctk.BOTH, expand=True, pady=(0, 16))
+        info_card = make_material_card(inner, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD_VARIANT)
+        info_card.pack(fill=ctk.BOTH, expand=True, pady=(0, 14))
 
         info_inner = ctk.CTkFrame(info_card, fg_color="transparent")
-        info_inner.pack(fill=ctk.BOTH, expand=True, padx=18, pady=14)
+        info_inner.pack(fill=ctk.BOTH, expand=True, padx=14, pady=12)
 
         bullets = [
-            ("⚡ High-Performance Core", "Rust (rayon/ndarray) + PyTorch CUDA GPU (<10ms)"),
-            ("🌡️ Radiometrie", "Stefan-Boltzmann Emissivitätskorrektur (ε=0.98)"),
-            ("🦶 Diabetischer Fuß", "Kontralaterale Asymmetrie (>2.2°C Goldstandard)"),
-            ("🛡️ Datenschutz", "Lokale In-Memory Verarbeitung & DSGVO SHA-256 Hashing"),
+            ("Rechen-Engine", "Rust (rayon/ndarray) + PyTorch CUDA GPU (<10ms)"),
+            ("Radiometrie", "Stefan-Boltzmann Emissivitätskorrektur (ε=0.98)"),
+            ("Podologie", "Kontralaterale Asymmetrie (>2.2°C Armstrong Goldstandard)"),
+            ("Datenschutz", "Lokale In-Memory Verarbeitung & DSGVO SHA-256 Hashing"),
         ]
 
         for title, desc in bullets:
             row = ctk.CTkFrame(info_inner, fg_color="transparent")
-            row.pack(fill=ctk.X, pady=4)
+            row.pack(fill=ctk.X, pady=3)
             ctk.CTkLabel(row, text=title, font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"), text_color=COLOR_TEXT_PRIMARY, anchor="w").pack(side=ctk.LEFT)
             ctk.CTkLabel(row, text=desc, font=ctk.CTkFont(family=FONT_FAMILY, size=11), text_color=COLOR_TEXT_MUTED, anchor="e").pack(side=ctk.RIGHT)
 
         ctk.CTkLabel(
             inner,
             text="© 2026 Jona Noack · Forschungsprototyp (Kein zertifiziertes Medizinprodukt)",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=10),
             text_color=COLOR_TEXT_MUTED
-        ).pack(pady=(0, 14))
+        ).pack(pady=(0, 12))
 
         ctk.CTkButton(
             inner,
             text="Schließen",
             command=self.destroy,
-            font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
             fg_color=COLOR_PRIMARY,
             hover_color=COLOR_PRIMARY_HOVER,
             text_color="#FFFFFF",
-            corner_radius=20,
-            height=40,
-            width=140
+            corner_radius=RADIUS_BUTTON,
+            height=34,
+            width=120
         ).pack()
 
 
 class HelpModal(ctk.CTkToplevel):
-    """Google Material 3 Anleitungs- und Hilfedialog."""
+    """Anleitungs- und Hilfedialog im High-Contrast Clinical Design."""
 
     def __init__(self, master, **kwargs) -> None:
         super().__init__(master, **kwargs)
 
         self.title("IGNITE – Bedienungsanleitung")
-        self.geometry("660x540")
+        self.geometry("640x500")
         self.transient(master)
         self.configure(fg_color=COLOR_BG_APP)
 
-        container = make_material_card(self, corner_radius=20, fg_color=COLOR_BG_CARD)
-        container.pack(fill=ctk.BOTH, expand=True, padx=20, pady=20)
+        container = make_material_card(self, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD)
+        container.pack(fill=ctk.BOTH, expand=True, padx=14, pady=14)
 
         scroll = ctk.CTkScrollableFrame(container, fg_color="transparent")
-        scroll.pack(fill=ctk.BOTH, expand=True, padx=20, pady=20)
+        scroll.pack(fill=ctk.BOTH, expand=True, padx=14, pady=14)
 
         ctk.CTkLabel(
             scroll,
-            text="📖 Bedienungsanleitung & Schnelleinstieg",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=20, weight="bold"),
+            text="Bedienungsanleitung & Schnelleinstieg",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=16, weight="bold"),
             text_color=COLOR_TEXT_PRIMARY,
             anchor="w"
-        ).pack(fill=ctk.X, pady=(0, 16))
+        ).pack(fill=ctk.X, pady=(0, 12))
 
         steps = [
-            ("1. Wärmebild öffnen", "Klicke oben rechts auf '+ Wärmebild öffnen' (Ctrl+O) und wähle eine Infrarotdatei (.jpg, .png, .tiff, .flir) aus."),
+            ("1. Wärmebild öffnen", "Klicke oben rechts auf '+ Bild öffnen' (Ctrl+O) und wähle eine Infrarotdatei (.jpg, .png, .tiff, .flir) aus."),
             ("2. Dashboard-Übersicht", "Das 4-Stufen-Dashboard berechnet automatisch Originalbild, Körpermaske, Top-Hat Differenz und Hotspot-Overlay."),
             ("3. Live-ROI & Inspektion", "Wechsle zu 'Inspektion', um durch Aufziehen eines Rechtecks mit der Maus beliebige Zonen live auszumessen."),
             ("4. Podologische Symmetrie", "Im Tab 'Podologie' wird das 3-Zonen-Modell (Vorfuß, Mittelfuß, Ferse) mit dem klinischen 2.2 °C Grenzwert verglichen."),
-            ("5. HTML-Bericht exportieren", "Klicke in der Seitenleiste auf 'HTML-Bericht exportieren' (Ctrl+E), um einen interaktiven Befundbericht zu speichern."),
-            ("6. Tastenkombinationen", "Ctrl+K: Befehlssuche · Ctrl+O: Öffnen · Ctrl+E: Exportieren · Ctrl+T: Dark/Light Mode · F5: Neu berechnen.")
+            ("5. Bericht exportieren", "Klicke in der Seitenleiste auf 'Bericht exportieren' (Ctrl+E), um einen interaktiven Befundbericht zu speichern."),
+            ("6. Tastenkombinationen", "Ctrl+K: Befehlssuche · Ctrl+O: Öffnen · Ctrl+E: Exportieren · F5: Neu berechnen.")
         ]
 
         for title, desc in steps:
-            card = make_material_card(scroll, corner_radius=12, fg_color=COLOR_BG_CARD_VARIANT)
-            card.pack(fill=ctk.X, pady=4)
+            card = make_material_card(scroll, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD_VARIANT)
+            card.pack(fill=ctk.X, pady=3)
             c_inner = ctk.CTkFrame(card, fg_color="transparent")
-            c_inner.pack(fill=ctk.X, padx=16, pady=12)
+            c_inner.pack(fill=ctk.X, padx=14, pady=10)
 
-            ctk.CTkLabel(c_inner, text=title, font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"), text_color=COLOR_PRIMARY, anchor="w").pack(fill=ctk.X)
-            ctk.CTkLabel(c_inner, text=desc, font=ctk.CTkFont(family=FONT_FAMILY, size=12), text_color=COLOR_TEXT_SECONDARY, anchor="w", wraplength=540, justify="left").pack(fill=ctk.X, pady=(2, 0))
+            ctk.CTkLabel(c_inner, text=title, font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"), text_color=COLOR_TEXT_PRIMARY, anchor="w").pack(fill=ctk.X)
+            ctk.CTkLabel(c_inner, text=desc, font=ctk.CTkFont(family=FONT_FAMILY, size=11), text_color=COLOR_TEXT_MUTED, anchor="w", wraplength=520, justify="left").pack(fill=ctk.X, pady=(2, 0))
 
         ctk.CTkButton(
             scroll,
             text="Schließen",
             command=self.destroy,
-            font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
             fg_color=COLOR_PRIMARY,
             hover_color=COLOR_PRIMARY_HOVER,
             text_color="#FFFFFF",
-            corner_radius=20,
-            height=40,
-            width=140
-        ).pack(pady=(18, 8))
+            corner_radius=RADIUS_BUTTON,
+            height=34,
+            width=120
+        ).pack(pady=(14, 6))
 
 
 class PatientExportModal(ctk.CTkToplevel):
@@ -169,47 +165,47 @@ class PatientExportModal(ctk.CTkToplevel):
         super().__init__(master, **kwargs)
 
         self.title("Befundbericht exportieren")
-        self.geometry("520x460")
+        self.geometry("480x420")
         self.resizable(False, False)
         self.transient(master)
         self.configure(fg_color=COLOR_BG_APP)
 
         self.on_submit = on_submit
 
-        container = make_material_card(self, corner_radius=20, fg_color=COLOR_BG_CARD)
-        container.pack(fill=ctk.BOTH, expand=True, padx=20, pady=20)
+        container = make_material_card(self, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD)
+        container.pack(fill=ctk.BOTH, expand=True, padx=14, pady=14)
 
         inner = ctk.CTkFrame(container, fg_color="transparent")
-        inner.pack(fill=ctk.BOTH, expand=True, padx=24, pady=24)
+        inner.pack(fill=ctk.BOTH, expand=True, padx=18, pady=18)
 
         ctk.CTkLabel(
             inner,
-            text="📄 Befundbericht exportieren",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=18, weight="bold"),
+            text="Befundbericht exportieren",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=16, weight="bold"),
             text_color=COLOR_TEXT_PRIMARY,
             anchor="w"
-        ).pack(fill=ctk.X, pady=(0, 14))
+        ).pack(fill=ctk.X, pady=(0, 12))
 
         # Patienten-ID
-        ctk.CTkLabel(inner, text="Patienten-Name / ID:", font=ctk.CTkFont(size=12, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w")
-        self.patient_entry = ctk.CTkEntry(inner, placeholder_text="z. B. Max Mustermann oder ANON-001", font=ctk.CTkFont(family=FONT_FAMILY, size=13), fg_color=COLOR_BG_CARD_VARIANT, border_color=COLOR_OUTLINE, height=36)
-        self.patient_entry.pack(fill=ctk.X, pady=(2, 10))
+        ctk.CTkLabel(inner, text="Patienten-Name / ID:", font=ctk.CTkFont(size=11, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w")
+        self.patient_entry = ctk.CTkEntry(inner, placeholder_text="z. B. Max Mustermann oder ANON-001", font=ctk.CTkFont(family=FONT_FAMILY, size=12), fg_color=COLOR_BG_CARD_VARIANT, border_color=COLOR_OUTLINE, height=32)
+        self.patient_entry.pack(fill=ctk.X, pady=(2, 8))
 
         # Geburtsdatum
-        ctk.CTkLabel(inner, text="Geburtsdatum (optional für SHA-256 Hash):", font=ctk.CTkFont(size=12, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w")
-        self.dob_entry = ctk.CTkEntry(inner, placeholder_text="TT.MM.JJJJ", font=ctk.CTkFont(family=FONT_FAMILY, size=13), fg_color=COLOR_BG_CARD_VARIANT, border_color=COLOR_OUTLINE, height=36)
-        self.dob_entry.pack(fill=ctk.X, pady=(2, 10))
+        ctk.CTkLabel(inner, text="Geburtsdatum (optional für SHA-256 Hash):", font=ctk.CTkFont(size=11, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w")
+        self.dob_entry = ctk.CTkEntry(inner, placeholder_text="TT.MM.JJJJ", font=ctk.CTkFont(family=FONT_FAMILY, size=12), fg_color=COLOR_BG_CARD_VARIANT, border_color=COLOR_OUTLINE, height=32)
+        self.dob_entry.pack(fill=ctk.X, pady=(2, 8))
 
         # Untersucher
-        ctk.CTkLabel(inner, text="Untersucher / Bediener:", font=ctk.CTkFont(size=12, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w")
-        self.operator_entry = ctk.CTkEntry(inner, placeholder_text="Jugend forscht 2026", font=ctk.CTkFont(family=FONT_FAMILY, size=13), fg_color=COLOR_BG_CARD_VARIANT, border_color=COLOR_OUTLINE, height=36)
+        ctk.CTkLabel(inner, text="Untersucher / Bediener:", font=ctk.CTkFont(size=11, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w")
+        self.operator_entry = ctk.CTkEntry(inner, placeholder_text="Jugend forscht 2026", font=ctk.CTkFont(family=FONT_FAMILY, size=12), fg_color=COLOR_BG_CARD_VARIANT, border_color=COLOR_OUTLINE, height=32)
         self.operator_entry.insert(0, "Jugend forscht 2026")
-        self.operator_entry.pack(fill=ctk.X, pady=(2, 10))
+        self.operator_entry.pack(fill=ctk.X, pady=(2, 8))
 
         # Anmerkungen
-        ctk.CTkLabel(inner, text="Klinische Anmerkungen:", font=ctk.CTkFont(size=12, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w")
-        self.notes_entry = ctk.CTkEntry(inner, placeholder_text="z. B. Postoperatives Monitoring", font=ctk.CTkFont(family=FONT_FAMILY, size=13), fg_color=COLOR_BG_CARD_VARIANT, border_color=COLOR_OUTLINE, height=36)
-        self.notes_entry.pack(fill=ctk.X, pady=(2, 16))
+        ctk.CTkLabel(inner, text="Klinische Anmerkungen:", font=ctk.CTkFont(size=11, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w")
+        self.notes_entry = ctk.CTkEntry(inner, placeholder_text="z. B. Postoperatives Monitoring", font=ctk.CTkFont(family=FONT_FAMILY, size=12), fg_color=COLOR_BG_CARD_VARIANT, border_color=COLOR_OUTLINE, height=32)
+        self.notes_entry.pack(fill=ctk.X, pady=(2, 14))
 
         btn_row = ctk.CTkFrame(inner, fg_color="transparent")
         btn_row.pack(fill=ctk.X)
@@ -218,26 +214,28 @@ class PatientExportModal(ctk.CTkToplevel):
             btn_row,
             text="Abbrechen",
             command=self.destroy,
-            font=ctk.CTkFont(family=FONT_FAMILY, size=13),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
             fg_color=COLOR_BG_CARD_VARIANT,
-            hover_color=COLOR_OUTLINE,
+            hover_color=COLOR_BG_CARD_HOVER,
+            border_width=1,
+            border_color=COLOR_OUTLINE,
             text_color=COLOR_TEXT_PRIMARY,
-            corner_radius=20,
-            height=40,
-            width=120
+            corner_radius=RADIUS_BUTTON,
+            height=34,
+            width=100
         ).pack(side=ctk.LEFT)
 
         ctk.CTkButton(
             btn_row,
             text="Bericht speichern",
             command=self._on_save,
-            font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
             fg_color=COLOR_PRIMARY,
             hover_color=COLOR_PRIMARY_HOVER,
             text_color="#FFFFFF",
-            corner_radius=20,
-            height=40
-        ).pack(side=ctk.RIGHT, fill=ctk.X, expand=True, padx=(12, 0))
+            corner_radius=RADIUS_BUTTON,
+            height=34
+        ).pack(side=ctk.RIGHT, fill=ctk.X, expand=True, padx=(10, 0))
 
     def _on_save(self) -> None:
         p_name = self.patient_entry.get().strip() or "Unbekannt"
