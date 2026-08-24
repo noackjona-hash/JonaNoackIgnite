@@ -1,0 +1,19 @@
+title: "[IDEA]: "
+labels: ["idea"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Teile Ideen für zukünftige Versionen, neue Entzündungs-Detektionsverfahren oder Kooperationsmöglichkeiten!
+  - type: textarea
+    id: idea
+    attributes:
+      label: 💡 Deine Idee
+      description: Beschreibe deine Idee oder dein Konzept.
+    validations:
+      required: true
+  - type: textarea
+    id: benefits
+    attributes:
+      label: 🌟 Vorteile & Relevanz
+      description: Warum wäre diese Idee für Anwender oder Forschende nützlich?

@@ -1,0 +1,14 @@
+title: "[SHOW & TELL]: "
+labels: ["show-and-tell"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Zeige eigene Auswertungen, Thermografie-Bilder oder Projekte, die du mit IGNITE umgesetzt hast!
+  - type: textarea
+    id: showcase
+    attributes:
+      label: 🔬 Dein Projekt / Deine Auswertung
+      description: Was hast du analysiert oder gebaut?
+    validations:
+      required: true

@@ -1,0 +1,48 @@
+name: "✨ Feature Request"
+description: "Schlage ein neues Feature oder eine algorithmische Optimierung vor"
+title: "[FEATURE]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Schlage eine funktionale Erweiterung, einen neuen Algorithmus oder eine UI-Verbesserung für **IGNITE** vor!
+  - type: textarea
+    id: problem
+    attributes:
+      label: 🎯 Motivation / Problemstellung
+      description: Welches klinische, wissenschaftliche oder technische Problem soll gelöst werden?
+      placeholder: Eine präzise Beschreibung des Bedarfs...
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: 💡 Vorgeschlagene Lösung
+      description: Wie genau soll das Feature funktionieren oder mathematisch umgesetzt werden?
+      placeholder: Detaillierter Lösungsvorschlag...
+    validations:
+      required: true
+  - type: dropdown
+    id: category
+    attributes:
+      label: 🔬 Kategorie
+      options:
+        - "Signal- & Bildverarbeitung (Filter, Segmentierung, Top-Hat)"
+        - "Klinische Diagnostik & Metriken (Asymmetrie, TSI, IWGDF, Pennes Bioheat)"
+        - "High-Performance Core (Rust, Rayon, PyTorch GPU)"
+        - "GUI & Visualisierung (Google Material 3, Histogramme, Charts, ROI)"
+        - "Export, Berichte & Compliance (HTML, PDF, DICOM, DSGVO)"
+        - "Wissenschaftliche Benchmarks & JuFo Dokumentation"
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 🔄 Betrachtete Alternativen
+      description: Welche alternativen Ansätze oder Workarounds hast du in Betracht gezogen?
+  - type: textarea
+    id: context
+    attributes:
+      label: ℹ️ Zusätzlicher Kontext / Referenzen
+      description: Links zu Papern, medizinischen Leitlinien, Screenshots oder Mockups.

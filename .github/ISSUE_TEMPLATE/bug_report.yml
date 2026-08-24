@@ -1,0 +1,83 @@
+name: "🐛 Bug Report"
+description: "Melde einen Fehler oder unerwartetes Verhalten in IGNITE"
+title: "[BUG]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Vielen Dank, dass du dir die Zeit nimmst, einen Fehler in **IGNITE** zu melden!
+  - type: textarea
+    id: description
+    attributes:
+      label: 📝 Fehlerbeschreibung
+      description: Eine klare und präzise Beschreibung des Fehlers.
+      placeholder: Was ist schiefgelaufen?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: 🔄 Schritte zur Reproduktion
+      description: Wie lässt sich der Fehler Schritt für Schritt nachvollziehen?
+      placeholder: |
+        1. IGNITE starten (python main.py)
+        2. Bild laden: ...
+        3. Option / Schwellenwert ändern: ...
+        4. Beobachteter Fehler: ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 🎯 Erwartetes Verhalten
+      description: Was hättest du unter normalen Bedingungen erwartet?
+    validations:
+      required: true
+  - type: dropdown
+    id: backend
+    attributes:
+      label: ⚡ Berechnungs-Backend
+      description: Welches Backend war bei Auftreten des Fehlers aktiv?
+      options:
+        - "Python Fallback (NumPy + OpenCV)"
+        - "Rust Core (ignite_core / Rayon)"
+        - "PyTorch GPU (CUDA Acceleration)"
+        - "Unbekannt / Startproblem"
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: 💻 Betriebssystem
+      description: Auf welcher Plattform tritt der Fehler auf?
+      options:
+        - "Windows 11 (64-Bit)"
+        - "Windows 10 (64-Bit)"
+        - "Linux (Ubuntu / Debian / Fedora / Arch)"
+        - "macOS (Apple Silicon / Intel)"
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: 🏷️ Versionen & Hardware
+      description: Python-Version, GPU-Modell, etc.
+      placeholder: z. B. Python 3.10.12, NVIDIA RTX 3060, IGNITE v3.2.0
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: 📜 Logs & Fehlerausgaben
+      description: Fehlermeldungen aus Terminal / Logs oder Stacktraces einfügen.
+      render: shell
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: 📋 Checkliste
+      options:
+        - label: Ich habe geprüft, ob dieses Problem bereits als Issue gemeldet wurde.
+          required: true
+        - label: Ich habe die neueste Version von IGNITE getestet.
+          required: true
