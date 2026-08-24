@@ -510,15 +510,14 @@ class IgniteApp:
         modal = PatientExportModal(self.root, on_submit=self._do_export_report)
         modal.grab_set()
 
-    def _do_export_report(self, p_name: str, p_dob: str, operator: str, notes: str) -> None:
+    def _do_export_report(self, record_id: str, operator: str, notes: str) -> None:
         if not self.current_result:
             return
 
         try:
             report_path = ExportService.generate_html_report(
                 analysis_result=self.current_result,
-                patient_name=p_name,
-                patient_dob=p_dob,
+                record_id=record_id,
                 operator=operator,
                 notes=notes
             )

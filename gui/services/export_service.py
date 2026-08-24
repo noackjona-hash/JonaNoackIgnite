@@ -44,8 +44,7 @@ class ExportService:
     def generate_html_report(
         cls,
         analysis_result: dict[str, Any],
-        patient_name: str = "Unbekannt",
-        patient_dob: str = "",
+        record_id: str = "Unbekannt",
         operator: str = "Jugend forscht 2026",
         notes: str = "",
         output_filepath: Optional[str] = None
@@ -58,13 +57,11 @@ class ExportService:
             os.makedirs(config.OUTPUT_DIR, exist_ok=True)
             output_filepath = os.path.join(config.OUTPUT_DIR, f"report_{base_name}.html")
 
-        # Pseudonymisierung prüfen
-        is_anon = patient_name.startswith("ANON-")
-        if not is_anon and patient_name.strip() and patient_name != "Unbekannt":
-            display_patient_id = pseudonymize_patient(patient_name, patient_dob)
-            is_anon = True
+        # Sicherstellen, dass die Kennung pseudonymisiert ist
+        if record_id and not record_id.startswith("ANON-") and record_id != "Unbekannt":
+            display_record_id = pseudonymize_patient(record_id)
         else:
-            display_patient_id = patient_name
+            display_record_id = record_id
 
         now_str = datetime.datetime.now().strftime("%d.%m.%Y, %H:%M Uhr")
         backend = analysis_result.get("backend", "Python CPU")
@@ -292,11 +289,11 @@ class ExportService:
 
         <!-- Stammdaten Card -->
         <div class="card">
-            <div class="card-title">Untersuchungs- & Patientendaten</div>
+            <div class="card-title">Untersuchungs- & Datensatzdaten</div>
             <div class="meta-grid">
                 <div class="meta-item">
-                    <div class="meta-label">Patienten-ID</div>
-                    <div class="meta-val">{display_patient_id}</div>
+                    <div class="meta-label">Datensatz / Pseudonym-ID</div>
+                    <div class="meta-val">{display_record_id}</div>
                 </div>
                 <div class="meta-item">
                     <div class="meta-label">Dateiname</div>
@@ -404,7 +401,7 @@ class ExportService:
         try:
             write_audit_entry({
                 "Zeitstempel": datetime.datetime.now().isoformat(),
-                "Patienten-ID": display_patient_id,
+                "Patienten-ID": display_record_id,
                 "Analysemodus": analysis_mode,
                 "Bilddatei": os.path.basename(image_path),
                 "sigma_k": analysis_result.get("params", {}).get("sigma_k", 3.0),

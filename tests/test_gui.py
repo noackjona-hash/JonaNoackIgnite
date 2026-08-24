@@ -61,8 +61,7 @@ def test_export_service_html_generation(tmp_path):
     out_file = str(tmp_path / "test_report.html")
     res_path = ExportService.generate_html_report(
         dummy_result,
-        patient_name="Max Mustermann",
-        patient_dob="01.01.1980",
+        record_id="Max Mustermann",
         operator="Tester",
         output_filepath=out_file
     )

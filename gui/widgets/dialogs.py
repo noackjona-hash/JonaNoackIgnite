@@ -161,7 +161,7 @@ class HelpModal(ctk.CTkToplevel):
 class PatientExportModal(ctk.CTkToplevel):
     """Dialog zur Eingabe von Patientendaten vor dem HTML-Report-Export."""
 
-    def __init__(self, master, on_submit: Callable[[str, str, str, str], None], **kwargs) -> None:
+    def __init__(self, master, on_submit: Callable[[str, str, str], None], **kwargs) -> None:
         super().__init__(master, **kwargs)
 
         self.title("Befundbericht exportieren")
@@ -238,10 +238,17 @@ class PatientExportModal(ctk.CTkToplevel):
         ).pack(side=ctk.RIGHT, fill=ctk.X, expand=True, padx=(10, 0))
 
     def _on_save(self) -> None:
-        p_name = self.patient_entry.get().strip() or "Unbekannt"
-        p_dob = self.dob_entry.get().strip()
+        from utils import pseudonymize_patient
+        raw_id = self.patient_entry.get().strip() or "Unbekannt"
+        raw_dob = self.dob_entry.get().strip()
         op = self.operator_entry.get().strip() or "Jugend forscht"
         notes = self.notes_entry.get().strip()
 
+        # Sofortige DSGVO-konforme Pseudonymisierung vor Weitergabe
+        if raw_id != "Unbekannt" and not raw_id.startswith("ANON-"):
+            record_id = pseudonymize_patient(raw_id, raw_dob)
+        else:
+            record_id = raw_id
+
         self.destroy()
-        self.on_submit(p_name, p_dob, op, notes)
+        self.on_submit(record_id, op, notes)

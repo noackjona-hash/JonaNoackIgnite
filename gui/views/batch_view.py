@@ -283,7 +283,7 @@ class BatchView(ctk.CTkFrame):
                     "analysis_mode": "Klinische Allgemeinanalyse",
                     "params": params
                 }
-                ExportService.generate_html_report(result_data, patient_name=f"Patient_{base_name}", output_filepath=rep_path)
+                ExportService.generate_html_report(result_data, record_id=f"ANON_BATCH_{base_name}", output_filepath=rep_path)
 
                 item = {
                     "filepath": filepath,
