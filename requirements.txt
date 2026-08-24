@@ -4,7 +4,7 @@
 
 # KERN-DEPENDENCIES (immer installieren)
 # ───────────────────────────────────────────────────────────────────────────────
-numpy>=1.24.0,<2.0          # Numerische Computations (FastMath, SIMD-Optimierungen)
+numpy>=2.2.6,<3.0          # Numerische Computations (FastMath, SIMD-Optimierungen)
 opencv-python>=4.8.0        # Bild I/O, Morphologie, Connected Components
 customtkinter>=5.2.0        # Modernes Dark-Mode GUI (CustomTkinter für schönere UI)
 Pillow>=10.0.0              # Bild-Rendering & PNG-Export
