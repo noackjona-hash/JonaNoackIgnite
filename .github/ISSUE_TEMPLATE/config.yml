@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 🛡️ Sicherheitslücke melden
+    url: https://github.com/noackjona-hash/JonaNoackIgnite/security/advisories
+    about: Bitte melde Sicherheitslücken vertraulich über GitHub Security Advisories.
+  - name: 💬 Fragen & Diskussionen
+    url: https://github.com/noackjona-hash/JonaNoackIgnite/discussions
+    about: Stelle Fragen zum Projekt, zur Jugend forscht Arbeit oder zur Methodik.
