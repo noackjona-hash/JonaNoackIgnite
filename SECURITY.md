@@ -8,14 +8,13 @@ Dieses Dokument definiert die verbindlichen Sicherheitsrichtlinien und den Proze
 
 ## 2. Supported Versions
 
-Sicherheitsupdates und Patches werden ausschließlich für die unten als unterstützt gekennzeichneten Versionen bereitgestellt. Ältere oder nicht unterstützte Versionen erhalten **keine** Fixes, Audits oder Backports. Nutzer von nicht unterstützten Versionen werden dringend aufgefordert, umgehend auf eine unterstützte Major-/Minor-Version zu aktualisieren.
+Sicherheitsupdates und Patches werden ausschließlich für die unten als unterstützt gekennzeichneten Versionen der **IGNITE Medical Imaging Suite** bereitgestellt:
 
 | Version | Supported          | Severity Threshold for Backports | End of Life (EOL) Date |
 | ------- | ------------------ | -------------------------------- | ---------------------- |
-| 5.1.x   | :white_check_mark: | Low / Medium / High / Critical   | Active Support         |
-| 5.0.x   | :x:                | None                             | EOL (2025-12-31)       |
-| 4.0.x   | :white_check_mark: | High / Critical ONLY             | 2026-12-31             |
-| < 4.0   | :x:                | None                             | EOL                    |
+| 3.2.x   | :white_check_mark: | Low / Medium / High / Critical   | Active Support (JuFo 2026) |
+| 3.1.x   | :white_check_mark: | High / Critical ONLY             | 2026-12-31             |
+| < 3.1   | :x:                | None                             | EOL                    |
 
 ---
 
@@ -25,9 +24,8 @@ Sicherheitsupdates und Patches werden ausschließlich für die unten als unterst
 
 ### 3.1 Submission Channel
 Sicherheitslücken müssen vertraulich gemeldet werden über:
-* **Primary:** GitHub Coordinated Disclosure / Private Vulnerability Reporting (über den Tab *Security* -> *Report a vulnerability* dieses Repositories).
-* **Alternative (PGP-verschlüsselt):** Sendet eine E-Mail an `security@your-domain.com`.
-  * **PGP Key Fingerprint:** `1234 5678 9ABC DEF0 1234 5678 9ABC DEF0 1234 5678` *(Hier Fingerprint einfügen)*
+* **Primary:** GitHub Private Vulnerability Reporting über den Tab [*Security -> Advisories*](https://github.com/noackjona-hash/JonaNoackIgnite/security/advisories) dieses Repositories.
+* **Alternative:** Direkter Kontakt an den Maintainer via GitHub.
 
 ### 3.2 Required Information
 Um eine schnelle Bearbeitung zu gewährleisten, **muss** der Report folgende Informationen enthalten:

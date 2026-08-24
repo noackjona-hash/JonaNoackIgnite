@@ -1,4 +1,4 @@
-﻿# build_setup.ps1
+# build_setup.ps1
 # ─────────────────────────────────────────────────────────────────────────────
 # Ignite – Build-Helfer für das native Rust-Erweiterungsmodul `ignite_core`
 #
@@ -33,7 +33,7 @@ $RepoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $RepoRoot
 
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  Ignite Core v0.1.0 – Rust Build" -ForegroundColor Cyan
+Write-Host "  IGNITE Core v3.2.0 – Rust Build" -ForegroundColor Cyan
 Write-Host "  Reine Rust-Implementierung (kein C++)" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""

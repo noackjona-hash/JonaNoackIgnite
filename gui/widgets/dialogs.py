@@ -55,7 +55,7 @@ class AboutModal(ctk.CTkToplevel):
 
         ctk.CTkLabel(
             inner,
-            text="Version 3.2 · Jugend forscht 2026 (Fachgebiet Arbeitswelt)",
+            text="Version 3.2.0 · Jugend forscht 2026 (Fachgebiet Arbeitswelt)",
             font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
             text_color=COLOR_PRIMARY
         ).pack(pady=(0, 14))

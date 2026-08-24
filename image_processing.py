@@ -46,9 +46,16 @@ def _init_gpu() -> bool:
         import torch.nn.functional as F
         _TORCH = torch
         if torch.cuda.is_available():
-            _dummy = torch.zeros(1, device="cuda")
-            _GPU_AVAILABLE = True
-            logging.info(f"GPU-Beschleunigung verfügbar: {torch.cuda.get_device_name(0)}")
+            try:
+                major, minor = torch.cuda.get_device_capability(0)
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    _dummy = torch.zeros(1, device="cuda")
+                _GPU_AVAILABLE = True
+                logging.info(f"GPU-Beschleunigung verfügbar: {torch.cuda.get_device_name(0)} (CC {major}.{minor})")
+            except Exception as inner_e:
+                logging.debug(f"CUDA-Device inkompatibel oder nicht nutzbar: {inner_e}")
+                _GPU_AVAILABLE = False
     except Exception as e:
         logging.debug(f"GPU-Initialisierung fehlgeschlagen: {e}")
         _GPU_AVAILABLE = False
