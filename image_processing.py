@@ -548,7 +548,26 @@ def compute_pennes_bioheat_flux(
     """
     Berechnet die thermische Wärmeflussdichte q = -k * grad(T) und die
     metabolische Wärmequellendichte Q = -div(q) = k * Lap(T) nach der Pennes-Bioheat-Gleichung.
+    Nutzt den schnellen Rust-Core falls verfügbar, sonst NumPy/OpenCV.
     """
+    if _RUST_BACKEND_AVAILABLE and _ignite_core is not None and hasattr(_ignite_core, "compute_pennes_bioheat"):
+        try:
+            arr_c = np.ascontiguousarray(img, dtype=np.uint8)
+            mask_c = np.ascontiguousarray(mask, dtype=np.uint8) if mask is not None else None
+            flux_mag, q_source, mean_flux, max_flux, mean_source, max_source = _ignite_core.compute_pennes_bioheat(
+                arr_c, mask_c, temp_min_c, temp_max_c, k_tissue
+            )
+            return {
+                "flux_magnitude": np.array(flux_mag, copy=False),
+                "heat_source_density": np.array(q_source, copy=False),
+                "mean_flux_mw_cm2": round(mean_flux, 2),
+                "max_flux_mw_cm2": round(max_flux, 2),
+                "mean_heat_source": round(mean_source, 2),
+                "max_heat_source": round(max_source, 2)
+            }
+        except Exception:
+            pass
+
     temp_range = max(1.0, temp_max_c - temp_min_c)
     temp_c = temp_min_c + (img.astype(np.float32) / 255.0) * temp_range
 

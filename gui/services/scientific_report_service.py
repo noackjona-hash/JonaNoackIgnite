@@ -184,8 +184,9 @@ class ScientificReportService:
 
         # Tabelle der synthetischen Szenarien
         syn_rows_html = ""
-        for name, metrics in benchmark_results.items():
-            if name == "summary" or not isinstance(metrics, dict):
+        scenarios_dict = benchmark_results.get("scenario_results", benchmark_results)
+        for name, metrics in scenarios_dict.items():
+            if name in ("summary", "statistical_validation", "baseline_otsu_comparison", "mad_thresholding_comparison", "sensitivity_analysis_k", "real_test_dataset", "reproducibility") or not isinstance(metrics, dict):
                 continue
             dice = metrics.get("dice", 0.0)
             sens = metrics.get("sensitivity", 0.0)
@@ -214,14 +215,15 @@ class ScientificReportService:
         # ROC Punkte HTML
         roc_rows_html = ""
         for p in roc_points:
-            is_optimal = (p["k"] == 3.0)
+            is_optimal = (p.get("k", 3.0) == 3.0)
             opt_tag = '<span class="badge badge-primary">Optimum (k=3.0σ)</span>' if is_optimal else ''
+            dice_val = p.get("dice", p.get("tpr", 0.0))
             roc_rows_html += f"""
             <tr style="{'background: #F8FAFC; font-weight: bold;' if is_optimal else ''}">
-                <td>k = {p['k']:.1f}σ</td>
-                <td>{p['tpr']:.3f}</td>
-                <td>{p['fpr']:.3f}</td>
-                <td>{p['dice']:.3f}</td>
+                <td>k = {p.get('k', 3.0):.1f}σ</td>
+                <td>{p.get('tpr', 0.0):.3f}</td>
+                <td>{p.get('fpr', 0.0):.3f}</td>
+                <td>{dice_val:.3f}</td>
                 <td>{opt_tag}</td>
             </tr>"""
 

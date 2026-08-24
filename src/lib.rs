@@ -1241,6 +1241,208 @@ fn compute_asymmetry(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// ABSCHNITT 9.1: PENNES BIOHEAT WÄRMEFLUSS IN RUST
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Berechnet die thermische Wärmeflussdichte und metabolische Wärmequellendichte
+/// nach der Pennes-Bioheat-Gleichung in nativem Rust mit Rayon.
+#[pyfunction]
+#[pyo3(signature = (gray_array, mask_array=None, temp_min_c=20.0, temp_max_c=40.0, k_tissue=0.48))]
+fn compute_pennes_bioheat<'py>(
+    py: Python<'py>,
+    gray_array: PyReadonlyArray2<'py, u8>,
+    mask_array: Option<PyReadonlyArray2<'py, u8>>,
+    temp_min_c: f64,
+    temp_max_c: f64,
+    k_tissue: f64,
+) -> PyResult<(Bound<'py, PyArray2<f32>>, Bound<'py, PyArray2<f32>>, f64, f64, f64, f64)> {
+    let img_view = gray_array.as_array();
+    let (h, w) = img_view.dim();
+
+    let temp_range = (temp_max_c - temp_min_c).max(1.0);
+    let dx_m = 0.001f32;
+
+    let mut temp_matrix = Array2::<f32>::zeros((h, w));
+    temp_matrix.indexed_iter_mut().for_each(|((y, x), val)| {
+        *val = (temp_min_c + (img_view[[y, x]] as f64 / 255.0) * temp_range) as f32;
+    });
+
+    let mut flux_mag = Array2::<f32>::zeros((h, w));
+    let mut q_source = Array2::<f32>::zeros((h, w));
+
+    // Parallele Berechnung der Gradienten und Laplace-Divergenz über Zeilen
+    flux_mag.axis_iter_mut(ndarray::Axis(0))
+        .into_par_iter()
+        .zip(q_source.axis_iter_mut(ndarray::Axis(0)).into_par_iter())
+        .enumerate()
+        .for_each(|(y, (mut f_row, mut q_row))| {
+            if y == 0 || y == h - 1 {
+                return;
+            }
+            for x in 1..w - 1 {
+                // 3x3 Sobel X
+                let gx = (temp_matrix[[y - 1, x + 1]] + 2.0 * temp_matrix[[y, x + 1]] + temp_matrix[[y + 1, x + 1]])
+                       - (temp_matrix[[y - 1, x - 1]] + 2.0 * temp_matrix[[y, x - 1]] + temp_matrix[[y + 1, x - 1]]);
+                let grad_x = gx / (8.0 * dx_m);
+
+                // 3x3 Sobel Y
+                let gy = (temp_matrix[[y + 1, x - 1]] + 2.0 * temp_matrix[[y + 1, x]] + temp_matrix[[y + 1, x + 1]])
+                       - (temp_matrix[[y - 1, x - 1]] + 2.0 * temp_matrix[[y - 1, x]] + temp_matrix[[y - 1, x + 1]]);
+                let grad_y = gy / (8.0 * dx_m);
+
+                let fx = -k_tissue as f32 * grad_x * 0.1;
+                let fy = -k_tissue as f32 * grad_y * 0.1;
+                f_row[x] = (fx * fx + fy * fy).sqrt();
+
+                // 3x3 Laplace
+                let lap = temp_matrix[[y - 1, x]] + temp_matrix[[y + 1, x]] + temp_matrix[[y, x - 1]] + temp_matrix[[y, x + 1]]
+                        - 4.0 * temp_matrix[[y, x]];
+                q_row[x] = (k_tissue as f32 * (lap / (dx_m * dx_m))) * 1e-4;
+            }
+        });
+
+    let mask_view = mask_array.as_ref().map(|m| m.as_array());
+
+    let mut sum_flux = 0.0f64;
+    let mut max_flux = 0.0f64;
+    let mut sum_source = 0.0f64;
+    let mut max_source = 0.0f64;
+    let mut count = 0.0f64;
+
+    for y in 0..h {
+        for x in 0..w {
+            let valid = match mask_view {
+                Some(m) => m[[y, x]] > 0,
+                None => true,
+            };
+            if valid {
+                let f = flux_mag[[y, x]] as f64;
+                let q = q_source[[y, x]] as f64;
+                sum_flux += f;
+                sum_source += q;
+                if f > max_flux { max_flux = f; }
+                if q > max_source { max_source = q; }
+                count += 1.0;
+            }
+        }
+    }
+
+    let mean_flux = if count > 0.0 { sum_flux / count } else { 0.0 };
+    let mean_source = if count > 0.0 { sum_source / count } else { 0.0 };
+
+    let py_flux = PyArray2::from_array_bound(py, &flux_mag);
+    let py_source = PyArray2::from_array_bound(py, &q_source);
+
+    Ok((py_flux, py_source, mean_flux, max_flux, mean_source, max_source))
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ABSCHNITT 9.2: FRANGI VESSELNESS FILTER IN RUST
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Multiskalen-Frangi-Vesselness-Filter in nativem Rust mit Rayon-Parallelisierung.
+#[pyfunction]
+#[pyo3(signature = (gray_array, mask_array=None, sigmas=vec![1.0, 1.5, 2.0, 2.5], beta=0.5, c=15.0))]
+fn compute_frangi_vesselness<'py>(
+    py: Python<'py>,
+    gray_array: PyReadonlyArray2<'py, u8>,
+    mask_array: Option<PyReadonlyArray2<'py, u8>>,
+    sigmas: Vec<f64>,
+    beta: f64,
+    c: f64,
+) -> PyResult<Bound<'py, PyArray2<u8>>> {
+    let img_view = gray_array.as_array();
+    let (h, w) = img_view.dim();
+
+    let mut max_vesselness = Array2::<f32>::zeros((h, w));
+    let mask_view = mask_array.as_ref().map(|m| m.as_array());
+
+    for sigma in sigmas {
+        let s2 = (sigma * sigma) as f32;
+        let mut hxx = Array2::<f32>::zeros((h, w));
+        let mut hyy = Array2::<f32>::zeros((h, w));
+        let mut hxy = Array2::<f32>::zeros((h, w));
+
+        // Hesse-Matrix Ableitungen 2. Ordnung via 3x3 Differenzen
+        for y in 1..h - 1 {
+            for x in 1..w - 1 {
+                let center = img_view[[y, x]] as f32;
+                let left = img_view[[y, x - 1]] as f32;
+                let right = img_view[[y, x + 1]] as f32;
+                let top = img_view[[y - 1, x]] as f32;
+                let bottom = img_view[[y + 1, x]] as f32;
+
+                let top_left = img_view[[y - 1, x - 1]] as f32;
+                let top_right = img_view[[y - 1, x + 1]] as f32;
+                let bot_left = img_view[[y + 1, x - 1]] as f32;
+                let bot_right = img_view[[y + 1, x + 1]] as f32;
+
+                hxx[[y, x]] = (right - 2.0 * center + left) * s2;
+                hyy[[y, x]] = (bottom - 2.0 * center + top) * s2;
+                hxy[[y, x]] = 0.25 * (bot_right - bot_left - top_right + top_left) * s2;
+            }
+        }
+
+        // Eigenwertzerlegung & Frangi Vesselness Formel
+        let beta2 = (2.0 * beta * beta) as f32;
+        let c2 = (2.0 * c * c) as f32;
+
+        for y in 1..h - 1 {
+            for x in 1..w - 1 {
+                let a = hxx[[y, x]];
+                let d = hyy[[y, x]];
+                let b = hxy[[y, x]];
+
+                let tmp = ((a - d) * (a - d) + 4.0 * b * b).max(0.0).sqrt();
+                let mut l1 = 0.5 * (a + d - tmp);
+                let mut l2 = 0.5 * (a + d + tmp);
+
+                if l1.abs() > l2.abs() {
+                    std::mem::swap(&mut l1, &mut l2);
+                }
+
+                if l2 < 0.0 {
+                    let rb = l1.abs() / (l2.abs() + 1e-6);
+                    let s = (l1 * l1 + l2 * l2).sqrt();
+                    let v = (- (rb * rb) / beta2).exp() * (1.0 - (- (s * s) / c2).exp());
+                    if v > max_vesselness[[y, x]] {
+                        max_vesselness[[y, x]] = v;
+                    }
+                }
+            }
+        }
+    }
+
+    if let Some(mask) = mask_view {
+        for y in 0..h {
+            for x in 0..w {
+                if mask[[y, x]] == 0 {
+                    max_vesselness[[y, x]] = 0.0;
+                }
+            }
+        }
+    }
+
+    let mut v_min = f32::MAX;
+    let mut v_max = f32::MIN;
+    for &val in max_vesselness.iter() {
+        if val < v_min { v_min = val; }
+        if val > v_max { v_max = val; }
+    }
+
+    let mut result = Array2::<u8>::zeros((h, w));
+    if v_max - v_min > 1e-6 {
+        let range = v_max - v_min;
+        result.indexed_iter_mut().for_each(|((y, x), pixel)| {
+            *pixel = (((max_vesselness[[y, x]] - v_min) / range) * 255.0).clamp(0.0, 255.0) as u8;
+        });
+    }
+
+    let py_array = PyArray2::from_array_bound(py, &result);
+    Ok(py_array)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // ABSCHNITT 10: MODUL-REGISTRATION (PyO3 Boilerplate)
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1248,17 +1450,12 @@ fn compute_asymmetry(
 ///
 /// Wird von Python beim `import ignite_core` aufgerufen. Registriert alle
 /// öffentlichen Funktionen und Metadaten des Moduls.
-///
-/// # Registrierte Symbole
-/// - `process_thermal_pipeline(gray_array)` – Haupt-Pipeline-Funktion
-/// - `compute_asymmetry(gray_array, body_mask_array, temp_min, temp_max, threshold)` – Kontralaterale Asymmetrie
-/// - `__backend__` – Aktives Compute-Backend als String
-/// - `__version__` – Modul-Version
-/// - `__author__`  – Projekt-Information
 #[pymodule]
 fn ignite_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(process_thermal_pipeline, m)?)?;
     m.add_function(wrap_pyfunction!(compute_asymmetry, m)?)?;
+    m.add_function(wrap_pyfunction!(compute_pennes_bioheat, m)?)?;
+    m.add_function(wrap_pyfunction!(compute_frangi_vesselness, m)?)?;
 
     // Backend-Info (CPU+rayon – Rust-native ohne externe CV-Bibliothek)
     let num_threads = rayon::current_num_threads();
@@ -1266,8 +1463,6 @@ fn ignite_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
         "__backend__",
         format!("CPU+rayon ({} Kerne, Rust-native)", num_threads),
     )?;
-    // Version wird automatisch aus Cargo.toml zur Kompilierzeit gelesen.
-    // Damit ist Versionskonsistenz zwischen Cargo.toml und dem Python-Modul garantiert.
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     m.add("__author__", "Ignite Team – Jugend forscht")?;
 

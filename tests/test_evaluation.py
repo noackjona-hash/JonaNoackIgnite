@@ -31,6 +31,27 @@ def test_evaluate_metrics():
     assert metrics["dice"] == 1.0
     assert metrics["iou"] == 1.0
 
+
+def test_statistical_validation_functions():
+    """Testet Bootstrap-Konfidenzintervalle und Wilcoxon-Signifikanztest."""
+    from dataset_evaluator import compute_bootstrap_confidence_intervals, compute_wilcoxon_significance_test
+
+    scores_a = [0.92, 0.95, 0.90, 0.96, 0.94, 0.91, 0.95]
+    scores_b = [0.45, 0.50, 0.40, 0.55, 0.48, 0.42, 0.51]
+
+    # 1. Bootstrap CI
+    ci_res = compute_bootstrap_confidence_intervals(scores_a, n_bootstraps=500, seed=42)
+    assert 0.88 <= ci_res["ci_lower"] <= ci_res["mean"] <= ci_res["ci_upper"] <= 1.0
+    assert "95% CI:" in ci_res["ci_formatted"]
+
+    # 2. Wilcoxon Test
+    wilc_res = compute_wilcoxon_significance_test(scores_a, scores_b)
+    assert wilc_res["significant"] is True
+    assert wilc_res["p_value"] < 0.05
+    assert wilc_res["mean_difference"] > 0.4
+
+
+@pytest.mark.benchmark
 def test_run_benchmark_suite():
     res1 = run_benchmark_suite()
     res2 = run_benchmark_suite()
@@ -41,6 +62,7 @@ def test_run_benchmark_suite():
     assert res1["sensitivity_analysis_k"] == res2["sensitivity_analysis_k"]
     assert res1["reproducibility"]["seed"] == 42
     assert res1["reproducibility"]["backend"] == "python"
+    assert "statistical_validation" in res1
 
 def test_new_scenarios_exist():
     """Alle 9 Szenarien müssen generierbar sein und sinnvolle Bilder erzeugen."""
@@ -69,6 +91,7 @@ def test_baseline_otsu_worse_than_ignite():
             f"< Otsu-Baseline Dice ({m_baseline['dice']:.3f})"
         )
 
+@pytest.mark.benchmark
 def test_benchmark_has_baseline_comparison():
     """run_benchmark_suite() muss baseline_otsu_comparison enthalten."""
     result = run_benchmark_suite()
@@ -80,6 +103,8 @@ def test_benchmark_has_baseline_comparison():
         assert "otsu_baseline" in entry
         assert "dice_improvement" in entry
 
+
+@pytest.mark.benchmark
 def test_gt_evaluation_runs_without_error():
     """evaluate_real_dataset_with_gt() darf nicht abstürzen, auch wenn GT fehlt."""
     results = evaluate_real_dataset_with_gt(test_data_dir="test-data")

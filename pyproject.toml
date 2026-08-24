@@ -22,4 +22,8 @@ module-name = "ignite_core"
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+markers = [
+    "benchmark: Slow full benchmark suites (run with '-m benchmark' or all with '-m \"\"')",
+]
+addopts = "-m 'not benchmark'"
 

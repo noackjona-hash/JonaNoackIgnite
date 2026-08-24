@@ -178,6 +178,90 @@ def evaluate_metrics(pred_mask: np.ndarray, gt_mask: np.ndarray, body_mask: np.n
     }
 
 
+def compute_bootstrap_confidence_intervals(
+    scores: list[float] | np.ndarray,
+    n_bootstraps: int = 1000,
+    confidence_level: float = 0.95,
+    seed: int = DEFAULT_BENCHMARK_SEED,
+) -> dict:
+    """Berechnet nicht-parametrische empirische Bootstrap-Konfidenzintervalle (z. B. 95% CI)."""
+    scores_arr = np.asarray(scores, dtype=np.float64)
+    if len(scores_arr) == 0:
+        return {"mean": 0.0, "ci_lower": 0.0, "ci_upper": 0.0, "std": 0.0, "ci_formatted": "0.000 [95% CI: 0.000 - 0.000]"}
+
+    rng = np.random.default_rng(seed)
+    n = len(scores_arr)
+    boot_means = np.empty(n_bootstraps, dtype=np.float64)
+    for i in range(n_bootstraps):
+        sample = rng.choice(scores_arr, size=n, replace=True)
+        boot_means[i] = np.mean(sample)
+
+    alpha = (1.0 - confidence_level) / 2.0
+    ci_lower = float(np.percentile(boot_means, alpha * 100.0))
+    ci_upper = float(np.percentile(boot_means, (1.0 - alpha) * 100.0))
+    mean_val = float(np.mean(scores_arr))
+    std_val = float(np.std(scores_arr))
+
+    return {
+        "mean": round(mean_val, 4),
+        "ci_lower": round(ci_lower, 4),
+        "ci_upper": round(ci_upper, 4),
+        "std": round(std_val, 4),
+        "ci_formatted": f"{mean_val:.3f} [95% CI: {ci_lower:.3f} - {ci_upper:.3f}]"
+    }
+
+
+def compute_wilcoxon_significance_test(
+    scores_a: list[float] | np.ndarray,
+    scores_b: list[float] | np.ndarray,
+) -> dict:
+    """Führt einen gepaarten Wilcoxon-Signed-Rank-Test durch (IGNITE vs. Baseline)."""
+    a = np.asarray(scores_a, dtype=np.float64)
+    b = np.asarray(scores_b, dtype=np.float64)
+
+    if len(a) != len(b) or len(a) < 3:
+        return {
+            "statistic": 0.0,
+            "p_value": 1.0,
+            "p_formatted": "p = 1.000",
+            "significant": False,
+            "mean_difference": 0.0
+        }
+
+    diff = a - b
+    mean_diff = float(np.mean(diff))
+
+    try:
+        from scipy import stats
+        res = stats.wilcoxon(a, b, alternative='greater')
+        stat = float(res.statistic)
+        p_val = float(res.pvalue)
+    except Exception:
+        nonzero_diff = diff[diff != 0]
+        n_nz = len(nonzero_diff)
+        if n_nz == 0:
+            return {"statistic": 0.0, "p_value": 1.0, "p_formatted": "p = 1.000", "significant": False, "mean_difference": 0.0}
+
+        ranks = np.argsort(np.abs(nonzero_diff)).argsort() + 1
+        w_plus = float(np.sum(ranks[nonzero_diff > 0]))
+        stat = w_plus
+        mean_w = n_nz * (n_nz + 1) / 4.0
+        var_w = n_nz * (n_nz + 1) * (2 * n_nz + 1) / 24.0
+        z = (w_plus - 0.5 - mean_w) / max(1e-5, np.sqrt(var_w))
+        from math import erfc, sqrt
+        p_val = float(0.5 * erfc(z / sqrt(2)))
+
+    p_formatted = "p < 0.001" if p_val < 0.001 else f"p = {p_val:.4f}"
+
+    return {
+        "statistic": round(stat, 3),
+        "p_value": round(p_val, 6),
+        "p_formatted": p_formatted,
+        "significant": bool(p_val < 0.05),
+        "mean_difference": round(mean_diff, 4)
+    }
+
+
 def _baseline_otsu_predict(img: np.ndarray) -> np.ndarray:
     """Naiver Otsu-Baseline-Prediktor (ohne Top-Hat, ohne Geometriefilter).
 
@@ -443,11 +527,27 @@ def run_benchmark_suite(
         # Reale Testbilder aus test-data/ auswerten (inkl. GT-Masken)
         real_dataset_results = evaluate_real_dataset_with_gt()
 
+    # 4. Statistische Validierung (Bootstrapping 95% CI & Wilcoxon Signed-Rank Test)
+    ignite_dices = [m["dice"] for m in results.values()]
+    baseline_dices = [entry["otsu_baseline"]["dice"] for entry in baseline_comparison.values()]
+    ignite_sens = [m["sensitivity"] for m in results.values()]
+    ignite_spec = [m["specificity"] for m in results.values()]
+
+    statistical_validation = {
+        "wilcoxon_vs_otsu": compute_wilcoxon_significance_test(ignite_dices, baseline_dices),
+        "bootstrap_ci": {
+            "dice": compute_bootstrap_confidence_intervals(ignite_dices, seed=seed),
+            "sensitivity": compute_bootstrap_confidence_intervals(ignite_sens, seed=seed),
+            "specificity": compute_bootstrap_confidence_intervals(ignite_spec, seed=seed),
+        },
+    }
+
     output_data = {
         "scenario_results": results,
         "baseline_otsu_comparison": baseline_comparison,
         "mad_thresholding_comparison": mad_comparison,
         "sensitivity_analysis_k": k_analysis,
+        "statistical_validation": statistical_validation,
         "real_test_dataset": real_dataset_results,
         "reproducibility": {
             "seed": seed,

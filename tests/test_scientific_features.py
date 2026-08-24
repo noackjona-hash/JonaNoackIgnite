@@ -16,8 +16,9 @@ import dataset_evaluator
 import image_processing
 
 
+@pytest.mark.benchmark
 def test_scientific_report_generation(tmp_path):
-    """Testet die fehlerfreie Erstellung des wissenschaftlichen Jury-Reports."""
+    """Testet die vollständige Erstellung des wissenschaftlichen Jury-Reports (Benchmark-Modus)."""
     out_dir = str(tmp_path / "jury_reports")
     report_path = ScientificReportService.run_full_evaluation_and_generate_html(
         output_dir=out_dir,
@@ -36,6 +37,31 @@ def test_scientific_report_generation(tmp_path):
     assert "Dice-Score (F₁)" in content
     assert "ROC-Analyse" in content
     assert "Hardware-Skalierung" in content
+
+
+def test_scientific_report_rendering_fast(tmp_path):
+    """Schneller Render-Test für das HTML-Dossier mit synthetischen Mock-Ergebnissen."""
+    mock_benchmark = {
+        "scenario_results": {"diabetic_ulcer": {"dice": 0.95, "sensitivity": 1.0, "specificity": 0.99, "iou": 0.90, "TP": 100, "FP": 1, "TN": 1000, "FN": 0}},
+        "baseline_otsu_comparison": {"diabetic_ulcer": {"ignite": {"dice": 0.95}, "otsu_baseline": {"dice": 0.50}, "dice_improvement": 0.45}},
+        "mad_thresholding_comparison": {"diabetic_ulcer": {"mean_std": {"dice": 0.95}, "mad_robust": {"dice": 0.96}}},
+        "statistical_validation": {
+            "wilcoxon_vs_otsu": {"p_formatted": "p < 0.001", "statistic": 45.0, "significant": True, "mean_difference": 0.35},
+            "bootstrap_ci": {"dice": {"ci_formatted": "0.950 [95% CI: 0.920 - 0.980]"}}
+        }
+    }
+    mock_runtimes = {"python": {"name": "Python CPU", "latency_ms": 78.2, "fps": 12.8}}
+    mock_roc = [{"k": 3.0, "tpr": 1.0, "fpr": 0.01, "dice": 0.95}]
+    
+    html = ScientificReportService._render_jury_dossier_html(
+        benchmark_results=mock_benchmark,
+        real_gt_results={},
+        runtime_benchmarks=mock_runtimes,
+        roc_points=mock_roc,
+        total_duration=0.1
+    )
+    assert "IGNITE: Wissenschaftlicher Evaluationsbericht" in html
+    assert "Diabetic Ulcer" in html
 
 
 def test_roc_points_computation():

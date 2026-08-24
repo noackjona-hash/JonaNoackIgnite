@@ -1,5 +1,13 @@
 # -*- coding: utf-8 -*-
-"""gui/views/single_view.py – Deep-Dive Image & ROI Inspector for IGNITE."""
+"""gui/views/single_view.py – Deep-Dive Image & ROI Inspector for IGNITE.
+
+Features:
+- Stage switching (Original, Body Mask, Top-Hat Diff, Hotspot Overlay, Bioheat, Frangi, Asymmetry)
+- Interactive Zoom (100% to 800%) & Pan with mouse wheel and drag
+- Dynamic Celsius Colorbar with T_min, T_mean, T_thresh, T_max markers
+- Precise ROI rectangle probe with quantitative statistics (Mean, Std, Min, Max, Area)
+- High-resolution snapshot export
+"""
 
 from __future__ import annotations
 import os
@@ -25,6 +33,7 @@ from gui.theme import (
     COLOR_CONTAINER_BLUE,
     COLOR_SUCCESS,
     COLOR_DANGER,
+    COLOR_WARNING,
     FONT_FAMILY,
     FONT_FAMILY_MONO,
     RADIUS_CARD,
@@ -36,7 +45,7 @@ from utils import pixel_to_celsius
 
 
 class SingleInspectView(ctk.CTkFrame):
-    """Detailansicht zur pixelgenauen Inspektion und interaktiven ROI-Messung."""
+    """Detailansicht zur pixelgenauen Inspektion, Zoom/Pan und interaktiven ROI-Messung."""
 
     STAGES = [
         ("4. Erkannte Hotspots (Rust)", "Hotspot-Overlay"),
@@ -61,11 +70,18 @@ class SingleInspectView(ctk.CTkFrame):
         self.active_stage_key: str = "4. Erkannte Hotspots (Rust)"
         self.palette_name: str = "Turbo"
 
+        # Zoom & Pan State
+        self.zoom_level: float = 1.0
+        self.pan_x: float = 0.0
+        self.pan_y: float = 0.0
+        self.pan_drag_start: Optional[tuple[int, int]] = None
+
         # ROI State
         self.roi_drag_start: Optional[tuple[int, int]] = None
         self.roi_drag_current: Optional[tuple[int, int]] = None
         self.roi_box: Optional[tuple[int, int, int, int]] = None
         self._rendered_pil: Optional[Image.Image] = None
+        self._visible_crop: tuple[int, int, int, int] = (0, 0, 0, 0)
         self._render_scale: float = 1.0
         self._offset_x: int = 0
         self._offset_y: int = 0
@@ -77,7 +93,7 @@ class SingleInspectView(ctk.CTkFrame):
         self.grid_columnconfigure(1, weight=0, minsize=380)
         self.grid_rowconfigure(0, weight=1)
 
-        # ── Linker Bereich: Bildanzeige ──────────────────────────────────────
+        # ── Linker Bereich: Bildanzeige & Colorbar ───────────────────────────
         self.canvas_card = make_material_card(self, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD)
         self.canvas_card.grid(row=0, column=0, padx=(14, 6), pady=14, sticky="nsew")
 
@@ -113,14 +129,14 @@ class SingleInspectView(ctk.CTkFrame):
             border_color=COLOR_OUTLINE,
             corner_radius=RADIUS_BUTTON,
             height=30,
-            width=140
+            width=135
         )
         self.snapshot_btn.pack(side=ctk.RIGHT)
 
         # Reset ROI Button
         self.reset_roi_btn = ctk.CTkButton(
             top_bar,
-            text="ROI zurücksetzen",
+            text="ROI Reset",
             command=self.clear_roi,
             font=ctk.CTkFont(family=FONT_FAMILY, size=11),
             fg_color=COLOR_BG_CARD_VARIANT,
@@ -130,26 +146,80 @@ class SingleInspectView(ctk.CTkFrame):
             border_color=COLOR_OUTLINE,
             corner_radius=RADIUS_BUTTON,
             height=30,
-            width=110
+            width=75
         )
         self.reset_roi_btn.pack(side=ctk.RIGHT, padx=(0, 6))
 
+        # Zoom Controls
+        self.zoom_badge = ctk.CTkButton(
+            top_bar,
+            text="100%",
+            command=self.reset_zoom,
+            font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=11, weight="bold"),
+            fg_color=COLOR_BG_CARD_VARIANT,
+            hover_color=COLOR_PRIMARY,
+            text_color=COLOR_TEXT_PRIMARY,
+            border_width=1,
+            border_color=COLOR_OUTLINE,
+            corner_radius=RADIUS_BUTTON,
+            height=30,
+            width=55
+        )
+        self.zoom_badge.pack(side=ctk.RIGHT, padx=(0, 6))
+
         ctk.CTkFrame(self.canvas_card, height=1, fg_color=COLOR_OUTLINE_VARIANT).pack(fill=ctk.X)
+
+        # Bild-Container mit Colorbar
+        display_frame = ctk.CTkFrame(self.canvas_card, fg_color="transparent")
+        display_frame.pack(fill=ctk.BOTH, expand=True, padx=10, pady=(8, 4))
+        display_frame.grid_columnconfigure(0, weight=1)
+        display_frame.grid_columnconfigure(1, weight=0, minsize=55)
+        display_frame.grid_rowconfigure(0, weight=1)
 
         # Bild Label mit Maus-Events
         self.img_lbl = ctk.CTkLabel(
-            self.canvas_card,
+            display_frame,
             text="Kein Bild geladen",
             font=ctk.CTkFont(family=FONT_FAMILY, size=13),
             text_color=COLOR_TEXT_MUTED
         )
-        self.img_lbl.pack(fill=ctk.BOTH, expand=True, padx=10, pady=(8, 4))
+        self.img_lbl.grid(row=0, column=0, sticky="nsew", padx=(0, 6))
 
         self.img_lbl.bind("<Motion>", self._on_mouse_move)
         self.img_lbl.bind("<Leave>", self._on_mouse_leave)
         self.img_lbl.bind("<ButtonPress-1>", self._on_mouse_down)
         self.img_lbl.bind("<B1-Motion>", self._on_mouse_drag)
         self.img_lbl.bind("<ButtonRelease-1>", self._on_mouse_up)
+        self.img_lbl.bind("<Double-Button-1>", lambda e: self.reset_zoom())
+
+        # Pan via Right Click / Middle Click
+        self.img_lbl.bind("<ButtonPress-3>", self._on_pan_start)
+        self.img_lbl.bind("<B3-Motion>", self._on_pan_drag)
+        self.img_lbl.bind("<ButtonRelease-3>", self._on_pan_end)
+        self.img_lbl.bind("<ButtonPress-2>", self._on_pan_start)
+        self.img_lbl.bind("<B2-Motion>", self._on_pan_drag)
+        self.img_lbl.bind("<ButtonRelease-2>", self._on_pan_end)
+
+        # Mousewheel Zoom
+        self.img_lbl.bind("<MouseWheel>", self._on_mouse_wheel)
+        self.img_lbl.bind("<Button-4>", lambda e: self._zoom_step(1.25))
+        self.img_lbl.bind("<Button-5>", lambda e: self._zoom_step(0.8))
+
+        # ── Colorbar Farblegende (Rechte Seite des Canvas) ───────────────────
+        self.colorbar_frame = ctk.CTkFrame(display_frame, fg_color="transparent", width=55)
+        self.colorbar_frame.grid(row=0, column=1, sticky="ns", padx=(4, 0))
+        self.colorbar_frame.pack_propagate(False)
+
+        self.cb_max_lbl = ctk.CTkLabel(self.colorbar_frame, text="-- °C", font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=9, weight="bold"), text_color=COLOR_DANGER)
+        self.cb_max_lbl.pack(side=ctk.TOP, anchor="e")
+
+        self.cb_strip_lbl = ctk.CTkLabel(self.colorbar_frame, text="")
+        self.cb_strip_lbl.pack(side=ctk.TOP, fill=ctk.Y, expand=True, pady=4)
+
+        self.cb_min_lbl = ctk.CTkLabel(self.colorbar_frame, text="-- °C", font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=9, weight="bold"), text_color=COLOR_PRIMARY)
+        self.cb_min_lbl.pack(side=ctk.BOTTOM, anchor="e")
+
+        self._render_colorbar_strip()
 
         # ── Rechter Bereich: Live Pixel & ROI Sidebar ────────────────────────
         self.sidebar_card = make_material_card(self, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD)
@@ -240,19 +310,30 @@ class SingleInspectView(ctk.CTkFrame):
             lbl.pack(side=ctk.RIGHT)
             self.roi_stats_rows[key] = lbl
 
-        # 3. Quick Tipp / Bedienhinweis
+        # 3. Quick Tipp / Zoom & Pan Bedienhinweis
         hint_box = ctk.CTkFrame(side_scroll, fg_color="transparent")
         hint_box.pack(fill=ctk.X, pady=(4, 0))
 
         ctk.CTkLabel(
             hint_box,
-            text="Bedienhinweis: Mit gedrückter linker Maustaste auf dem Wärmebild einen Messbereich aufziehen.",
+            text="Bedienung:\n• Linksklick + Ziehen: ROI-Messung\n• Mausrad: Zoom (100% - 800%)\n• Rechtsklick + Ziehen: Pan (Verschieben)\n• Doppelklick / 100%-Button: Zoom-Reset",
             font=ctk.CTkFont(family=FONT_FAMILY, size=11),
             text_color=COLOR_TEXT_MUTED,
             anchor="w",
             wraplength=210,
             justify="left"
         ).pack(fill=ctk.X)
+
+    def _render_colorbar_strip(self) -> None:
+        """Erzeugt den vertikalen Farbverlaufs-Streifen für die Colorbar."""
+        grad = np.linspace(255, 0, 180, dtype=np.uint8).reshape((180, 1))
+        grad = np.repeat(grad, 12, axis=1)
+        colored = apply_colormap_to_image(grad, self.palette_name)
+        rgb = cv2.cvtColor(colored, cv2.COLOR_BGR2RGB)
+        pil_strip = Image.fromarray(rgb)
+        ctk_strip = ctk.CTkImage(light_image=pil_strip, dark_image=pil_strip, size=(12, 180))
+        self.cb_strip_lbl.configure(image=ctk_strip)
+        self.cb_strip_lbl.image = ctk_strip
 
     def show_results(self, result: dict[str, Any], palette_name: str = "Turbo", target_stage: str | None = None) -> None:
         self.current_result = result
@@ -263,10 +344,17 @@ class SingleInspectView(ctk.CTkFrame):
                 if key == target_stage:
                     self.stage_seg.set(title)
                     break
+
+        t_min = result.get("t_min_c", 20.0)
+        t_max = result.get("t_max_c", 40.0)
+        self.cb_max_lbl.configure(text=f"{t_max:.1f}°C")
+        self.cb_min_lbl.configure(text=f"{t_min:.1f}°C")
+        self._render_colorbar_strip()
         self.redraw()
 
     def set_palette(self, palette_name: str) -> None:
         self.palette_name = palette_name
+        self._render_colorbar_strip()
         self.redraw()
 
     def _on_segment_changed(self, choice: str) -> None:
@@ -275,6 +363,53 @@ class SingleInspectView(ctk.CTkFrame):
                 self.active_stage_key = key
                 break
         self.redraw()
+
+    # ── Zoom & Pan Steuerung ─────────────────────────────────────────────────
+    def _on_mouse_wheel(self, event) -> None:
+        if not self.current_result:
+            return
+        if event.delta > 0:
+            self._zoom_step(1.25)
+        elif event.delta < 0:
+            self._zoom_step(0.8)
+
+    def _zoom_step(self, factor: float) -> None:
+        if not self.current_result:
+            return
+        new_zoom = float(np.clip(self.zoom_level * factor, 1.0, 8.0))
+        if abs(new_zoom - self.zoom_level) > 0.01:
+            self.zoom_level = new_zoom
+            if self.zoom_level <= 1.01:
+                self.pan_x = 0.0
+                self.pan_y = 0.0
+                self.zoom_badge.configure(text="100%")
+            else:
+                self.zoom_badge.configure(text=f"{int(round(self.zoom_level * 100))}%")
+            self.redraw()
+
+    def reset_zoom(self) -> None:
+        self.zoom_level = 1.0
+        self.pan_x = 0.0
+        self.pan_y = 0.0
+        self.zoom_badge.configure(text="100%")
+        self.redraw()
+
+    def _on_pan_start(self, event) -> None:
+        if self.zoom_level > 1.0:
+            self.pan_drag_start = (event.x, event.y)
+
+    def _on_pan_drag(self, event) -> None:
+        if self.pan_drag_start and self.zoom_level > 1.0 and self._rendered_pil:
+            dx = event.x - self.pan_drag_start[0]
+            dy = event.y - self.pan_drag_start[1]
+            orig_w, orig_h = self._rendered_pil.size
+            self.pan_x += dx / max(1.0, self._render_scale * self.zoom_level)
+            self.pan_y += dy / max(1.0, self._render_scale * self.zoom_level)
+            self.pan_drag_start = (event.x, event.y)
+            self.redraw()
+
+    def _on_pan_end(self, event) -> None:
+        self.pan_drag_start = None
 
     def redraw(self) -> None:
         if not self.current_result:
@@ -313,6 +448,7 @@ class SingleInspectView(ctk.CTkFrame):
 
         img_to_show = raw.copy()
 
+        # ROI Overlay zeichnen
         if self.roi_box:
             x1, y1, x2, y2 = self.roi_box
             cv2.rectangle(img_to_show, (x1, y1), (x2, y2), (255, 255, 0), 2)
@@ -322,23 +458,49 @@ class SingleInspectView(ctk.CTkFrame):
             cv2.rectangle(img_to_show, (x1, y1), (x2, y2), (0, 255, 255), 1)
 
         rgb = cv2.cvtColor(img_to_show, cv2.COLOR_BGR2RGB)
-        pil_img = Image.fromarray(rgb)
-        self._rendered_pil = pil_img
+        full_pil = Image.fromarray(rgb)
+        self._rendered_pil = full_pil
+
+        orig_w, orig_h = full_pil.size
+
+        # Zoom & Pan Crop berechnen
+        if self.zoom_level > 1.0:
+            view_w = max(10, int(round(orig_w / self.zoom_level)))
+            view_h = max(10, int(round(orig_h / self.zoom_level)))
+
+            max_pan_x = (orig_w - view_w) / 2.0
+            max_pan_y = (orig_h - view_h) / 2.0
+            self.pan_x = float(np.clip(self.pan_x, -max_pan_x, max_pan_x))
+            self.pan_y = float(np.clip(self.pan_y, -max_pan_y, max_pan_y))
+
+            center_x = orig_w / 2.0 - self.pan_x
+            center_y = orig_h / 2.0 - self.pan_y
+
+            crop_x1 = int(np.clip(round(center_x - view_w / 2.0), 0, orig_w - view_w))
+            crop_y1 = int(np.clip(round(center_y - view_h / 2.0), 0, orig_h - view_h))
+            crop_x2 = crop_x1 + view_w
+            crop_y2 = crop_y1 + view_h
+
+            self._visible_crop = (crop_x1, crop_y1, crop_x2, crop_y2)
+            display_pil = full_pil.crop((crop_x1, crop_y1, crop_x2, crop_y2))
+        else:
+            self._visible_crop = (0, 0, orig_w, orig_h)
+            display_pil = full_pil
 
         self.img_lbl.update_idletasks()
         w = max(self.img_lbl.winfo_width() - 16, 300)
         h = max(self.img_lbl.winfo_height() - 16, 200)
 
-        orig_w, orig_h = pil_img.size
-        ratio = min(w / orig_w, h / orig_h)
+        crop_w, crop_h = display_pil.size
+        ratio = min(w / crop_w, h / crop_h)
         self._render_scale = ratio
-        disp_w = max(1, int(orig_w * ratio))
-        disp_h = max(1, int(orig_h * ratio))
+        disp_w = max(1, int(crop_w * ratio))
+        disp_h = max(1, int(crop_h * ratio))
 
         self._offset_x = (self.img_lbl.winfo_width() - disp_w) // 2
         self._offset_y = (self.img_lbl.winfo_height() - disp_h) // 2
 
-        ctk_img = make_display_ctk_image(pil_img, w, h)
+        ctk_img = make_display_ctk_image(display_pil, w, h)
         self.img_lbl.configure(image=ctk_img, text="")
         self.img_lbl.image = ctk_img
 
@@ -360,14 +522,20 @@ class SingleInspectView(ctk.CTkFrame):
         mx = event.x - self._offset_x
         my = event.y - self._offset_y
 
-        orig_w, orig_h = self._rendered_pil.size
-        disp_w = orig_w * self._render_scale
-        disp_h = orig_h * self._render_scale
+        crop_x1, crop_y1, crop_x2, crop_y2 = self._visible_crop
+        crop_w = crop_x2 - crop_x1
+        crop_h = crop_y2 - crop_y1
+
+        disp_w = crop_w * self._render_scale
+        disp_h = crop_h * self._render_scale
 
         if 0 <= mx < disp_w and 0 <= my < disp_h:
-            img_x = int(mx / self._render_scale)
-            img_y = int(my / self._render_scale)
-            return min(max(img_x, 0), orig_w - 1), min(max(img_y, 0), orig_h - 1)
+            local_x = int(mx / self._render_scale)
+            local_y = int(my / self._render_scale)
+            full_x = crop_x1 + local_x
+            full_y = crop_y1 + local_y
+            orig_w, orig_h = self._rendered_pil.size
+            return min(max(full_x, 0), orig_w - 1), min(max(full_y, 0), orig_h - 1)
         return None
 
     def _on_mouse_move(self, event) -> None:
