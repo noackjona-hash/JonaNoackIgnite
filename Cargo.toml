@@ -22,7 +22,7 @@ numpy = "0.22"
 
 # ndarray: N-dimensionale Arrays für Rust (analog zu NumPy).
 # Wird für interne Berechnungen (Statistik, Maskenoperationen) genutzt.
-ndarray = { version = "0.16", features = ["rayon"] }
+ndarray = { version = "0.17", features = ["rayon"] }
 
 # imageproc: Reine Rust-Bildverarbeitungsbibliothek (kein C/C++ nötig).
 # Implementiert Morphologie, Konturen, Distanztransformation in nativem Rust.
