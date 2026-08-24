@@ -1,61 +1,285 @@
-===============================================================================
-CUSTOM NON-COMMERCIAL & AI-OPEN LICENSING & COPYRIGHT NOTICE
-===============================================================================
+====================================================================================================
+IGNITE PROPRIETARY SOURCE-AVAILABLE, SCIENTIFIC RESEARCH & STRICT NON-COMMERCIAL LICENSE AGREEMENT
+Version 3.2.0 (Institutional & Enterprise-Grade Legal Revision, 2026)
+====================================================================================================
 
-Copyright (c) 2026 Jona Noack. Alle Rechte vorbehalten. / All rights reserved.
+COPYRIGHT (C) 2026 JONA NOACK. ALL RIGHTS RESERVED. / ALLE RECHTE VORBEHALTEN.
 
-1. GEISTIGES EIGENTUM UND URHEBERRECHT (COPYRIGHT & OWNERSHIP)
-Diese Software (einschließlich, aber nicht beschränkt auf Quellcode, Binärdateien, 
-Algorithmen, Dokumentationen, Schnittstellen und Datenstrukturen) ist das ausschließliche 
-geistige Eigentum von Jona Noack ("Urheberrechtsinhaber"). Sie ist nach deutschem 
-Urheberrechtsgesetz (UrhG, insbesondere §§ 69a ff. UrhG) sowie internationalen 
-Abkommen geschützt.
+AUTHOR & EXCLUSIVE COPYRIGHT HOLDER:
+Jona Noack (Contact via official GitHub repository: https://github.com/noackjona-hash/JonaNoackIgnite)
 
-2. PRIVATE UND NICHT-KOMMERZIELLE NUTZUNG (ERWEITERTE CREDITS-PFLICHT)
-Dem Endanwender wird das nicht-exklusive Recht gewährt, diese Software ausschließlich 
-für persönliche, rein private und nicht-kommerzielle Zwecke (ohne Absicht zur 
-Erzielung von Einnahmen) zu nutzen, auszuführen und zu installieren.
+----------------------------------------------------------------------------------------------------
+LEGAL NOTICE & BINDING CONTRACTUAL AGREEMENT
+----------------------------------------------------------------------------------------------------
+THIS LEGAL DOCUMENT IS A BINDING CONTRACT ("AGREEMENT") BETWEEN YOU (WHETHER AN INDIVIDUAL, ACADEMIC 
+RESEARCHER, STUDENT, UNIVERSITY, LABORATORY, INSTITUTE, OR LEGAL ENTITY, HEREINAFTER "LICENSEE" OR 
+"YOU") AND JONA NOACK (THE "AUTHOR", "LICENSOR", AND EXCLUSIVE RIGHTSHOLDER).
 
-STRIKTE BEDINGUNG FÜR CREDITS UND QUELLENANGABE:
-Eine Quellenangabe in der README-Datei sowie in den Datei-Metadaten ist VERPFLICHTEND, 
-REICHT JEDOCH AUSDRÜCKLICH NICHT AUS. 
+BY DOWNLOADING, CLONING, ACCESSING, VIEWING, COMPILING, INSTALLING, COPYING, EXECUTING, OR 
+OTHERWISE UTILIZING ANY PART OF THE SOURCE CODE, BINARY ARTIFACTS, HEURISTICS, DATA STRUCTURES, 
+MODELS, ASSETS, OR DOCUMENTATION ASSOCIATED WITH THIS REPOSITORY, YOU UNCONDITIONALLY AND 
+IRREVOCABLY ACCEPT AND AGREE TO BE LEGALLY BOUND BY EVERY TERM, RESTRICTION, AND CONDITION SET 
+FORTH IN THIS AGREEMENT UNDER ALL APPLICABLE DOMESTIC AND INTERNATIONAL LAWS.
 
-Zusätzlich muss bei jeder Nutzung, Ausführung, Modifikation oder Weitergabe 
-eine unübersehbare, schriftliche Namensnennung des Urheberrechtsinhabers (Jona Noack) 
-an mindestens einer weiteren prominenten Stelle erfolgen:
-  * Direkt in der Benutzeroberfläche (GUI / UI / About-Screen), ODER
-  * Gut sichtbar bei jedem Programmstart (z. B. CLI-Banner / Start-Log), ODER
-  * In den Headern aller modifizierten oder genutzten Quellcode-Dateien.
+IF YOU DO NOT AGREE TO ALL PROVISIONS OF THIS AGREEMENT IN FULL WITHOUT MODIFICATION, YOU HAVE NO 
+RIGHT, PERMISSION, OR LICENSE TO ACCESS, DOWNLOAD, RETAIN, EXECUTE, OR DERIVE FROM THIS SOFTWARE 
+AND MUST PERMANENTLY DESTROY ALL COPIES IN YOUR POSSESSION IMMEDIATELY.
 
-3. KOMMERZIELLE UND SONSTIGE NUTZUNG (SCHRIFTLICHE GENEHMIGUNG PFLICHT)
-Jegliche Nutzung, die über den privaten Rahmen nach Ziffer 2 hinausgeht – insbesondere 
-die kommerzielle Nutzung, Nutzung zur Erzielung direkter oder indirekter Einnahmen, 
-geschäftliche Verwendung, Veräußerung, Bereitstellung als Dienstleistung (SaaS/Cloud), 
-Unterlizenzierung oder öffentliche Verbreitung – ist OHNE VORHERIGE, AUSDRÜCKLICHE UND 
-SCHRIFTLICHE GENEHMIGUNG DES URHEBERRECHTSINHABERS STRIKT UNTERSAGT.
+====================================================================================================
+SECTION 1: EXHAUSTIVE DEFINITIONS
+====================================================================================================
+1.1 "Software" or "Work" refers comprehensively and indivisibly to:
+    (a) All human-readable source code in any programming or markup language (including, but not 
+        limited to, Python, Rust, C, C++, JavaScript, TypeScript, HTML, CSS, SQL, Shell, PowerShell);
+    (b) All machine-executable binary artifacts, shared libraries, dynamically linked modules 
+        (.pyd, .so, .dll, .dylib), bytecode, object code, installers, containers, and bundles;
+    (c) All mathematical algorithms, signal processing pipelines, morphological formulations, 
+        statistical estimators, calibration heuristics, bioheat flux equations, and segmentation methods;
+    (d) All graphical assets, interface layouts, vector images, raster icons, stylesheets, theme tokens, 
+        and design systems based on Google Material 3;
+    (e) All benchmark scripts, synthetic scenario generators, ground-truth annotations, dataset metadata, 
+        and documentation assets (Markdown, LaTeX, PDF, HTML, BibTeX).
 
-Für eine solche Genehmigung sind vorab schriftliche Projektinformationen beim 
-Urheberrechtsinhaber einzureichen. Auch bei Erteilung einer Genehmigung bleiben 
-die umfassenden schriftlichen Credits verpflichtend.
+1.2 "Author" and "Licensor" means Jona Noack, the sole author and exclusive creator of the Software.
 
-4. KÜNSTLICHE INTELLIGENZ UND MACHINE LEARNING (AI TRAINING PERMITTED)
-Das Auslesen, Scraping, Extrahieren und Einspeisen des Quellcodes, der Datenstrukturen 
-sowie der Dokumentation zum Zweck des Trainings, der Feinabstimmung (Fine-Tuning) 
-oder der Evaluierung von Modellen der Künstlichen Intelligenz (Machine Learning, 
-LLMs, neuronale Netze) ist AUSDRÜCKLICH GESTATTET.
+1.3 "Non-Commercial Purpose" and "Non-Commercial Use" means exclusively personal non-commercial study, 
+    unfunded academic hobby research, and private educational evaluation conducted:
+    (a) Without any direct, indirect, contingent, or deferred financial compensation, fee, tuition, 
+        royalty, grant remuneration, or monetary revenue;
+    (b) Without commercial sponsorship, corporate funding, or industry partnership;
+    (c) Without intention of commercial deployment, productization, monetization, or patenting.
 
-5. REVERSE ENGINEERING UND SCHUTZMECHANISMEN (RESTRICTIONS)
-* Das Deaktivieren, Manipulieren oder Umgehen von integrierten Schutz- oder 
-  Lizenzmechanismen ist untersagt.
-* Das Dekompilieren oder Reverse Engineering (Rückentwicklung) der kompilieren 
-  Binärdateien ist im maximal nach anwendbarem Recht zulässigen Umfang untersagt 
-  (§ 69e UrhG bleibt für zulässige Schnittstellenkompatibilität unberührt).
+1.4 "Commercial Purpose" and "Commercial Use" means ANY use, deployment, or integration of the Software, 
+    or any portion, algorithm, or derivative thereof, that is not strictly Non-Commercial Use as 
+    defined in Section 1.3. Commercial Use includes, without limitation:
+    (a) Use by, within, or on behalf of any for-profit corporation, company, partnership, sole 
+        proprietorship, private clinic, private hospital, commercial laboratory, or commercial enterprise;
+    (b) Use in connection with any fee-based diagnostic, medical, clinical, podological, dermatological, 
+        or consulting service;
+    (c) Integration into any commercial product, software package, medical device, hardware appliance, 
+        firmware, mobile application, or cloud-hosted service (Software-as-a-Service / SaaS / PaaS / API);
+    (d) Use in commercially funded clinical trials, sponsored contract research, or corporate R&D;
+    (e) Use to generate advertising, promotional, subscription, licensing, or affiliate revenue;
+    (f) Use for competitive benchmarking, reverse-engineering of features, or patent landscaping.
 
-6. HAFTUNGSAUSSCHLUSS (DISCLAIMER OF WARRANTY & LIABILITY)
-DIE SOFTWARE WIRD OHNE JEGLICHE AUSDRÜCKLICHE ODER STILLSCHWEIGENDE GARANTIE 
-ODER GEWÄHRLEISTUNG "WIE GESEHEN" ("AS IS") BEREITGESTELLT. DER URHEBERRECHTSINHABER 
-HAFTET IN KEINEM FALL FÜR DIREKTE, INDIREKTE, ZUFÄLLIGE ODER FOLGESCHÄDEN 
-(EINSCHLIESSLICH DATENVERLUST ODER ENTGANGENEM GEWINN), DIE DURCH DIE NUTZUNG ODER 
-DIE UNMÖGLICHKEIT DER NUTZUNG DIESER SOFTWARE ENTSTEHEN (IM MAXIMAL GESETZLICH ZULÄSSIGEN UMFANG).
+1.5 "Derivative Work" means any work, module, script, library, application, or algorithm that is 
+    based on, incorporates, translates, ports, refactors, adapts, or derives from the Software or any 
+    part of its mathematical concepts, algorithms, or source code.
 
-===============================================================================
+====================================================================================================
+SECTION 2: INTELLECTUAL PROPERTY & STATUTORY OWNERSHIP
+====================================================================================================
+2.1 Statutory Protection:
+    The Software constitutes an original intellectual creation protected under the copyright laws of 
+    the Federal Republic of Germany (Urheberrechtsgesetz - UrhG, in particular §§ 69a et seq. UrhG), 
+    the European Union Copyright Directives (Directives 2001/29/EC and 2009/24/EC), international 
+    treaties (including the Berne Convention for the Protection of Literary and Artistic Works, the 
+    WIPO Copyright Treaty (WCT), and the TRIPS Agreement), and the United States Copyright Act (Title 17 U.S.C.).
+
+2.2 Moral Rights (Urheberpersönlichkeitsrecht):
+    The Author expressly asserts all moral rights under § 13 UrhG and international equivalents, 
+    including the right of authorship attribution, the right of first publication, and the right to 
+    prohibit distortion, modification, or derogatory treatment of the Work (§ 14 UrhG).
+
+2.3 Reservation of Rights:
+    No ownership, title, intellectual property right, patent right, trademark, or proprietary interest 
+    in the Software is transferred to Licensee. All rights not expressly granted in Section 3 are strictly 
+    and exclusively reserved by the Licensor.
+
+====================================================================================================
+SECTION 3: LIMITED GRANT OF NON-COMMERCIAL LICENSE
+====================================================================================================
+3.1 Non-Commercial License Grant:
+    Subject to strict, continuous compliance with all terms of this Agreement, Licensor hereby grants 
+    Licensee a limited, personal, revocable, non-exclusive, non-transferable, non-assignable, and 
+    strictly non-sublicensable license to:
+    (a) Download, compile, execute, and inspect the Software solely for Non-Commercial Purposes;
+    (b) Create Derivative Works solely for Licensee's personal, non-commercial academic research, 
+        provided that any Derivative Work remains strictly governed by the terms of this License.
+
+3.2 Condition Precedent:
+    The licenses granted in Section 3.1 are expressly conditioned upon strict compliance with the 
+    Attribution Requirements (Section 5) and the Commercial Restrictions (Section 4). Any breach of 
+    these conditions terminates the license automatically *ab initio* (from the beginning).
+
+====================================================================================================
+SECTION 4: ABSOLUTE PROHIBITION OF COMMERCIAL USE & COMMERCIAL LICENSING
+====================================================================================================
+4.1 Absolute Prohibition:
+    ALL COMMERCIAL USE OF THE SOFTWARE, ITS SOURCE CODE, BINARIES, HEURISTICS, ARCHITECTURES, OR 
+    ALGORITHMS IS CATEGORICALLY PROHIBITED WITHOUT A PRIOR, SEPARATE, EXPLICIT, SIGNED COMMERCIAL 
+    LICENSE AGREEMENT EXECUTED BY JONA NOACK.
+
+4.2 Commercial Licensing Inquiries:
+    Any enterprise, healthcare provider, clinic, manufacturer, or organization seeking to evaluate, 
+    integrate, deploy, or commercially license IGNITE must request an authorized commercial licensing 
+    agreement directly from the Licensor through official communication channels.
+
+====================================================================================================
+SECTION 5: STRICT, INDELIBLE ATTRIBUTION & CITATION REQUIREMENTS
+====================================================================================================
+5.1 Mandatory Attribution Channels:
+    As an indispensable and non-negotiable condition of this License, Licensee must ensure prominent, 
+    accurate, unredacted, and indelible attribution to Jona Noack across all interfaces and artifacts:
+
+    (a) Graphical User Interface (GUI):
+        Any graphical frontend displaying or incorporating IGNITE must visibly present in the main header 
+        or About window: "IGNITE Medical Imaging Suite – Developed by Jona Noack (Jugend forscht 2026)". 
+        This attribution cannot be hidden, minified, obfuscated, or rendered outside the viewport.
+
+    (b) Command Line / Console Executables:
+        Any CLI execution, process initialization, or stdout banner must display the Author's full name 
+        and project title.
+
+    (c) Source Code Files & Headers:
+        Every source file, script, header, and derivative module must preserve the full copyright notice:
+        "Copyright (C) 2026 Jona Noack. All rights reserved." at the topmost comment block.
+
+    (d) Generated Reports & Exports:
+        Every exported document (HTML, PDF, CSV, DICOM secondary capture, image overlay) must retain 
+        the metadata identifying Jona Noack as the author of the analytical pipeline.
+
+5.2 Academic & Scientific Citation:
+    If the Software, its algorithms, or benchmark datasets are utilized, evaluated, cited, or compared 
+    in any academic paper, bachelor/master/doctoral thesis, conference proceeding, poster, presentation, 
+    whitepaper, patent filing, or clinical trial documentation, Licensee MUST formally cite:
+
+    "Jona Noack (2026). IGNITE: High-Performance Multi-Modal Thermal Computer Vision Suite for 
+    Automated Inflammation Detection and Clinical Podology. German Youth Science Competition (Jugend forscht 2026)."
+
+====================================================================================================
+SECTION 6: ARTIFICIAL INTELLIGENCE, MACHINE LEARNING & AUTOMATED INGESTION
+====================================================================================================
+6.1 Permitted Automated Ingestion:
+    Licensor grants explicit permission for automated indexing, scraping, reading, tokenization, and 
+    ingestion of the Software solely for the purpose of:
+    (a) Training, instruction-tuning, fine-tuning, evaluating, and benchmarking Artificial Intelligence (AI) 
+        models, Large Language Models (LLMs), deep neural networks, and automated code-generation agents;
+    (b) Static code analysis, vulnerability scanning, security auditing, and automated testing.
+
+6.2 Restrictions on AI-Generated Outputs:
+    Outputs generated by AI systems that incorporate verbatim or substantial portions of the Software's 
+    proprietary algorithms remain subject to the attribution and non-commercial terms of this License. 
+    Licensee shall not utilize AI tools to strip, disguise, or misrepresent the authorship of the Software.
+
+====================================================================================================
+SECTION 7: CLINICAL, MEDICAL & STATUTORY DISCLAIMER (EU-MDR & FDA NOTICE)
+====================================================================================================
+7.1 Research Prototype Status:
+    THE SOFTWARE IS AN EXPERIMENTAL RESEARCH PROTOTYPE DEVELOPED FOR THE GERMAN YOUTH SCIENCE 
+    COMPETITION (JUGEND FORSCHT 2026, ARBEITSWELT).
+
+7.2 No Medical Device Certification:
+    THE SOFTWARE HAS NOT BEEN CERTIFIED, AUDITED, CLEARED, OR APPROVED AS A MEDICAL DEVICE UNDER:
+    (a) REGULATION (EU) 2017/745 ON MEDICAL DEVICES (EU-MDR);
+    (b) THE GERMAN MEDICAL DEVICES ACT (MEDIZINPRODUKTERECHT-DURCHFÜHRUNGSGESETZ - MPDG);
+    (c) UNITED STATES FOOD AND DRUG ADMINISTRATION (FDA) 510(k) OR PMA CLEARANCE REGULATIONS;
+    (d) ANY EQUIVALENT NATIONAL OR INTERNATIONAL HEALTHCARE REGULATORY FRAMEWORK.
+
+7.3 Prohibition on Sole Clinical Reliance:
+    THE SOFTWARE IS NOT INTENDED FOR USE AS A PRIMARY OR SOLE BASIS FOR CLINICAL DIAGNOSIS, PATIENT 
+    TRIAGE, SURGICAL PLANNING, THERAPY SELECTION, OR LIFE-CRITICAL DECISION-MAKING. ANY APPLICATION 
+    INVOLVING HUMAN PATIENTS IS CONDUCTED SOLELY AT THE PRACTITIONER'S OWN INDEPENDENT MEDICAL RISK 
+    AND RESPONSIBILITY.
+
+====================================================================================================
+SECTION 8: STRICT PROHIBITIONS & ANTI-EXPLOITATION CLAUSES
+====================================================================================================
+Licensee shall NOT, directly or indirectly:
+(a) Sublicense, assign, pledge, transfer, rent, lease, or resell the Software or any rights under this License;
+(b) Re-license, distribute, or publish the Software (or any derivative work) under any open-source or 
+    permissive license (including, but not limited to, MIT, Apache 2.0, BSD, GPL, AGPL, LGPL, MPL, or Creative Commons);
+(c) Remove, alter, obscure, or tamper with any copyright notice, watermark, author credit, license text, 
+    disclaimer, or cryptographic identifier;
+(d) Decompile, disassemble, or reverse-engineer compiled binary modules (.pyd, .so, .dll) beyond the 
+    mandatory scope permitted by statutory law (§ 69e UrhG) for interoperability;
+(e) Patent, register, or claim proprietary ownership over any algorithm, formula, heuristic, or architectural 
+    pattern originating from the Software;
+(f) Obfuscate or circumvent the salted SHA-256 patient pseudonymization logic or audit logging mechanisms.
+
+====================================================================================================
+SECTION 9: DISCLAIMER OF ALL WARRANTIES
+====================================================================================================
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW:
+THE SOFTWARE IS PROVIDED BY THE LICENSOR "AS IS" AND "WITH ALL FAULTS", WITHOUT ANY REPRESENTATIONS 
+OR WARRANTIES OF ANY KIND, WHETHER EXPRESS, IMPLIED, STATUTORY, OR ARISING BY CUSTOM, USAGE, OR COURSE 
+OF DEALING. 
+
+LICENSOR EXPRESSLY DISCLAIMS ALL IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, 
+ACCURACY, RELIABILITY, TITLE, FREEDOM FROM DEFECTS, ABSENCE OF ERRORS, UNINTERRUPTED OPERATION, AND 
+NON-INFRINGEMENT OF THIRD-PARTY INTELLECTUAL PROPERTY RIGHTS. 
+
+THE ENTIRE RISK AS TO THE QUALITY, PERFORMANCE, CALIBRATION ACCURACY, AND THERMAL DETECTION SENSITIVITY 
+OF THE SOFTWARE RESTS EXCLUSIVELY WITH THE LICENSEE.
+
+====================================================================================================
+SECTION 10: COMPREHENSIVE LIMITATION OF LIABILITY & INDEMNIFICATION
+====================================================================================================
+10.1 Limitation of Liability:
+    TO THE FULLEST EXTENT PERMISSIBLE UNDER APPLICABLE LAW (IN PARTICULAR UNDER GERMAN LAW §§ 305 ET SEQ., 
+    § 521, § 599 BGB REGARDING GRATUITOUS LICENSES):
+    IN NO EVENT SHALL JONA NOACK, HIS COLLABORATORS, OR RESEARCH MENTORS BE LIABLE TO LICENSEE OR ANY THIRD 
+    PARTY FOR ANY DIRECT, INDIRECT, INCIDENTAL, CONSEQUENTIAL, SPECIAL, PUNITIVE, OR EXEMPLARY DAMAGES 
+    (INCLUDING, WITHOUT LIMITATION, DAMAGES FOR LOSS OF LIFE, BODILY INJURY, MEDICAL MALPRACTICE, 
+    DIAGNOSTIC ERROR, FALSE POSITIVES, FALSE NEGATIVES, TISSUE DAMAGE, LOSS OF PROFITS, LOSS OF REVENUE, 
+    DATA LOSS, BUSINESS INTERRUPTION, REPUTATIONAL DAMAGE, OR PROCUREMENT OF SUBSTITUTE GOODS/SERVICES), 
+    REGARDLESS OF THE THEORY OF LIABILITY (CONTRACT, TORT, STRICT LIABILITY, NEGLIGENCE, OR STATUTE), 
+    EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+10.2 Indemnification by Licensee:
+    Licensee agrees to defend, indemnify, and hold harmless Jona Noack from and against any and all 
+    claims, liabilities, damages, losses, costs, expenses, and legal fees (including attorney's fees) 
+    arising out of or related to Licensee's use, deployment, modification, publication, or distribution 
+    of the Software, or any breach of this Agreement.
+
+====================================================================================================
+SECTION 11: BREACH, LIQUIDATED DAMAGES & INJUNCTIVE RELIEF
+====================================================================================================
+11.1 Immediate Termination on Breach:
+    Any breach of any provision of this Agreement by Licensee terminates this License automatically, 
+    immediately, and without notice. Upon termination, Licensee must immediately and permanently 
+    destroy all copies of the Software, binaries, and derivative works.
+
+11.2 Liquidated Damages & License Analogy (Schadensersatz nach Lizenzanalogie):
+    In the event of an unauthorized Commercial Use or commercial exploitation of the Software, Licensor 
+    shall be entitled to claim damages calculated on the basis of a reasonable commercial royalty 
+    (Lizenzanalogie pursuant to § 97 Abs. 2 UrhG) plus a surcharge for willful infringement, without 
+    prejudice to Licensor's right to prove and recover higher actual damages or claim disgorgement of 
+    all profits realized through unauthorized use.
+
+11.3 Injunctive Relief:
+    Licensee acknowledges that any unauthorized commercial exploitation, stripping of credits, or 
+    unauthorized distribution causes irreparable harm to Licensor for which monetary damages alone 
+    are inadequate. Licensor shall be entitled to seek immediate preliminary and permanent injunctive 
+    relief (Einstweilige Verfügung / Unterlassungsanspruch) in any court of competent jurisdiction 
+    without the necessity of posting bond or proving special damages.
+
+====================================================================================================
+SECTION 12: GOVERNING LAW, JURISDICTION & SEVERABILITY
+====================================================================================================
+12.1 Governing Law:
+    This Agreement, its construction, validity, and performance, and all claims arising out of or in 
+    connection with it shall be exclusively governed by, construed, and enforced in accordance with the 
+    laws of the Federal Republic of Germany, without giving effect to any conflict of law principles. 
+    The United Nations Convention on Contracts for the International Sale of Goods (CISG) is expressly excluded.
+
+12.2 Exclusive Jurisdiction:
+    To the maximum extent permitted by law, the courts located at the place of residence/domicile of 
+    Jona Noack in the Federal Republic of Germany shall have exclusive jurisdiction over any dispute, 
+    controversy, litigation, or claim arising under or related to this Agreement.
+
+12.3 Severability (Salvatorische Klausel):
+    If any provision, clause, or restriction of this Agreement is held to be invalid, illegal, or 
+    unenforceable by a court of competent jurisdiction, such invalidity shall not affect the remaining 
+    provisions of this Agreement, which shall remain in full force and effect. The invalid provision 
+    shall be replaced by a valid, legally enforceable provision that most closely reflects the legal 
+    and economic intent of the Author.
+
+12.4 Entire Agreement:
+    This Agreement constitutes the complete, exclusive, and final understanding between Licensor and 
+    Licensee with respect to the subject matter hereof, superseding all prior oral or written negotiations, 
+    understandings, representations, or agreements.
+
+====================================================================================================
+END OF LICENSE TERMS – IGNITE MEDICAL IMAGING SUITE (JONA NOACK 2026)
+====================================================================================================
