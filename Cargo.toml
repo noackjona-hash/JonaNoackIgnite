@@ -26,7 +26,7 @@ ndarray = { version = "0.16", features = ["rayon"] }
 
 # imageproc: Reine Rust-Bildverarbeitungsbibliothek (kein C/C++ nötig).
 # Implementiert Morphologie, Konturen, Distanztransformation in nativem Rust.
-imageproc = "0.25"
+imageproc = "0.27"
 
 # image: Rust-native Bild-Datentypen (Luma, Rgb, ImageBuffer).
 # imageproc arbeitet auf image::ImageBuffer.
