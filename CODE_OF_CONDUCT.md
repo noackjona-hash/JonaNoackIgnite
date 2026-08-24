@@ -1,55 +1,53 @@
 # Contributor Covenant Code of Conduct
 
-## Unser Versprechen
+## Our Pledge
 
-Im Interesse einer offenen und einladenden Gemeinschaft verpflichten wir uns als Mitwirkende und Betreuende dieses Projekts dazu, allen Beteiligten eine diskriminierungs- und belästigungsfreie Erfahrung zu bieten – unabhängig von Alter, Körpergröße, Behinderung, ethnischer Zugehörigkeit, Geschlechtsidentität und -ausdruck, Erfahrungsstufe, Bildung, sozioökonomischem Status, Nationalität, persönlicher Erscheinung, Rasse, Religion oder sexueller Orientierung und Identität.
+We as members, contributors, and leaders pledge to make participation in our community a harassment-free experience for everyone, regardless of age, body size, visible or invisible disability, ethnicity, sex characteristics, gender identity and expression, level of experience, education, socio-economic status, nationality, personal appearance, race, caste, color, religion, or sexual identity and orientation.
 
-Wir verpflichten uns dazu, in einer Art und Weise zu handeln, die zu einer offenen, einladenden, vielfältigen, inklusiven und gesunden Gemeinschaft beiträgt.
-
----
-
-## Unsere Standards
-
-### Positives Verhalten umfasst unter anderem:
-* Verwendung einer respektvollen, inklusiven und professionellen Sprache.
-* Rücksichtnahme auf unterschiedliche Meinungen, Blickwinkel und Erfahrungen.
-* Konstruktive Annahme und Formulierung von Kritik.
-* Verantwortung für Fehler übernehmen, sich entschuldigen und aus Erfahrungen lernen.
-* Fokus auf das, was das Beste nicht nur für uns selbst, sondern für die gesamte Gemeinschaft und das Projekt ist.
-* Empathie und Unterstützung für andere Projektbeteiligte zeigen.
-
-### Inakzeptables Verhalten umfasst unter anderem:
-* Die Verwendung sexualisierter Sprache oder Bildsprache sowie unerwünschte sexuelle Annäherungsversuche.
-* Trolling, beleidigende oder abwertende Kommentare sowie persönliche oder politische Angriffe.
-* Öffentliche oder private Belästigungen (Harassment).
-* Das Veröffentlichen privater Informationen Dritter (z. B. physische oder elektronische Adressen) ohne ausdrückliche Erlaubnis (*Doxxing*).
-* Sonstiges Verhalten, das vernünftigerweise in einem professionellen Umfeld als unangemessen erachtet werden kann.
+We pledge to act and interact in ways that contribute to an open, welcoming, diverse, inclusive, and healthy community.
 
 ---
 
-## Durchsetzung & Verantwortung
+## Our Standards
 
-Die Projektleitung ist für die Klarstellung und Durchsetzung unserer Standards für akzeptables Verhalten verantwortlich und wird bei unangemessenem, einschüchterndem, beleidigendem oder verletzendem Verhalten angemessene und faire Korrekturmaßnahmen ergreifen.
+### Examples of behavior that contributes to a positive environment:
+* Demonstrating empathy and kindness toward other people.
+* Being respectful of differing opinions, viewpoints, and experiences.
+* Giving and gracefully accepting constructive feedback.
+* Accepting responsibility and apologizing to those affected by our mistakes, and learning from the experience.
+* Focusing on what is best not just for us as individuals, but for the overall community.
 
-Die Projektleitung hat das Recht und die Verantwortung, Kommentare, Commits, Code, Wiki-Bearbeitungen, Issues und andere Beiträge, die nicht mit diesem Verhaltenskodex vereinbar sind, zu entfernen, zu bearbeiten oder abzulehnen.
-
----
-
-## Geltungsbereich
-
-Dieser Verhaltenskodex gilt sowohl innerhalb aller Projekträume (GitHub Repositories, Issues, Pull Requests, Diskussionen) als auch im öffentlichen Raum, wenn eine Person das Projekt oder seine Gemeinschaft offiziell vertritt.
-
----
-
-## Meldung & Kontakt
-
-Vorfälle von missbräuchlichem, belästigendem oder anderweitig inakzeptablem Verhalten können vertraulich gemeldet werden:
-* **Kontakt:** Über GitHub Private Messaging oder direkt via GitHub Issues/Discussions dieses Repositories.
-
-Alle Beschwerden werden zeitnah, vertraulich und fair geprüft und untersucht.
+### Examples of unacceptable behavior:
+* The use of sexualized language or imagery, and sexual attention or advances of any kind.
+* Trolling, insulting or derogatory comments, and personal or political attacks.
+* Public or private harassment.
+* Publishing others' private information, such as a physical or email address, without their explicit permission.
+* Other conduct which could reasonably be considered inappropriate in a professional setting.
 
 ---
 
-## Namensnennung
+## Enforcement Responsibilities
 
-Dieser Verhaltenskodex basiert auf dem [Contributor Covenant](https://www.contributor-covenant.org), Version 2.1 (abrufbar unter https://www.contributor-covenant.org/version/2/1/code_of_conduct.html).
+Community leaders are responsible for clarifying and enforcing our standards of acceptable behavior and will take appropriate and fair corrective action in response to any behavior that they deem inappropriate, threatening, offensive, or harmful.
+
+Community leaders have the right and responsibility to remove, edit, or reject comments, commits, code, wiki edits, issues, and other contributions that are not aligned to this Code of Conduct, and will communicate reasons for moderation decisions when appropriate.
+
+---
+
+## Scope
+
+This Code of Conduct applies within all community spaces (repositories, issue trackers, pull requests, and discussions), and also applies when an individual is officially representing the community in public spaces.
+
+---
+
+## Enforcement
+
+Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the project maintainers through private messaging on GitHub or via GitHub issue reports. All complaints will be reviewed and investigated promptly and fairly.
+
+All community leaders are obligated to respect the privacy and security of the reporter of any incident.
+
+---
+
+## Attribution
+
+This Code of Conduct is adapted from the [Contributor Covenant](https://www.contributor-covenant.org), version 2.1, available at https://www.contributor-covenant.org/version/2/1/code_of_conduct.html.

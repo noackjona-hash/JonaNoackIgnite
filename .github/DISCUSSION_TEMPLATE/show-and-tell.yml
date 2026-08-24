@@ -4,11 +4,11 @@ body:
   - type: markdown
     attributes:
       value: |
-        Zeige eigene Auswertungen, Thermografie-Bilder oder Projekte, die du mit IGNITE umgesetzt hast!
+        Showcase thermal datasets, evaluations, or integrations you built with IGNITE!
   - type: textarea
     id: showcase
     attributes:
-      label: 🔬 Dein Projekt / Deine Auswertung
-      description: Was hast du analysiert oder gebaut?
+      label: Your Project / Analysis
+      description: Describe what you analyzed or built.
     validations:
       required: true

@@ -1,118 +1,118 @@
-# Beitragen zu IGNITE Medical Imaging Suite 🔬🌡️
+# Contributing to IGNITE Medical Imaging Suite
 
-Vielen Dank für dein Interesse, zu **IGNITE** beizutragen! Dieses Projekt wurde als wissenschaftlicher Forschungsprototyp für den Wettbewerb **Jugend forscht 2026** (Fachgebiet Arbeitswelt) entwickelt.
+Thank you for your interest in contributing to **IGNITE**! This project was developed as a scientific research prototype for the German Youth Science Competition (**Jugend forscht 2026**).
 
-Wir freuen uns über Bug-Reports, Feature-Vorschläge, Verbesserungen an den Algorithmen sowie Erweiterungen der Dokumentation.
+We welcome contributions including bug reports, algorithmic improvements, documentation updates, and performance optimizations.
 
 ---
 
-## 📋 Inhaltsverzeichnis
+## Table of Contents
 
-1. [Verhaltenskodex](#verhaltenskodex)
-2. [Wie kann ich beitragen?](#wie-kann-ich-beitragen)
-   - [Fehler melden (Bug Reports)](#fehler-melden-bug-reports)
-   - [Neue Features vorschlagen](#neue-features-vorschlagen)
-   - [Code-Beiträge einreichen (Pull Requests)](#code-beiträge-einreichen-pull-requests)
-3. [Entwicklungsumgebung einrichten](#entwicklungsumgebung-einrichten)
-4. [Entwicklungsrichtlinien](#entwicklungsrichtlinien)
-   - [Python-Code](#python-code)
-   - [Rust-Core (ignite_core)](#rust-core-ignite_core)
-   - [GUI & Design (Google Material 3)](#gui--design-google-material-3)
-5. [Tests & Benchmarks ausführen](#tests--benchmarks-ausführen)
+1. [Code of Conduct](#code-of-conduct)
+2. [How to Contribute](#how-to-contribute)
+   - [Reporting Bugs](#reporting-bugs)
+   - [Requesting Features](#requesting-features)
+   - [Submitting Pull Requests](#submitting-pull-requests)
+3. [Development Setup](#development-setup)
+4. [Development Guidelines](#development-guidelines)
+   - [Python Code Standards](#python-code-standards)
+   - [Rust Core (ignite_core)](#rust-core-ignite_core)
+   - [User Interface & Design](#user-interface--design)
+5. [Running Tests and Benchmarks](#running-tests-and-benchmarks)
 6. [Pull Request Workflow](#pull-request-workflow)
 
 ---
 
-## 🤝 Verhaltenskodex
+## Code of Conduct
 
-Mit deiner Teilnahme an diesem Projekt verpflichtest du dich zur Einhaltung unseres [Code of Conduct](CODE_OF_CONDUCT.md). Bitte pflege einen respektvollen und konstruktiven Umgangston.
-
----
-
-## 💡 Wie kann ich beitragen?
-
-### Fehler melden (Bug Reports)
-Wenn du einen Fehler findest, öffne bitte ein Issue mit unserem [Bug Report Template](.github/ISSUE_TEMPLATE/bug_report.md):
-* Beschreibe das erwartete und das tatsächliche Verhalten.
-* Gib die Schritte zur Reproduktion an.
-* Nenne dein Betriebssystem, deine Python- und Rust-Version sowie Details zur Hardware (z. B. GPU-Modell).
-* Füge relevante Log-Ausgaben oder Screenshots bei.
-
-### Neue Features vorschlagen
-Für neue Features oder algorithmische Erweiterungen nutze bitte das [Feature Request Template](.github/ISSUE_TEMPLATE/feature_request.md):
-* Erkläre die Motivation und den wissenschaftlichen/klinischen Mehrwert.
-* Beschreibe deinen Lösungsvorschlag und eventuelle Alternativen.
+By participating in this project, you agree to abide by our [Code of Conduct](CODE_OF_CONDUCT.md). Please maintain a professional, respectful, and constructive tone in all interactions.
 
 ---
 
-## 💻 Entwicklungsumgebung einrichten
+## How to Contribute
 
-### 1. Repository klonen
+### Reporting Bugs
+If you encounter a bug or unexpected behavior, please submit an issue using our [Bug Report Form](.github/ISSUE_TEMPLATE/bug_report.yml):
+* Provide a clear and concise description of the issue.
+* List reproducible, step-by-step instructions.
+* Specify your operating system, Python version, compute backend, and hardware details.
+* Include relevant log outputs or stack traces.
+
+### Requesting Features
+For new features, diagnostic tools, or mathematical algorithms, please use our [Feature Request Form](.github/ISSUE_TEMPLATE/feature_request.yml):
+* Explain the rationale and clinical/scientific utility of the proposed feature.
+* Describe the desired implementation and any alternative solutions considered.
+
+---
+
+## Development Setup
+
+### 1. Clone the Repository
 ```bash
 git clone https://github.com/noackjona-hash/JonaNoackIgnite.git
 cd JonaNoackIgnite
 ```
 
-### 2. Virtuelle Umgebung erstellen & Abhängigkeiten installieren
+### 2. Configure Virtual Environment & Install Dependencies
 ```bash
 python -m venv venv
-source venv/bin/activate  # Unter Linux/macOS
-# bzw. venv\Scripts\activate unter Windows
+source venv/bin/activate  # On Linux/macOS
+# or venv\Scripts\activate on Windows
 
 pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### 3. Rust-Core kompilieren (optional, aber empfohlen)
+### 3. Compile Native Rust Core (Recommended)
 ```bash
 maturin develop --release
 ```
 
-### 4. Anwendung starten
+### 4. Run the Application
 ```bash
 python main.py
 ```
 
 ---
 
-## 📐 Entwicklungsrichtlinien
+## Development Guidelines
 
-### Python-Code
-* **Code-Style:** Halte dich an PEP 8.
-* **Typisierung:** Verwende Type Hints (`from typing import Optional, Any, ...`) für alle Funktionen und Methoden.
-* **Datenschutz by Design:** Schreibe niemals ungehashte Patientendaten in Ausgabedateien oder Logs. Nutze stets `pseudonymize_patient()`.
+### Python Code Standards
+* Follow PEP 8 style conventions.
+* Provide explicit type annotations (`from typing import Optional, Any, ...`) across all modules.
+* Maintain privacy-by-design principles: never write unhashed patient identifiable information to disk or logs. Always use `pseudonymize_patient()`.
 
-### Rust-Core (`src/lib.rs`)
-* **Fehlerbehandlung:** Verwende niemals `unwrap()` oder `expect()`. Alle Fehler müssen über `Result<T, String>` bzw. `PyResult<T>` an Python propagiert werden.
-* **Zero-Copy:** Nutze `PyReadonlyArray2` und `PyArray2` für speichereffizienten Datenaustausch mit NumPy.
-* **Parallelisierung:** Parallelisiere CPU-intensive Schleifen zeilenweise über `rayon`.
+### Rust Core (`src/lib.rs`)
+* Enforce safe error handling: never use `unwrap()` or `expect()`. Propagate errors using `Result<T, String>` or `PyResult<T>`.
+* Utilize zero-copy memory patterns with `PyReadonlyArray2` and `PyArray2`.
+* Parallelize CPU-intensive loops along image rows using `rayon`.
 
-### GUI & Design (Google Material 3)
-* Verwende stets die Design-Tokens und Farbkonstanten aus `gui/theme.py`.
-* Trenne UI-Layout (`gui/views/`, `gui/components/`) strikt von Berechnungs- und Exportlogik (`image_processing.py`, `gui/services/`).
+### User Interface & Design
+* Use design tokens and color constants defined in `gui/theme.py`.
+* Strictly decouple UI view components (`gui/views/`, `gui/components/`) from core mathematical and export services (`image_processing.py`, `gui/services/`).
 
 ---
 
-## 🧪 Tests & Benchmarks ausführen
+## Running Tests and Benchmarks
 
-Vor jedem Pull Request müssen alle Tests fehlerfrei durchlaufen:
+Ensure all automated tests pass before opening a pull request:
 
 ```bash
-# 1. Schnelle Unit- und GUI-Tests
+# Run unit and UI regression test suite
 pytest tests/
 
-# 2. Wissenschaftliche Benchmarks & Paritätsvalidierung
+# Run complete scientific benchmark and numerical parity suite
 python dataset_evaluator.py
 ```
 
 ---
 
-## 🚀 Pull Request Workflow
+## Pull Request Workflow
 
-1. Erstelle einen Feature-Branch von `main`:
+1. Create a descriptive feature branch from `main`:
    ```bash
-   git checkout -b feature/mein-neues-feature
+   git checkout -b feature/your-feature-name
    ```
-2. Nimm deine Änderungen vor und schreibe passende Tests in `tests/`.
-3. Führe `pytest` aus und stelle sicher, dass alle Tests grün sind.
-4. Erstelle einen Pull Request mit dem bereitgestellten [Pull Request Template](.github/PULL_REQUEST_TEMPLATE.md).
+2. Commit your changes and add corresponding test coverage under `tests/`.
+3. Verify that `pytest tests/` completes with all tests passing.
+4. Open a pull request following our [Pull Request Template](.github/PULL_REQUEST_TEMPLATE.md).

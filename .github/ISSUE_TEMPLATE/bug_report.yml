@@ -1,56 +1,56 @@
-name: "🐛 Bug Report"
-description: "Melde einen Fehler oder unerwartetes Verhalten in IGNITE"
+name: "Bug Report"
+description: "Report an issue, defect, or unexpected behavior in IGNITE"
 title: "[BUG]: "
 labels: ["bug"]
 body:
   - type: markdown
     attributes:
       value: |
-        Vielen Dank, dass du dir die Zeit nimmst, einen Fehler in **IGNITE** zu melden!
+        Thank you for submitting a bug report for **IGNITE**! Please fill out the sections below.
   - type: textarea
     id: description
     attributes:
-      label: 📝 Fehlerbeschreibung
-      description: Eine klare und präzise Beschreibung des Fehlers.
-      placeholder: Was ist schiefgelaufen?
+      label: Problem Description
+      description: A clear and concise description of what the bug is.
+      placeholder: Describe what went wrong...
     validations:
       required: true
   - type: textarea
     id: repro
     attributes:
-      label: 🔄 Schritte zur Reproduktion
-      description: Wie lässt sich der Fehler Schritt für Schritt nachvollziehen?
+      label: Steps to Reproduce
+      description: Step-by-step instructions to reproduce the issue.
       placeholder: |
-        1. IGNITE starten (python main.py)
-        2. Bild laden: ...
-        3. Option / Schwellenwert ändern: ...
-        4. Beobachteter Fehler: ...
+        1. Start IGNITE (python main.py)
+        2. Load image: ...
+        3. Adjust parameter / mode: ...
+        4. See error: ...
     validations:
       required: true
   - type: textarea
     id: expected
     attributes:
-      label: 🎯 Erwartetes Verhalten
-      description: Was hättest du unter normalen Bedingungen erwartet?
+      label: Expected Behavior
+      description: What did you expect to happen?
     validations:
       required: true
   - type: dropdown
     id: backend
     attributes:
-      label: ⚡ Berechnungs-Backend
-      description: Welches Backend war bei Auftreten des Fehlers aktiv?
+      label: Compute Backend
+      description: Which computation backend was active when the issue occurred?
       options:
         - "Python Fallback (NumPy + OpenCV)"
         - "Rust Core (ignite_core / Rayon)"
         - "PyTorch GPU (CUDA Acceleration)"
-        - "Unbekannt / Startproblem"
+        - "Startup Issue / Unknown"
     validations:
       required: true
   - type: dropdown
     id: os
     attributes:
-      label: 💻 Betriebssystem
-      description: Auf welcher Plattform tritt der Fehler auf?
+      label: Operating System
+      description: What operating system are you running?
       options:
         - "Windows 11 (64-Bit)"
         - "Windows 10 (64-Bit)"
@@ -61,23 +61,23 @@ body:
   - type: input
     id: versions
     attributes:
-      label: 🏷️ Versionen & Hardware
-      description: Python-Version, GPU-Modell, etc.
-      placeholder: z. B. Python 3.10.12, NVIDIA RTX 3060, IGNITE v3.2.0
+      label: Environment & Hardware Details
+      description: Python version, GPU model, IGNITE version.
+      placeholder: "e.g., Python 3.10.12, NVIDIA RTX 3060, IGNITE v3.2.0"
     validations:
       required: false
   - type: textarea
     id: logs
     attributes:
-      label: 📜 Logs & Fehlerausgaben
-      description: Fehlermeldungen aus Terminal / Logs oder Stacktraces einfügen.
+      label: Logs and Stack Traces
+      description: Terminal output, log messages, or stack traces.
       render: shell
   - type: checkboxes
     id: checklist
     attributes:
-      label: 📋 Checkliste
+      label: Checklist
       options:
-        - label: Ich habe geprüft, ob dieses Problem bereits als Issue gemeldet wurde.
+        - label: I have searched existing issues to ensure this is not a duplicate.
           required: true
-        - label: Ich habe die neueste Version von IGNITE getestet.
+        - label: I have tested against the latest version of IGNITE.
           required: true

@@ -1,31 +1,31 @@
-## 📌 Zusammenfassung der Änderungen
-Eine kurze und präzise Beschreibung, was dieser PR ändert, behebt oder hinzufügt.
+## Summary of Changes
+A concise summary of what this pull request introduces, fixes, or improves.
 
 ---
 
-## 🏷️ Art der Änderung
-- [ ] 🐛 Bugfix (Fehlerbehebung ohne Breaking Change)
-- [ ] ✨ Neues Feature (Funktionale Erweiterung)
-- [ ] ⚡ Performance-Optimierung (z. B. Rust-Core, Rayon, Vektor-Operationen)
-- [ ] 🔬 Wissenschaftliche Validierung / Benchmarks (JuFo Datensätze, Metriken)
-- [ ] 🎨 GUI / UX Anpassung (Google Material 3 Styling, Dialoge)
-- [ ] 📝 Dokumentation / Paper-Aktualisierung
-- [ ] 🧹 Refactoring / Code-Bereinigung
+## Type of Change
+- [ ] Bug fix (non-breaking change which fixes an issue)
+- [ ] New feature (non-breaking change which adds functionality)
+- [ ] Performance improvement (e.g., Rust core, Rayon multithreading, GPU kernel)
+- [ ] Scientific validation / Benchmarking (dataset evaluation, metric calibration)
+- [ ] GUI / UX improvement (Google Material 3 design, dialog enhancements)
+- [ ] Documentation update
+- [ ] Code cleanup and refactoring
 
 ---
 
-## 🧪 Durchgeführte Tests & Validierung
-- [ ] `pytest tests/` läuft lokal ohne Fehler durch.
-- [ ] Parität zwischen Python-, Rust- und GPU-Backend verifiziert (sofern relevant).
-- [ ] Keine Regression bei Dice-Score oder Sensitivität auf dem Benchmark-Datensatz (`dataset_evaluator.py`).
-- [ ] Manuelle Prüfung in der Benutzeroberfläche (`python main.py`).
+## Testing & Validation Checklist
+- [ ] `pytest tests/` passes locally without failures.
+- [ ] Numerical parity validated across Python, Rust, and GPU backends (if applicable).
+- [ ] No regression in Dice score or sensitivity on benchmark dataset (`dataset_evaluator.py`).
+- [ ] Manual verification completed in the graphical user interface (`python main.py`).
 
 ---
 
-## 📸 Screenshots / Benchmarks (falls relevant)
-*Vorher vs. Nachher (Screenshots der GUI oder Benchmark-Ergebnisse einfügen)*
+## Benchmarks / Visual Evidence (if applicable)
+*Include relevant before/after screenshots, runtime metrics, or benchmark output.*
 
 ---
 
-## 🔒 Datenschutz & Compliance
-- [ ] Keine Klartext-Patientendaten in Logs oder Berichten (DSGVO SHA-256 Pseudonymisierung gewahrt).
+## Privacy & Compliance
+- [ ] Confirmed no unhashed patient identifiable information is persisted to disk or logs.

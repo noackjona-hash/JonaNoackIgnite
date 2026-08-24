@@ -4,16 +4,16 @@ body:
   - type: markdown
     attributes:
       value: |
-        Stelle eine Frage zu **IGNITE**, zur Methodik, Installation oder wissenschaftlichen Arbeit für Jugend forscht 2026.
+        Ask a question about **IGNITE**, methodology, setup, or scientific research background.
   - type: textarea
     id: question
     attributes:
-      label: ❓ Deine Frage
-      description: Was möchtest du wissen oder worüber benötigst du Hilfe?
+      label: Your Question
+      description: What would you like to know or need assistance with?
     validations:
       required: true
   - type: textarea
     id: context
     attributes:
-      label: ℹ️ Kontext
-      description: Relevante Hintergrundinfos, Code-Snippets oder Systemdetails.
+      label: Context
+      description: Relevant background details, code snippets, or system information.

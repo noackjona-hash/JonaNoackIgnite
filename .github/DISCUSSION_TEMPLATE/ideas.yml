@@ -4,16 +4,16 @@ body:
   - type: markdown
     attributes:
       value: |
-        Teile Ideen für zukünftige Versionen, neue Entzündungs-Detektionsverfahren oder Kooperationsmöglichkeiten!
+        Share ideas for future versions, new inflammation detection techniques, or research collaborations!
   - type: textarea
     id: idea
     attributes:
-      label: 💡 Deine Idee
-      description: Beschreibe deine Idee oder dein Konzept.
+      label: Proposed Idea
+      description: Describe your idea or conceptual approach.
     validations:
       required: true
   - type: textarea
     id: benefits
     attributes:
-      label: 🌟 Vorteile & Relevanz
-      description: Warum wäre diese Idee für Anwender oder Forschende nützlich?
+      label: Expected Benefits
+      description: Why would this idea be valuable for clinicians or researchers?
