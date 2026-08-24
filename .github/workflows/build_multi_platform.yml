@@ -59,14 +59,14 @@ jobs:
 
       - name: Upload Windows Artifact
         if: runner.os == 'Windows'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: IGNITE_Setup_Windows
           path: IGNITE_Setup_*.exe
 
       - name: Upload Linux Artifact
         if: runner.os == 'Linux'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: IGNITE_Package_Linux
           path: IGNITE_Linux_x86_64.tar.gz

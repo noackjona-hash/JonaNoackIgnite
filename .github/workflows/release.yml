@@ -42,7 +42,7 @@ jobs:
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\ignite_installer.iss
 
       - name: Upload Windows Setup Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: IGNITE_Windows_Setup
           path: IGNITE_Setup_*.exe
@@ -88,7 +88,7 @@ jobs:
           tar -czvf ../IGNITE_Linux_x86_64.tar.gz IGNITE-Linux
 
       - name: Upload Linux Setup Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: IGNITE_Linux_Package
           path: IGNITE_Linux_x86_64.tar.gz
