@@ -27,6 +27,12 @@ def test_radiometric_emissivity_correction():
     assert t_corr >= 30.0
     assert abs(t_corr - 30.2) < 0.5
 
+    # Atmosphärische Korrektur bei Distanz (z. B. 2.5m und 60% Feuchte)
+    t_dist = apply_radiometric_emissivity_correction(
+        30.0, emissivity=0.98, t_refl_celsius=20.0, distance_m=2.5, rel_humidity=0.60, t_ambient_c=22.0
+    )
+    assert t_dist >= 30.0
+
 def test_convert_16bit_radiometric_to_8bit():
     t_min, t_max = 20.0, 40.0
 

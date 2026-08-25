@@ -214,7 +214,7 @@ class ThermalProcessingService:
 
     @staticmethod
     def _compute_zonal_stats(img: np.ndarray, body_mask: np.ndarray, pca_results: Optional[dict[str, Any]] = None) -> dict[str, Any]:
-        """Berechnet das klinische 3-Zonen-Modell mit bevorzugter PCA-Hauptachsenorientierung."""
+        """Berechnet das klinische 3-Zonen-Modell mit bevorzugter PCA-Hauptachsenorientierung und Cavanagh-Arch-Index."""
         if pca_results and pca_results.get("left", {}).get("exists") and pca_results.get("right", {}).get("exists"):
             l_info = pca_results["left"]
             r_info = pca_results["right"]
@@ -223,6 +223,9 @@ class ThermalProcessingService:
                     "fore": l_info["fore_c"],
                     "mid": l_info["mid_c"],
                     "heel": l_info["heel_c"],
+                    "arch_index": l_info.get("arch_index", 0.24),
+                    "arch_type": l_info.get("arch_type", "Normales Längsgewölbe"),
+                    "arch_code": l_info.get("arch_code", "normal"),
                     "exists": True,
                     "bbox": l_info.get("bbox"),
                     "angle_deg": l_info.get("angle_deg", 0.0)
@@ -231,6 +234,9 @@ class ThermalProcessingService:
                     "fore": r_info["fore_c"],
                     "mid": r_info["mid_c"],
                     "heel": r_info["heel_c"],
+                    "arch_index": r_info.get("arch_index", 0.24),
+                    "arch_type": r_info.get("arch_type", "Normales Längsgewölbe"),
+                    "arch_code": r_info.get("arch_code", "normal"),
                     "exists": True,
                     "bbox": r_info.get("bbox"),
                     "angle_deg": r_info.get("angle_deg", 0.0)

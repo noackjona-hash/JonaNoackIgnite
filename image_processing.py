@@ -396,16 +396,33 @@ def compute_pca_foot_alignment_and_zones(
         p_min, p_max = float(proj.min()), float(proj.max())
         p_range = max(1e-5, p_max - p_min)
 
-        # 3 Zonen entlang der longitudinalen Hauptachse: Vorfuß (0-33%), Mittelfuß (33-66%), Ferse (66-100%)
-        # Wir orientieren so, dass y-Werte oben (Vorfuß) und unten (Ferse) liegen
+        # 3 anatomische Zonen entlang der longitudinalen Hauptachse:
+        # Vorfuß (Metatarsus/Zehen, 0-40%), Mittelfuß (Gewölbe, 40-70%), Ferse (Calcaneus, 70-100%)
         norm_proj = (proj - p_min) / p_range
         # Wenn Hauptvektor nach oben zeigt, invertieren wir für anatomische Konsistenz
         if main_vec[1] < 0:
             norm_proj = 1.0 - norm_proj
 
-        z_fore = norm_proj <= 0.35
-        z_mid = (norm_proj > 0.35) & (norm_proj <= 0.68)
-        z_heel = norm_proj > 0.68
+        z_fore = norm_proj <= 0.40
+        z_mid = (norm_proj > 0.40) & (norm_proj <= 0.70)
+        z_heel = norm_proj > 0.70
+
+        # Cavanagh & Rodgers Plantar Arch Index (AI = Area_Midfoot / Area_Total)
+        n_fore = int(np.sum(z_fore))
+        n_mid = int(np.sum(z_mid))
+        n_heel = int(np.sum(z_heel))
+        n_tot = max(1, n_fore + n_mid + n_heel)
+        arch_index = float(n_mid / n_tot)
+
+        if arch_index < 0.21:
+            arch_type = "Pes Cavus (Hohlfuß)"
+            arch_code = "cavus"
+        elif arch_index <= 0.26:
+            arch_type = "Normales Längsgewölbe"
+            arch_code = "normal"
+        else:
+            arch_type = "Pes Planus (Senk-/Plattfuß / Charcot-Verdacht)"
+            arch_code = "planus"
 
         # Pixelwerte an den entsprechenden Koordinaten
         actual_xs = xs + x_offset
@@ -426,6 +443,10 @@ def compute_pca_foot_alignment_and_zones(
             "fore_c": round(_to_c(p_fore), 2),
             "mid_c": round(_to_c(p_mid), 2),
             "heel_c": round(_to_c(p_heel), 2),
+            "arch_index": round(arch_index, 3),
+            "arch_type": arch_type,
+            "arch_code": arch_code,
+            "zone_counts": {"fore": n_fore, "mid": n_mid, "heel": n_heel},
             "bbox": (bx, by, bw, bh)
         }
 

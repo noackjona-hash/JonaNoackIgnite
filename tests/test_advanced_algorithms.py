@@ -93,6 +93,11 @@ def test_pca_foot_alignment_and_rotation():
     # Vorfuß-Temperatur links sollte signifikant höher sein als rechts
     assert pca_res["left"]["fore_c"] > pca_res["right"]["fore_c"]
 
+    # Cavanagh & Rodgers Arch Index sollte vorhanden und valide sein
+    assert "arch_index" in pca_res["left"]
+    assert 0.0 < pca_res["left"]["arch_index"] < 1.0
+    assert "arch_type" in pca_res["left"]
+
 
 def test_thermal_severity_index_classification():
     """Testet die TSI-Risikoklassifikation für Normalbefund und akute Entzündung."""

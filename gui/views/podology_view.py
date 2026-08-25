@@ -202,9 +202,52 @@ class PodologyView(ctk.CTkFrame):
 
             self.zone_rows[z_key] = (lbl_l, lbl_r, lbl_d)
 
-        # 3. Fußnote mit wissenschaftlicher Referenz
+        # 3. Cavanagh & Rodgers Plantar Arch Index (Biomechanik)
+        ctk.CTkLabel(
+            scroll,
+            text="PLANTARER GEWÖLBE-INDEX (CAVANAGH & RODGERS)",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=10, weight="bold"),
+            text_color=COLOR_TEXT_MUTED,
+            anchor="w"
+        ).pack(fill=ctk.X, padx=4, pady=(10, 6))
+
+        self.arch_card = make_material_card(scroll, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD_VARIANT)
+        self.arch_card.pack(fill=ctk.X, padx=4, pady=(0, 10))
+
+        a_inner = ctk.CTkFrame(self.arch_card, fg_color="transparent")
+        a_inner.pack(fill=ctk.X, padx=12, pady=10)
+
+        self.arch_l_lbl = ctk.CTkLabel(
+            a_inner,
+            text="Linker Fuß: AI = -- (Normal)",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            text_color=COLOR_TEXT_PRIMARY,
+            anchor="w"
+        )
+        self.arch_l_lbl.pack(fill=ctk.X)
+
+        self.arch_r_lbl = ctk.CTkLabel(
+            a_inner,
+            text="Rechter Fuß: AI = -- (Normal)",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            text_color=COLOR_TEXT_PRIMARY,
+            anchor="w"
+        )
+        self.arch_r_lbl.pack(fill=ctk.X, pady=(2, 4))
+
+        ctk.CTkLabel(
+            a_inner,
+            text="Index-Referenz: <0.21 Pes Cavus (Hohlfuß) | 0.21-0.26 Normal | >0.26 Pes Planus (Charcot-Senkfuß)",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=9),
+            text_color=COLOR_TEXT_MUTED,
+            anchor="w",
+            wraplength=340,
+            justify="left"
+        ).pack(fill=ctk.X)
+
+        # 4. Fußnote mit wissenschaftlicher Referenz
         note_card = make_material_card(scroll, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD_VARIANT)
-        note_card.pack(fill=ctk.X, padx=4, pady=(14, 4))
+        note_card.pack(fill=ctk.X, padx=4, pady=(10, 4))
         n_inner = ctk.CTkFrame(note_card, fg_color="transparent")
         n_inner.pack(fill=ctk.X, padx=12, pady=10)
 
@@ -277,9 +320,25 @@ class PodologyView(ctk.CTkFrame):
                 lbl_r.configure(text=f"R: {r_c:.1f} °C")
 
                 d_color = COLOR_DANGER if d_c > 2.2 else COLOR_SUCCESS
-                lbl_d.configure(text=f"Δ {d_c:.1f} °C", text_color=d_color)
+                warn_sym = " ⚠️" if d_c > 2.2 else ""
+                lbl_d.configure(text=f"Δ {d_c:.1f} °C{warn_sym}", text_color=d_color)
 
-        # 3. Bild rendern
+            # 3. Arch Index aktualisieren
+            ai_l = zonal["left"].get("arch_index")
+            type_l = zonal["left"].get("arch_type", "Normal")
+            code_l = zonal["left"].get("arch_code", "normal")
+            col_l = COLOR_DANGER if code_l == "planus" else (COLOR_WARNING if code_l == "cavus" else COLOR_SUCCESS)
+            if ai_l is not None:
+                self.arch_l_lbl.configure(text=f"Linker Fuß: AI = {ai_l:.3f} ({type_l})", text_color=col_l)
+
+            ai_r = zonal["right"].get("arch_index")
+            type_r = zonal["right"].get("arch_type", "Normal")
+            code_r = zonal["right"].get("arch_code", "normal")
+            col_r = COLOR_DANGER if code_r == "planus" else (COLOR_WARNING if code_r == "cavus" else COLOR_SUCCESS)
+            if ai_r is not None:
+                self.arch_r_lbl.configure(text=f"Rechter Fuß: AI = {ai_r:.3f} ({type_r})", text_color=col_r)
+
+        # 4. Bild rendern
         self.redraw()
 
     def redraw(self) -> None:

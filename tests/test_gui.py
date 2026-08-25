@@ -264,3 +264,45 @@ def test_longitudinal_visit_comparison():
 
     root.destroy()
 
+
+def test_podology_view_arch_index_and_zonal_warnings():
+    """Testet die Darstellung von Cavanagh & Rodgers Arch Index und Zonen-Warnungen in PodologyView."""
+    from gui.views.podology_view import PodologyView
+    import customtkinter as ctk
+
+    root = ctk.CTk()
+    root.withdraw()
+
+    podology_view = PodologyView(root)
+
+    dummy_result = {
+        "t_min_c": 20.0,
+        "t_max_c": 40.0,
+        "asym_results": {"delta_t_c": 2.6, "is_asymmetric": True},
+        "pca_results": {
+            "left": {"exists": True, "angle_deg": 12.0},
+            "right": {"exists": True, "angle_deg": -10.5},
+        },
+        "zonal_stats": {
+            "left": {
+                "fore": 34.0, "mid": 28.0, "heel": 27.0, "exists": True,
+                "arch_index": 0.235, "arch_type": "Normales Längsgewölbe", "arch_code": "normal"
+            },
+            "right": {
+                "fore": 31.0, "mid": 27.5, "heel": 26.8, "exists": True,
+                "arch_index": 0.285, "arch_type": "Pes Planus (Senk-/Plattfuß / Charcot-Verdacht)", "arch_code": "planus"
+            },
+        },
+        "overlay_rgb": np.full((100, 100, 3), 180, dtype=np.uint8),
+    }
+
+    podology_view.show_results(dummy_result)
+
+    assert "Pathologische Asymmetrie" in podology_view.asym_status_lbl.cget("text")
+    assert "0.235" in podology_view.arch_l_lbl.cget("text")
+    assert "0.285" in podology_view.arch_r_lbl.cget("text")
+    # Vorfuß-Differenz beträgt 3.0°C (> 2.2°C) -> sollte Warnsymbol enthalten
+    assert "⚠️" in podology_view.zone_rows["fore"][2].cget("text")
+
+    root.destroy()
+

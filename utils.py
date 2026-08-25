@@ -6,23 +6,38 @@ import config
 def apply_radiometric_emissivity_correction(
     temp_celsius: float,
     emissivity: float = config.SKIN_EMISSIVITY,
-    t_refl_celsius: float = config.REFLECTED_TEMP_C
+    t_refl_celsius: float = config.REFLECTED_TEMP_C,
+    distance_m: float = 1.0,
+    rel_humidity: float = 0.50,
+    t_ambient_c: float = 20.0
 ) -> float:
     """
     Berechnet die physikalisch korrigierte Objekttemperatur unter Berücksichtigung
-    des Emissivitätsgrads (Haut ~0.98) und der reflektierten Umgebungstemperatur
-    gemäß Stefan-Boltzmann-Gesetz.
+    des Emissivitätsgrads (Haut ~0.98), der reflektierten Umgebungstemperatur und
+    der atmosphärischen Transmission (Dämpfung durch Messdistanz und Luftfeuchte).
 
-    T_obj = ((T_meas^4 - (1 - epsilon) * T_refl^4) / epsilon)^(1/4)
+    Strahlungsbilanz:
+    W_tot = eps * tau * W_obj + (1 - eps) * tau * W_refl + (1 - tau) * W_atm
+    W_obj = (W_tot - (1 - eps) * tau * W_refl - (1 - tau) * W_atm) / (eps * tau)
     """
     t_meas_k = temp_celsius + 273.15
     t_refl_k = t_refl_celsius + 273.15
+    t_atm_k = t_ambient_c + 273.15
+
+    # Atmosphärische Transmission (FLIR Modell)
+    # Sättigungsdampfdruck e_s in hPa (Magnus-Formel)
+    e_s = 6.112 * np.exp((17.67 * t_ambient_c) / (t_ambient_c + 243.5))
+    h_abs = (rel_humidity * e_s * 216.7) / (t_ambient_c + 273.15)
+    d = max(0.05, distance_m)
+    # Dämpfungskoeffizient für langwelliges Infrarot (8 - 14 µm)
+    tau = float(np.clip(np.exp(-np.sqrt(d) * (0.0065 + 0.0012 * np.sqrt(max(0.0, h_abs)))), 0.6, 1.0))
 
     # Stefan-Boltzmann Strahlungsbilanz
     rad_meas = t_meas_k ** 4
-    rad_refl = (1.0 - emissivity) * (t_refl_k ** 4)
+    rad_refl = (1.0 - emissivity) * tau * (t_refl_k ** 4)
+    rad_atm = (1.0 - tau) * (t_atm_k ** 4)
 
-    rad_obj = (rad_meas - rad_refl) / max(0.01, emissivity)
+    rad_obj = (rad_meas - rad_refl - rad_atm) / max(0.01, emissivity * tau)
     t_obj_k = max(0.0, rad_obj) ** 0.25
 
     return t_obj_k - 273.15
