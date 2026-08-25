@@ -83,6 +83,13 @@ class SingleInspectView(ctk.CTkFrame):
         self.profile_temps: list[float] = []
         self.profile_grads: list[float] = []
 
+        # Isothermen (Thermische Bandpass-Hervorhebung) State
+        self.is_isotherm_mode: bool = False
+        self.isotherm_min: float = 32.0
+        self.isotherm_max: float = 40.0
+        self.isotherm_color_name: str = "Signalrot"
+        self.isotherm_filter_mode: str = "Oberhalb"
+
         # Zoom & Pan State
         self.zoom_level: float = 1.0
         self.pan_x: float = 0.0
@@ -115,17 +122,17 @@ class SingleInspectView(ctk.CTkFrame):
         top_bar.pack(fill=ctk.X, padx=14, pady=(10, 6))
         top_bar.pack_propagate(False)
 
-        # Modus-Umschalter: Stufen-Ansicht vs. Linienprofil vs. Swipe / Split-View
+        # Modus-Umschalter: Stufen-Ansicht vs. Isotherme vs. Linienprofil vs. Swipe / Split-View
         self.mode_switcher = ctk.CTkSegmentedButton(
             top_bar,
-            values=["Stufen", "Linienprofil", "Swipe-Split"],
+            values=["Stufen", "Isotherme", "Linienprofil", "Swipe-Split"],
             command=self._on_view_mode_changed,
             font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
             selected_color=COLOR_PRIMARY,
             selected_hover_color=COLOR_PRIMARY_HOVER,
             corner_radius=RADIUS_BUTTON,
             height=30,
-            width=220
+            width=290
         )
         self.mode_switcher.set("Stufen")
         self.mode_switcher.pack(side=ctk.LEFT, padx=(0, 8))
@@ -196,10 +203,10 @@ class SingleInspectView(ctk.CTkFrame):
         )
         self.split_pct_lbl.pack(side=ctk.LEFT)
 
-        # Rechter Button: Snapshot exportieren
+        # Rechter Bereich: 3D-Relief & Snapshot exportieren
         self.snapshot_btn = ctk.CTkButton(
             top_bar,
-            text="Snapshot exportieren",
+            text="Snapshot",
             command=self.save_snapshot,
             font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
             fg_color=COLOR_BG_CARD_VARIANT,
@@ -209,9 +216,25 @@ class SingleInspectView(ctk.CTkFrame):
             border_color=COLOR_OUTLINE,
             corner_radius=RADIUS_BUTTON,
             height=30,
-            width=135
+            width=80
         )
         self.snapshot_btn.pack(side=ctk.RIGHT)
+
+        self.threed_btn = ctk.CTkButton(
+            top_bar,
+            text="🏔️ 3D-Relief",
+            command=self.open_3d_viewer,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            fg_color=COLOR_BG_CARD_VARIANT,
+            hover_color=COLOR_BG_CARD_HOVER,
+            text_color=COLOR_TEXT_PRIMARY,
+            border_width=1,
+            border_color=COLOR_OUTLINE,
+            corner_radius=RADIUS_BUTTON,
+            height=30,
+            width=95
+        )
+        self.threed_btn.pack(side=ctk.RIGHT, padx=(0, 6))
 
         # Reset Button (ROI / Linienprofil)
         self.reset_roi_btn = ctk.CTkButton(
@@ -462,6 +485,179 @@ class SingleInspectView(ctk.CTkFrame):
         )
         self.copy_profile_btn.pack(fill=ctk.X, pady=(8, 0))
 
+        # 3. Isothermen-Analyse Karte
+        self.isotherm_card = make_material_card(side_scroll, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD_VARIANT)
+        # wird dynamisch gepackt
+
+        iso_inner = ctk.CTkFrame(self.isotherm_card, fg_color="transparent")
+        iso_inner.pack(fill=ctk.X, padx=14, pady=12)
+
+        ctk.CTkLabel(
+            iso_inner,
+            text="ISOTHERMEN-FILTER",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=10, weight="bold"),
+            text_color=COLOR_TEXT_MUTED,
+            anchor="w"
+        ).pack(fill=ctk.X, pady=(0, 4))
+
+        # Modus: Oberhalb, Bandpass, Unterhalb
+        self.iso_mode_seg = ctk.CTkSegmentedButton(
+            iso_inner,
+            values=["Oberhalb", "Bandpass", "Unterhalb"],
+            command=self._on_iso_mode_changed,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            selected_color=COLOR_PRIMARY,
+            selected_hover_color=COLOR_PRIMARY_HOVER,
+            corner_radius=RADIUS_BUTTON,
+            height=28
+        )
+        self.iso_mode_seg.set("Oberhalb")
+        self.iso_mode_seg.pack(fill=ctk.X, pady=(0, 8))
+
+        # Min Temperatur Slider & Label
+        min_row = ctk.CTkFrame(iso_inner, fg_color="transparent")
+        min_row.pack(fill=ctk.X, pady=(2, 2))
+        ctk.CTkLabel(min_row, text="Untere Schwelle (T_min):", font=ctk.CTkFont(family=FONT_FAMILY, size=11), text_color=COLOR_TEXT_SECONDARY).pack(side=ctk.LEFT)
+        self.iso_min_lbl = ctk.CTkLabel(min_row, text="32.0 °C", font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=11, weight="bold"), text_color=COLOR_PRIMARY)
+        self.iso_min_lbl.pack(side=ctk.RIGHT)
+
+        self.iso_min_slider = ctk.CTkSlider(
+            iso_inner,
+            from_=15.0,
+            to=45.0,
+            number_of_steps=150,
+            command=self._on_iso_min_moved,
+            height=16,
+            progress_color=COLOR_PRIMARY,
+            button_color=COLOR_PRIMARY,
+            button_hover_color=COLOR_PRIMARY_HOVER
+        )
+        self.iso_min_slider.set(32.0)
+        self.iso_min_slider.pack(fill=ctk.X, pady=(0, 6))
+
+        # Max Temperatur Slider & Label (für Bandpass / Unterhalb)
+        max_row = ctk.CTkFrame(iso_inner, fg_color="transparent")
+        max_row.pack(fill=ctk.X, pady=(2, 2))
+        ctk.CTkLabel(max_row, text="Obere Schwelle (T_max):", font=ctk.CTkFont(family=FONT_FAMILY, size=11), text_color=COLOR_TEXT_SECONDARY).pack(side=ctk.LEFT)
+        self.iso_max_lbl = ctk.CTkLabel(max_row, text="40.0 °C", font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=11, weight="bold"), text_color=COLOR_PRIMARY)
+        self.iso_max_lbl.pack(side=ctk.RIGHT)
+
+        self.iso_max_slider = ctk.CTkSlider(
+            iso_inner,
+            from_=15.0,
+            to=45.0,
+            number_of_steps=150,
+            command=self._on_iso_max_moved,
+            height=16,
+            progress_color=COLOR_PRIMARY,
+            button_color=COLOR_PRIMARY,
+            button_hover_color=COLOR_PRIMARY_HOVER
+        )
+        self.iso_max_slider.set(40.0)
+        self.iso_max_slider.pack(fill=ctk.X, pady=(0, 8))
+
+        # Farbauswahl
+        color_row = ctk.CTkFrame(iso_inner, fg_color="transparent")
+        color_row.pack(fill=ctk.X, pady=(0, 8))
+        ctk.CTkLabel(color_row, text="Isothermen-Farbe:", font=ctk.CTkFont(family=FONT_FAMILY, size=11), text_color=COLOR_TEXT_SECONDARY).pack(side=ctk.LEFT)
+        self.iso_color_opt = ctk.CTkOptionMenu(
+            color_row,
+            values=["Signalrot", "Neon-Bernstein", "Cyan", "Magenta"],
+            command=self._on_iso_color_changed,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            fg_color=COLOR_BG_CARD,
+            button_color=COLOR_PRIMARY,
+            button_hover_color=COLOR_PRIMARY_HOVER,
+            corner_radius=RADIUS_BUTTON,
+            height=26,
+            width=130
+        )
+        self.iso_color_opt.set("Signalrot")
+        self.iso_color_opt.pack(side=ctk.RIGHT)
+
+        # Quick Presets
+        ctk.CTkLabel(
+            iso_inner,
+            text="KLINISCHE PRESETS",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=9, weight="bold"),
+            text_color=COLOR_TEXT_MUTED,
+            anchor="w"
+        ).pack(fill=ctk.X, pady=(2, 4))
+
+        preset_grid = ctk.CTkFrame(iso_inner, fg_color="transparent")
+        preset_grid.pack(fill=ctk.X, pady=(0, 8))
+        preset_grid.grid_columnconfigure((0, 1), weight=1)
+
+        ctk.CTkButton(
+            preset_grid,
+            text="⚠️ >32.0°C (IWGDF)",
+            command=lambda: self._set_isotherm_preset("Oberhalb", 32.0, 42.0),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=10, weight="bold"),
+            fg_color=COLOR_BG_CARD,
+            hover_color=COLOR_BG_CARD_HOVER,
+            text_color=COLOR_TEXT_PRIMARY,
+            border_width=1,
+            border_color=COLOR_OUTLINE,
+            corner_radius=RADIUS_BUTTON,
+            height=26
+        ).grid(row=0, column=0, padx=(0, 2), pady=2, sticky="ew")
+
+        ctk.CTkButton(
+            preset_grid,
+            text="🔴 >34.5°C (Akut)",
+            command=lambda: self._set_isotherm_preset("Oberhalb", 34.5, 42.0),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=10, weight="bold"),
+            fg_color=COLOR_BG_CARD,
+            hover_color=COLOR_BG_CARD_HOVER,
+            text_color=COLOR_TEXT_PRIMARY,
+            border_width=1,
+            border_color=COLOR_OUTLINE,
+            corner_radius=RADIUS_BUTTON,
+            height=26
+        ).grid(row=0, column=1, padx=(2, 0), pady=2, sticky="ew")
+
+        ctk.CTkButton(
+            preset_grid,
+            text="🦶 28-32°C (Normal)",
+            command=lambda: self._set_isotherm_preset("Bandpass", 28.0, 32.0),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=10, weight="bold"),
+            fg_color=COLOR_BG_CARD,
+            hover_color=COLOR_BG_CARD_HOVER,
+            text_color=COLOR_TEXT_PRIMARY,
+            border_width=1,
+            border_color=COLOR_OUTLINE,
+            corner_radius=RADIUS_BUTTON,
+            height=26
+        ).grid(row=1, column=0, padx=(0, 2), pady=2, sticky="ew")
+
+        ctk.CTkButton(
+            preset_grid,
+            text="❄️ <27.0°C (Hypo)",
+            command=lambda: self._set_isotherm_preset("Unterhalb", 15.0, 27.0),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=10, weight="bold"),
+            fg_color=COLOR_BG_CARD,
+            hover_color=COLOR_BG_CARD_HOVER,
+            text_color=COLOR_TEXT_PRIMARY,
+            border_width=1,
+            border_color=COLOR_OUTLINE,
+            corner_radius=RADIUS_BUTTON,
+            height=26
+        ).grid(row=1, column=1, padx=(2, 0), pady=2, sticky="ew")
+
+        # Stats Rows
+        self.iso_stats_rows = {}
+        for key, name in [
+            ("area", "Isothermen-Fläche:"),
+            ("mean", "Mitteltemperatur (µ):"),
+            ("peak", "Peak-Temperatur:")
+        ]:
+            row = ctk.CTkFrame(iso_inner, fg_color="transparent")
+            row.pack(fill=ctk.X, pady=2)
+            ctk.CTkLabel(row, text=name, font=ctk.CTkFont(family=FONT_FAMILY, size=11), text_color=COLOR_TEXT_SECONDARY).pack(side=ctk.LEFT)
+            lbl = ctk.CTkLabel(row, text="--", font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=11, weight="bold"), text_color=COLOR_TEXT_PRIMARY)
+            lbl.pack(side=ctk.RIGHT)
+            self.iso_stats_rows[key] = lbl
+
         # 4. Quick Tipp / Zoom & Pan Bedienhinweis
         hint_box = ctk.CTkFrame(side_scroll, fg_color="transparent")
         hint_box.pack(fill=ctk.X, pady=(4, 0))
@@ -509,33 +705,166 @@ class SingleInspectView(ctk.CTkFrame):
         self._render_colorbar_strip()
         self.redraw()
 
+    def open_3d_viewer(self) -> None:
+        """Öffnet das interaktive 3D-Relief- und Topographie-Fenster."""
+        if not self.current_result:
+            return
+        from gui.widgets.dialogs import Thermal3DViewerModal
+        raw_img = self.current_result["calibrated_original"]
+        body_mask = self.current_result.get("body_mask")
+        t_min = float(self.current_result.get("t_min_c", 20.0))
+        t_max = float(self.current_result.get("t_max_c", 40.0))
+
+        Thermal3DViewerModal(
+            self,
+            calibrated_image=raw_img,
+            body_mask=body_mask,
+            t_min_c=t_min,
+            t_max_c=t_max,
+            palette_name=self.palette_name
+        )
+
     def _on_view_mode_changed(self, mode: str) -> None:
-        """Schaltet zwischen Stufen-Ansicht, Linienprofil und interaktivem Swipe/Split-View um."""
+        """Schaltet zwischen Stufen-Ansicht, Isotherme, Linienprofil und interaktivem Swipe/Split-View um."""
         if mode == "Swipe-Split":
             self.is_split_view = True
             self.is_profile_mode = False
+            self.is_isotherm_mode = False
             self.stage_frame.pack_forget()
             self.split_frame.pack(side=ctk.LEFT, fill=ctk.Y, padx=(0, 8))
             self.profile_card.pack_forget()
+            self.isotherm_card.pack_forget()
             self.roi_card.pack(fill=ctk.X, pady=(0, 14))
             self.reset_roi_btn.configure(state="disabled")
         elif mode == "Linienprofil":
             self.is_split_view = False
             self.is_profile_mode = True
+            self.is_isotherm_mode = False
             self.split_frame.pack_forget()
             self.stage_frame.pack(side=ctk.LEFT, fill=ctk.Y)
             self.roi_card.pack_forget()
+            self.isotherm_card.pack_forget()
             self.profile_card.pack(fill=ctk.X, pady=(0, 14))
+            self.reset_roi_btn.configure(state="normal")
+        elif mode == "Isotherme":
+            self.is_split_view = False
+            self.is_profile_mode = False
+            self.is_isotherm_mode = True
+            self.split_frame.pack_forget()
+            self.stage_frame.pack(side=ctk.LEFT, fill=ctk.Y)
+            self.roi_card.pack_forget()
+            self.profile_card.pack_forget()
+            self.isotherm_card.pack(fill=ctk.X, pady=(0, 14))
             self.reset_roi_btn.configure(state="normal")
         else:  # "Stufen"
             self.is_split_view = False
             self.is_profile_mode = False
+            self.is_isotherm_mode = False
             self.split_frame.pack_forget()
             self.stage_frame.pack(side=ctk.LEFT, fill=ctk.Y)
             self.profile_card.pack_forget()
+            self.isotherm_card.pack_forget()
             self.roi_card.pack(fill=ctk.X, pady=(0, 14))
             self.reset_roi_btn.configure(state="normal")
         self.redraw()
+
+    def _on_iso_mode_changed(self, mode: str) -> None:
+        self.isotherm_filter_mode = mode
+        self.redraw()
+
+    def _on_iso_min_moved(self, val: float) -> None:
+        self.isotherm_min = float(val)
+        self.iso_min_lbl.configure(text=f"{self.isotherm_min:.1f} °C")
+        if self.isotherm_min > self.isotherm_max:
+            self.isotherm_max = self.isotherm_min
+            self.iso_max_slider.set(self.isotherm_max)
+            self.iso_max_lbl.configure(text=f"{self.isotherm_max:.1f} °C")
+        self.redraw()
+
+    def _on_iso_max_moved(self, val: float) -> None:
+        self.isotherm_max = float(val)
+        self.iso_max_lbl.configure(text=f"{self.isotherm_max:.1f} °C")
+        if self.isotherm_max < self.isotherm_min:
+            self.isotherm_min = self.isotherm_max
+            self.iso_min_slider.set(self.isotherm_min)
+            self.iso_min_lbl.configure(text=f"{self.isotherm_min:.1f} °C")
+        self.redraw()
+
+    def _on_iso_color_changed(self, color_name: str) -> None:
+        self.isotherm_color_name = color_name
+        self.redraw()
+
+    def _set_isotherm_preset(self, mode: str, t_min: float, t_max: float) -> None:
+        self.isotherm_filter_mode = mode
+        self.iso_mode_seg.set(mode)
+        self.isotherm_min = t_min
+        self.isotherm_max = t_max
+        self.iso_min_slider.set(t_min)
+        self.iso_max_slider.set(t_max)
+        self.iso_min_lbl.configure(text=f"{t_min:.1f} °C")
+        self.iso_max_lbl.configure(text=f"{t_max:.1f} °C")
+        self.redraw()
+
+    def _compute_isotherm_overlay(self) -> np.ndarray:
+        """Erzeugt ein Graustufen-Hintergrundbild mit farblich intensiv isolierter Isothermenzone."""
+        if not self.current_result:
+            return np.zeros((100, 100, 3), dtype=np.uint8)
+
+        raw_img = self.current_result["calibrated_original"]
+        body_mask = self.current_result.get("body_mask", np.ones_like(raw_img) * 255)
+        t_min = float(self.current_result.get("t_min_c", 20.0))
+        t_max = float(self.current_result.get("t_max_c", 40.0))
+
+        # Temperaturmatrix in °C
+        temp_c = t_min + (raw_img.astype(np.float32) / 255.0) * (t_max - t_min)
+
+        # Isothermen-Maske nach Modus filtern
+        if self.isotherm_filter_mode == "Oberhalb":
+            iso_mask = (temp_c >= self.isotherm_min) & (body_mask > 0)
+        elif self.isotherm_filter_mode == "Bandpass":
+            iso_mask = (temp_c >= self.isotherm_min) & (temp_c <= self.isotherm_max) & (body_mask > 0)
+        else:  # "Unterhalb"
+            iso_mask = (temp_c <= self.isotherm_max) & (body_mask > 0)
+
+        # Farbdefinitionen (BGR)
+        color_map_bgr = {
+            "Signalrot": (0, 0, 235),
+            "Neon-Bernstein": (0, 180, 255),
+            "Cyan": (255, 230, 0),
+            "Magenta": (220, 50, 240)
+        }
+        chosen_bgr = color_map_bgr.get(self.isotherm_color_name, (0, 0, 235))
+
+        # Hintergrund: abgedunkeltes Graustufenbild
+        bg_gray = cv2.cvtColor(raw_img, cv2.COLOR_GRAY2BGR)
+        bg_gray = (bg_gray.astype(np.float32) * 0.75).astype(np.uint8)
+
+        result_img = bg_gray.copy()
+        result_img[iso_mask] = chosen_bgr
+
+        # Kontur um Isothermenzone
+        iso_bin = iso_mask.astype(np.uint8) * 255
+        contours, _ = cv2.findContours(iso_bin, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        cv2.drawContours(result_img, contours, -1, (255, 255, 255), 1, cv2.LINE_AA)
+
+        # Statistik aktualisieren
+        body_px = int(np.sum(body_mask > 0))
+        iso_px = int(np.sum(iso_mask))
+        ratio = (iso_px / max(1, body_px)) * 100.0
+
+        if iso_px > 0:
+            iso_temps = temp_c[iso_mask]
+            mean_iso = float(np.mean(iso_temps))
+            peak_iso = float(np.max(iso_temps))
+            self.iso_stats_rows["area"].configure(text=f"{iso_px:,} px ({ratio:.1f} %)")
+            self.iso_stats_rows["mean"].configure(text=f"{mean_iso:.2f} °C")
+            self.iso_stats_rows["peak"].configure(text=f"{peak_iso:.2f} °C")
+        else:
+            self.iso_stats_rows["area"].configure(text="0 px (0.0 %)")
+            self.iso_stats_rows["mean"].configure(text="--.- °C")
+            self.iso_stats_rows["peak"].configure(text="--.- °C")
+
+        return result_img
 
     def _on_split_stage_selected(self, choice: str) -> None:
         """Wählt die Vergleichs-Ebene für den Swipe-View."""
@@ -719,6 +1048,9 @@ class SingleInspectView(ctk.CTkFrame):
         """Gibt das visualisierte BGR-Bild für die angegebene Pipeline-Stufe zurück."""
         if not self.current_result:
             return np.zeros((100, 100, 3), dtype=np.uint8)
+
+        if self.is_isotherm_mode:
+            return self._compute_isotherm_overlay()
 
         if stage_key == "1. Originalbild":
             return apply_colormap_to_image(self.current_result["calibrated_original"], self.palette_name)

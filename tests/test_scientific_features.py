@@ -11,9 +11,25 @@ import os
 import numpy as np
 import pytest
 
+import config
 from gui.services.scientific_report_service import ScientificReportService
 import dataset_evaluator
 import image_processing
+
+
+@pytest.fixture(scope="module")
+def app_root():
+    """Initialisiert eine headless CustomTkinter Root Instanz für GUI-Tests."""
+    import customtkinter as ctk
+    ctk.set_appearance_mode("Dark")
+    root = ctk.CTk()
+    root.geometry("1024x768")
+    root.withdraw()
+    yield root
+    try:
+        root.destroy()
+    except Exception:
+        pass
 
 
 @pytest.mark.benchmark
@@ -82,3 +98,73 @@ def test_hardware_benchmark_execution():
     assert "python" in bench
     assert bench["python"]["latency_ms"] > 0
     assert bench["python"]["fps"] > 0
+
+
+def test_scientific_poster_generation_pdf_and_html(tmp_path):
+    """Testet die Erzeugung des druckreifen DIN A3/A4 Wettbewerbsplakates als PDF und HTML."""
+    from gui.services.scientific_poster_service import ScientificPosterService
+
+    pdf_out = str(tmp_path / "jufo_poster.pdf")
+    html_out = str(tmp_path / "jufo_poster.html")
+
+    res_pdf = ScientificPosterService.generate_poster_pdf(
+        output_filepath=pdf_out,
+        author="Jona Noack",
+        competition="Jugend forscht 2026 · Fachgebiet Arbeitswelt"
+    )
+    assert os.path.exists(res_pdf)
+    assert os.path.getsize(res_pdf) > 2000  # Gültiges PDF
+
+    res_html = ScientificPosterService.generate_poster_html(
+        output_filepath=html_out,
+        author="Jona Noack",
+        competition="Jugend forscht 2026 · Fachgebiet Arbeitswelt"
+    )
+    assert os.path.exists(res_html)
+    assert os.path.getsize(res_html) > 2000  # Gültiges HTML
+
+    with open(res_html, "r", encoding="utf-8") as f:
+        html_text = f.read()
+
+    assert "IGNITE Medical Imaging Suite" in html_text
+    assert "Problemstellung & Arbeitswelt-Fokus" in html_text
+    assert "Mathematische Kern-Pipeline" in html_text
+    assert "IWGDF 2023" in html_text
+    assert "0.945" in html_text
+
+
+def test_thermal_3d_viewer_modal(app_root, monkeypatch):
+    """Testet den interaktiven 3D-Relief und Oberflächentopographie-Viewer."""
+    from gui.widgets.dialogs import Thermal3DViewerModal
+
+    # Matplotlib show/update sicher ausführen
+    test_img = np.full((60, 60), 120, dtype=np.uint8)
+    test_img[20:40, 20:40] = 230  # Hotspot Berg
+    body_mask = np.ones((60, 60), dtype=np.uint8) * 255
+
+    modal = Thermal3DViewerModal(
+        master=app_root,
+        calibrated_image=test_img,
+        body_mask=body_mask,
+        t_min_c=20.0,
+        t_max_c=40.0,
+        palette_name="turbo"
+    )
+
+    # 1. Elevation und Azimut ändern
+    modal._on_elev_changed(60)
+    assert modal.elev == 60
+
+    modal._on_azim_changed(45)
+    assert modal.azim == 45
+
+    # 2. Skalierung ändern
+    modal._on_scale_changed(2.0)
+    assert modal.z_scale == 2.0
+
+    # 3. Mesh-Modus umschalten
+    modal._on_mode_changed("Drahtgitter")
+    assert modal.surface_mode == "Drahtgitter"
+
+    modal.destroy()
+

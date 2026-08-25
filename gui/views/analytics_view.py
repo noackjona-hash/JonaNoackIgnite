@@ -182,6 +182,20 @@ class AnalyticsView(ctk.CTkFrame):
 
         ctk.CTkButton(
             j_inner,
+            text="Wissenschaftsplakat exportieren (PDF & HTML)",
+            command=self._on_click_poster_export,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            fg_color=COLOR_BG_CARD,
+            hover_color=COLOR_BG_CARD_HOVER,
+            text_color=COLOR_TEXT_PRIMARY,
+            border_width=1,
+            border_color=COLOR_OUTLINE,
+            corner_radius=RADIUS_BUTTON,
+            height=32
+        ).pack(fill=ctk.X, pady=(0, 6))
+
+        ctk.CTkButton(
+            j_inner,
             text="Ground-Truth Annotator öffnen",
             command=self._on_click_annotator,
             font=ctk.CTkFont(family=FONT_FAMILY, size=11),
@@ -249,6 +263,20 @@ class AnalyticsView(ctk.CTkFrame):
     def _on_click_jury_report(self) -> None:
         if self.on_export_jury_report:
             self.on_export_jury_report()
+
+    def _on_click_poster_export(self) -> None:
+        try:
+            from gui.services.scientific_poster_service import ScientificPosterService
+            pdf_path = ScientificPosterService.generate_poster_pdf()
+            html_path = ScientificPosterService.generate_poster_html()
+            from tkinter import messagebox
+            messagebox.showinfo(
+                "Poster-Export erfolgreich",
+                f"Wissenschaftsplakat erfolgreich exportiert als:\n• PDF: {os.path.basename(pdf_path)}\n• HTML: {os.path.basename(html_path)}\n\nGespeichert in: {config.OUTPUT_DIR}"
+            )
+        except Exception as e:
+            from tkinter import messagebox
+            messagebox.showerror("Fehler beim Poster-Export", str(e))
 
     def _on_click_annotator(self) -> None:
         if self.on_open_annotator:

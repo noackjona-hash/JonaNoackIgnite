@@ -443,4 +443,98 @@ def test_single_view_line_profile_transect(app_root):
     assert len(single_view.profile_temps) == 0
 
 
+def test_export_service_dicom_generation(tmp_path):
+    """Testet die Erzeugung von standardkonformen DICOM-Thermografie-Dateien (.dcm) für PACS."""
+    import pydicom
+    from gui.services.export_service import ExportService
+    from utils import pseudonymize_patient
+
+    img = np.full((120, 160), 128, dtype=np.uint8)
+    img[40:80, 50:110] = 220  # Hotspot-Zone
+
+    analysis_res = {
+        "calibrated_original": img,
+        "image_path": str(tmp_path / "thermal_test.png"),
+        "t_min_c": 20.0,
+        "t_max_c": 40.0,
+        "analysis_mode": "Podologische Entzündungsdiagnostik",
+        "backend": "Rust Native Core",
+    }
+
+    dcm_target = str(tmp_path / "patient_exam.dcm")
+    out_path = ExportService.generate_dicom_file(
+        analysis_result=analysis_res,
+        record_id="Erika Mustermann",
+        operator="Jugend forscht 2026",
+        notes="Pre-ulcerative lesion monitoring",
+        output_filepath=dcm_target
+    )
+
+    assert os.path.exists(out_path)
+    assert out_path == dcm_target
+
+    # DICOM-Tags validieren
+    ds = pydicom.dcmread(out_path)
+    assert ds.Modality == "TG"
+    assert ds.PatientID == pseudonymize_patient("Erika Mustermann")
+    assert ds.Rows == 120
+    assert ds.Columns == 160
+    assert ds.BitsAllocated == 16
+    assert ds.BitsStored == 16
+    assert ds.RescaleSlope == 0.01
+    assert ds.RescaleType == "degC"
+    assert ds.Manufacturer == "IGNITE Jugend forscht 2026"
+    assert ds.pixel_array.shape == (120, 160)
+    assert ds.pixel_array.dtype == np.uint16
+
+
+def test_single_view_isotherm_filter_and_presets(app_root):
+    """Testet die interaktive Isothermen-Hervorhebung, Bandpass-Filterung und klinische Presets."""
+    from gui.views.single_view import SingleInspectView
+
+    single_view = SingleInspectView(app_root, on_load_click=lambda: None)
+
+    img = np.full((100, 100), 100, dtype=np.uint8)  # ~27.8 °C
+    img[30:70, 30:70] = 200  # Hotspot: ~35.7 °C
+    body_mask = np.ones((100, 100), dtype=np.uint8) * 255
+
+    res = {
+        "calibrated_original": img,
+        "body_mask": body_mask,
+        "heat_diff": np.zeros_like(img),
+        "overlay_bgr": np.zeros((100, 100, 3), dtype=np.uint8),
+        "t_min_c": 20.0,
+        "t_max_c": 40.0,
+        "hotspots": []
+    }
+    single_view.show_results(res)
+
+    # 1. Modus auf Isotherme umschalten
+    single_view._on_view_mode_changed("Isotherme")
+    assert single_view.is_isotherm_mode is True
+
+    # 2. Preset Hyperthermie (>32.0°C) testen
+    single_view._set_isotherm_preset("Oberhalb", 32.0, 42.0)
+    assert single_view.isotherm_filter_mode == "Oberhalb"
+    assert single_view.isotherm_min == 32.0
+
+    iso_img = single_view._compute_isotherm_overlay()
+    assert iso_img.shape == (100, 100, 3)
+    # Hotspot-Zone (1600 px) muss hervorgehoben sein
+    assert "1,600 px" in single_view.iso_stats_rows["area"].cget("text")
+    assert "35.6" in single_view.iso_stats_rows["peak"].cget("text") or "35.7" in single_view.iso_stats_rows["peak"].cget("text")
+
+    # 3. Bandpass-Filterung testen (25.0°C - 30.0°C)
+    single_view._set_isotherm_preset("Bandpass", 25.0, 30.0)
+    iso_band = single_view._compute_isotherm_overlay()
+    assert iso_band.shape == (100, 100, 3)
+    # Hintergrund-Zone (10000 - 1600 = 8400 px) bei ~27.8°C muss in der Isotherme liegen
+    assert "8,400 px" in single_view.iso_stats_rows["area"].cget("text")
+
+    # 4. Farbauswahl testen
+    single_view._on_iso_color_changed("Neon-Bernstein")
+    assert single_view.isotherm_color_name == "Neon-Bernstein"
+
+
+
 

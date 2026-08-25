@@ -880,6 +880,95 @@ class ExportService:
         return summary_path
 
     @classmethod
+    def generate_dicom_file(
+        cls,
+        analysis_result: dict[str, Any],
+        record_id: str = "Unbekannt",
+        operator: str = "Jugend forscht 2026",
+        notes: str = "",
+        output_filepath: Optional[str] = None
+    ) -> str:
+        """Erzeugt einen standardkonformen DICOM-Thermografie-Datensatz (.dcm) für PACS-Archive."""
+        import pydicom
+        from pydicom.dataset import Dataset, FileDataset, FileMetaDataset
+        from pydicom.uid import ExplicitVRLittleEndian, SecondaryCaptureImageStorage, generate_uid
+
+        image_path = analysis_result.get("image_path", "Unbekannt")
+        base_name = os.path.splitext(os.path.basename(image_path))[0]
+
+        if not output_filepath or not output_filepath.lower().endswith(".dcm"):
+            os.makedirs(config.OUTPUT_DIR, exist_ok=True)
+            output_filepath = os.path.join(config.OUTPUT_DIR, f"{base_name}.dcm")
+
+        if record_id and not record_id.startswith("ANON-") and record_id != "Unbekannt":
+            display_record_id = pseudonymize_patient(record_id)
+        else:
+            display_record_id = record_id
+
+        # Radiometrische Matrix oder kalibriertes Bild holen
+        raw_img = analysis_result.get("calibrated_original")
+        if raw_img is None:
+            raw_img = np.zeros((100, 100), dtype=np.uint8)
+
+        t_min = float(analysis_result.get("t_min_c", 20.0))
+        t_max = float(analysis_result.get("t_max_c", 40.0))
+
+        # 16-Bit Rescaling für maximale radiometrische Präzision in PACS (0.01 °C Auflösung)
+        # Temperatur = (PixelWert * RescaleSlope) + RescaleIntercept
+        h, w = raw_img.shape[:2]
+        temp_c_matrix = t_min + (raw_img.astype(np.float32) / 255.0) * (t_max - t_min)
+        pixel_array_16 = np.clip(np.round(temp_c_matrix * 100.0), 0, 65535).astype(np.uint16)
+
+        # File Meta Information
+        file_meta = FileMetaDataset()
+        file_meta.MediaStorageSOPClassUID = SecondaryCaptureImageStorage
+        file_meta.MediaStorageSOPInstanceUID = generate_uid()
+        file_meta.TransferSyntaxUID = ExplicitVRLittleEndian
+        file_meta.ImplementationClassUID = generate_uid()
+
+        # Dataset initialisieren
+        ds = FileDataset(output_filepath, {}, file_meta=file_meta, preamble=b"\0" * 128)
+
+        now = datetime.datetime.now()
+        ds.PatientName = display_record_id
+        ds.PatientID = display_record_id
+        ds.StudyDate = now.strftime("%Y%m%d")
+        ds.StudyTime = now.strftime("%H%M%S")
+        ds.StudyDescription = f"IGNITE Thermografie: {analysis_result.get('analysis_mode', 'Podologische Symmetrie')}"
+        ds.SeriesDescription = f"IGNITE Analysis ({analysis_result.get('backend', 'Python CPU')})"
+        ds.Modality = "TG"  # Standard DICOM Modality für Thermography
+        ds.Manufacturer = "IGNITE Jugend forscht 2026"
+        ds.OperatorsName = operator
+        ds.ImageComments = notes if notes else "Automatisch analysiert via IGNITE Medical Suite"
+
+        ds.StudyInstanceUID = generate_uid()
+        ds.SeriesInstanceUID = generate_uid()
+        ds.SOPInstanceUID = file_meta.MediaStorageSOPInstanceUID
+        ds.SOPClassUID = SecondaryCaptureImageStorage
+
+        # Bild-Geometrie & Pixel-Metadaten
+        ds.SamplesPerPixel = 1
+        ds.PhotometricInterpretation = "MONOCHROME2"
+        ds.Rows = h
+        ds.Columns = w
+        ds.BitsAllocated = 16
+        ds.BitsStored = 16
+        ds.HighBit = 15
+        ds.PixelRepresentation = 0  # Unsigned integer
+
+        # DICOM Radiometric Rescale Tags
+        ds.RescaleIntercept = 0.0
+        ds.RescaleSlope = 0.01  # Wert * 0.01 = Temperatur in °C
+        ds.RescaleType = "degC"
+        ds.WindowCenter = int(round(((t_min + t_max) / 2.0) * 100.0))
+        ds.WindowWidth = int(round((t_max - t_min) * 100.0))
+
+        ds.PixelData = pixel_array_16.tobytes()
+        ds.save_as(output_filepath, enforce_file_format=True)
+
+        return output_filepath
+
+    @classmethod
     def export_report(
         cls,
         analysis_result: dict[str, Any],
@@ -889,11 +978,11 @@ class ExportService:
         format_choice: str = "PDF (.pdf)",
         output_filepath: Optional[str] = None
     ) -> list[str]:
-        """Universeller Export-Handler, der flexibel PDF, HTML oder beide Formate erzeugt."""
+        """Universeller Export-Handler, der flexibel PDF, HTML, DICOM oder alle Formate erzeugt."""
         generated_files = []
         fmt = format_choice.lower()
 
-        if "pdf" in fmt or "beide" in fmt:
+        if "pdf" in fmt or "beide" in fmt or "alle" in fmt:
             pdf_path = cls.generate_pdf_report(
                 analysis_result=analysis_result,
                 record_id=record_id,
@@ -903,7 +992,7 @@ class ExportService:
             )
             generated_files.append(pdf_path)
 
-        if "html" in fmt or "beide" in fmt:
+        if "html" in fmt or "beide" in fmt or "alle" in fmt:
             html_path = cls.generate_html_report(
                 analysis_result=analysis_result,
                 record_id=record_id,
@@ -912,6 +1001,16 @@ class ExportService:
                 output_filepath=output_filepath if (output_filepath and output_filepath.endswith(".html")) else None
             )
             generated_files.append(html_path)
+
+        if "dicom" in fmt or "dcm" in fmt or "alle" in fmt:
+            dcm_path = cls.generate_dicom_file(
+                analysis_result=analysis_result,
+                record_id=record_id,
+                operator=operator,
+                notes=notes,
+                output_filepath=output_filepath if (output_filepath and output_filepath.endswith(".dcm")) else None
+            )
+            generated_files.append(dcm_path)
 
         return generated_files
 
