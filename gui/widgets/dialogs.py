@@ -159,13 +159,13 @@ class HelpModal(ctk.CTkToplevel):
 
 
 class PatientExportModal(ctk.CTkToplevel):
-    """Dialog zur Eingabe von Patientendaten vor dem HTML-Report-Export."""
+    """Dialog zur Eingabe von Patientendaten vor dem PDF/HTML-Report-Export."""
 
-    def __init__(self, master, on_submit: Callable[[str, str, str], None], **kwargs) -> None:
+    def __init__(self, master, on_submit: Callable[[str, str, str, str], None], **kwargs) -> None:
         super().__init__(master, **kwargs)
 
         self.title("Befundbericht exportieren")
-        self.geometry("480x420")
+        self.geometry("490x480")
         self.resizable(False, False)
         self.transient(master)
         self.configure(fg_color=COLOR_BG_APP)
@@ -184,28 +184,44 @@ class PatientExportModal(ctk.CTkToplevel):
             font=ctk.CTkFont(family=FONT_FAMILY, size=16, weight="bold"),
             text_color=COLOR_TEXT_PRIMARY,
             anchor="w"
-        ).pack(fill=ctk.X, pady=(0, 12))
+        ).pack(fill=ctk.X, pady=(0, 10))
+
+        # Format-Auswahl
+        ctk.CTkLabel(inner, text="Ausgabe-Format:", font=ctk.CTkFont(size=11, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w")
+        self.format_seg = ctk.CTkSegmentedButton(
+            inner,
+            values=["PDF (.pdf)", "HTML (.html)", "Beide (PDF + HTML)"],
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            selected_color=COLOR_PRIMARY,
+            selected_hover_color=COLOR_PRIMARY_HOVER,
+            unselected_color=COLOR_BG_CARD_VARIANT,
+            unselected_hover_color=COLOR_BG_CARD_HOVER,
+            text_color=COLOR_TEXT_PRIMARY,
+            height=30
+        )
+        self.format_seg.set("PDF (.pdf)")
+        self.format_seg.pack(fill=ctk.X, pady=(2, 8))
 
         # Patienten-ID
         ctk.CTkLabel(inner, text="Patienten-Name / ID:", font=ctk.CTkFont(size=11, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w")
-        self.patient_entry = ctk.CTkEntry(inner, placeholder_text="z. B. Max Mustermann oder ANON-001", font=ctk.CTkFont(family=FONT_FAMILY, size=12), fg_color=COLOR_BG_CARD_VARIANT, border_color=COLOR_OUTLINE, height=32)
+        self.patient_entry = ctk.CTkEntry(inner, placeholder_text="z. B. Max Mustermann oder ANON-001", font=ctk.CTkFont(family=FONT_FAMILY, size=12), fg_color=COLOR_BG_CARD_VARIANT, border_color=COLOR_OUTLINE, height=30)
         self.patient_entry.pack(fill=ctk.X, pady=(2, 8))
 
         # Geburtsdatum
         ctk.CTkLabel(inner, text="Geburtsdatum (optional für SHA-256 Hash):", font=ctk.CTkFont(size=11, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w")
-        self.dob_entry = ctk.CTkEntry(inner, placeholder_text="TT.MM.JJJJ", font=ctk.CTkFont(family=FONT_FAMILY, size=12), fg_color=COLOR_BG_CARD_VARIANT, border_color=COLOR_OUTLINE, height=32)
+        self.dob_entry = ctk.CTkEntry(inner, placeholder_text="TT.MM.JJJJ", font=ctk.CTkFont(family=FONT_FAMILY, size=12), fg_color=COLOR_BG_CARD_VARIANT, border_color=COLOR_OUTLINE, height=30)
         self.dob_entry.pack(fill=ctk.X, pady=(2, 8))
 
         # Untersucher
         ctk.CTkLabel(inner, text="Untersucher / Bediener:", font=ctk.CTkFont(size=11, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w")
-        self.operator_entry = ctk.CTkEntry(inner, placeholder_text="Jugend forscht 2026", font=ctk.CTkFont(family=FONT_FAMILY, size=12), fg_color=COLOR_BG_CARD_VARIANT, border_color=COLOR_OUTLINE, height=32)
+        self.operator_entry = ctk.CTkEntry(inner, placeholder_text="Jugend forscht 2026", font=ctk.CTkFont(family=FONT_FAMILY, size=12), fg_color=COLOR_BG_CARD_VARIANT, border_color=COLOR_OUTLINE, height=30)
         self.operator_entry.insert(0, "Jugend forscht 2026")
         self.operator_entry.pack(fill=ctk.X, pady=(2, 8))
 
         # Anmerkungen
         ctk.CTkLabel(inner, text="Klinische Anmerkungen:", font=ctk.CTkFont(size=11, weight="bold"), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w")
-        self.notes_entry = ctk.CTkEntry(inner, placeholder_text="z. B. Postoperatives Monitoring", font=ctk.CTkFont(family=FONT_FAMILY, size=12), fg_color=COLOR_BG_CARD_VARIANT, border_color=COLOR_OUTLINE, height=32)
-        self.notes_entry.pack(fill=ctk.X, pady=(2, 14))
+        self.notes_entry = ctk.CTkEntry(inner, placeholder_text="z. B. Postoperatives Monitoring / Hyperthermieverdacht", font=ctk.CTkFont(family=FONT_FAMILY, size=12), fg_color=COLOR_BG_CARD_VARIANT, border_color=COLOR_OUTLINE, height=30)
+        self.notes_entry.pack(fill=ctk.X, pady=(2, 12))
 
         btn_row = ctk.CTkFrame(inner, fg_color="transparent")
         btn_row.pack(fill=ctk.X)
@@ -227,7 +243,7 @@ class PatientExportModal(ctk.CTkToplevel):
 
         ctk.CTkButton(
             btn_row,
-            text="Bericht speichern",
+            text="Bericht exportieren",
             command=self._on_save,
             font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
             fg_color=COLOR_PRIMARY,
@@ -243,6 +259,7 @@ class PatientExportModal(ctk.CTkToplevel):
         raw_dob = self.dob_entry.get().strip()
         op = self.operator_entry.get().strip() or "Jugend forscht"
         notes = self.notes_entry.get().strip()
+        fmt = self.format_seg.get()
 
         # Sofortige DSGVO-konforme Pseudonymisierung vor Weitergabe
         if raw_id != "Unbekannt" and not raw_id.startswith("ANON-"):
@@ -251,4 +268,4 @@ class PatientExportModal(ctk.CTkToplevel):
             record_id = raw_id
 
         self.destroy()
-        self.on_submit(record_id, op, notes)
+        self.on_submit(record_id, op, notes, fmt)

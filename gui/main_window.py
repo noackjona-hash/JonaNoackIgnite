@@ -510,18 +510,20 @@ class IgniteApp:
         modal = PatientExportModal(self.root, on_submit=self._do_export_report)
         modal.grab_set()
 
-    def _do_export_report(self, record_id: str, operator: str, notes: str) -> None:
+    def _do_export_report(self, record_id: str, operator: str, notes: str, format_choice: str = "PDF (.pdf)") -> None:
         if not self.current_result:
             return
 
         try:
-            report_path = ExportService.generate_html_report(
+            generated_files = ExportService.export_report(
                 analysis_result=self.current_result,
                 record_id=record_id,
                 operator=operator,
-                notes=notes
+                notes=notes,
+                format_choice=format_choice
             )
-            self.toast.show(f"Bericht erfolgreich exportiert: {os.path.basename(report_path)}", level="success")
+            filenames = ", ".join(os.path.basename(p) for p in generated_files)
+            self.toast.show(f"Bericht exportiert: {filenames}", level="success")
         except Exception as e:
             self.toast.show(f"Export fehlgeschlagen: {e}", level="error")
 

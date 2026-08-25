@@ -301,9 +301,13 @@ class BatchView(ctk.CTkFrame):
             except Exception as e:
                 print(f"Fehler bei {filename}: {e}")
 
-        # Zusammenfassungsbericht schreiben
+        # Zusammenfassungsbericht schreiben (HTML & PDF)
         if self._processed_items:
             ExportService.generate_batch_summary_html(self._processed_items, dest_dir)
+            try:
+                ExportService.generate_batch_summary_pdf(self._processed_items, dest_dir)
+            except Exception as e:
+                print(f"Batch PDF Zusammenfassung fehlgeschlagen: {e}")
 
         self.after(0, self._on_batch_finished)
 

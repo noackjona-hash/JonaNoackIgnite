@@ -109,6 +109,108 @@ def test_batch_summary_html_generation(tmp_path):
     assert "img2.jpg" in content
 
 
+def test_export_service_pdf_generation(tmp_path):
+    """Testet die fehlerfreie Erzeugung eines druckreifen A4 PDF-Reports."""
+    from gui.services.export_service import ExportService
+
+    dummy_result = {
+        "image_path": "test-data/bild (1).jpeg",
+        "calibrated_original": np.full((100, 100), 128, dtype=np.uint8),
+        "body_mask": np.full((100, 100), 255, dtype=np.uint8),
+        "heat_diff": np.zeros((100, 100), dtype=np.uint8),
+        "hotspot_mask": np.zeros((100, 100), dtype=np.uint8),
+        "overlay_rgb": np.full((100, 100, 3), 180, dtype=np.uint8),
+        "asym_results": {"delta_t_c": 2.5, "is_asymmetric": True, "status": "Pathologisch"},
+        "tsi_results": {"score": 5.8, "tier_name": "Stufe 2", "tier_desc": "Mäßige Hyperthermie", "color": "#DC2626"},
+        "gradient_results": {"max_gradient": 85.0},
+        "pca_results": {
+            "left": {"exists": True, "angle_deg": 10.0, "arch_index": 0.23, "arch_type": "Normal", "arch_code": "normal"},
+            "right": {"exists": True, "angle_deg": -8.0, "arch_index": 0.29, "arch_type": "Pes Planus", "arch_code": "planus"},
+        },
+        "zonal_stats": {
+            "left": {"fore": 135.0, "mid": 125.0, "heel": 120.0, "arch_index": 0.23, "arch_type": "Normal", "exists": True},
+            "right": {"fore": 120.0, "mid": 124.0, "heel": 121.0, "arch_index": 0.29, "arch_type": "Pes Planus", "exists": True},
+        },
+        "body_pixel_count": 10000,
+        "hotspot_pixel_count": 150,
+        "hotspot_ratio": 1.5,
+        "mean_pixel": 128.0,
+        "std_pixel": 5.0,
+        "max_pixel": 160.0,
+        "min_pixel": 110.0,
+        "t_min_c": 20.0,
+        "t_max_c": 40.0,
+        "backend": "Test Core",
+        "analysis_mode": "Podologische Symmetrieanalyse",
+        "params": {"sigma_k": 3.0, "tophat_factor": 0.05}
+    }
+
+    out_file = str(tmp_path / "test_report.pdf")
+    pdf_path = ExportService.generate_pdf_report(
+        dummy_result,
+        record_id="Max Mustermann",
+        operator="Tester JuFo",
+        notes="Auffällige Hyperthermie im Vorfuß links.",
+        output_filepath=out_file
+    )
+
+    assert os.path.exists(pdf_path)
+    assert os.path.getsize(pdf_path) > 1000  # Valide PDF-Datei
+
+
+def test_export_service_multi_format(tmp_path):
+    """Testet die universelle export_report Methode für PDF, HTML und Beide."""
+    from gui.services.export_service import ExportService
+
+    dummy_result = {
+        "image_path": "test-data/bild (1).jpeg",
+        "calibrated_original": np.full((100, 100), 128, dtype=np.uint8),
+        "body_mask": np.full((100, 100), 255, dtype=np.uint8),
+        "heat_diff": np.zeros((100, 100), dtype=np.uint8),
+        "hotspot_mask": np.zeros((100, 100), dtype=np.uint8),
+        "overlay_rgb": np.full((100, 100, 3), 180, dtype=np.uint8),
+        "asym_results": {"delta_t_c": 0.5, "is_asymmetric": False},
+        "zonal_stats": {},
+        "body_pixel_count": 10000,
+        "hotspot_pixel_count": 0,
+        "hotspot_ratio": 0.0,
+        "mean_pixel": 128.0,
+        "std_pixel": 5.0,
+        "max_pixel": 140.0,
+        "min_pixel": 110.0,
+        "t_min_c": 20.0,
+        "t_max_c": 40.0,
+        "backend": "Test Core",
+        "analysis_mode": "Klinische Allgemeinanalyse",
+        "params": {"sigma_k": 3.0}
+    }
+
+    # 1. Nur PDF
+    res_pdf = ExportService.export_report(dummy_result, format_choice="PDF (.pdf)")
+    assert len(res_pdf) == 1
+    assert res_pdf[0].endswith(".pdf")
+
+    # 2. Beide
+    res_both = ExportService.export_report(dummy_result, format_choice="Beide (PDF + HTML)")
+    assert len(res_both) == 2
+    assert any(p.endswith(".pdf") for p in res_both)
+    assert any(p.endswith(".html") for p in res_both)
+
+
+def test_batch_summary_pdf_generation(tmp_path):
+    """Testet die Erzeugung des Batch-Zusammenfassungsberichts als PDF."""
+    from gui.services.export_service import ExportService
+
+    items = [
+        {"filepath": "/path/to/img1.jpg", "hotspot_count": 0, "delta_t_c": 0.4, "status_text": "Unauffällig", "is_warning": False},
+        {"filepath": "/path/to/img2.jpg", "hotspot_count": 250, "delta_t_c": 2.8, "status_text": "Auffällig", "is_warning": True}
+    ]
+
+    pdf_out = ExportService.generate_batch_summary_pdf(items, str(tmp_path))
+    assert os.path.exists(pdf_out)
+    assert os.path.getsize(pdf_out) > 500
+
+
 def test_full_gui_lifecycle():
     """Testet die Initialisierung aller Views, State-Verteilung und Tab-Wechsel."""
     import customtkinter as ctk

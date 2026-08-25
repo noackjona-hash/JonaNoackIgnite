@@ -12,13 +12,46 @@ import cv2
 import numpy as np
 from PIL import Image
 
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.units import mm
+from reportlab.platypus import (
+    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image as RLImage, KeepTogether, HRFlowable
+)
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+
 import config
 from audit_log import write_audit_entry
 from utils import pixel_to_celsius, pseudonymize_patient
 
 
 class ExportService:
-    """Service-Klasse zum Generieren von HTML-Klinikberichten und Protokollen."""
+    """Service-Klasse zum Generieren von klinischen PDF- und HTML-Befundberichten und Protokollen."""
+
+    @staticmethod
+    def _cv_to_reportlab_image(img_array: np.ndarray, target_w_mm: float = 88.0, is_rgb: bool = False) -> Optional[RLImage]:
+        """Konvertiert eine OpenCV Bildmatrix in ein ReportLab Flowable Image."""
+        try:
+            if is_rgb:
+                bgr = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
+            elif len(img_array.shape) == 2:
+                bgr = cv2.cvtColor(img_array, cv2.COLOR_GRAY2BGR)
+            else:
+                bgr = img_array
+
+            success, buffer = cv2.imencode(".png", bgr)
+            if not success:
+                return None
+            img_io = io.BytesIO(buffer.tobytes())
+            h, w = img_array.shape[:2]
+            aspect = h / max(1, w)
+            w_pt = target_w_mm * mm
+            h_pt = w_pt * aspect
+            return RLImage(img_io, width=w_pt, height=h_pt)
+        except Exception as e:
+            logging.debug(f"Fehler bei ReportLab Image Konvertierung: {e}")
+            return None
 
     @staticmethod
     def _cv_to_base64(img_array: np.ndarray, is_rgb: bool = False) -> str:
@@ -497,3 +530,388 @@ class ExportService:
             f.write(html)
 
         return summary_path
+
+    @classmethod
+    def generate_pdf_report(
+        cls,
+        analysis_result: dict[str, Any],
+        record_id: str = "Unbekannt",
+        operator: str = "Jugend forscht 2026",
+        notes: str = "",
+        output_filepath: Optional[str] = None
+    ) -> str:
+        """Erzeugt einen druckreifen, hochauflösenden A4-Klinikbefundbericht als PDF mit ReportLab."""
+        image_path = analysis_result.get("image_path", "Unbekannt")
+        base_name = os.path.splitext(os.path.basename(image_path))[0]
+
+        if not output_filepath or not output_filepath.lower().endswith(".pdf"):
+            os.makedirs(config.OUTPUT_DIR, exist_ok=True)
+            output_filepath = os.path.join(config.OUTPUT_DIR, f"report_{base_name}.pdf")
+
+        if record_id and not record_id.startswith("ANON-") and record_id != "Unbekannt":
+            display_record_id = pseudonymize_patient(record_id)
+        else:
+            display_record_id = record_id
+
+        now_str = datetime.datetime.now().strftime("%d.%m.%Y, %H:%M Uhr")
+        backend = analysis_result.get("backend", "Python CPU")
+        analysis_mode = analysis_result.get("analysis_mode", "Klinische Allgemeinanalyse")
+
+        t_min = analysis_result.get("t_min_c", 20.0)
+        t_max = analysis_result.get("t_max_c", 40.0)
+        mean_px = analysis_result.get("mean_pixel", 0.0)
+        std_px = analysis_result.get("std_pixel", 0.0)
+        max_px = analysis_result.get("max_pixel", 0.0)
+        min_px = analysis_result.get("min_pixel", 0.0)
+        hotspot_px = analysis_result.get("hotspot_pixel_count", 0)
+        body_px = analysis_result.get("body_pixel_count", 0)
+        hotspot_ratio = analysis_result.get("hotspot_ratio", 0.0)
+
+        mean_c = pixel_to_celsius(mean_px, t_min, t_max)
+        std_c = (std_px / 255.0) * (t_max - t_min)
+        max_c = pixel_to_celsius(max_px, t_min, t_max)
+        min_c = pixel_to_celsius(min_px, t_min, t_max)
+        sigma_k = analysis_result.get("params", {}).get("sigma_k", 3.0)
+        thresh_c = mean_c + sigma_k * std_c
+
+        asym = analysis_result.get("asym_results", {})
+        delta_t = asym.get("delta_t_c", 0.0)
+        is_asymmetric = asym.get("is_asymmetric", False)
+
+        tsi = analysis_result.get("tsi_results", {})
+        tsi_score = tsi.get("score", 0.0)
+        tsi_tier_name = tsi.get("tier_name", "Stufe 0: Physiologischer Normalbefund")
+        tsi_tier_desc = tsi.get("tier_desc", "Keine Auffälligkeiten.")
+        tsi_color_hex = tsi.get("color", "#16A34A")
+
+        grads = analysis_result.get("gradient_results", {})
+        max_grad = grads.get("max_gradient", 0.0)
+
+        pca = analysis_result.get("pca_results")
+        pca_l_ang = pca.get("left", {}).get("angle_deg", 0.0) if pca else 0.0
+        pca_r_ang = pca.get("right", {}).get("angle_deg", 0.0) if pca else 0.0
+
+        # Status text & colors
+        if analysis_mode == "Podologische Symmetrieanalyse":
+            if is_asymmetric:
+                status_text = "Pathologische Asymmetrie (ΔT > 2.2 °C nach Armstrong)"
+                status_color = "#DC2626"
+            else:
+                status_text = "Physiologisch symmetrisch (Normbefund <= 2.2 °C)"
+                status_color = "#16A34A"
+        else:
+            if hotspot_px >= 150:
+                status_text = "Klinisch auffällige Hyperthermie-Hotspots"
+                status_color = "#DC2626"
+            elif hotspot_px > 0:
+                status_text = "Geringfügige thermische Abweichung"
+                status_color = "#D97706"
+            else:
+                status_text = "Unauffällig / Keine Entzündungsherde"
+                status_color = "#16A34A"
+
+        # Arch Index Info
+        zonal = analysis_result.get("zonal_stats", {})
+        ai_l = zonal.get("left", {}).get("arch_index", 0.24)
+        ai_r = zonal.get("right", {}).get("arch_index", 0.24)
+        type_l = zonal.get("left", {}).get("arch_type", "Normal")
+        type_r = zonal.get("right", {}).get("arch_type", "Normal")
+
+        # ReportLab Document Setup
+        doc = SimpleDocTemplate(
+            output_filepath,
+            pagesize=A4,
+            leftMargin=12 * mm,
+            rightMargin=12 * mm,
+            topMargin=10 * mm,
+            bottomMargin=10 * mm
+        )
+
+        styles = getSampleStyleSheet()
+        style_title = ParagraphStyle('RepTitle', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=14, leading=17, textColor=colors.HexColor('#1A73E8'))
+        style_sub = ParagraphStyle('RepSub', parent=styles['Normal'], fontName='Helvetica', fontSize=8, leading=11, textColor=colors.HexColor('#64748B'))
+        style_card_title = ParagraphStyle('RepCardTitle', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=9.5, leading=12, textColor=colors.HexColor('#0F172A'))
+        style_cell = ParagraphStyle('RepCell', parent=styles['Normal'], fontName='Helvetica', fontSize=8, leading=10.5, textColor=colors.HexColor('#334155'))
+        style_cell_bold = ParagraphStyle('RepCellB', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=8, leading=10.5, textColor=colors.HexColor('#0F172A'))
+        style_caption = ParagraphStyle('RepCaption', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=7.5, leading=9.5, alignment=TA_CENTER, textColor=colors.HexColor('#475569'))
+        style_disclaimer = ParagraphStyle('RepDisc', parent=styles['Normal'], fontName='Helvetica', fontSize=6.8, leading=8.5, textColor=colors.HexColor('#94A3B8'))
+
+        elements = []
+
+        # 1. Header Table
+        header_data = [
+            [
+                Paragraph('<b>IGNITE Medical Imaging Suite</b><br/><font size="7.5" color="#64748B">Klinischer Befundbericht · Thermografische Entzündungsdiagnostik</font>', style_title),
+                Paragraph(f'<b>Patient:</b> {display_record_id}<br/><b>Datum:</b> {now_str}<br/><b>Untersucher:</b> {operator}<br/><b>Modus:</b> {analysis_mode}', style_sub)
+            ]
+        ]
+        t_header = Table(header_data, colWidths=[108 * mm, 78 * mm])
+        t_header.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+            ('TOPPADDING', (0, 0), (-1, -1), 0),
+        ]))
+        elements.append(t_header)
+        elements.append(Spacer(1, 2 * mm))
+        elements.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#1A73E8'), spaceAfter=3 * mm))
+
+        # 2. Befund-Zusammenfassung Box
+        summary_data = [
+            [
+                Paragraph(f'<b>DIAGNOSTISCHER GESAMTSTATUS:</b> <font color="{status_color}"><b>{status_text}</b></font>', style_card_title),
+                Paragraph(f'<b>TSI-Score:</b> <font color="{tsi_color_hex}"><b>{tsi_score:.1f} / 10</b></font> ({tsi_tier_name})', style_cell)
+            ],
+            [
+                Paragraph(f'<b>Cavanagh & Rodgers Arch Index:</b> L: <b>{ai_l:.3f}</b> ({type_l}) · R: <b>{ai_r:.3f}</b> ({type_r})', style_cell),
+                Paragraph(f'<b>Max. Temperatur:</b> {max_c:.1f} °C (Gewebe-Mittelwert µ: {mean_c:.1f} °C ± {std_c:.1f} °C)', style_cell)
+            ]
+        ]
+        t_sum = Table(summary_data, colWidths=[104 * mm, 82 * mm])
+        t_sum.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#F8FAFC')),
+            ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#CBD5E1')),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('LEFTPADDING', (0, 0), (-1, -1), 7),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 7),
+        ]))
+        elements.append(t_sum)
+        elements.append(Spacer(1, 3 * mm))
+
+        # 3. 2x2 Image Grid
+        orig_arr = analysis_result.get("calibrated_original", np.zeros((10, 10), dtype=np.uint8))
+        mask_arr = analysis_result.get("body_mask", np.zeros((10, 10), dtype=np.uint8))
+        diff_arr = analysis_result.get("heat_diff", np.zeros((10, 10), dtype=np.uint8))
+        over_arr = analysis_result.get("overlay_rgb", np.zeros((10, 10, 3), dtype=np.uint8))
+
+        rl1 = cls._cv_to_reportlab_image(orig_arr, target_w_mm=86.0, is_rgb=False)
+        rl2 = cls._cv_to_reportlab_image(mask_arr, target_w_mm=86.0, is_rgb=False)
+        rl3 = cls._cv_to_reportlab_image(diff_arr, target_w_mm=86.0, is_rgb=False)
+        rl4 = cls._cv_to_reportlab_image(over_arr, target_w_mm=86.0, is_rgb=True)
+
+        if rl1 and rl2 and rl3 and rl4:
+            grid_data = [
+                [rl1, rl2],
+                [Paragraph('1. Original-Wärmebild (Kalibriert)', style_caption), Paragraph('2. Gewebe-Segmentierung (Körpermaske)', style_caption)],
+                [rl3, rl4],
+                [Paragraph('3. Morphologische Top-Hat Differenz', style_caption), Paragraph('4. Detektierte Hotspots & Annotation', style_caption)],
+            ]
+            t_grid = Table(grid_data, colWidths=[93 * mm, 93 * mm])
+            t_grid.setStyle(TableStyle([
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('TOPPADDING', (0, 0), (-1, -1), 1),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 1),
+            ]))
+            elements.append(t_grid)
+            elements.append(Spacer(1, 3 * mm))
+
+        # 4. Parameter & 3-Zonen Tabelle
+        l_fore_c = pixel_to_celsius(zonal.get("left", {}).get("fore", mean_px), t_min, t_max)
+        r_fore_c = pixel_to_celsius(zonal.get("right", {}).get("fore", mean_px), t_min, t_max)
+        d_fore_c = abs(l_fore_c - r_fore_c)
+
+        l_mid_c = pixel_to_celsius(zonal.get("left", {}).get("mid", mean_px), t_min, t_max)
+        r_mid_c = pixel_to_celsius(zonal.get("right", {}).get("mid", mean_px), t_min, t_max)
+        d_mid_c = abs(l_mid_c - r_mid_c)
+
+        l_heel_c = pixel_to_celsius(zonal.get("left", {}).get("heel", mean_px), t_min, t_max)
+        r_heel_c = pixel_to_celsius(zonal.get("right", {}).get("heel", mean_px), t_min, t_max)
+        d_heel_c = abs(l_heel_c - r_heel_c)
+
+        fore_warn = f'<font color="#DC2626"><b>Δ {d_fore_c:.1f} °C ⚠️</b></font>' if d_fore_c > 2.2 else f'Δ {d_fore_c:.1f} °C'
+        mid_warn = f'<font color="#DC2626"><b>Δ {d_mid_c:.1f} °C ⚠️</b></font>' if d_mid_c > 2.2 else f'Δ {d_mid_c:.1f} °C'
+        heel_warn = f'<font color="#DC2626"><b>Δ {d_heel_c:.1f} °C ⚠️</b></font>' if d_heel_c > 2.2 else f'Δ {d_heel_c:.1f} °C'
+
+        param_data = [
+            [Paragraph('<b>Messparameter</b>', style_cell_bold), Paragraph('<b>Wert</b>', style_cell_bold), Paragraph('<b>Podologische Zone</b>', style_cell_bold), Paragraph('<b>Links</b>', style_cell_bold), Paragraph('<b>Rechts</b>', style_cell_bold), Paragraph('<b>Differenz ΔT</b>', style_cell_bold)],
+            [Paragraph('Gewebe-Mittelwert (µ)', style_cell), Paragraph(f'{mean_c:.1f} °C', style_cell), Paragraph('Vorfuß (Ballen)', style_cell), Paragraph(f'{l_fore_c:.1f} °C', style_cell), Paragraph(f'{r_fore_c:.1f} °C', style_cell), Paragraph(fore_warn, style_cell)],
+            [Paragraph('Standardabweichung (σ)', style_cell), Paragraph(f'±{std_c:.2f} °C', style_cell), Paragraph('Mittelfuß (Gewölbe)', style_cell), Paragraph(f'{l_mid_c:.1f} °C', style_cell), Paragraph(f'{r_mid_c:.1f} °C', style_cell), Paragraph(mid_warn, style_cell)],
+            [Paragraph('Adaptive Schwelle (µ+k·σ)', style_cell), Paragraph(f'{thresh_c:.1f} °C', style_cell), Paragraph('Ferse (Rückfuß)', style_cell), Paragraph(f'{l_heel_c:.1f} °C', style_cell), Paragraph(f'{r_heel_c:.1f} °C', style_cell), Paragraph(heel_warn, style_cell)],
+            [Paragraph('Hotspot-Fläche', style_cell), Paragraph(f'{hotspot_px} px ({hotspot_ratio:.1f} %)', style_cell), Paragraph('Cavanagh Arch Index', style_cell), Paragraph(f'{ai_l:.3f}', style_cell), Paragraph(f'{ai_r:.3f}', style_cell), Paragraph('Asymmetrie-Check', style_cell)],
+        ]
+        t_params = Table(param_data, colWidths=[38 * mm, 26 * mm, 38 * mm, 28 * mm, 28 * mm, 28 * mm])
+        t_params.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#F1F5F9')),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E2E8F0')),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('TOPPADDING', (0, 0), (-1, -1), 2.5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 2.5),
+        ]))
+        elements.append(t_params)
+        elements.append(Spacer(1, 2 * mm))
+
+        # 5. Klinische Anmerkungen (falls vorhanden)
+        if notes and notes.strip():
+            notes_data = [[
+                Paragraph(f'<b>Klinische Anmerkungen des Untersuchers:</b> {notes.strip()}', style_cell)
+            ]]
+            t_notes = Table(notes_data, colWidths=[186 * mm])
+            t_notes.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#FFFBEB')),
+                ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor('#FCD34D')),
+                ('TOPPADDING', (0, 0), (-1, -1), 3),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+                ('LEFTPADDING', (0, 0), (-1, -1), 6),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+            ]))
+            elements.append(t_notes)
+            elements.append(Spacer(1, 2 * mm))
+
+        # 6. Fußnote & Disclaimer
+        disc = Paragraph(
+            'IGNITE Medical Imaging Suite · Entwickelt von Jona Noack für Jugend forscht 2026 (Fachgebiet Arbeitswelt). '
+            '<em>Hinweis: Forschungsprototyp – Kein zertifiziertes EU-MDR Medizinprodukt. DSGVO-konforme In-Memory Pseudonymisierung.</em>',
+            style_disclaimer
+        )
+        elements.append(disc)
+
+        doc.build(elements)
+
+        # Audit-Log Eintrag schreiben
+        try:
+            write_audit_entry({
+                "Zeitstempel": datetime.datetime.now().isoformat(),
+                "Patienten-ID": display_record_id,
+                "Format": "PDF",
+                "Analysemodus": analysis_mode,
+                "Bilddatei": os.path.basename(image_path),
+                "sigma_k": sigma_k,
+                "T_min_C": t_min,
+                "T_max_C": t_max,
+                "Hotspot_Pixel": hotspot_px,
+                "Max_Temp_C": round(max_c, 2),
+                "Symmetrie_Delta": round(delta_t, 2),
+                "Operator": operator
+            })
+        except Exception as e:
+            logging.error(f"Audit log write failed: {e}")
+
+        return output_filepath
+
+    @classmethod
+    def generate_batch_summary_pdf(
+        cls,
+        results_list: list[dict[str, Any]],
+        output_dir: str
+    ) -> str:
+        """Erzeugt einen Gesamtübersichts-Bericht aller Batch-Bilder als druckfertiges PDF."""
+        summary_path = os.path.join(output_dir, "batch_summary_report.pdf")
+        now_str = datetime.datetime.now().strftime("%d.%m.%Y, %H:%M Uhr")
+
+        doc = SimpleDocTemplate(
+            summary_path,
+            pagesize=A4,
+            leftMargin=12 * mm,
+            rightMargin=12 * mm,
+            topMargin=12 * mm,
+            bottomMargin=12 * mm
+        )
+
+        styles = getSampleStyleSheet()
+        style_title = ParagraphStyle('SummTitle', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=14, leading=17, textColor=colors.HexColor('#1A73E8'))
+        style_sub = ParagraphStyle('SummSub', parent=styles['Normal'], fontName='Helvetica', fontSize=8.5, leading=11, textColor=colors.HexColor('#64748B'))
+        style_cell = ParagraphStyle('SummCell', parent=styles['Normal'], fontName='Helvetica', fontSize=8, leading=10, textColor=colors.HexColor('#334155'))
+        style_cell_bold = ParagraphStyle('SummCellB', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=8, leading=10, textColor=colors.HexColor('#0F172A'))
+
+        elements = []
+
+        # Header
+        header_data = [
+            [
+                Paragraph('<b>IGNITE Serienuntersuchungs-Bericht (Batch)</b><br/><font size="8" color="#64748B">Stapelverarbeitung von Infrarot-Thermogrammen</font>', style_title),
+                Paragraph(f'<b>Anzahl Aufnahmen:</b> {len(results_list)}<br/><b>Erstellt am:</b> {now_str}', style_sub)
+            ]
+        ]
+        t_header = Table(header_data, colWidths=[110 * mm, 76 * mm])
+        elements.append(t_header)
+        elements.append(Spacer(1, 2 * mm))
+        elements.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#1A73E8'), spaceAfter=4 * mm))
+
+        # Batch Table
+        table_rows = [
+            [
+                Paragraph('<b>Bilddatei</b>', style_cell_bold),
+                Paragraph('<b>Hotspots (px)</b>', style_cell_bold),
+                Paragraph('<b>Symmetrie (ΔT)</b>', style_cell_bold),
+                Paragraph('<b>Diagnostischer Status</b>', style_cell_bold)
+            ]
+        ]
+
+        for item in results_list:
+            fname = os.path.basename(item.get("filepath", ""))
+            hotspot_px = item.get("hotspot_count", 0)
+            delta_t = item.get("delta_t_c", 0.0)
+            status_text = item.get("status_text", "Unauffällig")
+            is_warn = item.get("is_warning", False)
+
+            col_hotspot = '#DC2626' if hotspot_px > 0 else '#16A34A'
+            col_status = '#DC2626' if is_warn else '#16A34A'
+
+            table_rows.append([
+                Paragraph(f'<b>{fname}</b>', style_cell),
+                Paragraph(f'<font color="{col_hotspot}"><b>{hotspot_px:,} px</b></font>', style_cell),
+                Paragraph(f'{delta_t:.2f} °C', style_cell),
+                Paragraph(f'<font color="{col_status}"><b>{status_text}</b></font>', style_cell),
+            ])
+
+        t_batch = Table(table_rows, colWidths=[70 * mm, 35 * mm, 35 * mm, 46 * mm])
+        t_batch.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#F1F5F9')),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E2E8F0')),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('TOPPADDING', (0, 0), (-1, -1), 3),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ]))
+        elements.append(t_batch)
+        elements.append(Spacer(1, 4 * mm))
+
+        # Disclaimer
+        disc = Paragraph(
+            'IGNITE Medical Imaging Suite · Entwickelt von Jona Noack für Jugend forscht 2026. '
+            '<em>Hinweis: Forschungsprototyp – Kein zertifiziertes EU-MDR Medizinprodukt.</em>',
+            style_cell
+        )
+        elements.append(disc)
+
+        doc.build(elements)
+        return summary_path
+
+    @classmethod
+    def export_report(
+        cls,
+        analysis_result: dict[str, Any],
+        record_id: str = "Unbekannt",
+        operator: str = "Jugend forscht 2026",
+        notes: str = "",
+        format_choice: str = "PDF (.pdf)",
+        output_filepath: Optional[str] = None
+    ) -> list[str]:
+        """Universeller Export-Handler, der flexibel PDF, HTML oder beide Formate erzeugt."""
+        generated_files = []
+        fmt = format_choice.lower()
+
+        if "pdf" in fmt or "beide" in fmt:
+            pdf_path = cls.generate_pdf_report(
+                analysis_result=analysis_result,
+                record_id=record_id,
+                operator=operator,
+                notes=notes,
+                output_filepath=output_filepath if (output_filepath and output_filepath.endswith(".pdf")) else None
+            )
+            generated_files.append(pdf_path)
+
+        if "html" in fmt or "beide" in fmt:
+            html_path = cls.generate_html_report(
+                analysis_result=analysis_result,
+                record_id=record_id,
+                operator=operator,
+                notes=notes,
+                output_filepath=output_filepath if (output_filepath and output_filepath.endswith(".html")) else None
+            )
+            generated_files.append(html_path)
+
+        return generated_files
+
