@@ -200,7 +200,7 @@ class BatchView(ctk.CTkFrame):
             self.on_notify("Quellordner existiert nicht!", "error")
             return
 
-        valid_exts = (".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif")
+        valid_exts = (".jpg", ".jpeg", ".rjpg", ".png", ".bmp", ".tiff", ".tif", ".flir", ".npy")
         files = [f for f in os.listdir(src_dir) if f.lower().endswith(valid_exts)]
         if not files:
             self.on_notify("Keine Bilddateien im Quellordner gefunden.", "warning")
@@ -221,6 +221,8 @@ class BatchView(ctk.CTkFrame):
         dest_dir = self.dest_dir_var.get()
         os.makedirs(dest_dir, exist_ok=True)
         params = self.get_current_params()
+        t_min = float(params.get("t_min_c", config.DEFAULT_TEMP_MIN))
+        t_max = float(params.get("t_max_c", config.DEFAULT_TEMP_MAX))
 
         total = len(files)
         for idx, filename in enumerate(files):
@@ -233,7 +235,7 @@ class BatchView(ctk.CTkFrame):
             self.after(0, lambda p=progress, f=filename, i=idx: self._update_progress(p, f"Verarbeite: {f} ({i+1}/{total})"))
 
             try:
-                raw_img = image_processing.load_thermal_image(filepath)
+                raw_img = image_processing.load_thermal_image(filepath, t_min=t_min, t_max=t_max)
                 diff_vis, hotspot_mask = image_processing.run_rust_pipeline(
                     raw_img,
                     sigma_k=params.get("sigma_k", config.DEFAULT_SIGMA_K),

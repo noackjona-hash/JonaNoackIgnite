@@ -70,6 +70,11 @@ class SingleInspectView(ctk.CTkFrame):
         self.active_stage_key: str = "4. Erkannte Hotspots (Rust)"
         self.palette_name: str = "Turbo"
 
+        # Swipe / Split-View State
+        self.is_split_view: bool = False
+        self.split_ratio: float = 0.50
+        self.split_target_stage: str = "4. Erkannte Hotspots (Rust)"
+
         # Zoom & Pan State
         self.zoom_level: float = 1.0
         self.pan_x: float = 0.0
@@ -102,9 +107,27 @@ class SingleInspectView(ctk.CTkFrame):
         top_bar.pack(fill=ctk.X, padx=14, pady=(10, 6))
         top_bar.pack_propagate(False)
 
-        # Segmented Stage Switcher
-        self.stage_seg = ctk.CTkSegmentedButton(
+        # Modus-Umschalter: Stufen-Ansicht vs. Swipe / Split-View
+        self.mode_switcher = ctk.CTkSegmentedButton(
             top_bar,
+            values=["Stufen", "Swipe-Split"],
+            command=self._on_view_mode_changed,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            selected_color=COLOR_PRIMARY,
+            selected_hover_color=COLOR_PRIMARY_HOVER,
+            corner_radius=RADIUS_BUTTON,
+            height=30,
+            width=150
+        )
+        self.mode_switcher.set("Stufen")
+        self.mode_switcher.pack(side=ctk.LEFT, padx=(0, 8))
+
+        # 1. Stufen-Leiste (Standard)
+        self.stage_frame = ctk.CTkFrame(top_bar, fg_color="transparent")
+        self.stage_frame.pack(side=ctk.LEFT, fill=ctk.Y)
+
+        self.stage_seg = ctk.CTkSegmentedButton(
+            self.stage_frame,
             values=[title for _, title in self.STAGES],
             command=self._on_segment_changed,
             font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
@@ -115,6 +138,55 @@ class SingleInspectView(ctk.CTkFrame):
         )
         self.stage_seg.set("Hotspot-Overlay")
         self.stage_seg.pack(side=ctk.LEFT)
+
+        # 2. Swipe / Split-View Leiste (wird bei Swipe-Modus aktiv)
+        self.split_frame = ctk.CTkFrame(top_bar, fg_color="transparent")
+
+        self.split_stage_opt = ctk.CTkOptionMenu(
+            self.split_frame,
+            values=["Hotspot-Overlay", "Pennes Bioheat", "Frangi-Venen", "Asymmetrie-Map"],
+            command=self._on_split_stage_selected,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            fg_color=COLOR_BG_CARD_VARIANT,
+            button_color=COLOR_PRIMARY,
+            button_hover_color=COLOR_PRIMARY_HOVER,
+            corner_radius=RADIUS_BUTTON,
+            height=30,
+            width=150
+        )
+        self.split_stage_opt.set("Hotspot-Overlay")
+        self.split_stage_opt.pack(side=ctk.LEFT, padx=(0, 8))
+
+        ctk.CTkLabel(
+            self.split_frame,
+            text="Swipe:",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+            text_color=COLOR_TEXT_SECONDARY
+        ).pack(side=ctk.LEFT, padx=(0, 4))
+
+        self.split_slider = ctk.CTkSlider(
+            self.split_frame,
+            from_=0.0,
+            to=1.0,
+            number_of_steps=100,
+            command=self._on_split_slider_moved,
+            width=120,
+            height=16,
+            progress_color=COLOR_PRIMARY,
+            button_color=COLOR_PRIMARY,
+            button_hover_color=COLOR_PRIMARY_HOVER
+        )
+        self.split_slider.set(0.5)
+        self.split_slider.pack(side=ctk.LEFT, padx=(0, 6))
+
+        self.split_pct_lbl = ctk.CTkLabel(
+            self.split_frame,
+            text="50%",
+            font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=11, weight="bold"),
+            text_color=COLOR_PRIMARY,
+            width=36
+        )
+        self.split_pct_lbl.pack(side=ctk.LEFT)
 
         # Rechter Button: Snapshot exportieren
         self.snapshot_btn = ctk.CTkButton(
@@ -310,6 +382,21 @@ class SingleInspectView(ctk.CTkFrame):
             lbl.pack(side=ctk.RIGHT)
             self.roi_stats_rows[key] = lbl
 
+        self.copy_roi_btn = ctk.CTkButton(
+            r_inner,
+            text="📋 Messwerte kopieren",
+            command=self.copy_roi_stats,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+            fg_color=COLOR_BG_CARD,
+            hover_color=COLOR_BG_CARD_HOVER,
+            border_width=1,
+            border_color=COLOR_OUTLINE,
+            text_color=COLOR_TEXT_PRIMARY,
+            corner_radius=RADIUS_BUTTON,
+            height=28
+        )
+        self.copy_roi_btn.pack(fill=ctk.X, pady=(8, 0))
+
         # 3. Quick Tipp / Zoom & Pan Bedienhinweis
         hint_box = ctk.CTkFrame(side_scroll, fg_color="transparent")
         hint_box.pack(fill=ctk.X, pady=(4, 0))
@@ -356,6 +443,127 @@ class SingleInspectView(ctk.CTkFrame):
         self.palette_name = palette_name
         self._render_colorbar_strip()
         self.redraw()
+
+    def _on_view_mode_changed(self, mode: str) -> None:
+        """Schaltet zwischen Stufen-Ansicht und interaktivem Swipe/Split-View um."""
+        if mode == "Swipe-Split":
+            self.is_split_view = True
+            self.stage_frame.pack_forget()
+            self.split_frame.pack(side=ctk.LEFT, fill=ctk.Y, padx=(0, 8))
+            self.reset_roi_btn.configure(state="disabled")
+        else:
+            self.is_split_view = False
+            self.split_frame.pack_forget()
+            self.stage_frame.pack(side=ctk.LEFT, fill=ctk.Y)
+            self.reset_roi_btn.configure(state="normal")
+        self.redraw()
+
+    def _on_split_stage_selected(self, choice: str) -> None:
+        """Wählt die Vergleichs-Ebene für den Swipe-View."""
+        for key, title in self.STAGES:
+            if title == choice:
+                self.split_target_stage = key
+                break
+        self.redraw()
+
+    def _on_split_slider_moved(self, val: float) -> None:
+        """Aktualisiert die Swipe-Trennlinie bei Schieberegler-Bewegung."""
+        self.split_ratio = float(val)
+        self.split_pct_lbl.configure(text=f"{int(round(self.split_ratio * 100))}%")
+        self.redraw()
+
+    def copy_roi_stats(self) -> None:
+        """Kopiert den aktuellen ROI-Messbefund formatiert in die Zwischenablage."""
+        if not self.roi_box or not self.current_result:
+            return
+        x1, y1, x2, y2 = self.roi_box
+        mean_txt = self.roi_stats_rows["mean"].cget("text")
+        std_txt = self.roi_stats_rows["std"].cget("text")
+        min_txt = self.roi_stats_rows["min"].cget("text")
+        max_txt = self.roi_stats_rows["max"].cget("text")
+        area_txt = self.roi_stats_rows["area"].cget("text")
+
+        text = (
+            f"IGNITE ROI-Messbefund:\n"
+            f"Bereich: X={x1}..{x2}, Y={y1}..{y2} (Größe: {x2-x1}x{y2-y1} px)\n"
+            f"Fläche: {area_txt}\n"
+            f"Temperatur: Mittelwert {mean_txt} (Std: {std_txt}), Min: {min_txt}, Max: {max_txt}"
+        )
+        try:
+            self.clipboard_clear()
+            self.clipboard_append(text)
+            self.copy_roi_btn.configure(text="✓ Kopiert!", fg_color=COLOR_SUCCESS)
+            self.after(1500, lambda: self.copy_roi_btn.configure(text="📋 Messwerte kopieren", fg_color=COLOR_BG_CARD))
+        except Exception as e:
+            pass
+
+    def _get_stage_image(self, stage_key: str) -> np.ndarray:
+        """Gibt das visualisierte BGR-Bild für die angegebene Pipeline-Stufe zurück."""
+        if not self.current_result:
+            return np.zeros((100, 100, 3), dtype=np.uint8)
+
+        if stage_key == "1. Originalbild":
+            return apply_colormap_to_image(self.current_result["calibrated_original"], self.palette_name)
+        elif stage_key == "2. Hintergrund-Maske":
+            return cv2.cvtColor(self.current_result["body_mask"], cv2.COLOR_GRAY2BGR)
+        elif stage_key == "3. Lokale Hitze-Differenz":
+            return cv2.cvtColor(self.current_result["heat_diff"], cv2.COLOR_GRAY2BGR)
+        elif stage_key == "5. Pennes Bioheat":
+            bio_res = self.current_result.get("bioheat_results", {})
+            flux_mag = bio_res.get("flux_magnitude")
+            if flux_mag is not None:
+                norm_flux = cv2.normalize(flux_mag, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+                return apply_colormap_to_image(norm_flux, "Inferno")
+            else:
+                return self.current_result["overlay_bgr"]
+        elif stage_key == "6. Frangi-Venen":
+            frangi_map = self.current_result.get("frangi_vesselness")
+            if frangi_map is not None:
+                return apply_colormap_to_image(frangi_map, "Inferno")
+            else:
+                return self.current_result["overlay_bgr"]
+        elif stage_key == "7. Bilaterale Asymmetrie":
+            asym_res = self.current_result.get("bilateral_map_results", {})
+            asym_map = asym_res.get("asymmetry_map")
+            if asym_map is not None and asym_res.get("valid"):
+                norm_asym = np.clip(asym_map / 4.0 * 255.0, 0, 255).astype(np.uint8)
+                return apply_colormap_to_image(norm_asym, "Turbo")
+            else:
+                return self.current_result["overlay_bgr"]
+        else:
+            return self.current_result["overlay_bgr"]
+
+    def _render_split_image(self, img_a: np.ndarray, img_b: np.ndarray, ratio: float) -> np.ndarray:
+        """Kombiniert zwei Bilder horizontal mit einer interaktiven Swipe-Trennlinie und Grip-Handle."""
+        h, w = img_a.shape[:2]
+        if img_b.shape[:2] != (h, w):
+            img_b = cv2.resize(img_b, (w, h), interpolation=cv2.INTER_LINEAR)
+
+        split_x = int(np.clip(round(w * ratio), 0, w))
+        merged = img_b.copy()
+        if split_x > 0:
+            merged[:, :split_x] = img_a[:, :split_x]
+
+        if 0 < split_x < w:
+            # Trennlinie (2px Cyan)
+            cv2.line(merged, (split_x, 0), (split_x, h), (0, 230, 255), 2, cv2.LINE_AA)
+            # Grip-Circle in der Bildmitte
+            mid_y = h // 2
+            cv2.circle(merged, (split_x, mid_y), 13, (0, 230, 255), -1, cv2.LINE_AA)
+            cv2.circle(merged, (split_x, mid_y), 13, (15, 23, 42), 2, cv2.LINE_AA)
+            # Grip-Pfeile
+            cv2.line(merged, (split_x - 6, mid_y), (split_x - 3, mid_y - 4), (15, 23, 42), 2, cv2.LINE_AA)
+            cv2.line(merged, (split_x - 6, mid_y), (split_x - 3, mid_y + 4), (15, 23, 42), 2, cv2.LINE_AA)
+            cv2.line(merged, (split_x + 6, mid_y), (split_x + 3, mid_y - 4), (15, 23, 42), 2, cv2.LINE_AA)
+            cv2.line(merged, (split_x + 6, mid_y), (split_x + 3, mid_y + 4), (15, 23, 42), 2, cv2.LINE_AA)
+
+            # Badges
+            cv2.putText(merged, "ORIGINAL", (max(10, split_x - 85), 26), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 3, cv2.LINE_AA)
+            cv2.putText(merged, "ORIGINAL", (max(10, split_x - 85), 26), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+            cv2.putText(merged, "ANALYSE", (min(w - 85, split_x + 12), 26), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 3, cv2.LINE_AA)
+            cv2.putText(merged, "ANALYSE", (min(w - 85, split_x + 12), 26), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 230, 255), 1, cv2.LINE_AA)
+
+        return merged
 
     def _on_segment_changed(self, choice: str) -> None:
         for key, title in self.STAGES:
@@ -415,47 +623,26 @@ class SingleInspectView(ctk.CTkFrame):
         if not self.current_result:
             return
 
-        if self.active_stage_key == "1. Originalbild":
-            raw = apply_colormap_to_image(self.current_result["calibrated_original"], self.palette_name)
-        elif self.active_stage_key == "2. Hintergrund-Maske":
-            raw = cv2.cvtColor(self.current_result["body_mask"], cv2.COLOR_GRAY2BGR)
-        elif self.active_stage_key == "3. Lokale Hitze-Differenz":
-            raw = cv2.cvtColor(self.current_result["heat_diff"], cv2.COLOR_GRAY2BGR)
-        elif self.active_stage_key == "5. Pennes Bioheat":
-            bio_res = self.current_result.get("bioheat_results", {})
-            flux_mag = bio_res.get("flux_magnitude")
-            if flux_mag is not None:
-                norm_flux = cv2.normalize(flux_mag, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
-                raw = apply_colormap_to_image(norm_flux, "Inferno")
-            else:
-                raw = self.current_result["overlay_bgr"]
-        elif self.active_stage_key == "6. Frangi-Venen":
-            frangi_map = self.current_result.get("frangi_vesselness")
-            if frangi_map is not None:
-                raw = apply_colormap_to_image(frangi_map, "Inferno")
-            else:
-                raw = self.current_result["overlay_bgr"]
-        elif self.active_stage_key == "7. Bilaterale Asymmetrie":
-            asym_res = self.current_result.get("bilateral_map_results", {})
-            asym_map = asym_res.get("asymmetry_map")
-            if asym_map is not None and asym_res.get("valid"):
-                norm_asym = np.clip(asym_map / 4.0 * 255.0, 0, 255).astype(np.uint8)
-                raw = apply_colormap_to_image(norm_asym, "Turbo")
-            else:
-                raw = self.current_result["overlay_bgr"]
+        if self.is_split_view:
+            # Bild A: Kalibriertes Originalbild
+            img_a = self._get_stage_image("1. Originalbild")
+            # Bild B: Ausgewähltes Analyse-Vergleichsbild
+            img_b = self._get_stage_image(self.split_target_stage)
+            raw = self._render_split_image(img_a, img_b, self.split_ratio)
         else:
-            raw = self.current_result["overlay_bgr"]
+            raw = self._get_stage_image(self.active_stage_key)
 
         img_to_show = raw.copy()
 
-        # ROI Overlay zeichnen
-        if self.roi_box:
-            x1, y1, x2, y2 = self.roi_box
-            cv2.rectangle(img_to_show, (x1, y1), (x2, y2), (255, 255, 0), 2)
-        elif self.roi_drag_start and self.roi_drag_current:
-            x1, x2 = sorted([self.roi_drag_start[0], self.roi_drag_current[0]])
-            y1, y2 = sorted([self.roi_drag_start[1], self.roi_drag_current[1]])
-            cv2.rectangle(img_to_show, (x1, y1), (x2, y2), (0, 255, 255), 1)
+        # ROI Overlay zeichnen (nur im Stufen-Modus oder wenn ROI aktiv)
+        if not self.is_split_view:
+            if self.roi_box:
+                x1, y1, x2, y2 = self.roi_box
+                cv2.rectangle(img_to_show, (x1, y1), (x2, y2), (255, 255, 0), 2)
+            elif self.roi_drag_start and self.roi_drag_current:
+                x1, x2 = sorted([self.roi_drag_start[0], self.roi_drag_current[0]])
+                y1, y2 = sorted([self.roi_drag_start[1], self.roi_drag_current[1]])
+                cv2.rectangle(img_to_show, (x1, y1), (x2, y2), (0, 255, 255), 1)
 
         rgb = cv2.cvtColor(img_to_show, cv2.COLOR_BGR2RGB)
         full_pil = Image.fromarray(rgb)
@@ -569,18 +756,44 @@ class SingleInspectView(ctk.CTkFrame):
 
     def _on_mouse_down(self, event) -> None:
         coords = self._event_to_img_coords(event)
-        if coords:
-            self.roi_drag_start = coords
-            self.roi_drag_current = coords
-            self.roi_box = None
+        if not coords:
+            return
+
+        if self.is_split_view:
+            if self._rendered_pil:
+                orig_w, _ = self._rendered_pil.size
+                self.split_ratio = float(np.clip(coords[0] / max(1, orig_w), 0.0, 1.0))
+                self.split_slider.set(self.split_ratio)
+                self.split_pct_lbl.configure(text=f"{int(round(self.split_ratio * 100))}%")
+                self.redraw()
+            return
+
+        self.roi_drag_start = coords
+        self.roi_drag_current = coords
+        self.roi_box = None
 
     def _on_mouse_drag(self, event) -> None:
         coords = self._event_to_img_coords(event)
+        if not coords:
+            return
+
+        if self.is_split_view:
+            if self._rendered_pil:
+                orig_w, _ = self._rendered_pil.size
+                self.split_ratio = float(np.clip(coords[0] / max(1, orig_w), 0.0, 1.0))
+                self.split_slider.set(self.split_ratio)
+                self.split_pct_lbl.configure(text=f"{int(round(self.split_ratio * 100))}%")
+                self.redraw()
+            return
+
         if coords and self.roi_drag_start:
             self.roi_drag_current = coords
             self.redraw()
 
     def _on_mouse_up(self, event) -> None:
+        if self.is_split_view:
+            return
+
         coords = self._event_to_img_coords(event)
         if coords and self.roi_drag_start:
             x1, x2 = sorted([self.roi_drag_start[0], coords[0]])

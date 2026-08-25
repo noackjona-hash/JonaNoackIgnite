@@ -10,6 +10,7 @@ Enthält die vollständige Signal- und Bildverarbeitungs-Pipeline:
 """
 
 from typing import Tuple, Optional, Any, Dict
+import os
 import warnings
 import cv2
 import numpy as np
@@ -89,23 +90,126 @@ def compute_odd_kernel(dimension: int, factor: float) -> int:
     return max(3, odd)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 1. BILD LADEN
+# 1. BILD LADEN (8-BIT, 16-BIT RADIOMETRISCH, TIFF, RJPG, NPY)
 # ─────────────────────────────────────────────────────────────────────────────
-def load_thermal_image(filepath: str) -> np.ndarray:
-    """Lädt ein Wärmebild als Graustufen-Matrix mit Umlaut-Workaround."""
+def _extract_flir_radiometric_raw(filepath: str) -> Optional[np.ndarray]:
+    """
+    Sucht in einer JPEG-Datei nach eingebetteten FLIR-Radiometriedaten im APP1-Segment.
+    Gibt die 16-Bit Roh-Temperaturmatrix zurück oder None, wenn keine Daten vorhanden sind.
+    """
+    try:
+        with open(filepath, "rb") as f:
+            data = f.read()
+
+        flir_tag = b"FLIR\x00"
+        idx = 0
+        while True:
+            idx = data.find(b"\xff\xe1", idx)
+            if idx == -1 or idx + 4 >= len(data):
+                break
+            length = int.from_bytes(data[idx+2:idx+4], "big")
+            segment = data[idx+4:idx+2+length]
+            if segment.startswith(flir_tag):
+                raw_png_idx = segment.find(b"\x89PNG\r\n\x1a\n")
+                if raw_png_idx != -1:
+                    png_bytes = segment[raw_png_idx:]
+                    raw_arr = cv2.imdecode(np.frombuffer(png_bytes, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
+                    if raw_arr is not None:
+                        return raw_arr
+            idx += 2 + length
+    except Exception as e:
+        logging.debug(f"FLIR APP1 Parsing übersprungen: {e}")
+    return None
+
+
+def _normalize_loaded_matrix(
+    img: np.ndarray,
+    t_min: float = _config.DEFAULT_TEMP_MIN,
+    t_max: float = _config.DEFAULT_TEMP_MAX
+) -> np.ndarray:
+    """Konvertiert beliebige Bildmatrizen (16-Bit, Float, Multi-Kanal) in ein 8-Bit Graustufenbild."""
+    # Mehrkanalige Bilder (z.B. RGB/BGR/RGBA)
+    if img.ndim == 3:
+        if img.shape[2] == 4:
+            img = img[:, :, :3]
+        if img.shape[2] == 3:
+            if np.array_equal(img[:, :, 0], img[:, :, 1]) and np.array_equal(img[:, :, 1], img[:, :, 2]):
+                img = img[:, :, 0]
+            else:
+                # Perzeptive Graustufenkonvertierung (ITU-R BT.601)
+                img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) if img.dtype == np.uint8 else (
+                    0.299 * img[:, :, 2] + 0.587 * img[:, :, 1] + 0.114 * img[:, :, 0]
+                ).astype(img.dtype)
+
+    # 16-Bit, 32-Bit Float oder Integer-Daten kalibrieren
+    if img.dtype == np.uint16 or np.issubdtype(img.dtype, np.floating) or img.dtype == np.int32:
+        from utils import convert_16bit_radiometric_to_8bit
+        return convert_16bit_radiometric_to_8bit(img, t_min=t_min, t_max=t_max)
+
+    if img.dtype != np.uint8:
+        img = np.clip(img, 0, 255).astype(np.uint8)
+
+    return img
+
+
+def load_thermal_image(
+    filepath: str,
+    t_min: float = _config.DEFAULT_TEMP_MIN,
+    t_max: float = _config.DEFAULT_TEMP_MAX
+) -> np.ndarray:
+    """
+    Lädt ein Wärmebild als kalibriertes 8-Bit Graustufen-Matrix.
+
+    Unterstützt:
+    - 8-Bit Standardformate (JPEG, PNG, BMP)
+    - 16-Bit RAW / TIFF (z. B. radiometrische FLIR/Optris/Hikmicro Daten, mK, Centikelvin, 0.1°C)
+    - 32-Bit Float-TIFF (direkte Temperatur-Messwerte in °C)
+    - NumPy Arrays (.npy) mit Rohdaten
+    - FLIR Radiometrische JPEGs (RJPG) mit eingebettetem APP1-Thermal-Stream
+    - Mehrkanalige RGB/BGR-Wärmebilder (automatische Konvertierung zu kalibrierten Graustufen)
+    """
+    if not os.path.exists(filepath):
+        raise FileNotFoundError(f"Bilddatei nicht gefunden: {filepath}")
+
+    # 1. NumPy .npy Datei
+    if filepath.lower().endswith(".npy"):
+        try:
+            arr = np.load(filepath)
+            return _normalize_loaded_matrix(arr, t_min, t_max)
+        except Exception as e:
+            raise ValueError(f".npy Datei konnte nicht geladen werden: {e}") from e
+
+    # 2. FLIR Radiometrisches JPEG
+    if filepath.lower().endswith((".jpg", ".jpeg", ".rjpg")):
+        flir_raw = _extract_flir_radiometric_raw(filepath)
+        if flir_raw is not None:
+            return _normalize_loaded_matrix(flir_raw, t_min, t_max)
+
+    # 3. OpenCV mit IMREAD_UNCHANGED (um 16-Bit / Float / Unkomprimiert ohne Quantisierungsverlust zu erhalten)
+    img = None
     try:
         file_bytes = np.fromfile(filepath, dtype=np.uint8)
-        img = cv2.imdecode(file_bytes, cv2.IMREAD_GRAYSCALE)
-        if img is None:
-            raise ValueError(
-                "Bilddaten konnten nicht dekodiert werden. "
-                "Format nicht unterstützt oder Datei beschädigt."
-            )
-        return img
+        img = cv2.imdecode(file_bytes, cv2.IMREAD_UNCHANGED)
     except Exception as e:
-        raise FileNotFoundError(
-            f"Bild konnte nicht geladen werden: {filepath}\nDetails: {e}"
-        ) from e
+        logging.debug(f"cv2.imdecode fehlgeschlagen für {filepath}: {e}")
+
+    # 4. Fallback zu Pillow (Multi-Page TIFF, 16-Bit TIFFs, seltene Farbräume)
+    if img is None:
+        try:
+            from PIL import Image
+            with Image.open(filepath) as pil_img:
+                img = np.array(pil_img)
+        except Exception as e:
+            raise FileNotFoundError(
+                f"Bild konnte weder mit OpenCV noch mit Pillow geladen werden: {filepath}\nDetails: {e}"
+            ) from e
+
+    if img is None or img.size == 0:
+        raise ValueError(
+            "Bilddaten konnten nicht dekodiert werden. Format nicht unterstützt oder Datei beschädigt."
+        )
+
+    return _normalize_loaded_matrix(img, t_min, t_max)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 2. ADAPTIVE GEWEBESEGMENTIERUNG (MULTI-OTSU)

@@ -48,18 +48,57 @@ def convert_16bit_radiometric_to_8bit(
     t_max: float = config.DEFAULT_TEMP_MAX
 ) -> np.ndarray:
     """
-    Konvertiert 16-Bit RAW Wärmebilddaten (z. B. FLIR/Hikmicro mK-Counts)
-    in ein kalibriertes 8-Bit Graustufenbild.
+    Konvertiert 16-Bit / Float RAW Wärmebilddaten (z. B. FLIR/Optris/Hikmicro mK-Counts,
+    Centikelvin, Decikelvin, 0.1°C oder 32-Bit Float °C) in ein physikalisch kalibriertes
+    8-Bit Graustufenbild.
+
+    Unterstützte Formate / Skalierungen:
+    - 8-Bit (uint8): Unverändert zurückgeben
+    - Float (float32, float64): Direkte Temperaturwerte in °C -> lineare Skalierung auf [t_min, t_max]
+    - Centikelvin / mK (Werte > 20000, z. B. 29315 - 32315 -> 20.0°C - 50.0°C): T_C = raw * 0.01 - 273.15
+    - Decikelvin (Werte 2500 - 4500, z. B. 2931 -> 20.0°C): T_C = raw * 0.1 - 273.15
+    - Centicelsius / 0.01°C (Werte 1500 - 6000, wenn max < 10000): T_C = raw * 0.01
+    - Decicelsius / 0.1°C (Werte 150 - 1000): T_C = raw * 0.1
+    - Unkalibrierte 16-Bit Counts (z. B. 0 - 65535 oder 0 - 16383 RAW-Sensor-ADU):
+      Robuste Min-Max-Skalierung (0.5 - 99.5 Perzentil zur Ausreißer-Unterdrückung)
     """
     if raw_16bit.dtype == np.uint8:
         return raw_16bit
 
-    # Angenommene Skalierung: 1 LSB = 0.01 °C (Centikelvin)
-    temp_c = raw_16bit.astype(np.float32) * 0.01 - 273.15 if raw_16bit.max() > 10000 else raw_16bit.astype(np.float32) * 0.1
+    if np.issubdtype(raw_16bit.dtype, np.floating):
+        # Direkte Celsius-Fließkommawerte
+        temp_c = raw_16bit.astype(np.float32)
+    else:
+        raw_max = float(np.max(raw_16bit))
+        raw_min = float(np.min(raw_16bit))
 
-    # Clipping auf Temperaturfenster
+        if raw_max > 20000:
+            # Centikelvin: 1 LSB = 0.01 K (z. B. FLIR RAW: 30000 = 300.00 K = 26.85 °C)
+            temp_c = raw_16bit.astype(np.float32) * 0.01 - 273.15
+        elif 2500 <= raw_max <= 4500 and raw_min >= 2000:
+            # Decikelvin: 1 LSB = 0.1 K (z. B. 3031 = 303.1 K = 30.0 °C)
+            temp_c = raw_16bit.astype(np.float32) * 0.1 - 273.15
+        elif 1500 <= raw_max <= 6000 and raw_min >= 500:
+            # Centicelsius: 1 LSB = 0.01 °C (z. B. 3250 = 32.50 °C)
+            temp_c = raw_16bit.astype(np.float32) * 0.01
+        elif 150 <= raw_max <= 1000 and raw_min >= 50:
+            # Decicelsius: 1 LSB = 0.1 °C (z. B. 325 = 32.5 °C)
+            temp_c = raw_16bit.astype(np.float32) * 0.1
+        else:
+            # Unkalibrierte Sensor-Rohdaten (ADU 14-Bit / 16-Bit)
+            # Robuste Normalisierung über Perzentile
+            p1 = float(np.percentile(raw_16bit, 0.5))
+            p99 = float(np.percentile(raw_16bit, 99.5))
+            if p99 > p1:
+                norm = np.clip((raw_16bit.astype(np.float32) - p1) / (p99 - p1), 0.0, 1.0)
+                return (norm * 255.0).astype(np.uint8)
+            else:
+                return np.zeros_like(raw_16bit, dtype=np.uint8)
+
+    # Lineares Mapping auf [t_min, t_max] und Konvertierung nach 8-Bit
+    range_c = max(1e-5, t_max - t_min)
     clipped = np.clip(temp_c, t_min, t_max)
-    normalized = ((clipped - t_min) / (t_max - t_min) * 255.0).astype(np.uint8)
+    normalized = np.clip(np.round((clipped - t_min) / range_c * 255.0), 0, 255).astype(np.uint8)
     return normalized
 
 def pseudonymize_patient(name: str, dob: str = "") -> str:

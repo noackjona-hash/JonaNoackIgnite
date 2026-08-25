@@ -2,7 +2,9 @@
 """gui/views/analytics_view.py – Statistical Analytics & Jury Benchmark for IGNITE."""
 
 from __future__ import annotations
+import os
 import tkinter as tk
+from tkinter import filedialog
 from typing import Optional, Any, Callable
 import customtkinter as ctk
 import numpy as np
@@ -191,6 +193,58 @@ class AnalyticsView(ctk.CTkFrame):
             height=32
         ).pack(fill=ctk.X)
 
+        # 4. Longitudinaler Verlaufs-Vergleich (Follow-Up & Monitoring)
+        ctk.CTkLabel(
+            scroll,
+            text="LONGITUDINALER VERLAUFS-VERGLEICH",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=10, weight="bold"),
+            text_color=COLOR_TEXT_MUTED,
+            anchor="w"
+        ).pack(fill=ctk.X, padx=4, pady=(14, 6))
+
+        followup_box = make_material_card(scroll, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD_VARIANT)
+        followup_box.pack(fill=ctk.X, padx=4, pady=(0, 14))
+
+        f_inner = ctk.CTkFrame(followup_box, fg_color="transparent")
+        f_inner.pack(fill=ctk.X, padx=14, pady=12)
+
+        self.followup_load_btn = ctk.CTkButton(
+            f_inner,
+            text="Follow-Up Bild laden & vergleichen",
+            command=self._on_load_followup,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            fg_color=COLOR_PRIMARY,
+            hover_color=COLOR_PRIMARY_HOVER,
+            corner_radius=RADIUS_BUTTON,
+            height=32
+        )
+        self.followup_load_btn.pack(fill=ctk.X, pady=(0, 8))
+
+        self.followup_status_lbl = ctk.CTkLabel(
+            f_inner,
+            text="Keine Vergleichsaufnahme geladen.",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+            text_color=COLOR_TEXT_MUTED,
+            anchor="w",
+            wraplength=210,
+            justify="left"
+        )
+        self.followup_status_lbl.pack(fill=ctk.X, pady=(0, 6))
+
+        self.followup_stats_rows = {}
+        for key, name in [
+            ("delta_t", "Mittlere Temp.-Änderung (ΔT):"),
+            ("delta_max", "Max. Temperaturdifferenz:"),
+            ("area_change", "Hotspot-Flächenänderung:"),
+            ("status", "Klinischer Verlauf:")
+        ]:
+            row = ctk.CTkFrame(f_inner, fg_color="transparent")
+            row.pack(fill=ctk.X, pady=2)
+            ctk.CTkLabel(row, text=name, font=ctk.CTkFont(family=FONT_FAMILY, size=11), text_color=COLOR_TEXT_SECONDARY).pack(side=ctk.LEFT)
+            lbl = ctk.CTkLabel(row, text="--", font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=11, weight="bold"), text_color=COLOR_TEXT_PRIMARY)
+            lbl.pack(side=ctk.RIGHT)
+            self.followup_stats_rows[key] = lbl
+
     def _on_click_jury_report(self) -> None:
         if self.on_export_jury_report:
             self.on_export_jury_report()
@@ -198,6 +252,65 @@ class AnalyticsView(ctk.CTkFrame):
     def _on_click_annotator(self) -> None:
         if self.on_open_annotator:
             self.on_open_annotator()
+
+    def _on_load_followup(self) -> None:
+        if not self.current_result:
+            return
+        path = filedialog.askopenfilename(
+            title="Follow-Up Wärmebild wählen",
+            filetypes=[("Wärmebilder", "*.png;*.jpg;*.jpeg;*.bmp;*.tiff;*.tif;*.rjpg;*.npy")]
+        )
+        if not path:
+            return
+
+        try:
+            from gui.services.processing_service import ThermalProcessingService
+            import image_processing
+            t_min = self.current_result.get("t_min_c", 20.0)
+            t_max = self.current_result.get("t_max_c", 40.0)
+            params = self.current_result.get("params", {})
+
+            # Follow-Up Bild laden und Pipeline berechnen
+            raw2 = image_processing.load_thermal_image(path, t_min=t_min, t_max=t_max)
+            diff2, hs2 = image_processing.run_rust_pipeline(
+                raw2,
+                sigma_k=params.get("sigma_k", 3.0),
+                tophat_factor=params.get("tophat_factor", 0.05)
+            )
+            mask2 = (diff2 > 0).astype(np.uint8) * 255
+
+            res2 = {
+                "calibrated_original": raw2,
+                "body_mask": mask2,
+                "hotspot_mask": hs2,
+                "t_min_c": t_min,
+                "t_max_c": t_max,
+            }
+
+            long_res = ThermalProcessingService.compare_longitudinal_visits(self.current_result, res2)
+            self._apply_longitudinal_results(long_res, path)
+        except Exception as e:
+            self.followup_status_lbl.configure(text=f"Fehler: {e}", text_color=COLOR_DANGER)
+
+    def _apply_longitudinal_results(self, long_res: dict[str, Any], followup_path: str) -> None:
+        dt_mean = long_res["delta_t_mean"]
+        dt_max = long_res["delta_t_max"]
+        area_pct = long_res["area_pct_change"]
+        status = long_res["status"]
+        color = long_res["status_color"]
+
+        sign_dt = "+" if dt_mean > 0 else ""
+        sign_max = "+" if dt_max > 0 else ""
+        sign_area = "+" if area_pct > 0 else ""
+
+        self.followup_status_lbl.configure(
+            text=f"Vergleich mit: {os.path.basename(followup_path)}",
+            text_color=COLOR_TEXT_PRIMARY
+        )
+        self.followup_stats_rows["delta_t"].configure(text=f"{sign_dt}{dt_mean:.2f} °C", text_color=color)
+        self.followup_stats_rows["delta_max"].configure(text=f"{sign_max}{dt_max:.1f} °C")
+        self.followup_stats_rows["area_change"].configure(text=f"{sign_area}{area_pct:.1f} %", text_color=color)
+        self.followup_stats_rows["status"].configure(text=status, text_color=color)
 
     def show_results(self, result: dict[str, Any]) -> None:
         self.current_result = result

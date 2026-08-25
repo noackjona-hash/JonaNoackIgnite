@@ -165,3 +165,102 @@ def test_full_gui_lifecycle():
 
     root.destroy()
 
+
+def test_single_view_swipe_and_roi():
+    """Testet den Swipe / Split-View Modus und ROI-Berechnungen im SingleInspectView."""
+    import customtkinter as ctk
+    from gui.views.single_view import SingleInspectView
+
+    root = ctk.CTk()
+    root.withdraw()
+
+    single_view = SingleInspectView(root, on_load_click=lambda: None)
+
+    dummy_result = {
+        "image_path": "test-data/bild (1).jpeg",
+        "calibrated_original": np.full((100, 100), 150, dtype=np.uint8),
+        "body_mask": np.full((100, 100), 255, dtype=np.uint8),
+        "heat_diff": np.zeros((100, 100), dtype=np.uint8),
+        "hotspot_mask": np.zeros((100, 100), dtype=np.uint8),
+        "overlay_bgr": np.full((100, 100, 3), 200, dtype=np.uint8),
+        "t_min_c": 20.0,
+        "t_max_c": 40.0,
+    }
+
+    single_view.show_results(dummy_result)
+    assert single_view.current_result is not None
+
+    # Swipe-Modus umschalten
+    single_view._on_view_mode_changed("Swipe-Split")
+    assert single_view.is_split_view is True
+
+    # Slider bewegen
+    single_view._on_split_slider_moved(0.75)
+    assert single_view.split_ratio == 0.75
+
+    # Split-Image rendering testen
+    img_a = single_view._get_stage_image("1. Originalbild")
+    img_b = single_view._get_stage_image("4. Erkannte Hotspots (Rust)")
+    merged = single_view._render_split_image(img_a, img_b, 0.5)
+    assert merged.shape == (100, 100, 3)
+
+    # Zurück zu Stufen
+    single_view._on_view_mode_changed("Stufen")
+    assert single_view.is_split_view is False
+
+    # ROI Messung testen
+    single_view.roi_box = (10, 10, 50, 50)
+    single_view._compute_roi_stats(10, 10, 50, 50)
+    assert single_view.roi_stats_rows["mean"].cget("text") != "--"
+
+    # Messwerte kopieren
+    single_view.copy_roi_stats()
+
+    root.destroy()
+
+
+def test_longitudinal_visit_comparison():
+    """Testet die quantitative Berechnung von Baseline- vs. Follow-Up-Untersuchungen."""
+    from gui.services.processing_service import ThermalProcessingService
+    from gui.views.analytics_view import AnalyticsView
+    import customtkinter as ctk
+
+    root = ctk.CTk()
+    root.withdraw()
+
+    analytics_view = AnalyticsView(root)
+
+    # Baseline (z. B. Visit 1 mit akutem Hotspot)
+    res_baseline = {
+        "calibrated_original": np.full((100, 100), 160, dtype=np.uint8),
+        "body_mask": np.full((100, 100), 255, dtype=np.uint8),
+        "hotspot_mask": np.zeros((100, 100), dtype=np.uint8),
+        "t_min_c": 20.0,
+        "t_max_c": 40.0,
+    }
+    res_baseline["hotspot_mask"][40:60, 40:60] = 255  # 400 px Hotspot
+
+    # Follow-Up (z. B. Visit 2 nach 4 Wochen Therapie: abgekühlt und kleinerer Herd)
+    res_followup = {
+        "calibrated_original": np.full((100, 100), 140, dtype=np.uint8),
+        "body_mask": np.full((100, 100), 255, dtype=np.uint8),
+        "hotspot_mask": np.zeros((100, 100), dtype=np.uint8),
+        "t_min_c": 20.0,
+        "t_max_c": 40.0,
+    }
+    res_followup["hotspot_mask"][45:55, 45:55] = 255  # 100 px Hotspot (-75%)
+
+    long_res = ThermalProcessingService.compare_longitudinal_visits(res_baseline, res_followup)
+    assert long_res["delta_t_mean"] < 0.0  # Abkühlung
+    assert long_res["area_pct_change"] < 0.0  # Flächenreduktion
+    assert long_res["status_code"] == "regression"
+    assert long_res["diff_map_bgr"].shape == (100, 100, 3)
+
+    # Analytics View UI Verifikation
+    analytics_view.show_results(res_baseline)
+    analytics_view._apply_longitudinal_results(long_res, "/tmp/followup_visit2.png")
+    assert "°C" in analytics_view.followup_stats_rows["delta_t"].cget("text")
+    assert "%" in analytics_view.followup_stats_rows["area_change"].cget("text")
+
+    root.destroy()
+

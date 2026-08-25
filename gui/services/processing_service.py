@@ -43,8 +43,8 @@ class ThermalProcessingService:
                 if on_progress:
                     on_progress(0.15, "Lade Wärmebild...")
 
-                # 1. Bild laden
-                raw_img = image_processing.load_thermal_image(image_path)
+                # 1. Bild laden (inkl. 16-Bit / RAW Kalibrierung)
+                raw_img = image_processing.load_thermal_image(image_path, t_min=t_min_c, t_max=t_max_c)
 
                 with cls._lock:
                     if job_id != cls._current_job_id:
@@ -360,3 +360,110 @@ class ThermalProcessingService:
                     cv2.line(overlay, (bx, by + 2 * h3), (bx + bw, by + 2 * h3), (255, 200, 0), 1)
 
         return overlay
+
+    @classmethod
+    def compare_longitudinal_visits(
+        cls,
+        baseline_result: dict[str, Any],
+        followup_result: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Vergleicht zwei zeitlich versetzte Untersuchungen (Baseline vs. Follow-Up).
+        
+        Berechnet pixelgenaue Temperaturveränderungen (ΔT), Hotspot-Flächendifferenzen
+        sowie eine differenzielle Heatmap zur objektiven Therapie- und Verlaufskontrolle.
+        """
+        img0 = baseline_result["calibrated_original"]
+        img1 = followup_result["calibrated_original"]
+        h0, w0 = img0.shape[:2]
+
+        if img1.shape[:2] != (h0, w0):
+            img1 = cv2.resize(img1, (w0, h0), interpolation=cv2.INTER_LINEAR)
+            mask1 = cv2.resize(followup_result["body_mask"], (w0, h0), interpolation=cv2.INTER_NEAREST)
+            hs1 = cv2.resize(followup_result["hotspot_mask"], (w0, h0), interpolation=cv2.INTER_NEAREST)
+        else:
+            mask1 = followup_result["body_mask"]
+            hs1 = followup_result["hotspot_mask"]
+
+        mask0 = baseline_result["body_mask"]
+        hs0 = baseline_result["hotspot_mask"]
+
+        t_min0 = baseline_result.get("t_min_c", 20.0)
+        t_max0 = baseline_result.get("t_max_c", 40.0)
+        t_min1 = followup_result.get("t_min_c", 20.0)
+        t_max1 = followup_result.get("t_max_c", 40.0)
+
+        temp0 = pixel_to_celsius(img0.astype(np.float32), t_min0, t_max0)
+        temp1 = pixel_to_celsius(img1.astype(np.float32), t_min1, t_max1)
+
+        common_mask = (mask0 > 0) & (mask1 > 0)
+        if not np.any(common_mask):
+            common_mask = (mask0 > 0) | (mask1 > 0)
+        if not np.any(common_mask):
+            common_mask = np.ones((h0, w0), dtype=bool)
+
+        delta_t = temp1 - temp0
+        valid_delta = delta_t[common_mask]
+
+        delta_mean = float(np.mean(valid_delta)) if len(valid_delta) > 0 else 0.0
+        delta_std = float(np.std(valid_delta)) if len(valid_delta) > 0 else 0.0
+        delta_max = float(np.max(valid_delta)) if len(valid_delta) > 0 else 0.0
+        delta_min = float(np.min(valid_delta)) if len(valid_delta) > 0 else 0.0
+
+        area0 = int(np.count_nonzero(hs0))
+        area1 = int(np.count_nonzero(hs1))
+        area_diff = area1 - area0
+        area_pct_change = float((area_diff / max(1, area0)) * 100.0) if area0 > 0 else (100.0 if area1 > 0 else 0.0)
+
+        # Klinische Verlaufs-Klassifikation
+        if delta_mean <= -0.5 and area_pct_change <= -15.0:
+            status = "Signifikante Besserung / Entzündungsregression"
+            status_code = "regression"
+            status_color = "#10B981"  # Success Grün
+        elif delta_mean >= 0.5 or area_pct_change >= 20.0:
+            status = "Progression / Akute Entzündungszunahme"
+            status_code = "progression"
+            status_color = "#EF4444"  # Danger Rot
+        else:
+            status = "Stabiler Verlauf / Befundkonstanz"
+            status_code = "stable"
+            status_color = "#3B82F6"  # Blue Info
+
+        # Divergierende Colormap: [-3.0 °C (Blau) ... 0.0 °C (Grau/Weiß) ... +3.0 °C (Rot)]
+        norm_delta = np.clip(delta_t / 3.0, -1.0, 1.0)
+        diff_bgr = np.zeros((h0, w0, 3), dtype=np.uint8)
+        diff_bgr[:] = [24, 24, 27]  # Dunkler Hintergrund
+
+        for y in range(h0):
+            for x in range(w0):
+                if not common_mask[y, x]:
+                    continue
+                nd = norm_delta[y, x]
+                if nd < 0:
+                    # Blau-Skalierung (Abkühlung / Heilung)
+                    val = int(-nd * 255)
+                    diff_bgr[y, x] = [min(255, 120 + val), max(0, 180 - val // 2), max(0, 50 - val // 4)]
+                else:
+                    # Rot-Skalierung (Erwärmung / Entzündung)
+                    val = int(nd * 255)
+                    diff_bgr[y, x] = [max(0, 50 - val // 4), max(0, 140 - val // 2), min(255, 120 + val)]
+
+        # Trennkontur des Gewebes
+        contours, _ = cv2.findContours(common_mask.astype(np.uint8) * 255, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        cv2.drawContours(diff_bgr, contours, -1, (200, 200, 200), 1)
+
+        return {
+            "delta_t_matrix": delta_t,
+            "diff_map_bgr": diff_bgr,
+            "delta_t_mean": delta_mean,
+            "delta_t_std": delta_std,
+            "delta_t_max": delta_max,
+            "delta_t_min": delta_min,
+            "area_baseline_px": area0,
+            "area_followup_px": area1,
+            "area_diff_px": area_diff,
+            "area_pct_change": area_pct_change,
+            "status": status,
+            "status_code": status_code,
+            "status_color": status_color,
+            "common_mask": common_mask,
+        }
