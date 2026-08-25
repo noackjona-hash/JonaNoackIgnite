@@ -75,6 +75,14 @@ class SingleInspectView(ctk.CTkFrame):
         self.split_ratio: float = 0.50
         self.split_target_stage: str = "4. Erkannte Hotspots (Rust)"
 
+        # Linienprofil (1D Transect) State
+        self.is_profile_mode: bool = False
+        self.profile_drag_start: Optional[tuple[int, int]] = None
+        self.profile_drag_current: Optional[tuple[int, int]] = None
+        self.profile_line: Optional[tuple[tuple[int, int], tuple[int, int]]] = None
+        self.profile_temps: list[float] = []
+        self.profile_grads: list[float] = []
+
         # Zoom & Pan State
         self.zoom_level: float = 1.0
         self.pan_x: float = 0.0
@@ -107,17 +115,17 @@ class SingleInspectView(ctk.CTkFrame):
         top_bar.pack(fill=ctk.X, padx=14, pady=(10, 6))
         top_bar.pack_propagate(False)
 
-        # Modus-Umschalter: Stufen-Ansicht vs. Swipe / Split-View
+        # Modus-Umschalter: Stufen-Ansicht vs. Linienprofil vs. Swipe / Split-View
         self.mode_switcher = ctk.CTkSegmentedButton(
             top_bar,
-            values=["Stufen", "Swipe-Split"],
+            values=["Stufen", "Linienprofil", "Swipe-Split"],
             command=self._on_view_mode_changed,
             font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
             selected_color=COLOR_PRIMARY,
             selected_hover_color=COLOR_PRIMARY_HOVER,
             corner_radius=RADIUS_BUTTON,
             height=30,
-            width=150
+            width=220
         )
         self.mode_switcher.set("Stufen")
         self.mode_switcher.pack(side=ctk.LEFT, padx=(0, 8))
@@ -205,11 +213,11 @@ class SingleInspectView(ctk.CTkFrame):
         )
         self.snapshot_btn.pack(side=ctk.RIGHT)
 
-        # Reset ROI Button
+        # Reset Button (ROI / Linienprofil)
         self.reset_roi_btn = ctk.CTkButton(
             top_bar,
-            text="ROI Reset",
-            command=self.clear_roi,
+            text="Reset",
+            command=self.reset_measurement,
             font=ctk.CTkFont(family=FONT_FAMILY, size=11),
             fg_color=COLOR_BG_CARD_VARIANT,
             hover_color=COLOR_BG_CARD_HOVER,
@@ -218,7 +226,7 @@ class SingleInspectView(ctk.CTkFrame):
             border_color=COLOR_OUTLINE,
             corner_radius=RADIUS_BUTTON,
             height=30,
-            width=75
+            width=70
         )
         self.reset_roi_btn.pack(side=ctk.RIGHT, padx=(0, 6))
 
@@ -397,7 +405,64 @@ class SingleInspectView(ctk.CTkFrame):
         )
         self.copy_roi_btn.pack(fill=ctk.X, pady=(8, 0))
 
-        # 3. Quick Tipp / Zoom & Pan Bedienhinweis
+        # 3. Linienprofil-Karte (1D Transect)
+        self.profile_card = make_material_card(side_scroll, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD_VARIANT)
+
+        pr_inner = ctk.CTkFrame(self.profile_card, fg_color="transparent")
+        pr_inner.pack(fill=ctk.X, padx=14, pady=12)
+
+        self.profile_title_lbl = ctk.CTkLabel(
+            pr_inner,
+            text="Linie mit Maus ziehen (A → B)",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
+            text_color=COLOR_TEXT_MUTED,
+            anchor="w",
+            wraplength=200
+        )
+        self.profile_title_lbl.pack(fill=ctk.X, pady=(0, 6))
+
+        # Mini Canvas Graph für das 1D-Profil
+        self.profile_canvas = tk.Canvas(
+            pr_inner,
+            width=240,
+            height=100,
+            bg="#0F172A",
+            highlightthickness=1,
+            highlightbackground="#334155"
+        )
+        self.profile_canvas.pack(fill=ctk.X, pady=(0, 8))
+
+        self.profile_stats_rows = {}
+        for key, name in [
+            ("len", "Distanz (L):"),
+            ("delta", "Delta-T (ΔT):"),
+            ("min_max", "Min / Max:"),
+            ("mean", "Mittelwert (µ):"),
+            ("grad", "Max. Gradient:")
+        ]:
+            row = ctk.CTkFrame(pr_inner, fg_color="transparent")
+            row.pack(fill=ctk.X, pady=2)
+            ctk.CTkLabel(row, text=name, font=ctk.CTkFont(family=FONT_FAMILY, size=12), text_color=COLOR_TEXT_SECONDARY).pack(side=ctk.LEFT)
+            lbl = ctk.CTkLabel(row, text="--", font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=12, weight="bold"), text_color=COLOR_TEXT_PRIMARY)
+            lbl.pack(side=ctk.RIGHT)
+            self.profile_stats_rows[key] = lbl
+
+        self.copy_profile_btn = ctk.CTkButton(
+            pr_inner,
+            text="📋 Profildaten kopieren (CSV)",
+            command=self.copy_profile_csv,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+            fg_color=COLOR_BG_CARD,
+            hover_color=COLOR_BG_CARD_HOVER,
+            border_width=1,
+            border_color=COLOR_OUTLINE,
+            text_color=COLOR_TEXT_PRIMARY,
+            corner_radius=RADIUS_BUTTON,
+            height=28
+        )
+        self.copy_profile_btn.pack(fill=ctk.X, pady=(8, 0))
+
+        # 4. Quick Tipp / Zoom & Pan Bedienhinweis
         hint_box = ctk.CTkFrame(side_scroll, fg_color="transparent")
         hint_box.pack(fill=ctk.X, pady=(4, 0))
 
@@ -445,16 +510,30 @@ class SingleInspectView(ctk.CTkFrame):
         self.redraw()
 
     def _on_view_mode_changed(self, mode: str) -> None:
-        """Schaltet zwischen Stufen-Ansicht und interaktivem Swipe/Split-View um."""
+        """Schaltet zwischen Stufen-Ansicht, Linienprofil und interaktivem Swipe/Split-View um."""
         if mode == "Swipe-Split":
             self.is_split_view = True
+            self.is_profile_mode = False
             self.stage_frame.pack_forget()
             self.split_frame.pack(side=ctk.LEFT, fill=ctk.Y, padx=(0, 8))
+            self.profile_card.pack_forget()
+            self.roi_card.pack(fill=ctk.X, pady=(0, 14))
             self.reset_roi_btn.configure(state="disabled")
-        else:
+        elif mode == "Linienprofil":
             self.is_split_view = False
+            self.is_profile_mode = True
             self.split_frame.pack_forget()
             self.stage_frame.pack(side=ctk.LEFT, fill=ctk.Y)
+            self.roi_card.pack_forget()
+            self.profile_card.pack(fill=ctk.X, pady=(0, 14))
+            self.reset_roi_btn.configure(state="normal")
+        else:  # "Stufen"
+            self.is_split_view = False
+            self.is_profile_mode = False
+            self.split_frame.pack_forget()
+            self.stage_frame.pack(side=ctk.LEFT, fill=ctk.Y)
+            self.profile_card.pack_forget()
+            self.roi_card.pack(fill=ctk.X, pady=(0, 14))
             self.reset_roi_btn.configure(state="normal")
         self.redraw()
 
@@ -496,6 +575,145 @@ class SingleInspectView(ctk.CTkFrame):
             self.after(1500, lambda: self.copy_roi_btn.configure(text="📋 Messwerte kopieren", fg_color=COLOR_BG_CARD))
         except Exception as e:
             pass
+
+    def _compute_line_profile(self, p1: tuple[int, int], p2: tuple[int, int]) -> None:
+        """Extrahiert das 1D-Temperaturprofil entlang einer Schnittlinie und berechnet Gradienten."""
+        if not self.current_result:
+            return
+
+        x1, y1 = p1
+        x2, y2 = p2
+        dist = float(np.hypot(x2 - x1, y2 - y1))
+        if dist < 2:
+            return
+
+        num_points = max(2, int(round(dist)) + 1)
+        xs = np.linspace(x1, x2, num_points)
+        ys = np.linspace(y1, y2, num_points)
+
+        raw_img = self.current_result["calibrated_original"]
+        h, w = raw_img.shape[:2]
+
+        xs_clip = np.clip(np.round(xs).astype(int), 0, w - 1)
+        ys_clip = np.clip(np.round(ys).astype(int), 0, h - 1)
+
+        px_vals = raw_img[ys_clip, xs_clip]
+
+        t_min = self.current_result.get("t_min_c", 20.0)
+        t_max = self.current_result.get("t_max_c", 40.0)
+        temps = [pixel_to_celsius(float(p), t_min, t_max) for p in px_vals]
+        grads = list(np.abs(np.gradient(temps)))
+
+        self.profile_temps = temps
+        self.profile_grads = grads
+
+        t_min_val = float(np.min(temps))
+        t_max_val = float(np.max(temps))
+        delta_t = t_max_val - t_min_val
+        mean_t = float(np.mean(temps))
+        std_t = float(np.std(temps))
+        max_grad = float(np.max(grads)) if len(grads) > 0 else 0.0
+
+        self.profile_title_lbl.configure(
+            text=f"Linie: ({x1},{y1}) → ({x2},{y2})",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            text_color=COLOR_TEXT_PRIMARY
+        )
+        self.profile_stats_rows["len"].configure(text=f"{dist:.1f} px")
+        self.profile_stats_rows["delta"].configure(
+            text=f"Δ {delta_t:.1f} °C",
+            text_color=COLOR_DANGER if delta_t > 2.2 else COLOR_SUCCESS
+        )
+        self.profile_stats_rows["min_max"].configure(text=f"{t_min_val:.1f} / {t_max_val:.1f} °C")
+        self.profile_stats_rows["mean"].configure(text=f"{mean_t:.1f} ± {std_t:.2f} °C")
+        self.profile_stats_rows["grad"].configure(text=f"{max_grad:.2f} °C/px")
+
+        self._draw_profile_plot(temps, t_min_val, t_max_val, mean_t)
+
+    def _draw_profile_plot(self, temps: list[float], t_min_val: float, t_max_val: float, mean_t: float) -> None:
+        """Zeichnet das 1D-Temperaturprofil auf den Mini-Canvas."""
+        self.profile_canvas.delete("all")
+        if not temps or len(temps) < 2:
+            return
+
+        cw = self.profile_canvas.winfo_width()
+        ch = self.profile_canvas.winfo_height()
+        if cw <= 10:
+            cw = 240
+        if ch <= 10:
+            ch = 100
+
+        pad_left = 32
+        pad_right = 10
+        pad_top = 10
+        pad_bottom = 16
+
+        pw = max(10, cw - pad_left - pad_right)
+        ph = max(10, ch - pad_top - pad_bottom)
+
+        t_range = max(0.5, t_max_val - t_min_val)
+        y_min = t_min_val - 0.1 * t_range
+        y_max = t_max_val + 0.1 * t_range
+        y_range = max(0.5, y_max - y_min)
+
+        def _to_canvas(idx: int, t_val: float) -> tuple[float, float]:
+            cx = pad_left + (idx / (len(temps) - 1)) * pw
+            cy = pad_top + ph - ((t_val - y_min) / y_range) * ph
+            return cx, cy
+
+        # Horizontale Rasterlinien
+        for val, col, tag in [(t_min_val, "#334155", f"{t_min_val:.1f}"), (mean_t, "#475569", f"{mean_t:.1f}"), (t_max_val, "#334155", f"{t_max_val:.1f}")]:
+            _, gy = _to_canvas(0, val)
+            self.profile_canvas.create_line(pad_left, gy, pad_left + pw, gy, fill=col, dash=(2, 2))
+            self.profile_canvas.create_text(pad_left - 4, gy, text=tag, fill="#94A3B8", font=("Helvetica", 7), anchor="e")
+
+        # 1D Temperatur-Kurve zeichnen
+        pts = []
+        for i, t in enumerate(temps):
+            pts.extend(_to_canvas(i, t))
+
+        if len(pts) >= 4:
+            self.profile_canvas.create_line(*pts, fill="#0284C7", width=2, smooth=True)
+
+        # Max Peak Markierung
+        max_idx = int(np.argmax(temps))
+        mx, my = _to_canvas(max_idx, t_max_val)
+        self.profile_canvas.create_oval(mx - 3, my - 3, mx + 3, my + 3, fill="#DC2626", outline="#FFFFFF", width=1)
+
+        # X-Achsen Beschriftung
+        self.profile_canvas.create_text(pad_left, ch - 6, text="A (0 px)", fill="#94A3B8", font=("Helvetica", 7), anchor="w")
+        self.profile_canvas.create_text(pad_left + pw, ch - 6, text=f"B ({len(temps)-1} px)", fill="#94A3B8", font=("Helvetica", 7), anchor="e")
+
+    def copy_profile_csv(self) -> None:
+        """Kopiert das 1D-Linienprofil als CSV-Tabelle in die Zwischenablage."""
+        if not self.profile_temps:
+            return
+
+        lines = ["Dist_px\tTemp_C\tGradient_C_px"]
+        for i, (t, g) in enumerate(zip(self.profile_temps, self.profile_grads)):
+            lines.append(f"{i}\t{t:.2f}\t{g:.3f}")
+        csv_text = "\n".join(lines)
+
+        try:
+            self.clipboard_clear()
+            self.clipboard_append(csv_text)
+            self.copy_profile_btn.configure(text="✓ CSV Kopiert!", fg_color=COLOR_SUCCESS)
+            self.after(1500, lambda: self.copy_profile_btn.configure(text="📋 Profildaten kopieren (CSV)", fg_color=COLOR_BG_CARD))
+        except Exception:
+            pass
+
+    def clear_profile(self) -> None:
+        """Setzt die aktive Proflinie und Messung zurück."""
+        self.profile_line = None
+        self.profile_drag_start = None
+        self.profile_drag_current = None
+        self.profile_temps = []
+        self.profile_grads = []
+        self.profile_canvas.delete("all")
+        self.profile_title_lbl.configure(text="Linie mit Maus ziehen (A → B)", font=ctk.CTkFont(family=FONT_FAMILY, size=12), text_color=COLOR_TEXT_MUTED)
+        for lbl in self.profile_stats_rows.values():
+            lbl.configure(text="--")
+        self.redraw()
 
     def _get_stage_image(self, stage_key: str) -> np.ndarray:
         """Gibt das visualisierte BGR-Bild für die angegebene Pipeline-Stufe zurück."""
@@ -634,15 +852,31 @@ class SingleInspectView(ctk.CTkFrame):
 
         img_to_show = raw.copy()
 
-        # ROI Overlay zeichnen (nur im Stufen-Modus oder wenn ROI aktiv)
+        # ROI / Linienprofil Overlay zeichnen (nur im Stufen- und Linienprofil-Modus)
         if not self.is_split_view:
-            if self.roi_box:
-                x1, y1, x2, y2 = self.roi_box
-                cv2.rectangle(img_to_show, (x1, y1), (x2, y2), (255, 255, 0), 2)
-            elif self.roi_drag_start and self.roi_drag_current:
-                x1, x2 = sorted([self.roi_drag_start[0], self.roi_drag_current[0]])
-                y1, y2 = sorted([self.roi_drag_start[1], self.roi_drag_current[1]])
-                cv2.rectangle(img_to_show, (x1, y1), (x2, y2), (0, 255, 255), 1)
+            if self.is_profile_mode:
+                p1, p2 = None, None
+                if self.profile_line:
+                    p1, p2 = self.profile_line
+                elif self.profile_drag_start and self.profile_drag_current:
+                    p1, p2 = self.profile_drag_start, self.profile_drag_current
+
+                if p1 and p2:
+                    cv2.line(img_to_show, p1, p2, (0, 230, 255), 2, cv2.LINE_AA)
+                    cv2.circle(img_to_show, p1, 5, (0, 255, 0), -1, cv2.LINE_AA)
+                    cv2.circle(img_to_show, p1, 5, (15, 23, 42), 1, cv2.LINE_AA)
+                    cv2.putText(img_to_show, "A", (p1[0] + 6, p1[1] - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2, cv2.LINE_AA)
+                    cv2.circle(img_to_show, p2, 5, (0, 0, 255), -1, cv2.LINE_AA)
+                    cv2.circle(img_to_show, p2, 5, (15, 23, 42), 1, cv2.LINE_AA)
+                    cv2.putText(img_to_show, "B", (p2[0] + 6, p2[1] - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv2.LINE_AA)
+            else:
+                if self.roi_box:
+                    x1, y1, x2, y2 = self.roi_box
+                    cv2.rectangle(img_to_show, (x1, y1), (x2, y2), (255, 255, 0), 2)
+                elif self.roi_drag_start and self.roi_drag_current:
+                    x1, x2 = sorted([self.roi_drag_start[0], self.roi_drag_current[0]])
+                    y1, y2 = sorted([self.roi_drag_start[1], self.roi_drag_current[1]])
+                    cv2.rectangle(img_to_show, (x1, y1), (x2, y2), (0, 255, 255), 1)
 
         rgb = cv2.cvtColor(img_to_show, cv2.COLOR_BGR2RGB)
         full_pil = Image.fromarray(rgb)
@@ -768,6 +1002,12 @@ class SingleInspectView(ctk.CTkFrame):
                 self.redraw()
             return
 
+        if self.is_profile_mode:
+            self.profile_drag_start = coords
+            self.profile_drag_current = coords
+            self.profile_line = None
+            return
+
         self.roi_drag_start = coords
         self.roi_drag_current = coords
         self.roi_box = None
@@ -786,6 +1026,13 @@ class SingleInspectView(ctk.CTkFrame):
                 self.redraw()
             return
 
+        if self.is_profile_mode:
+            if coords and self.profile_drag_start:
+                self.profile_drag_current = coords
+                self._compute_line_profile(self.profile_drag_start, coords)
+                self.redraw()
+            return
+
         if coords and self.roi_drag_start:
             self.roi_drag_current = coords
             self.redraw()
@@ -795,6 +1042,21 @@ class SingleInspectView(ctk.CTkFrame):
             return
 
         coords = self._event_to_img_coords(event)
+        if self.is_profile_mode:
+            if coords and self.profile_drag_start:
+                p1 = self.profile_drag_start
+                p2 = coords
+                dist = np.hypot(p2[0] - p1[0], p2[1] - p1[1])
+                if dist >= 3:
+                    self.profile_line = (p1, p2)
+                    self._compute_line_profile(p1, p2)
+                else:
+                    self.clear_profile()
+                self.profile_drag_start = None
+                self.profile_drag_current = None
+                self.redraw()
+            return
+
         if coords and self.roi_drag_start:
             x1, x2 = sorted([self.roi_drag_start[0], coords[0]])
             y1, y2 = sorted([self.roi_drag_start[1], coords[1]])
@@ -839,6 +1101,13 @@ class SingleInspectView(ctk.CTkFrame):
         self.roi_stats_rows["min"].configure(text=f"{min_c:.1f} °C")
         self.roi_stats_rows["max"].configure(text=f"{max_c:.1f} °C")
         self.roi_stats_rows["area"].configure(text=f"{area_px:,} px")
+
+    def reset_measurement(self) -> None:
+        """Setzt die aktive Messung (ROI oder Linienprofil) zurück."""
+        if self.is_profile_mode:
+            self.clear_profile()
+        else:
+            self.clear_roi()
 
     def clear_roi(self) -> None:
         self.roi_box = None

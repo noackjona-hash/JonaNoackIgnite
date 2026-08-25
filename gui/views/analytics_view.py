@@ -123,6 +123,7 @@ class AnalyticsView(ctk.CTkFrame):
             ("body_px", "Segmentierte Gewebepixel:", "-- px"),
             ("hotspot_px", "Erkannte Hotspot-Pixel:", "-- px"),
             ("hotspot_ratio", "Hyperthermie-Anteil:", "-.-- %"),
+            ("iwgdf_risk", "IWGDF 2023 Risikoklasse:", "Grad 0 (Normal)"),
         ]
 
         for m_key, title, default_v in metrics_list:
@@ -346,6 +347,25 @@ class AnalyticsView(ctk.CTkFrame):
         hs_color = COLOR_DANGER if hotspot_px > 0 else COLOR_SUCCESS
         self.metric_rows["hotspot_px"].configure(text=f"{hotspot_px:,} px", text_color=hs_color)
         self.metric_rows["hotspot_ratio"].configure(text=f"{ratio:.2f} %", text_color=hs_color)
+
+        # IWGDF 2023 / Armstrong Risikoklassifikation
+        asym_res = result.get("asym_results", {})
+        delta_t_asym = asym_res.get("delta_t_c", 0.0) if asym_res else 0.0
+        zonal = result.get("zonal_stats", {})
+        arch_l = zonal.get("left", {}).get("arch_index", 0.23) if isinstance(zonal, dict) else 0.23
+        arch_r = zonal.get("right", {}).get("arch_index", 0.23) if isinstance(zonal, dict) else 0.23
+        max_arch = max(arch_l if isinstance(arch_l, (int, float)) else 0.23, arch_r if isinstance(arch_r, (int, float)) else 0.23)
+
+        import dataset_evaluator
+        risk_info = dataset_evaluator.classify_iwgdf_armstrong_risk(
+            delta_t_c=delta_t_asym,
+            hotspot_area_pct=ratio,
+            arch_index=max_arch
+        )
+        self.metric_rows["iwgdf_risk"].configure(
+            text=f"Grad {risk_info['grade']}",
+            text_color=risk_info["color"]
+        )
 
         # Herde-Karten aufbauen
         for w in self.hotspot_list_frame.winfo_children():

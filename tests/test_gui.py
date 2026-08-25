@@ -211,15 +211,23 @@ def test_batch_summary_pdf_generation(tmp_path):
     assert os.path.getsize(pdf_out) > 500
 
 
-def test_full_gui_lifecycle():
-    """Testet die Initialisierung aller Views, State-Verteilung und Tab-Wechsel."""
+@pytest.fixture(scope="module")
+def app_root():
     import customtkinter as ctk
-    from gui.main_window import IgniteApp
-
     root = ctk.CTk()
     root.withdraw()
+    yield root
+    try:
+        root.destroy()
+    except Exception:
+        pass
 
-    app = IgniteApp(root)
+
+def test_full_gui_lifecycle(app_root):
+    """Testet die Initialisierung aller Views, State-Verteilung und Tab-Wechsel."""
+    from gui.main_window import IgniteApp
+
+    app = IgniteApp(app_root)
     assert len(app.views) == 6
 
     # Test-Daten an alle Views verteilen
@@ -265,18 +273,12 @@ def test_full_gui_lifecycle():
     # Theme wechseln
     app.toggle_appearance_mode()
 
-    root.destroy()
 
-
-def test_single_view_swipe_and_roi():
+def test_single_view_swipe_and_roi(app_root):
     """Testet den Swipe / Split-View Modus und ROI-Berechnungen im SingleInspectView."""
-    import customtkinter as ctk
     from gui.views.single_view import SingleInspectView
 
-    root = ctk.CTk()
-    root.withdraw()
-
-    single_view = SingleInspectView(root, on_load_click=lambda: None)
+    single_view = SingleInspectView(app_root, on_load_click=lambda: None)
 
     dummy_result = {
         "image_path": "test-data/bild (1).jpeg",
@@ -318,19 +320,13 @@ def test_single_view_swipe_and_roi():
     # Messwerte kopieren
     single_view.copy_roi_stats()
 
-    root.destroy()
 
-
-def test_longitudinal_visit_comparison():
+def test_longitudinal_visit_comparison(app_root):
     """Testet die quantitative Berechnung von Baseline- vs. Follow-Up-Untersuchungen."""
     from gui.services.processing_service import ThermalProcessingService
     from gui.views.analytics_view import AnalyticsView
-    import customtkinter as ctk
 
-    root = ctk.CTk()
-    root.withdraw()
-
-    analytics_view = AnalyticsView(root)
+    analytics_view = AnalyticsView(app_root)
 
     # Baseline (z. B. Visit 1 mit akutem Hotspot)
     res_baseline = {
@@ -364,18 +360,12 @@ def test_longitudinal_visit_comparison():
     assert "°C" in analytics_view.followup_stats_rows["delta_t"].cget("text")
     assert "%" in analytics_view.followup_stats_rows["area_change"].cget("text")
 
-    root.destroy()
 
-
-def test_podology_view_arch_index_and_zonal_warnings():
+def test_podology_view_arch_index_and_zonal_warnings(app_root):
     """Testet die Darstellung von Cavanagh & Rodgers Arch Index und Zonen-Warnungen in PodologyView."""
     from gui.views.podology_view import PodologyView
-    import customtkinter as ctk
 
-    root = ctk.CTk()
-    root.withdraw()
-
-    podology_view = PodologyView(root)
+    podology_view = PodologyView(app_root)
 
     dummy_result = {
         "t_min_c": 20.0,
@@ -406,5 +396,51 @@ def test_podology_view_arch_index_and_zonal_warnings():
     # Vorfuß-Differenz beträgt 3.0°C (> 2.2°C) -> sollte Warnsymbol enthalten
     assert "⚠️" in podology_view.zone_rows["fore"][2].cget("text")
 
-    root.destroy()
+
+def test_single_view_line_profile_transect(app_root):
+    """Testet das 1D-Schnittlinien-Temperaturprofil (Transect) in SingleInspectView."""
+    from gui.views.single_view import SingleInspectView
+
+    single_view = SingleInspectView(app_root, on_load_click=lambda: None)
+
+    # Erzeuge ein Test-Wärmebild mit einer Temperatur-Stufe (z. B. 25°C links, 35°C rechts)
+    raw = np.full((100, 100), 100, dtype=np.uint8)
+    raw[:, 50:] = 200
+
+    dummy_result = {
+        "image_path": "test-data/bild (1).jpeg",
+        "calibrated_original": raw,
+        "body_mask": np.full((100, 100), 255, dtype=np.uint8),
+        "heat_diff": np.zeros((100, 100), dtype=np.uint8),
+        "hotspot_mask": np.zeros((100, 100), dtype=np.uint8),
+        "overlay_bgr": np.full((100, 100, 3), 200, dtype=np.uint8),
+        "t_min_c": 20.0,
+        "t_max_c": 40.0,
+    }
+
+    single_view.show_results(dummy_result)
+
+    # Umschalten auf Linienprofil-Modus
+    single_view._on_view_mode_changed("Linienprofil")
+    assert single_view.is_profile_mode is True
+
+    # 1D-Linie von (10, 50) nach (90, 50) berechnen
+    single_view._compute_line_profile((10, 50), (90, 50))
+
+    assert len(single_view.profile_temps) == 81  # 81 Stützpunkte entlang 80 px
+    assert single_view.profile_temps[0] < single_view.profile_temps[-1]  # Erwärmung entlang der Linie
+    assert float(np.max(single_view.profile_grads)) > 0.0  # Thermischer Gradient detektiert
+
+    # Stats-Labels verifizieren
+    assert single_view.profile_stats_rows["len"].cget("text") == "80.0 px"
+    assert "°C" in single_view.profile_stats_rows["delta"].cget("text")
+
+    # CSV-Kopieren testen
+    single_view.copy_profile_csv()
+
+    # Reset
+    single_view.reset_measurement()
+    assert len(single_view.profile_temps) == 0
+
+
 
