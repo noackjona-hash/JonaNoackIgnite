@@ -6,7 +6,7 @@
 # ───────────────────────────────────────────────────────────────────────────────
 numpy>=1.24.0,<2.0          # Numerische Computations (FastMath, SIMD-Optimierungen)
 opencv-python>=4.8.0        # Bild I/O, Morphologie, Connected Components
-customtkinter>=5.2.0        # Modernes Dark-Mode GUI (CustomTkinter für schönere UI)
+customtkinter>=6.0.0        # Modernes Dark-Mode GUI (CustomTkinter für schönere UI)
 Pillow>=10.0.0              # Bild-Rendering & PNG-Export
 
 # DOKUMENTATION & TESTING (optional, aber empfohlen für Entwicklung)
