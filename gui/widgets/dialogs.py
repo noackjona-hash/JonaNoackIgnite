@@ -528,3 +528,239 @@ class Thermal3DViewerModal(ctk.CTkToplevel):
         )
         if path and hasattr(self, 'fig'):
             self.fig.savefig(path, dpi=200, bbox_inches='tight')
+
+
+class DynamicPerfusionModal(ctk.CTkToplevel):
+    """Interaktiver Kälteprovokations- und Wiedererwärmungs-Analyzer (Dynamic Thermal Recovery)."""
+
+    def __init__(
+        self,
+        master,
+        calibrated_image: np.ndarray,
+        body_mask: Optional[np.ndarray] = None,
+        t_min_c: float = 20.0,
+        t_max_c: float = 40.0,
+        palette_name: str = "turbo",
+        **kwargs
+    ) -> None:
+        super().__init__(master, **kwargs)
+        self.title("IGNITE – Dynamische Perfusions- & Wiedererwärmungsanalyse (Cold Stress Test)")
+        self.geometry("960x720")
+        self.minsize(860, 620)
+        self.configure(fg_color=COLOR_BG_APP)
+
+        self.calibrated_image = calibrated_image
+        self.body_mask = body_mask if body_mask is not None else np.ones_like(calibrated_image) * 255
+        self.t_min_c = float(t_min_c)
+        self.t_max_c = float(t_max_c)
+        self.palette_name = palette_name.lower()
+
+        # Sequenz simulieren / generieren
+        from gui.services.dynamic_perfusion_service import DynamicPerfusionService
+        self.frames, self.time_points, self.mean_temps = DynamicPerfusionService.simulate_cold_stress_sequence(
+            baseline_img=self.calibrated_image,
+            body_mask=self.body_mask,
+            num_frames=12,
+            total_time_s=180.0
+        )
+
+        # Modellfittung
+        self.fit_metrics = DynamicPerfusionService.fit_rewarming_curve(
+            time_seconds=self.time_points,
+            temperatures=np.array(self.mean_temps)
+        )
+
+        self.current_frame_idx = 0
+        self._canvas_tk = None
+        self._build_ui()
+        self._update_view()
+
+    def _build_ui(self) -> None:
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_columnconfigure(1, weight=0, minsize=290)
+        self.grid_rowconfigure(0, weight=1)
+
+        # Linker Bereich: Live-Plot der Wiedererwärmungskurve & Bildvorschau
+        left_card = make_material_card(self, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD)
+        left_card.grid(row=0, column=0, padx=(14, 6), pady=14, sticky="nsew")
+
+        self.plot_host = ctk.CTkFrame(left_card, fg_color="transparent")
+        self.plot_host.pack(fill=ctk.BOTH, expand=True, padx=10, pady=10)
+
+        # Rechter Bereich: Steuerung & Kinetik-Parameter
+        right_card = make_material_card(self, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD)
+        right_card.grid(row=0, column=1, padx=(6, 14), pady=14, sticky="nsew")
+
+        r_inner = ctk.CTkFrame(right_card, fg_color="transparent")
+        r_inner.pack(fill=ctk.BOTH, expand=True, padx=14, pady=14)
+
+        ctk.CTkLabel(
+            r_inner,
+            text="WIEDERERWÄRMUNGS-KINETIK",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
+            text_color=COLOR_TEXT_PRIMARY,
+            anchor="w"
+        ).pack(fill=ctk.X, pady=(0, 10))
+
+        # Zeit-Scrubber Slider
+        ctk.CTkLabel(r_inner, text="Zeitpunkt t (s) nach Kältereiz:", font=ctk.CTkFont(family=FONT_FAMILY, size=11), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w")
+        self.time_lbl = ctk.CTkLabel(r_inner, text=f"t = {self.time_points[0]:.0f} s", font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=12, weight="bold"), text_color=COLOR_PRIMARY)
+        self.time_lbl.pack(anchor="e")
+
+        self.time_slider = ctk.CTkSlider(
+            r_inner,
+            from_=0,
+            to=len(self.time_points) - 1,
+            number_of_steps=len(self.time_points) - 1,
+            command=self._on_slider_moved,
+            height=16,
+            progress_color=COLOR_PRIMARY,
+            button_color=COLOR_PRIMARY
+        )
+        self.time_slider.set(0)
+        self.time_slider.pack(fill=ctk.X, pady=(0, 14))
+
+        # Diagnose-Ergebnis Badge
+        risk_box = make_material_card(r_inner, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD_VARIANT)
+        risk_box.pack(fill=ctk.X, pady=(0, 14))
+
+        rb_inner = ctk.CTkFrame(risk_box, fg_color="transparent")
+        rb_inner.pack(fill=ctk.X, padx=12, pady=12)
+
+        ctk.CTkLabel(
+            rb_inner,
+            text="KLINISCHE BEWERTUNG",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=10, weight="bold"),
+            text_color=COLOR_TEXT_MUTED
+        ).pack(anchor="w")
+
+        ctk.CTkLabel(
+            rb_inner,
+            text=self.fit_metrics["classification"],
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            text_color=self.fit_metrics["color_hex"],
+            wraplength=240,
+            justify="left"
+        ).pack(anchor="w", pady=(4, 0))
+
+        # Kinetik Kennzahlen
+        stats_card = make_material_card(r_inner, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD_VARIANT)
+        stats_card.pack(fill=ctk.X, pady=(0, 14))
+
+        sc_inner = ctk.CTkFrame(stats_card, fg_color="transparent")
+        sc_inner.pack(fill=ctk.X, padx=10, pady=10)
+
+        for lbl_t, val_t in [
+            ("Erwärmungsrate (k):", f"{self.fit_metrics['k_rate_min']:.3f} min⁻¹"),
+            ("Halbwertszeit (t½):", f"{self.fit_metrics['half_time_s']:.1f} s"),
+            ("Start-Temp (T₀):", f"{self.fit_metrics['t0_c']:.1f} °C"),
+            ("Ziel-Temp (T_inf):", f"{self.fit_metrics['t_inf_c']:.1f} °C"),
+            ("Modell-Güte (R²):", f"{self.fit_metrics['r_squared']:.4f}")
+        ]:
+            r = ctk.CTkFrame(sc_inner, fg_color="transparent")
+            r.pack(fill=ctk.X, pady=1.5)
+            ctk.CTkLabel(r, text=lbl_t, font=ctk.CTkFont(family=FONT_FAMILY, size=11), text_color=COLOR_TEXT_SECONDARY).pack(side=ctk.LEFT)
+            ctk.CTkLabel(r, text=val_t, font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=11, weight="bold"), text_color=COLOR_TEXT_PRIMARY).pack(side=ctk.RIGHT)
+
+        # Snapshot & Schließen
+        ctk.CTkButton(
+            r_inner,
+            text="📸 Bericht exportieren",
+            command=self._save_plot,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            fg_color=COLOR_PRIMARY,
+            hover_color=COLOR_PRIMARY_HOVER,
+            corner_radius=RADIUS_BUTTON,
+            height=32
+        ).pack(fill=ctk.X, pady=(0, 6))
+
+        ctk.CTkButton(
+            r_inner,
+            text="Schließen",
+            command=self.destroy,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+            fg_color=COLOR_BG_CARD,
+            hover_color=COLOR_BG_CARD_HOVER,
+            border_width=1,
+            border_color=COLOR_OUTLINE,
+            text_color=COLOR_TEXT_PRIMARY,
+            corner_radius=RADIUS_BUTTON,
+            height=30
+        ).pack(fill=ctk.X)
+
+    def _on_slider_moved(self, val: float) -> None:
+        idx = int(round(val))
+        self.current_frame_idx = max(0, min(idx, len(self.time_points) - 1))
+        self.time_lbl.configure(text=f"t = {self.time_points[self.current_frame_idx]:.0f} s")
+        self._update_view()
+
+    def _update_view(self) -> None:
+        import matplotlib.pyplot as plt
+        from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
+        is_dark = ctk.get_appearance_mode() == "Dark"
+        bg_color = "#131923" if is_dark else "#FFFFFF"
+        text_color = "#F8FAFC" if is_dark else "#0F172A"
+        grid_color = "#334155" if is_dark else "#E2E8F0"
+
+        fig, (ax_img, ax_curve) = plt.subplots(1, 2, figsize=(8.0, 4.8), dpi=100, gridspec_kw={'width_ratios': [1, 1.3]})
+        fig.patch.set_facecolor(bg_color)
+
+        # 1. Thermogramm zum ausgewählten Zeitpunkt
+        cur_frame = self.frames[self.current_frame_idx]
+        cur_t_c = 20.0 + (cur_frame.astype(np.float32) / 255.0) * 20.0
+
+        ax_img.set_facecolor(bg_color)
+        im = ax_img.imshow(cur_t_c, cmap=self.palette_name if self.palette_name in ['turbo', 'inferno', 'jet'] else 'turbo', vmin=20.0, vmax=38.0)
+        ax_img.set_title(f"Thermogramm (t = {self.time_points[self.current_frame_idx]:.0f} s)", color=text_color, fontsize=10, pad=6)
+        ax_img.axis('off')
+
+        # 2. Wiedererwärmungskurve & Fit
+        ax_curve.set_facecolor(bg_color)
+        t_meas = self.fit_metrics["time_seconds"]
+        y_meas = self.fit_metrics["measured_temps"]
+        y_fit = self.fit_metrics["fitted_temps"]
+
+        # Messpunkte
+        ax_curve.scatter(t_meas, y_meas, color="#38BDF8", s=32, zorder=3, label="Gemessen")
+        # Aktueller Punkt markieren
+        ax_curve.scatter([self.time_points[self.current_frame_idx]], [self.mean_temps[self.current_frame_idx]], color="#EF4444", s=90, zorder=4, edgecolor="#FFFFFF", linewidth=1.5)
+
+        # Exponentielle Modellkurve
+        t_dense = np.linspace(0, max(t_meas), 100)
+        k = self.fit_metrics["k_rate_s"]
+        t0 = self.fit_metrics["t0_c"]
+        t_inf = self.fit_metrics["t_inf_c"]
+        y_dense = t_inf - (t_inf - t0) * np.exp(-k * t_dense)
+        ax_curve.plot(t_dense, y_dense, color="#0284C7", linewidth=2.0, label=f"Pennes-Modell (R²={self.fit_metrics['r_squared']:.3f})")
+
+        ax_curve.set_xlabel("Zeit nach Kältereiz t (s)", color=text_color, fontsize=9)
+        ax_curve.set_ylabel("Mitteltemperatur (°C)", color=text_color, fontsize=9)
+        ax_curve.set_title("Wiedererwärmungskinetik T(t)", color=text_color, fontsize=10, pad=6)
+        ax_curve.grid(True, linestyle="--", alpha=0.5, color=grid_color)
+        ax_curve.tick_params(colors=text_color, labelsize=8)
+        for spine in ax_curve.spines.values():
+            spine.set_color(grid_color)
+
+        ax_curve.legend(loc="lower right", facecolor=bg_color, edgecolor=grid_color, labelcolor=text_color, fontsize=8)
+
+        fig.tight_layout()
+
+        if self._canvas_tk:
+            self._canvas_tk.get_tk_widget().destroy()
+
+        self._canvas_tk = FigureCanvasTkAgg(fig, master=self.plot_host)
+        self._canvas_tk.draw()
+        self._canvas_tk.get_tk_widget().pack(fill="both", expand=True)
+        self.fig = fig
+
+    def _save_plot(self) -> None:
+        from tkinter import filedialog
+        path = filedialog.asksaveasfilename(
+            defaultextension=".png",
+            filetypes=[("PNG-Grafik", "*.png"), ("PDF-Dokument", "*.pdf")],
+            title="Perfusionsanalyse speichern"
+        )
+        if path and hasattr(self, 'fig'):
+            self.fig.savefig(path, dpi=200, bbox_inches='tight')
+

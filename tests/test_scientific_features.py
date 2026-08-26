@@ -168,3 +168,62 @@ def test_thermal_3d_viewer_modal(app_root, monkeypatch):
 
     modal.destroy()
 
+
+def test_dynamic_perfusion_service_fitting():
+    """Testet das biologische Pennes/Newton-Wiedererwärmungsmodell und die Risikoklassifikation."""
+    from gui.services.dynamic_perfusion_service import DynamicPerfusionService
+
+    # 1. Synthetische Messreihe (z. B. 22°C nach Kältereiz, steigt exponentiell auf 32°C)
+    t = np.array([0, 15, 30, 60, 90, 120, 180], dtype=np.float64)
+    # T(t) = 32 - (32 - 22) * exp(-0.02 * t)
+    temps = 32.0 - 10.0 * np.exp(-0.02 * t)
+
+    fit_res = DynamicPerfusionService.fit_rewarming_curve(t, temps, t_asymptote=32.2)
+
+    assert fit_res["t0_c"] == 22.0
+    assert fit_res["t_inf_c"] >= 32.0
+    assert fit_res["k_rate_s"] > 0.01
+    assert fit_res["r_squared"] > 0.95
+    assert fit_res["risk_level"] in ["Normal", "Mäßig", "Hoch"]
+    assert "classification" in fit_res
+
+    # 2. Sequenz-Simulator testen
+    base_img = np.full((50, 50), 150, dtype=np.uint8)
+    frames, times, mean_c = DynamicPerfusionService.simulate_cold_stress_sequence(
+        baseline_img=base_img,
+        num_frames=8,
+        total_time_s=120.0
+    )
+    assert frames.shape == (8, 50, 50)
+    assert len(times) == 8
+    assert len(mean_c) == 8
+    # Temperatur muss im Zeitverlauf ansteigen
+    assert mean_c[-1] > mean_c[0]
+
+
+def test_dynamic_perfusion_modal_interaction(app_root):
+    """Testet den interaktiven DynamicPerfusionModal mit Zeitschieberegler."""
+    from gui.widgets.dialogs import DynamicPerfusionModal
+
+    test_img = np.full((50, 50), 140, dtype=np.uint8)
+    body_mask = np.ones((50, 50), dtype=np.uint8) * 255
+
+    modal = DynamicPerfusionModal(
+        master=app_root,
+        calibrated_image=test_img,
+        body_mask=body_mask,
+        t_min_c=20.0,
+        t_max_c=40.0,
+        palette_name="turbo"
+    )
+
+    assert hasattr(modal, "fit_metrics")
+    assert modal.fit_metrics["r_squared"] >= 0.0
+
+    # Schieberegler bewegen
+    modal._on_slider_moved(3)
+    assert modal.current_frame_idx == 3
+
+    modal.destroy()
+
+

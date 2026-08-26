@@ -227,16 +227,21 @@ def extract_body_mask_multi_otsu(
     min_val, max_val, _, _ = cv2.minMaxLoc(img)
     dynamic_range = max_val - min_val
 
+    # WICHTIG: Diese Konstanten muessen exakt mit dem Rust-Kern (src/lib.rs,
+    # extract_body_mask) uebereinstimmen, sonst divergieren die Backends.
+    # Rust rechnet mit u8-Integerdivision (otsu_thresh / 2), daher hier // 2.
     if dynamic_range < 30:
-        threshold = max(otsu_min, min(otsu_max, min_val + 0.35 * dynamic_range))
+        threshold = max(otsu_min, min(otsu_max, min_val + 0.3 * dynamic_range))
     else:
         otsu_thresh, _ = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        threshold = max(otsu_min, min(otsu_max, otsu_thresh * 0.65))
+        threshold = max(otsu_min, min(otsu_max, int(otsu_thresh) // 2))
 
     _, raw_mask = cv2.threshold(img, int(threshold), 255, cv2.THRESH_BINARY)
 
-    # Morphologisches Closing zum Schließen kleiner Poren
-    close_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+    # Morphologisches Closing zum Schließen kleiner Poren.
+    # Rechteckiges Element, um dem Rust-Kern zu entsprechen: dessen separable
+    # Lemire-Morphologie kann kein elliptisches Strukturelement abbilden.
+    close_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
     cleaned_mask = cv2.morphologyEx(raw_mask, cv2.MORPH_CLOSE, close_kernel)
 
     # Distanztransformation zur Elimination von Kantenübergangs-Artefakten
@@ -803,7 +808,10 @@ def _filter_geometric_noise(
         binary_raw.shape[1] * _config.MIN_DIST_FROM_BORDER_FACTOR
     )
 
-    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(binary_raw)
+    # 4-Konnektivitaet, um exakt dem Rust-Kern (connected_components in src/lib.rs)
+    # zu entsprechen. OpenCV verwendet sonst standardmaessig 8-Konnektivitaet,
+    # was zu abweichenden Komponentenzerlegungen und damit zu Backend-Divergenz fuehrt.
+    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(binary_raw, connectivity=4)
     final_mask = np.zeros_like(binary_raw)
 
     border_margin = _config.BORDER_MARGIN_PX
@@ -926,17 +934,33 @@ def _python_fallback_pipeline(
     otsu_min: int = _config.DEFAULT_OTSU_MIN,
     otsu_max: int = _config.DEFAULT_OTSU_MAX,
     dist_erosion_factor: float = _config.DEFAULT_DIST_EROSION_FACTOR,
-    use_mad: bool = _config.DEFAULT_USE_MAD
+    use_mad: bool = _config.DEFAULT_USE_MAD,
+    multiscale: bool = False,
+    pre_blur: bool = False,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Python-Pipeline mit Multi-Scale Top-Hat und robuster Statistik."""
+    """Python-Fallback der Hotspot-Pipeline.
+
+    Diese Funktion ist die Referenz-Reimplementierung des Rust-Kerns und muss
+    dessen Verhalten so genau wie moeglich nachbilden. Deshalb sind
+    ``multiscale`` und ``pre_blur`` standardmaessig deaktiviert: der Rust-Kern
+    rechnet einskalig und ohne Vorglaettung (siehe process_thermal_pipeline in
+    src/lib.rs). Werden sie aktiviert, weicht das Ergebnis bewusst vom Rust-Kern
+    ab und ist nicht mehr paritaetsfaehig.
+
+    Hinweis zur verbleibenden Restabweichung: Der Rust-Kern nutzt eine separable
+    Lemire-Morphologie mit *rechteckigem* Strukturelement (O(K) statt O(K^2)),
+    OpenCV hier ebenfalls MORPH_RECT. Die Distanztransformation verwendet
+    dagegen unterschiedliche Approximationen (Chamfer 3/4 in Rust,
+    cv2.DIST_L2/3x3 hier), weshalb exakte Bit-Paritaet nicht erreichbar ist.
+    """
     warnings.warn(
         "[image_processing] Python-Fallback aktiv! Performance beeinträchtigt.",
         RuntimeWarning,
         stacklevel=3,
     )
 
-    # 0. Pre-filter 3x3 box blur
-    img_blurred = cv2.blur(img, (3, 3))
+    # 0. Vorglaettung nur auf ausdruecklichen Wunsch (Rust-Kern glaettet nicht)
+    img_blurred = cv2.blur(img, (3, 3)) if pre_blur else img
 
     # 1. Body mask via Multi-Otsu
     mask = extract_body_mask_multi_otsu(img_blurred, otsu_min, otsu_max, dist_erosion_factor)
@@ -944,12 +968,20 @@ def _python_fallback_pipeline(
     if total_body_area == 0:
         raise ValueError("Body-Mask ist leer – kein Körper im Bild erkannt.")
 
-    # 2. Multi-Scale Top-Hat
-    diff_img = compute_multiscale_tophat(
-        img_blurred,
-        factors=(tophat_factor * 0.5, tophat_factor, tophat_factor * 2.0),
-        mask=mask
-    )
+    # 2. Top-Hat – einskalig (Rust-aequivalent) oder multiskalig (abweichend)
+    if multiscale:
+        diff_img = compute_multiscale_tophat(
+            img_blurred,
+            factors=(tophat_factor * 0.5, tophat_factor, tophat_factor * 2.0),
+            mask=mask
+        )
+    else:
+        dim = min(img_blurred.shape[0], img_blurred.shape[1])
+        k_size = compute_odd_kernel(dim, tophat_factor)
+        kernel_se = cv2.getStructuringElement(cv2.MORPH_RECT, (k_size, k_size))
+        opened = cv2.morphologyEx(img_blurred, cv2.MORPH_OPEN, kernel_se)
+        tophat = cv2.subtract(img_blurred, opened)
+        diff_img = cv2.bitwise_and(tophat, tophat, mask=mask)
 
     # 3. Statistik-Thresholding
     body_pixels = diff_img[mask > 0]

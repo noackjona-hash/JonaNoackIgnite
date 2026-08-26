@@ -150,11 +150,12 @@ def compute_surface_distances(pred_mask: np.ndarray, gt_mask: np.ndarray) -> tup
     # Wenn beide Masken leer sind -> perfekte anatomische Übereinstimmung (z. B. Normalbefund)
     if np.sum(pred_bin) == 0 and np.sum(gt_bin) == 0:
         return 0.0, 0.0
-    # Wenn eine Maske leer ist und die andere nicht -> maximale Diskrepanz (Bilddiagonale)
+    # Wenn genau eine Maske leer ist, sind Oberflaechendistanzen mathematisch undefiniert.
+    # Frueher wurde hier die Bilddiagonale zurueckgegeben; das ist ein willkuerlicher
+    # Straf-Wert, der Mittelwerte ueber einen Datensatz massiv verzerrt. Wir melden
+    # stattdessen NaN und berichten die Zahl der auswertbaren Faelle separat.
     if np.sum(pred_bin) == 0 or np.sum(gt_bin) == 0:
-        h, w = pred_bin.shape[:2]
-        diag = float(np.hypot(h, w))
-        return round(diag, 2), round(diag, 2)
+        return float("nan"), float("nan")
 
     # Konturen extrahieren
     pred_contours, _ = cv2.findContours(pred_bin, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
@@ -206,12 +207,18 @@ def evaluate_metrics(pred_mask: np.ndarray, gt_mask: np.ndarray, body_mask: np.n
     fn = int(np.sum(~pred_bin & gt_bin))
     tn = int(np.sum(~pred_bin & ~gt_bin))
 
-    sensitivity = tp / (tp + fn) if (tp + fn) > 0 else 1.0
-    specificity = tn / (tn + fp) if (tn + fp) > 0 else 1.0
-    precision = tp / (tp + fp) if (tp + fp) > 0 else 1.0
+    # Undefinierte Metriken werden bewusst als NaN gemeldet statt als 1.0.
+    # Ein stiller 1.0-Fallback (z. B. Sensitivitaet bei voellig leerer Ground Truth)
+    # taeuscht perfekte Erkennung vor und blaeht Datensatz-Mittelwerte auf.
+    NAN = float("nan")
+    sensitivity = tp / (tp + fn) if (tp + fn) > 0 else NAN
+    specificity = tn / (tn + fp) if (tn + fp) > 0 else NAN
+    precision = tp / (tp + fp) if (tp + fp) > 0 else NAN
     recall = sensitivity
-    dice = (2.0 * tp) / (2.0 * tp + fp + fn) if (2.0 * tp + fp + fn) > 0 else (1.0 if (fp + fn) == 0 else 0.0)
-    iou = tp / (tp + fp + fn) if (tp + fp + fn) > 0 else (1.0 if (fp + fn) == 0 else 0.0)
+    # Dice/IoU sind nur dann sinnvoll 1.0, wenn beide Masken leer sind (echter Normalbefund).
+    both_empty = (tp + fp + fn) == 0
+    dice = (2.0 * tp) / (2.0 * tp + fp + fn) if not both_empty else 1.0
+    iou = tp / (tp + fp + fn) if not both_empty else 1.0
 
     # 1. Matthews Correlation Coefficient (MCC) – Goldstandard bei unausgeglichenen medizinischen Masken
     denom_mcc = np.sqrt(float(tp + fp) * float(tp + fn) * float(tn + fp) * float(tn + fn))
@@ -235,9 +242,12 @@ def evaluate_metrics(pred_mask: np.ndarray, gt_mask: np.ndarray, body_mask: np.n
     # 4. Diagnostic Odds Ratio (DOR) mit Haldane-Anscombe-Glättung
     dor = ((tp + 0.5) * (tn + 0.5)) / ((fp + 0.5) * (fn + 0.5))
 
-    # 5. Positive & Negative Likelihood Ratios
-    lr_plus = sensitivity / max(1e-5, (1.0 - specificity)) if specificity < 1.0 else 999.0
-    lr_minus = (1.0 - sensitivity) / max(1e-5, specificity) if specificity > 0.0 else 0.0
+    # 5. Positive & Negative Likelihood Ratios (NaN-sicher)
+    if np.isnan(sensitivity) or np.isnan(specificity):
+        lr_plus, lr_minus = NAN, NAN
+    else:
+        lr_plus = sensitivity / max(1e-5, (1.0 - specificity)) if specificity < 1.0 else float("inf")
+        lr_minus = (1.0 - sensitivity) / max(1e-5, specificity) if specificity > 0.0 else NAN
 
     # 6. Räumliche Randdistanzen: HD95 & ASSD
     hd95, assd = compute_surface_distances(pred_bin, gt_bin)
@@ -574,48 +584,60 @@ def evaluate_real_dataset_with_gt(
             "has_ground_truth": False,
         }
 
-        # Ground-Truth laden: Name-Stem suchen (ohne Extension)
+        # Ground-Truth laden: Name-Stem suchen (ohne Extension).
+        # Wichtig: Eine Datei zaehlt nur dann als gueltige Annotation, wenn sie
+        # tatsaechlich Vordergrundpixel enthaelt. Leere Masken entstehen, wenn im
+        # Annotationswerkzeug ein Bild ohne Zeichnung weitergeblaettert wurde; sie
+        # wuerden sonst als "alles negativ" in die Statistik eingehen.
         stem = os.path.splitext(img_name)[0]
         gt_candidates = [
             os.path.join(gt_dir, f"{stem}_mask.png"),
             os.path.join(gt_dir, f"{stem}.png"),
         ]
-        gt_path = next((p for p in gt_candidates if os.path.exists(p)), None)
+        gt_path, gt_raw = None, None
+        for cand in gt_candidates:
+            if not os.path.exists(cand):
+                continue
+            candidate_raw = cv2.imread(cand, cv2.IMREAD_GRAYSCALE)
+            if candidate_raw is None:
+                continue
+            if int(np.count_nonzero(candidate_raw > 127)) == 0:
+                print(f"[  ] {img_name:22s} | GT-Datei leer, wird ignoriert: {os.path.basename(cand)}")
+                continue
+            gt_path, gt_raw = cand, candidate_raw
+            break
 
-        if gt_path is not None:
-            gt_raw = cv2.imread(gt_path, cv2.IMREAD_GRAYSCALE)
-            if gt_raw is not None:
-                # GT-Maske muss ggf. auf Bildgröße reskaliert werden
-                if gt_raw.shape != img.shape:
-                    gt_raw = cv2.resize(gt_raw, (img.shape[1], img.shape[0]),
-                                        interpolation=cv2.INTER_NEAREST)
-                gt_bin = (gt_raw > 127).astype(np.uint8) * 255
+        if gt_raw is not None:
+            # GT-Maske muss ggf. auf Bildgröße reskaliert werden
+            if gt_raw.shape != img.shape:
+                gt_raw = cv2.resize(gt_raw, (img.shape[1], img.shape[0]),
+                                    interpolation=cv2.INTER_NEAREST)
+            gt_bin = (gt_raw > 127).astype(np.uint8) * 255
 
-                # IGNITE-Metriken
-                m_ignite = evaluate_metrics(hotspot_mask, gt_bin, body_mask)
+            # IGNITE-Metriken
+            m_ignite = evaluate_metrics(hotspot_mask, gt_bin, body_mask)
 
-                # Otsu-Baseline-Metriken
-                baseline_mask = _baseline_otsu_predict(img)
-                m_baseline = evaluate_metrics(baseline_mask, gt_bin, body_mask)
+            # Otsu-Baseline-Metriken
+            baseline_mask = _baseline_otsu_predict(img)
+            m_baseline = evaluate_metrics(baseline_mask, gt_bin, body_mask)
 
-                entry["has_ground_truth"] = True
-                entry["ignite_metrics"] = m_ignite
-                entry["baseline_otsu_metrics"] = m_baseline
-                entry["dice_improvement_over_baseline"] = round(
-                    m_ignite["dice"] - m_baseline["dice"], 4
-                )
+            entry["has_ground_truth"] = True
+            entry["ground_truth_file"] = os.path.basename(gt_path)
+            entry["ignite_metrics"] = m_ignite
+            entry["baseline_otsu_metrics"] = m_baseline
+            entry["dice_improvement_over_baseline"] = round(
+                m_ignite["dice"] - m_baseline["dice"], 4
+            )
 
-                ignite_dice_sum += m_ignite["dice"]
-                baseline_dice_sum += m_baseline["dice"]
-                gt_count += 1
+            ignite_dice_sum += m_ignite["dice"]
+            baseline_dice_sum += m_baseline["dice"]
+            gt_count += 1
 
-                print(
-                    f"[GT] {img_name:22s} | IGNITE Dice={m_ignite['dice']:.3f} "
-                    f"Sens={m_ignite['sensitivity']:.3f} Spec={m_ignite['specificity']:.3f} | "
-                    f"Otsu Dice={m_baseline['dice']:.3f}"
-                )
-            else:
-                print(f"[  ] {img_name:22s} | GT-Maske nicht lesbar: {gt_path}")
+            print(
+                f"[GT] {img_name:22s} | IGNITE Dice={m_ignite['dice']:.3f} "
+                f"Sens={m_ignite['sensitivity']:.3f} Spec={m_ignite['specificity']:.3f} | "
+                f"Otsu Dice={m_baseline['dice']:.3f}"
+            )
         else:
             print(
                 f"[  ] {img_name:22s} | Keine GT-Maske – Coverage={coverage:.2f}% "

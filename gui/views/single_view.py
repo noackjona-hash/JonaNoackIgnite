@@ -222,8 +222,24 @@ class SingleInspectView(ctk.CTkFrame):
 
         self.threed_btn = ctk.CTkButton(
             top_bar,
-            text="🏔️ 3D-Relief",
+            text="🏔️ 3D",
             command=self.open_3d_viewer,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            fg_color=COLOR_BG_CARD_VARIANT,
+            hover_color=COLOR_BG_CARD_HOVER,
+            text_color=COLOR_TEXT_PRIMARY,
+            border_width=1,
+            border_color=COLOR_OUTLINE,
+            corner_radius=RADIUS_BUTTON,
+            height=30,
+            width=65
+        )
+        self.threed_btn.pack(side=ctk.RIGHT, padx=(0, 6))
+
+        self.perfusion_btn = ctk.CTkButton(
+            top_bar,
+            text="⏱️ Perfusion",
+            command=self.open_perfusion_viewer,
             font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
             fg_color=COLOR_BG_CARD_VARIANT,
             hover_color=COLOR_BG_CARD_HOVER,
@@ -234,7 +250,7 @@ class SingleInspectView(ctk.CTkFrame):
             height=30,
             width=95
         )
-        self.threed_btn.pack(side=ctk.RIGHT, padx=(0, 6))
+        self.perfusion_btn.pack(side=ctk.RIGHT, padx=(0, 6))
 
         # Reset Button (ROI / Linienprofil)
         self.reset_roi_btn = ctk.CTkButton(
@@ -716,6 +732,25 @@ class SingleInspectView(ctk.CTkFrame):
         t_max = float(self.current_result.get("t_max_c", 40.0))
 
         Thermal3DViewerModal(
+            self,
+            calibrated_image=raw_img,
+            body_mask=body_mask,
+            t_min_c=t_min,
+            t_max_c=t_max,
+            palette_name=self.palette_name
+        )
+
+    def open_perfusion_viewer(self) -> None:
+        """Öffnet das interaktive Kälteprovokations- und dynamische Wiedererwärmungs-Fenster."""
+        if not self.current_result:
+            return
+        from gui.widgets.dialogs import DynamicPerfusionModal
+        raw_img = self.current_result["calibrated_original"]
+        body_mask = self.current_result.get("body_mask")
+        t_min = float(self.current_result.get("t_min_c", 20.0))
+        t_max = float(self.current_result.get("t_max_c", 40.0))
+
+        DynamicPerfusionModal(
             self,
             calibrated_image=raw_img,
             body_mask=body_mask,

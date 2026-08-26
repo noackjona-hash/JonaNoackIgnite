@@ -14,9 +14,9 @@ Medical thermography regularly contends with artifacts including high-frequency 
 | :--- | :---: | :---: | :---: | :---: |
 | **Determinism & Interpretability** | Subjective | High | Black-box | Deterministic (100%) |
 | **Local Privacy (GDPR / HIPAA)** | Inherent | Inherent | Often requires cloud APIs | 100% In-Memory Local Processing |
-| **Local Hotspot Isolation** | Moderate | Poor | Good | Excellent (Multi-Scale Top-Hat) |
-| **Consumer Hardware Latency** | Manual | < 10 ms | > 500 ms (GPU required) | < 30 ms (Rust CPU) / < 10 ms (CUDA) |
-| **Empirical Sensitivity / Specificity** | N/A | ~0.70 / ~0.85 | ~0.95 / ~0.95 | 1.00 / 1.00 (Synthetic Benchmark) |
+| **Local Hotspot Isolation** | Moderate | Poor | Good | Good (Top-Hat + geometric filtering) |
+| **Consumer Hardware Latency** | Manual | see note | GPU required | 1.6 ms @160x120, 104 ms @1440x1080 (Rust CPU, measured) |
+| **Empirical Sensitivity / Specificity** | N/A | 0.005 / 0.982 (measured) | not evaluated here | 0.206 / 1.000 (measured) |
 | **Bimodal Noise Robustness (MAD)** | No | No | Learned | Robust MAD & Gaussian options |
 
 ---
@@ -59,7 +59,7 @@ Determines thresholds for statistically significant hyperthermia:
 
 ### 5. Geometric Noise & Circularity Filtering
 Removes single-pixel artifacts and false positives:
-1. **Contour Extraction:** Detects 8-connected candidate regions.
+1. **Contour Extraction:** Detects 4-connected candidate regions.
 2. **Minimum Area Clamping:** Rejects regions smaller than $\text{min\_area\_factor} \times \text{body\_pixels}$.
 3. **Isoperimetric Circularity:** Rejects elongated boundary noise:
    $$C = \frac{4 \pi \cdot \text{Area}}{\text{Perimeter}^2} \ge 0.08$$
@@ -68,11 +68,24 @@ Removes single-pixel artifacts and false positives:
 
 ## Computational Complexity & Performance
 
-| Stage | Theoretical Complexity | Rust CPU (Rayon) | PyTorch (CUDA) |
-| :--- | :--- | :--- | :--- |
-| **Kernel Scaling** | $O(1)$ | < 0.01 ms | < 0.01 ms |
-| **Tissue Mask** | $O(H \cdot W)$ | 4.2 ms | 1.1 ms |
-| **Separable Top-Hat** | $O(H \cdot W)$ | 12.5 ms | 3.4 ms |
-| **Outlier Threshold** | $O(H \cdot W)$ | 1.8 ms | 0.8 ms |
-| **Contour Filter** | $O(N)$ | 2.1 ms | 2.1 ms (Host) |
-| **Total Pipeline** | $O(H \cdot W)$ | **~21 ms** | **~7.5 ms** |
+| Stage | Theoretical Complexity | Rust CPU (Rayon), 1440x1080 |
+| :--- | :--- | :--- |
+| **Body Mask** (Otsu + closing + distance transform) | $O(H \cdot W)$ | 39.0 ms |
+| **Separable Top-Hat** | $O(H \cdot W)$ | 26.8 ms |
+| **Outlier Threshold** | $O(H \cdot W)$ | 2.5 ms |
+| **Geometric Filter** | $O(N)$ | 5.7 ms |
+| **Total Pipeline** | $O(H \cdot W)$ | **86.4 ms** (min) / 104.3 ms (median) |
+
+Measured with `scripts/run_validation.py` on x86_64, 4 cores, 60 runs after 10 warm-up
+runs. Per-stage numbers are minima obtained with `IGNITE_DEBUG=1`.
+
+At the native resolution of the FLIR ONE Pro thermal sensor (160x120) the full pipeline
+runs in **1.6 ms** (median). The 1440x1080 JPEG the camera exports is an upscaled render
+and carries no additional thermal information.
+
+> **Note on OpenCV comparison:** once both backends were aligned to the same single-scale
+> algorithm, the OpenCV/Python path measured ~2.4x *faster* than this Rust core
+> (43.9 ms vs 104.3 ms median @1440x1080). The Rust core is not justified by raw speed but
+> by having no native third-party runtime dependency (< 25 MB installer), deterministic
+> cross-platform behaviour and low memory use. The CUDA path could not be validated on the
+> available hardware (GTX 1050, compute capability 6.1) and is therefore not benchmarked.

@@ -477,10 +477,23 @@ class AnnotatorApp:
         fname = self.image_files[self.index]
         arr   = np.array(self.draw_mask)
         gt    = (arr[:, :, 3] > 0).astype(np.uint8) * 255
-        self.annotations[fname] = gt
         os.makedirs(GT_DIR, exist_ok=True)
         base = os.path.splitext(fname)[0]
-        cv2.imwrite(os.path.join(GT_DIR, base + "_mask.png"), gt)
+        out_path = os.path.join(GT_DIR, base + "_mask.png")
+
+        # Schutz vor Datenverlust: Wurde in dieser Sitzung nichts gezeichnet, darf eine
+        # bereits vorhandene, nicht-leere Annotation NICHT mit einer leeren Maske
+        # ueberschrieben werden. Genau dadurch gingen frueher Annotationen verloren,
+        # wenn im Annotator nur durch die Bilder geblaettert wurde.
+        if int(np.count_nonzero(gt)) == 0:
+            existing = cv2.imread(out_path, cv2.IMREAD_GRAYSCALE)
+            if existing is not None and int(np.count_nonzero(existing > 127)) > 0:
+                print(f"[annotator] Leere Zeichnung fuer {fname} - vorhandene Annotation bleibt erhalten.")
+                self.annotations[fname] = existing
+                return
+
+        self.annotations[fname] = gt
+        cv2.imwrite(out_path, gt)
 
     def _next(self):
         self._save_current_annotation()

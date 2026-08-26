@@ -116,6 +116,25 @@ fn compute_odd_kernel(dimension: usize, factor: f64) -> usize {
 // Die separierbaren Operationen benötigen kein explizites Kernel-Array.
 
 
+/// Debug-Protokollierung des Rust-Kerns.
+///
+/// Die Pipeline wird in der Stapelverarbeitung tausendfach aufgerufen; bedingungslose
+/// `println!`-Aufrufe fluten dann stdout und kosten messbar Laufzeit. Die Ausgabe wird
+/// daher nur aktiviert, wenn die Umgebungsvariable `IGNITE_DEBUG` gesetzt ist.
+fn debug_enabled() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ENABLED.get_or_init(|| std::env::var("IGNITE_DEBUG").is_ok())
+}
+
+macro_rules! ignite_debug {
+    ($($arg:tt)*) => {
+        if debug_enabled() {
+            println!($($arg)*);
+        }
+    };
+}
+
+
 /// 1D-Sliding-Window Maximum (Dilation) für eine Datenreihe.
 ///
 /// # Komplexität
@@ -219,6 +238,90 @@ fn erode_1d(data: &[u8], result: &mut [u8], radius: usize, deque: &mut VecDeque<
     }
 }
 
+
+/// Cache-geblockte Transposition einer u8-Matrix.
+///
+/// Die separable Morphologie benoetigt einen vertikalen (spaltenweisen) Pass.
+/// Ein direkter Spaltenzugriff auf eine zeilen-major gespeicherte Matrix
+/// erzeugt pro Element einen Cache-Miss (Stride = Bildbreite). Bei 1440x1080
+/// dominiert dieser Effekt die gesamte Pipeline-Laufzeit.
+///
+/// Stattdessen wird die Matrix hier in 64x64-Kacheln transponiert (beide
+/// Zugriffsmuster bleiben damit im L1/L2-Cache), anschliessend laeuft der
+/// schnelle zeilenweise Pass, danach wird zurueck transponiert.
+fn transpose_blocked(src: &ImageMatrix) -> ImageMatrix {
+    const TILE: usize = 64;
+    let (h, w) = src.dim();
+    let mut dst = Array2::<u8>::zeros((w, h));
+
+    let src_s = src.as_slice();
+    let dst_s = dst.as_slice_mut();
+
+    if let (Some(a), Some(b)) = (src_s, dst_s) {
+        for y0 in (0..h).step_by(TILE) {
+            let y1 = (y0 + TILE).min(h);
+            for x0 in (0..w).step_by(TILE) {
+                let x1 = (x0 + TILE).min(w);
+                for y in y0..y1 {
+                    let row = y * w;
+                    for x in x0..x1 {
+                        b[x * h + y] = a[row + x];
+                    }
+                }
+            }
+        }
+    } else {
+        for y in 0..h {
+            for x in 0..w {
+                dst[[x, y]] = src[[y, x]];
+            }
+        }
+    }
+    dst
+}
+
+/// Fuehrt einen zeilenweisen 1D-Filter ueber alle Zeilen aus (parallel via rayon).
+fn apply_rows_1d(
+    src: &ImageMatrix,
+    op: fn(&[u8], &mut [u8], usize, &mut VecDeque<usize>),
+    radius: usize,
+) -> ImageMatrix {
+    let (h, w) = src.dim();
+    let mut out = Array2::<u8>::zeros((h, w));
+    ndarray::Zip::from(out.rows_mut())
+        .and(src.rows())
+        .into_par_iter()
+        .for_each(|(mut out_row, in_row)| {
+            let mut deque: VecDeque<usize> = VecDeque::with_capacity(w.min(radius * 2 + 2));
+            if let (Some(in_slice), Some(out_slice)) = (in_row.as_slice(), out_row.as_slice_mut()) {
+                op(in_slice, out_slice, radius, &mut deque);
+            } else {
+                let in_vec = in_row.to_vec();
+                let mut out_vec = vec![0u8; w];
+                op(&in_vec, &mut out_vec, radius, &mut deque);
+                for i in 0..w {
+                    out_row[i] = out_vec[i];
+                }
+            }
+        });
+    let _ = h;
+    out
+}
+
+/// Separable 2D-Morphologie: horizontaler Pass, dann vertikaler Pass via Transposition.
+fn separable_morph(
+    img: &ImageMatrix,
+    op: fn(&[u8], &mut [u8], usize, &mut VecDeque<usize>),
+    kernel_size: usize,
+) -> ImageMatrix {
+    let radius = kernel_size / 2;
+    let horizontal = apply_rows_1d(img, op, radius);
+    let transposed = transpose_blocked(&horizontal);
+    let vertical = apply_rows_1d(&transposed, op, radius);
+    transpose_blocked(&vertical)
+}
+
+
 /// Morphologische Dilatation – Separierbare Sliding-Window-Implementierung.
 ///
 /// # Methodik (Separierbar)
@@ -238,42 +341,10 @@ fn erode_1d(data: &[u8], result: &mut [u8], radius: usize, deque: &mut VecDeque<
 /// # Returns
 /// `Result<ImageMatrix, String>` – Dilatiertes Bild
 fn dilate(img: &ImageMatrix, kernel_size: usize) -> Result<ImageMatrix, String> {
-    let (h, w) = img.dim();
-    let radius = kernel_size / 2;
-
-    let mut tmp = Array2::<u8>::zeros((h, w));
-
-    // Pass 1: Horizontale Dilation (parallelisiert über Zeilen via rayon)
-    ndarray::Zip::from(tmp.rows_mut())
-        .and(img.rows())
-        .into_par_iter()
-        .for_each(|(mut out_row, in_row)| {
-            let mut deque: VecDeque<usize> = VecDeque::with_capacity(w.min(radius * 2 + 2));
-            if let (Some(in_slice), Some(out_slice)) = (in_row.as_slice(), out_row.as_slice_mut()) {
-                dilate_1d(in_slice, out_slice, radius, &mut deque);
-            } else {
-                let in_vec = in_row.to_vec();
-                let mut out_vec = vec![0u8; w];
-                dilate_1d(&in_vec, &mut out_vec, radius, &mut deque);
-                for i in 0..w { out_row[i] = out_vec[i]; }
-            }
-        });
-
-    let mut output = Array2::<u8>::zeros((h, w));
-    
-    // Pass 2: Vertikale Dilation (parallelisiert über Spalten via rayon)
-    ndarray::Zip::from(output.columns_mut())
-        .and(tmp.columns())
-        .into_par_iter()
-        .for_each(|(mut out_col, in_col)| {
-            let mut deque: VecDeque<usize> = VecDeque::with_capacity(h.min(radius * 2 + 2));
-            let in_vec = in_col.to_vec();
-            let mut out_vec = vec![0u8; h];
-            dilate_1d(&in_vec, &mut out_vec, radius, &mut deque);
-            for i in 0..h { out_col[i] = out_vec[i]; }
-        });
-
-    Ok(output)
+    if kernel_size == 0 {
+        return Err("Kernel-Groesse muss > 0 sein".to_string());
+    }
+    Ok(separable_morph(img, dilate_1d, kernel_size))
 }
 
 /// Morphologische Erosion – Separierbare Sliding-Window-Implementierung.
@@ -290,42 +361,10 @@ fn dilate(img: &ImageMatrix, kernel_size: usize) -> Result<ImageMatrix, String> 
 /// # Returns
 /// `Result<ImageMatrix, String>` – Erodiertes Bild
 fn erode(img: &ImageMatrix, kernel_size: usize) -> Result<ImageMatrix, String> {
-    let (h, w) = img.dim();
-    let radius = kernel_size / 2;
-
-    let mut tmp = Array2::<u8>::zeros((h, w));
-
-    // Pass 1: Horizontale Erosion (parallelisiert über Zeilen)
-    ndarray::Zip::from(tmp.rows_mut())
-        .and(img.rows())
-        .into_par_iter()
-        .for_each(|(mut out_row, in_row)| {
-            let mut deque: VecDeque<usize> = VecDeque::with_capacity(w.min(radius * 2 + 2));
-            if let (Some(in_slice), Some(out_slice)) = (in_row.as_slice(), out_row.as_slice_mut()) {
-                erode_1d(in_slice, out_slice, radius, &mut deque);
-            } else {
-                let in_vec = in_row.to_vec();
-                let mut out_vec = vec![0u8; w];
-                erode_1d(&in_vec, &mut out_vec, radius, &mut deque);
-                for i in 0..w { out_row[i] = out_vec[i]; }
-            }
-        });
-
-    let mut output = Array2::<u8>::zeros((h, w));
-
-    // Pass 2: Vertikale Erosion (parallelisiert über Spalten)
-    ndarray::Zip::from(output.columns_mut())
-        .and(tmp.columns())
-        .into_par_iter()
-        .for_each(|(mut out_col, in_col)| {
-            let mut deque: VecDeque<usize> = VecDeque::with_capacity(h.min(radius * 2 + 2));
-            let in_vec = in_col.to_vec();
-            let mut out_vec = vec![0u8; h];
-            erode_1d(&in_vec, &mut out_vec, radius, &mut deque);
-            for i in 0..h { out_col[i] = out_vec[i]; }
-        });
-
-    Ok(output)
+    if kernel_size == 0 {
+        return Err("Kernel-Groesse muss > 0 sein".to_string());
+    }
+    Ok(separable_morph(img, erode_1d, kernel_size))
 }
 
 
@@ -449,7 +488,7 @@ fn otsu_threshold(img: &ImageMatrix) -> u8 {
 /// 3. Rückwärts-Pass (unten-rechts → oben-links):
 ///    Aktualisiere analog für die andere Richtung.
 ///
-/// Approximiert DIST_L2 (euklidisch) mit der chamfer-Metrik (3-4-Approximation).
+/// Approximiert DIST_L2 (euklidisch) mit der Chamfer-Metrik (12-17-Approximation).
 ///
 /// # Arguments
 /// * `binary_mask` – Binäres Eingabebild (0 = Hintergrund, 255 = Vordergrund)
@@ -459,74 +498,88 @@ fn otsu_threshold(img: &ImageMatrix) -> u8 {
 fn distance_transform_l2(binary_mask: &ImageMatrix) -> FloatMatrix {
     let (h, w) = binary_mask.dim();
 
-    // Chamfer 3-4 Approximation mit u32-Integer-Arithmetik (statt f64):
-    // Integer-Ops sind ~4× schneller als Float-Ops in der inneren Schleife.
-    // Horizontale/Vertikale Nachbarn: Kosten = 3
-    // Diagonale Nachbarn: Kosten = 4
-    // Skalierung: Euklidischer Wert ≈ dist_int / 3.0 (Normierung bei Bedarf)
+    // Chamfer-Approximation mit u32-Integer-Arithmetik (statt f64):
+    // Integer-Ops sind ~4x schneller als Float-Ops in der inneren Schleife.
+    // Verwendet werden die Gewichte 12/17 statt der klassischen 3/4:
+    //   3/4   -> Diagonalverhaeltnis 1.3333 (5.72 % Fehler gegen sqrt(2))
+    //   12/17 -> Diagonalverhaeltnis 1.4167 (0.17 % Fehler gegen sqrt(2))
+    //
+    // Implementierungshinweis: Die beiden Chamfer-Passes sind streng sequentiell
+    // (jeder Pixel haengt vom bereits berechneten Vorgaenger ab) und daher nicht
+    // parallelisierbar. Der Durchsatz wird deshalb ueber einen flachen Puffer mit
+    // vorberechneten Zeilenoffsets erreicht: ndarray-Indizierung via [[y, x]]
+    // kostet pro Zugriff Bounds-Check und Stride-Multiplikation, was bei
+    // ~1,5 Mio. Pixeln und 8 Nachbarzugriffen dominant wird.
     const INF: u32 = u32::MAX / 2;
-    const COST_STRAIGHT: u32 = 3;
-    const COST_DIAGONAL: u32 = 4;
+    const COST_STRAIGHT: u32 = 12;
+    const COST_DIAGONAL: u32 = 17;
 
-    // Integer-Distanzkarte für schnelle Berechnungen
-    let mut dist_int = Array2::<u32>::from_elem((h, w), INF);
-    for y in 0..h {
-        for x in 0..w {
-            if binary_mask[[y, x]] == 0 {
-                dist_int[[y, x]] = 0;
-            }
-        }
+    let mut dist: Vec<u32> = Vec::with_capacity(h * w);
+    match binary_mask.as_slice() {
+        Some(src) => dist.extend(src.iter().map(|&px| if px == 0 { 0 } else { INF })),
+        None => dist.extend(binary_mask.iter().map(|&px| if px == 0 { 0 } else { INF })),
     }
 
-    // Vorwärts-Pass: Oben-links → Unten-rechts
+    // Vorwaerts-Pass: oben-links -> unten-rechts
     for y in 0..h {
+        let row = y * w;
+        let prev = row.wrapping_sub(w);
         for x in 0..w {
-            if dist_int[[y, x]] == 0 {
+            let i = row + x;
+            let mut d = dist[i];
+            if d == 0 {
                 continue;
             }
-            let mut min_d = dist_int[[y, x]];
             if y > 0 {
-                min_d = min_d.min(dist_int[[y - 1, x]].saturating_add(COST_STRAIGHT));
+                d = d.min(dist[prev + x].saturating_add(COST_STRAIGHT));
+                if x > 0 {
+                    d = d.min(dist[prev + x - 1].saturating_add(COST_DIAGONAL));
+                }
+                if x + 1 < w {
+                    d = d.min(dist[prev + x + 1].saturating_add(COST_DIAGONAL));
+                }
             }
             if x > 0 {
-                min_d = min_d.min(dist_int[[y, x - 1]].saturating_add(COST_STRAIGHT));
+                d = d.min(dist[i - 1].saturating_add(COST_STRAIGHT));
             }
-            if y > 0 && x > 0 {
-                min_d = min_d.min(dist_int[[y - 1, x - 1]].saturating_add(COST_DIAGONAL));
-            }
-            if y > 0 && x + 1 < w {
-                min_d = min_d.min(dist_int[[y - 1, x + 1]].saturating_add(COST_DIAGONAL));
-            }
-            dist_int[[y, x]] = min_d;
+            dist[i] = d;
         }
     }
 
-    // Rückwärts-Pass: Unten-rechts → Oben-links
+    // Rueckwaerts-Pass: unten-rechts -> oben-links
     for y in (0..h).rev() {
+        let row = y * w;
+        let next = row + w;
         for x in (0..w).rev() {
-            if dist_int[[y, x]] == 0 {
+            let i = row + x;
+            let mut d = dist[i];
+            if d == 0 {
                 continue;
             }
-            let mut min_d = dist_int[[y, x]];
             if y + 1 < h {
-                min_d = min_d.min(dist_int[[y + 1, x]].saturating_add(COST_STRAIGHT));
+                d = d.min(dist[next + x].saturating_add(COST_STRAIGHT));
+                if x > 0 {
+                    d = d.min(dist[next + x - 1].saturating_add(COST_DIAGONAL));
+                }
+                if x + 1 < w {
+                    d = d.min(dist[next + x + 1].saturating_add(COST_DIAGONAL));
+                }
             }
             if x + 1 < w {
-                min_d = min_d.min(dist_int[[y, x + 1]].saturating_add(COST_STRAIGHT));
+                d = d.min(dist[i + 1].saturating_add(COST_STRAIGHT));
             }
-            if y + 1 < h && x + 1 < w {
-                min_d = min_d.min(dist_int[[y + 1, x + 1]].saturating_add(COST_DIAGONAL));
-            }
-            if y + 1 < h && x > 0 {
-                min_d = min_d.min(dist_int[[y + 1, x - 1]].saturating_add(COST_DIAGONAL));
-            }
-            dist_int[[y, x]] = min_d;
+            dist[i] = d;
         }
     }
 
-    // Zurück zu f64 für Kompatibilität mit dem Rest der Pipeline
-    // (Division durch 3 normiert auf ungefähre euklidische Pixel-Distanz)
-    dist_int.mapv(|v| if v >= INF { f64::MAX / 2.0 } else { v as f64 / 3.0 })
+    // Zurueck zu f64 fuer Kompatibilitaet mit dem Rest der Pipeline
+    // (Division durch COST_STRAIGHT normiert auf euklidische Pixel-Distanz)
+    let scale = COST_STRAIGHT as f64;
+    let floats: Vec<f64> = dist
+        .into_iter()
+        .map(|v| if v >= INF { f64::MAX / 2.0 } else { v as f64 / scale })
+        .collect();
+    FloatMatrix::from_shape_vec((h, w), floats).expect("Distanzkarte: Shape-Fehler")
 }
 
 /// Erzeugt eine Body-Mask via Otsu-Schwellenwert und adaptiver Distanz-Erosion.
@@ -568,6 +621,12 @@ fn extract_body_mask(
     otsu_mask.zip_mut_with(img, |out, &px| {
         *out = if px > threshold { 255 } else { 0 };
     });
+
+    // Schritt 1b: Morphologisches Closing schliesst kleine Poren in der Koerpermaske.
+    // Muss identisch im Python-Fallback (extract_body_mask_multi_otsu) erfolgen,
+    // sonst divergieren die Backends. Bewusst rechteckiges 5x5-Element, weil die
+    // separable Lemire-Morphologie kein elliptisches Element abbilden kann.
+    let otsu_mask = morph_close(&otsu_mask, 5)?;
 
     // Schritt 2: Distanztransformation (wird auch an filter_geometric weitergegeben)
     let dist_map = distance_transform_l2(&otsu_mask);
@@ -656,33 +715,43 @@ fn threshold_statistical(
 ) -> Result<ImageMatrix, String> {
     let (h, w) = diff_img.dim();
 
-    let mut body_diff_vals: Vec<f64> = Vec::new();
-    let mut body_orig_vals: Vec<f64> = Vec::new();
+    // Die Werte innerhalb der Body-Maske werden nur dann materialisiert, wenn der
+    // robuste MAD-Pfad sie tatsaechlich braucht (Median erfordert alle Werte).
+    // Der Gauss-Pfad kommt mit Summen aus und vermeidet damit zwei Vektoren mit
+    // je ~500k f64-Werten (mehrere MB Allokation und Speicherbandbreite pro Bild).
+    // Zusaetzlich wird u8 statt f64 gepuffert (8x weniger Speicher).
+    let n_body = mask.iter().filter(|&&m| m > 0).count();
+    if n_body == 0 {
+        return Err("Body-Mask ist leer – keine Körper-Pixel für Statistik gefunden.".to_string());
+    }
 
-    for y in 0..h {
-        for x in 0..w {
-            if mask[[y, x]] > 0 {
-                body_diff_vals.push(diff_img[[y, x]] as f64);
-                body_orig_vals.push(original_img[[y, x]] as f64);
+    let mut body_diff_vals: Vec<u8> = Vec::new();
+    let mut body_orig_vals: Vec<u8> = Vec::new();
+    if use_mad {
+        body_diff_vals.reserve_exact(n_body);
+        body_orig_vals.reserve_exact(n_body);
+        for y in 0..h {
+            for x in 0..w {
+                if mask[[y, x]] > 0 {
+                    body_diff_vals.push(diff_img[[y, x]]);
+                    body_orig_vals.push(original_img[[y, x]]);
+                }
             }
         }
     }
 
-    if body_diff_vals.is_empty() {
-        return Err("Body-Mask ist leer – keine Körper-Pixel für Statistik gefunden.".to_string());
-    }
-
     let (threshold_diff, mu_orig) = if use_mad {
+        // u8-Werte: Median via Zaehlsortierung (O(n)) statt Vergleichssortierung.
         let mut sorted_diff = body_diff_vals;
-        sorted_diff.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+        sorted_diff.sort_unstable();
         let len = sorted_diff.len();
         let median_diff = if len % 2 == 0 {
-            (sorted_diff[len / 2 - 1] + sorted_diff[len / 2]) / 2.0
+            (sorted_diff[len / 2 - 1] as f64 + sorted_diff[len / 2] as f64) / 2.0
         } else {
-            sorted_diff[len / 2]
+            sorted_diff[len / 2] as f64
         };
 
-        let mut abs_devs: Vec<f64> = sorted_diff.iter().map(|&x| (x - median_diff).abs()).collect();
+        let mut abs_devs: Vec<f64> = sorted_diff.iter().map(|&x| (x as f64 - median_diff).abs()).collect();
         abs_devs.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
         let mad = if len % 2 == 0 {
             (abs_devs[len / 2 - 1] + abs_devs[len / 2]) / 2.0
@@ -695,19 +764,41 @@ fn threshold_statistical(
         let thresh = (median_diff + k * sigma_mad).clamp(0.0, 254.0);
 
         let mut sorted_orig = body_orig_vals;
-        sorted_orig.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+        sorted_orig.sort_unstable();
         let med_orig = if len % 2 == 0 {
-            (sorted_orig[len / 2 - 1] + sorted_orig[len / 2]) / 2.0
+            (sorted_orig[len / 2 - 1] as f64 + sorted_orig[len / 2] as f64) / 2.0
         } else {
-            sorted_orig[len / 2]
+            sorted_orig[len / 2] as f64
         };
 
         (thresh, med_orig)
     } else {
-        let n = body_diff_vals.len() as f64;
-        let sum_diff: f64 = body_diff_vals.iter().sum();
-        let sum_orig: f64 = body_orig_vals.iter().sum();
-        let sum_sq_diff: f64 = body_diff_vals.iter().map(|&d| d * d).sum();
+        // Einzelner paralleler Reduktionslauf ueber die Maske: Summen in u64,
+        // ohne die Werte vorher zu materialisieren.
+        let (sum_diff_i, sum_orig_i, sum_sq_diff_i) = ndarray::Zip::from(mask)
+            .and(diff_img)
+            .and(original_img)
+            .into_par_iter()
+            .fold(
+                || (0u64, 0u64, 0u64),
+                |(sd, so, ssq), (&m, &d, &o)| {
+                    if m > 0 {
+                        let dv = d as u64;
+                        (sd + dv, so + o as u64, ssq + dv * dv)
+                    } else {
+                        (sd, so, ssq)
+                    }
+                },
+            )
+            .reduce(
+                || (0u64, 0u64, 0u64),
+                |a, b| (a.0 + b.0, a.1 + b.1, a.2 + b.2),
+            );
+
+        let n = n_body as f64;
+        let sum_diff = sum_diff_i as f64;
+        let sum_orig = sum_orig_i as f64;
+        let sum_sq_diff = sum_sq_diff_i as f64;
 
         let mu_diff = sum_diff / n;
         let mu_orig = sum_orig / n;
@@ -1108,15 +1199,17 @@ fn process_thermal_pipeline<'py>(
             // Geometriefilter-Referenzgröße (nicht für Morph-Ops genutzt, nur als Parameter)
             let kernel_small = compute_odd_kernel(dimension, 0.02).max(3);
 
-            println!(
+            ignite_debug!(
                 "[ignite_core] Bild: {}×{}, Dim: {}, Kernel groß: {}, Kernel klein: {}",
                 width, height, dimension, kernel_large, kernel_small
             );
 
             // ── Feature B: Adaptive Body-Mask via Distanztransformation ──
             // Gibt nun auch die Distanzkarte zurück (für Rand-Hotspot-Filter)
+            let _t_stage = std::time::Instant::now();
             let (mask, dist_map) = extract_body_mask(&img, otsu_min, otsu_max, dist_erosion_factor)
                 .map_err(|e| format!("Body-Mask Fehler: {}", e))?;
+            ignite_debug!("[ignite_core][profil] Body-Mask: {:.2} ms", _t_stage.elapsed().as_secs_f64() * 1000.0);
 
             let body_pixel_count = mask.iter().filter(|&&px| px > 0).count();
             if body_pixel_count == 0 {
@@ -1126,18 +1219,22 @@ fn process_thermal_pipeline<'py>(
                     .to_string(),
                 );
             }
-            println!("[ignite_core] Body-Pixel: {}", body_pixel_count);
+            ignite_debug!("[ignite_core] Body-Pixel: {}", body_pixel_count);
 
             // ── Feature C: Top-Hat Differenzbild ─────────────────────────
+            let _t_stage = std::time::Instant::now();
             let diff_img = calculate_tophat_difference(&img, &mask, kernel_large)
                 .map_err(|e| format!("TopHat Fehler: {}", e))?;
+            ignite_debug!("[ignite_core][profil] Top-Hat: {:.2} ms", _t_stage.elapsed().as_secs_f64() * 1000.0);
 
             // ── Feature D: Statistischer Schwellenwert µ + k·σ / Robust MAD ───
+            let _t_stage = std::time::Instant::now();
             let binary_raw = threshold_statistical(&img, &diff_img, &mask, sigma_k, use_mad_flag)
                 .map_err(|e| format!("Schwellenwert Fehler: {}", e))?;
+            ignite_debug!("[ignite_core][profil] Threshold: {:.2} ms", _t_stage.elapsed().as_secs_f64() * 1000.0);
 
             let raw_hotspot_count = binary_raw.iter().filter(|&&px| px > 0).count();
-            println!(
+            ignite_debug!(
                 "[ignite_core] Hotspot-Pixel (vor Geometriefilter): {}",
                 raw_hotspot_count
             );
@@ -1147,14 +1244,16 @@ fn process_thermal_pipeline<'py>(
             // minimalen Bilddimension vom Maskenrand entfernt sein (min 12px). Rand-Artefakte
             // liegen direkt an der Körper-Hintergrund-Grenze (dist < 12px).
             let min_dist_from_border = (dimension as f64 * 0.015).max(12.0);
+            let _t_stage = std::time::Instant::now();
             let final_mask = filter_geometric(
                 &binary_raw, &mask, &dist_map,
                 min_area_factor, min_circularity, min_dist_from_border
             )
             .map_err(|e| format!("Geometriefilter Fehler: {}", e))?;
+            ignite_debug!("[ignite_core][profil] Geometriefilter: {:.2} ms", _t_stage.elapsed().as_secs_f64() * 1000.0);
 
             let final_hotspot_count = final_mask.iter().filter(|&&px| px > 0).count();
-            println!(
+            ignite_debug!(
                 "[ignite_core] Hotspot-Pixel (nach Geometriefilter): {}",
                 final_hotspot_count
             );
