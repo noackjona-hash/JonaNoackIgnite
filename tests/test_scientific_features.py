@@ -17,19 +17,7 @@ import dataset_evaluator
 import image_processing
 
 
-@pytest.fixture(scope="module")
-def app_root():
-    """Initialisiert eine headless CustomTkinter Root Instanz für GUI-Tests."""
-    import customtkinter as ctk
-    ctk.set_appearance_mode("Dark")
-    root = ctk.CTk()
-    root.geometry("1024x768")
-    root.withdraw()
-    yield root
-    try:
-        root.destroy()
-    except Exception:
-        pass
+
 
 
 @pytest.mark.benchmark

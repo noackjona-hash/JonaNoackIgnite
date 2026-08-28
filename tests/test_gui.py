@@ -211,16 +211,7 @@ def test_batch_summary_pdf_generation(tmp_path):
     assert os.path.getsize(pdf_out) > 500
 
 
-@pytest.fixture(scope="module")
-def app_root():
-    import customtkinter as ctk
-    root = ctk.CTk()
-    root.withdraw()
-    yield root
-    try:
-        root.destroy()
-    except Exception:
-        pass
+
 
 
 def test_full_gui_lifecycle(app_root):
