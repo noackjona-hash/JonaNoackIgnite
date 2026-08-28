@@ -9,7 +9,11 @@ from typing import Optional, Any, Callable
 import customtkinter as ctk
 import numpy as np
 import matplotlib
-matplotlib.use("Agg")
+try:
+    if hasattr(matplotlib, "use"):
+        matplotlib.use("Agg")
+except Exception:
+    pass
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 

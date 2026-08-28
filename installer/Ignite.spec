@@ -7,8 +7,7 @@ import os
 REPO_ROOT = os.path.dirname(SPECPATH)
 
 datas = [(os.path.join(REPO_ROOT, 'icon'), 'icon')]
-binaries = []
-hiddenimports = []
+hiddenimports = ['matplotlib.backends.backend_tkagg', 'mpl_toolkits.mplot3d']
 tmp_ret = collect_all('customtkinter')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
@@ -25,7 +24,7 @@ a = Analysis(
     excludes=[
         'torch', 'torchvision', 'torchaudio', 'scipy', 'pandas', 'sympy',
         'IPython', 'notebook', 'PyQt5', 'PyQt6', 'PySide2', 'PySide6',
-        'cuda', 'cudnn', 'triton', 'tensorrt', 'matplotlib'
+        'cuda', 'cudnn', 'triton', 'tensorrt'
     ],
     noarchive=False,
     optimize=0,
