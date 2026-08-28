@@ -63,7 +63,8 @@ def test_calculate_next_version():
 
 
 def test_bump_all_files_dry_run():
-    updated = bump_all_files("3.4.0", "3.3.0", dry_run=True)
+    curr = read_current_version()
+    updated = bump_all_files("4.0.0", curr, dry_run=True)
     assert "VERSION" in updated
     assert "pyproject.toml" in updated
     assert "Cargo.toml" in updated
@@ -72,4 +73,4 @@ def test_bump_all_files_dry_run():
     assert "installer/ignite_installer.iss" in updated
 
     # Sicherstellen, dass im dry_run nichts überschrieben wurde
-    assert read_current_version() == "3.3.0"
+    assert read_current_version() == curr

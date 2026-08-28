@@ -28,6 +28,9 @@ a = Analysis(
 )
 pyz = PYZ(a.pure)
 
+import sys
+icon_list = [os.path.join(REPO_ROOT, 'icon', 'LogoRund.ico')] if sys.platform.startswith('win') else None
+
 exe = EXE(
     pyz,
     a.scripts,
@@ -44,7 +47,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=[os.path.join(REPO_ROOT, 'icon', 'LogoRund.ico')],
+    icon=icon_list,
     version_file=None,
 )
 

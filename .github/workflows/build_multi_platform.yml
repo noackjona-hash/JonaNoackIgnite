@@ -50,9 +50,9 @@ jobs:
       - name: Package Application (Linux)
         if: runner.os == 'Linux'
         run: |
-          pyinstaller --noconfirm --onedir --name IGNITE-Linux --add-data "icon:icon" main.py
+          pyinstaller --noconfirm installer/Ignite.spec
           cd dist
-          tar -czvf ../IGNITE_Linux_x86_64.tar.gz IGNITE-Linux
+          tar -czvf ../IGNITE_Linux_x86_64.tar.gz IGNITE
 
       - name: Upload Windows Artifact
         if: runner.os == 'Windows'

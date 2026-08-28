@@ -121,12 +121,12 @@ jobs:
 
       - name: Build Linux Standalone Executable Bundle
         run: |
-          pyinstaller --noconfirm --onedir --name IGNITE-Linux --add-data "icon:icon" main.py
+          pyinstaller --noconfirm installer/Ignite.spec
 
       - name: Create Linux Tarball Archive
         run: |
           cd dist
-          tar -czvf ../IGNITE_Linux_x86_64.tar.gz IGNITE-Linux
+          tar -czvf ../IGNITE_Linux_x86_64.tar.gz IGNITE
 
       - name: Upload Linux Setup Artifact
         uses: actions/upload-artifact@v4

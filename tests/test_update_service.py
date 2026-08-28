@@ -171,12 +171,11 @@ def test_download_update_asset_cancellation():
             )
 
 
-def test_update_modal_dialog_rendering():
-    import customtkinter as ctk
+def test_update_modal_dialog_rendering(app_root):
     from gui.widgets.dialogs import UpdateModal
 
-    root = ctk.CTk()
-    root.withdraw()
+    if app_root is None:
+        pytest.skip("Headless Tkinter nicht verfügbar")
 
     info_newer = UpdateInfo(
         version="3.4.0",
@@ -190,26 +189,24 @@ def test_update_modal_dialog_rendering():
         published_at="2026-08-28",
         is_newer=True
     )
-    modal = UpdateModal(root, update_info=info_newer)
+    modal = UpdateModal(app_root, update_info=info_newer)
     assert modal is not None
     assert modal.title() == "IGNITE – Software-Update"
     modal.destroy()
 
     info_current = UpdateInfo(
-        version="3.3.0",
-        tag_name="v3.3.0",
-        release_name="IGNITE v3.3.0",
+        version="3.3.2",
+        tag_name="v3.3.2",
+        release_name="IGNITE v3.3.2",
         release_notes="",
         html_url="https://github.com",
-        asset_name="IGNITE_Setup_v3.3.0.exe",
-        asset_url="https://github.com/.../IGNITE_Setup_v3.3.0.exe",
+        asset_name="IGNITE_Setup_v3.3.2.exe",
+        asset_url="https://github.com/.../IGNITE_Setup_v3.3.2.exe",
         asset_size=25000000,
         published_at="2026-08-28",
         is_newer=False
     )
-    modal2 = UpdateModal(root, update_info=info_current)
+    modal2 = UpdateModal(app_root, update_info=info_current)
     assert modal2 is not None
     modal2.destroy()
-
-    root.destroy()
 

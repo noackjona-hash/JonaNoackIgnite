@@ -19,9 +19,10 @@ matplotlib>=3.8.0           # Diagnostik-Visualisierung (kann durch custom-rende
 
 # GPU-BACKEND (optional – nur installieren wenn CUDA/NVIDIA-Grafikkarte vorhanden)
 # ───────────────────────────────────────────────────────────────────────────────
-# Installiere mit: pip install -e ".[gpu]" 
-torch>=2.0.0              # GPU-beschleunigte Tensoroperationen (lazy-imported, ~2GB!)
+# Installiere mit: pip install -e ".[gpu]" (oder pip install torch --index-url https://download.pytorch.org/whl/cpu)
+# torch>=2.0.0              # GPU-beschleunigte Tensoroperationen (optional, via .[gpu])
+
 
 # RUST-DEVELOPMENT (optional – nur für native Core-Kompilierung)
 # ───────────────────────────────────────────────────────────────────────────────
-maturin>=1.4,<2.0         # Rust-PyO3 Compiler (wird durch cargo/maturin verwaltet)
+#maturin>=1.4,<2.0         # Rust-PyO3 Compiler (wird durch cargo/maturin verwaltet)
