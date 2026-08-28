@@ -138,7 +138,20 @@ DEFAULT_ENABLE_BILATERAL_MAP = _settings.get("DEFAULT_ENABLE_BILATERAL_MAP", Tru
 UI_SCALE = _settings.get("UI_SCALE", 1.0)
 
 # ── Update & Versions-Konfiguration ───────────────────────────────────────────
-APP_VERSION = _settings.get("APP_VERSION", "3.3.0")
+def get_app_version() -> str:
+    """Ermittelt die App-Version dynamisch aus der VERSION-Datei oder den Einstellungen."""
+    ver_path = os.path.join(os.path.dirname(__file__), "VERSION")
+    if os.path.exists(ver_path):
+        try:
+            with open(ver_path, "r", encoding="utf-8") as f:
+                v = f.read().strip()
+                if v:
+                    return v
+        except Exception:
+            pass
+    return _settings.get("APP_VERSION", "3.3.0")
+
+APP_VERSION = get_app_version()
 GITHUB_REPO = _settings.get("GITHUB_REPO", "noackjona-hash/JonaNoackIgnite")
 AUTO_CHECK_UPDATES = _settings.get("AUTO_CHECK_UPDATES", True)
 

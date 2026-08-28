@@ -9,16 +9,45 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'Release-Tag / Version (z. B. v3.3.0)'
+        description: 'Release-Tag / Version (optional, z. B. v3.3.0)'
         required: false
-        default: 'v3.3.0'
+        default: ''
 
 permissions:
   contents: write
 
 jobs:
+  resolve-version:
+    name: Resolve Version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+      tag_name: ${{ steps.ver.outputs.tag_name }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Extract Version
+        id: ver
+        run: |
+          if [ -n "${{ inputs.tag_name }}" ]; then
+            TAG="${{ inputs.tag_name }}"
+          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            TAG="${{ github.ref_name }}"
+          elif [ -f "VERSION" ]; then
+            RAW_V=$(cat VERSION | tr -d ' \r\n')
+            TAG="v${RAW_V}"
+          else
+            TAG="v3.3.0"
+          fi
+          VER="${TAG#v}"
+          echo "tag_name=${TAG}" >> $GITHUB_OUTPUT
+          echo "version=${VER}" >> $GITHUB_OUTPUT
+          echo "Resolved Version: ${VER} (Tag: ${TAG})"
+
   build-windows:
     name: Build Windows Setup (.exe)
+    needs: resolve-version
     runs-on: windows-latest
     steps:
       - name: Checkout Code
@@ -49,7 +78,7 @@ jobs:
 
       - name: Build Inno Setup Installer
         run: |
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\ignite_installer.iss
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DAppVersion=${{ needs.resolve-version.outputs.version }} installer\ignite_installer.iss
 
       - name: Upload Windows Setup Artifact
         uses: actions/upload-artifact@v4
@@ -60,6 +89,7 @@ jobs:
 
   build-linux:
     name: Build Linux Package (.tar.gz)
+    needs: resolve-version
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -107,7 +137,7 @@ jobs:
 
   create-release:
     name: Create GitHub Release
-    needs: [build-windows, build-linux]
+    needs: [resolve-version, build-windows, build-linux]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -128,22 +158,11 @@ jobs:
         run: |
           ls -la dist_release/
 
-      - name: Determine Tag Name
-        id: tag_info
-        run: |
-          if [ -n "${{ inputs.tag_name }}" ]; then
-            echo "tag=${{ inputs.tag_name }}" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
-            echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
-          else
-            echo "tag=v3.3.0" >> $GITHUB_OUTPUT
-          fi
-
       - name: Create or Update GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.tag_info.outputs.tag }}
-          name: IGNITE Medical Imaging Suite ${{ steps.tag_info.outputs.tag }}
+          tag_name: ${{ needs.resolve-version.outputs.tag_name }}
+          name: IGNITE Medical Imaging Suite ${{ needs.resolve-version.outputs.tag_name }}
           files: |
             dist_release/IGNITE_Setup_*.exe
             dist_release/IGNITE_Linux_x86_64.tar.gz
