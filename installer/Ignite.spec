@@ -22,10 +22,31 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=['torch', 'torchvision', 'torchaudio', 'scipy', 'pandas', 'sympy', 'IPython', 'notebook', 'PyQt5', 'PyQt6', 'PySide2', 'PySide6'],
+    excludes=[
+        'torch', 'torchvision', 'torchaudio', 'scipy', 'pandas', 'sympy',
+        'IPython', 'notebook', 'PyQt5', 'PyQt6', 'PySide2', 'PySide6',
+        'cuda', 'cudnn', 'triton', 'tensorrt', 'matplotlib'
+    ],
     noarchive=False,
     optimize=0,
 )
+
+# Aggressiver Ausschluss von CUDA / PyTorch / LLVM / MKL / ML-Binaries
+EXCLUDE_BIN_KEYWORDS = (
+    'torch', 'libtorch', 'cuda', 'cudnn', 'cublas', 'cufft', 'curand',
+    'cusolver', 'cusparse', 'nccl', 'nvrtc', 'tensorrt', 'llvm', 'triton'
+)
+
+a.binaries = [
+    b for b in a.binaries
+    if not any(k in os.path.basename(b[0]).lower() for k in EXCLUDE_BIN_KEYWORDS)
+]
+
+a.datas = [
+    d for d in a.datas
+    if not any(k in os.path.basename(d[0]).lower() for k in EXCLUDE_BIN_KEYWORDS)
+]
+
 pyz = PYZ(a.pure)
 
 import sys

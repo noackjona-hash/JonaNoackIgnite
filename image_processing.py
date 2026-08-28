@@ -43,8 +43,8 @@ def _init_gpu() -> bool:
     _GPU_INITIALIZED = True
     
     try:
-        import torch
-        import torch.nn.functional as F
+        import importlib
+        torch = importlib.import_module("torch")
         _TORCH = torch
         if torch.cuda.is_available():
             try:
@@ -883,7 +883,8 @@ def _pytorch_gpu_pipeline(
     kernel_large = compute_odd_kernel(dim, tophat_factor)
     pad = kernel_large // 2
 
-    import torch.nn.functional as F
+    import importlib
+    F = importlib.import_module("torch.nn.functional")
     with _TORCH.no_grad():
         img_4d = img_t.unsqueeze(0).unsqueeze(0)
 
