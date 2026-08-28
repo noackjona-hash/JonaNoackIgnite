@@ -25,6 +25,7 @@ from gui.theme import (
     BACKEND_STYLES,
 )
 from utils import get_resource_path
+import config
 import image_processing
 
 
@@ -87,7 +88,7 @@ class TopAppBar(ctk.CTkFrame):
 
         ctk.CTkLabel(
             title_row,
-            text=" v3.2 ",
+            text=f" v{getattr(config, 'APP_VERSION', '3.3.0')} ",
             font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=11, weight="bold"),
             text_color=COLOR_TEXT_MUTED,
             fg_color=COLOR_BG_CARD_VARIANT,

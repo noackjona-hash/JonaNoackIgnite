@@ -9,9 +9,9 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'Release-Tag / Version (z. B. v3.2.0)'
+        description: 'Release-Tag / Version (z. B. v3.3.0)'
         required: false
-        default: 'v3.2.0'
+        default: 'v3.3.0'
 
 permissions:
   contents: write
@@ -136,7 +136,7 @@ jobs:
           elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
             echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
           else
-            echo "tag=v3.2.0" >> $GITHUB_OUTPUT
+            echo "tag=v3.3.0" >> $GITHUB_OUTPUT
           fi
 
       - name: Create or Update GitHub Release

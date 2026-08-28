@@ -3,12 +3,14 @@
 
 from gui.widgets.toast import ToastManager
 from gui.widgets.command_palette import CommandPalette
-from gui.widgets.dialogs import AboutModal, HelpModal, PatientExportModal
+from gui.widgets.dialogs import AboutModal, HelpModal, PatientExportModal, UpdateModal
 
 __all__ = [
     "ToastManager",
     "CommandPalette",
     "AboutModal",
     "HelpModal",
-    "PatientExportModal"
+    "PatientExportModal",
+    "UpdateModal"
 ]
+

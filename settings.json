@@ -45,5 +45,8 @@
     ],
     "FRANGI_BETA": 0.5,
     "FRANGI_C": 15.0,
-    "DEFAULT_ENABLE_BILATERAL_MAP": true
+    "DEFAULT_ENABLE_BILATERAL_MAP": true,
+    "APP_VERSION": "3.3.0",
+    "GITHUB_REPO": "noackjona-hash/JonaNoackIgnite",
+    "AUTO_CHECK_UPDATES": true
 }

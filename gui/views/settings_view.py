@@ -40,6 +40,7 @@ class SettingsView(ctk.CTkFrame):
         ("visual",   "Anzeige & Overlays"),
         ("hardware", "Performance & Engine"),
         ("privacy",  "Datenschutz & DSGVO"),
+        ("updates",  "Updates & Version"),
     ]
 
     PRESETS = {
@@ -218,6 +219,7 @@ class SettingsView(ctk.CTkFrame):
         self._build_visual_panel()
         self._build_hardware_panel()
         self._build_privacy_panel()
+        self._build_updates_panel()
 
         self.select_category("algo")
 
@@ -480,6 +482,110 @@ class SettingsView(ctk.CTkFrame):
         sw_audit.select()
         sw_audit.pack(fill=ctk.X, pady=4)
         self.switches["audit_log"] = sw_audit
+
+    def _build_updates_panel(self) -> None:
+        import webbrowser
+        from gui.services.update_service import is_frozen_app
+        from gui.widgets.dialogs import UpdateModal
+
+        panel = ctk.CTkFrame(self.scroll_body, fg_color="transparent")
+        self.category_panels["updates"] = panel
+
+        # Karte 1: Versions- & Installationsstatus
+        card1 = make_material_card(panel, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD_VARIANT)
+        card1.pack(fill=ctk.X, pady=4)
+        c1_inner = ctk.CTkFrame(card1, fg_color="transparent")
+        c1_inner.pack(fill=ctk.X, padx=16, pady=14)
+
+        ctk.CTkLabel(
+            c1_inner,
+            text="Software-Version & Status",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"),
+            text_color=COLOR_TEXT_PRIMARY
+        ).pack(anchor="w", pady=(0, 8))
+
+        # Statuszeilen
+        frozen = is_frozen_app()
+        status_mode = "Installierte Desktop-Workstation (.exe)" if frozen else "Entwickler-Modus (Quellcode / venv)"
+        ver_str = getattr(config, "APP_VERSION", "3.3.0")
+        repo_str = getattr(config, "GITHUB_REPO", "noackjona-hash/JonaNoackIgnite")
+
+        for label_t, val_t in [
+            ("Installierte Version:", f"v{ver_str}"),
+            ("Betriebsmodus:", status_mode),
+            ("GitHub Repository:", repo_str),
+        ]:
+            row = ctk.CTkFrame(c1_inner, fg_color="transparent")
+            row.pack(fill=ctk.X, pady=2)
+            ctk.CTkLabel(row, text=label_t, font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color=COLOR_TEXT_PRIMARY).pack(side=tk.LEFT)
+            ctk.CTkLabel(row, text=val_t, font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=11), text_color=COLOR_TEXT_MUTED).pack(side=tk.RIGHT)
+
+        # Update Check Button
+        ctk.CTkButton(
+            c1_inner,
+            text="🔄 Jetzt nach Software-Updates suchen",
+            command=lambda: UpdateModal(self.winfo_toplevel(), on_notify=self.on_notify),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            fg_color=COLOR_PRIMARY,
+            hover_color=COLOR_PRIMARY_HOVER,
+            text_color="#FFFFFF",
+            corner_radius=RADIUS_BUTTON,
+            height=34
+        ).pack(fill=ctk.X, pady=(12, 0))
+
+        # Karte 2: Automatische Update-Prüfung
+        card2 = make_material_card(panel, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD_VARIANT)
+        card2.pack(fill=ctk.X, pady=6)
+        c2_inner = ctk.CTkFrame(card2, fg_color="transparent")
+        c2_inner.pack(fill=ctk.X, padx=16, pady=14)
+
+        ctk.CTkLabel(
+            c2_inner,
+            text="Automatische Prüfung beim Start",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"),
+            text_color=COLOR_TEXT_PRIMARY
+        ).pack(anchor="w", pady=(0, 4))
+
+        sw_auto_update = ctk.CTkSwitch(
+            c2_inner,
+            text="Beim Programmstart automatisch im Hintergrund nach neuen Versionen suchen",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            progress_color=COLOR_PRIMARY,
+            command=self._on_change
+        )
+        if getattr(config, "AUTO_CHECK_UPDATES", True):
+            sw_auto_update.select()
+        else:
+            sw_auto_update.deselect()
+        sw_auto_update.pack(fill=ctk.X, pady=(4, 6))
+        self.switches["auto_check_updates"] = sw_auto_update
+
+        ctk.CTkLabel(
+            c2_inner,
+            text="Sobald auf GitHub ein neues Release veröffentlicht wird, blendet IGNITE eine Benachrichtigung ein.",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=10),
+            text_color=COLOR_TEXT_MUTED
+        ).pack(anchor="w")
+
+        # Karte 3: Releases & Changelog Link
+        card3 = make_material_card(panel, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD_VARIANT)
+        card3.pack(fill=ctk.X, pady=4)
+        c3_inner = ctk.CTkFrame(card3, fg_color="transparent")
+        c3_inner.pack(fill=ctk.X, padx=16, pady=12)
+
+        ctk.CTkButton(
+            c3_inner,
+            text="🌐 Alle Releases & Versionshistorie auf GitHub anzeigen",
+            command=lambda: webbrowser.open(f"https://github.com/{repo_str}/releases"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+            fg_color=COLOR_BG_CARD,
+            hover_color=COLOR_BG_CARD_HOVER,
+            border_width=1,
+            border_color=COLOR_OUTLINE,
+            text_color=COLOR_TEXT_PRIMARY,
+            corner_radius=RADIUS_BUTTON,
+            height=32
+        ).pack(fill=ctk.X)
 
     # ── Callbacks ─────────────────────────────────────────────────────────────
 

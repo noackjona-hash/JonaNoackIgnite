@@ -9,6 +9,7 @@ from __future__ import annotations
 import os
 import sys
 import logging
+import threading
 from tkinter import filedialog
 from typing import Optional, Any
 import customtkinter as ctk
@@ -39,14 +40,15 @@ from gui.views.batch_view import BatchView
 from gui.views.settings_view import SettingsView
 from gui.widgets.toast import ToastManager
 from gui.widgets.command_palette import CommandPalette
-from gui.widgets.dialogs import AboutModal, HelpModal, PatientExportModal
+from gui.widgets.dialogs import AboutModal, HelpModal, PatientExportModal, UpdateModal
 from gui.widgets.annotator_dialog import GroundTruthAnnotatorDialog
 from gui.services.processing_service import ThermalProcessingService
 from gui.services.export_service import ExportService
 from gui.services.scientific_report_service import ScientificReportService
+from gui.services.update_service import UpdateService, UpdateInfo
 from utils import get_resource_path
 
-APP_VERSION = "3.2.0"
+APP_VERSION = getattr(config, "APP_VERSION", "3.2.0")
 
 
 class IgniteApp:
@@ -163,6 +165,10 @@ class IgniteApp:
         self._bind_shortcuts()
         self.root.bind("<Configure>", self._on_window_resize)
 
+        # ── 7. Automatischer Update-Check (Background) ────────────────────────
+        if getattr(config, "AUTO_CHECK_UPDATES", True):
+            self.root.after(2500, self._check_updates_background)
+
     def _apply_geometry(self) -> None:
         """Setzt eine proportionierte Startgröße passend zur Bildschirmauflösung."""
         try:
@@ -250,6 +256,8 @@ class IgniteApp:
         self.root.bind("<Control-G>", lambda e: self.open_ground_truth_annotator())
         self.root.bind("<Control-t>", lambda e: self.toggle_appearance_mode())
         self.root.bind("<Control-T>", lambda e: self.toggle_appearance_mode())
+        self.root.bind("<Control-u>", lambda e: self.open_update_dialog())
+        self.root.bind("<Control-U>", lambda e: self.open_update_dialog())
         self.root.bind("<F5>", lambda e: self.run_pipeline())
         self.root.bind("<Control-r>", lambda e: self.run_pipeline())
         self.root.bind("<Control-R>", lambda e: self.run_pipeline())
@@ -465,10 +473,41 @@ class IgniteApp:
             {"label": "Ground-Truth Annotator öffnen",  "desc": "Interaktives Annotieren & Validieren von Testmasken", "shortcut": "Ctrl+G", "action": self.open_ground_truth_annotator},
             {"label": "Design wechseln (Hell/Dunkel)",   "desc": "Erscheinungsmodus umschalten",         "shortcut": "Ctrl+T", "action": self.toggle_appearance_mode},
             {"label": "Bedienungsanleitung anzeigen",    "desc": "Dokumentation und Schnelleinstieg",    "shortcut": "",       "action": self.show_help_dialog},
+            {"label": "Nach Software-Updates suchen…",  "desc": "GitHub Releases prüfen und aktualisieren", "shortcut": "Ctrl+U", "action": self.open_update_dialog},
             {"label": "Über IGNITE",                     "desc": "Versions- und Projektinformationen",   "shortcut": "",       "action": self.show_about_dialog},
         ]
         palette = CommandPalette(self.root, commands)
         palette.grab_set()
+
+    def _check_updates_background(self) -> None:
+        """Prüft im Hintergrund-Thread asynchron auf neue Releases."""
+        def _worker():
+            try:
+                info = UpdateService.check_for_updates(
+                    current_version=getattr(config, "APP_VERSION", "3.3.0"),
+                    repo=getattr(config, "GITHUB_REPO", UpdateService.DEFAULT_REPO)
+                )
+                if info and info.is_newer:
+                    self.root.after(0, lambda: self._notify_update_available(info))
+            except Exception as e:
+                logging.debug(f"Hintergrund-Updateprüfung fehlgeschlagen: {e}")
+
+        threading.Thread(target=_worker, daemon=True).start()
+
+    def _notify_update_available(self, info: UpdateInfo) -> None:
+        """Blendet eine Toast-Benachrichtigung für ein verfügbares Update ein."""
+        self.toast.show(
+            f"🚀 Update {info.tag_name} verfügbar!",
+            level="info",
+            duration_ms=9000,
+            action_text="Aktualisieren",
+            action_callback=lambda: self.open_update_dialog(info)
+        )
+
+    def open_update_dialog(self, info: Optional[UpdateInfo] = None) -> None:
+        """Öffnet den Software-Update-Dialog."""
+        modal = UpdateModal(self.root, update_info=info, on_notify=self._show_toast)
+        modal.grab_set()
 
     def open_ground_truth_annotator(self) -> None:
         """Öffnet den interaktiven Ground-Truth Annotator."""
@@ -534,3 +573,4 @@ class IgniteApp:
     def show_help_dialog(self) -> None:
         modal = HelpModal(self.root)
         modal.grab_set()
+

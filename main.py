@@ -145,7 +145,7 @@ def create_instant_splash():
     badge_frame.pack(side=tk.LEFT, padx=(10, 0), pady=4)
     tk.Label(
         badge_frame,
-        text="v3.2.0 · Core",
+        text="v3.3.0 · Core",
         font=("Segoe UI", 8, "bold"),
         fg="#38BDF8",
         bg="#1E293B"
@@ -340,7 +340,7 @@ def main():
             try:
                 import ignite_core
                 loaded["ignite_core"] = ignite_core
-                rust_backend_str = getattr(ignite_core, "__backend__", f"v{getattr(ignite_core, '__version__', '3.2.0')}")
+                rust_backend_str = getattr(ignite_core, "__backend__", f"v{getattr(ignite_core, '__version__', '3.3.0')}")
             except Exception:
                 pass
 

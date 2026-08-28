@@ -2,10 +2,15 @@
 """gui/widgets/dialogs.py – High-Contrast Modals & Dialogs for IGNITE."""
 
 from __future__ import annotations
+import os
+import sys
+import threading
+import webbrowser
 import tkinter as tk
-from typing import Callable, Optional
+from typing import Callable, Optional, Any
 import numpy as np
 import customtkinter as ctk
+
 
 from gui.theme import (
     COLOR_BG_APP,
@@ -54,9 +59,10 @@ class AboutModal(ctk.CTkToplevel):
             text_color=COLOR_TEXT_PRIMARY
         ).pack(pady=(4, 2))
 
+        import config
         ctk.CTkLabel(
             inner,
-            text="Version 3.2.0 · Jugend forscht 2026 (Fachgebiet Arbeitswelt)",
+            text=f"Version {getattr(config, 'APP_VERSION', '3.3.0')} · Jugend forscht 2026 (Fachgebiet Arbeitswelt)",
             font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
             text_color=COLOR_PRIMARY
         ).pack(pady=(0, 14))
@@ -88,18 +94,37 @@ class AboutModal(ctk.CTkToplevel):
             text_color=COLOR_TEXT_MUTED
         ).pack(pady=(0, 12))
 
+        btn_row = ctk.CTkFrame(inner, fg_color="transparent")
+        btn_row.pack(pady=(0, 0))
+
         ctk.CTkButton(
-            inner,
+            btn_row,
+            text="🔄 Nach Updates suchen",
+            command=self._open_updater,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            fg_color=COLOR_BG_CARD_VARIANT,
+            hover_color=COLOR_BG_CARD_HOVER,
+            corner_radius=RADIUS_BUTTON,
+            height=34
+        ).pack(side=tk.LEFT, padx=(0, 8))
+
+        ctk.CTkButton(
+            btn_row,
             text="Schließen",
             command=self.destroy,
-            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
             fg_color=COLOR_PRIMARY,
             hover_color=COLOR_PRIMARY_HOVER,
             text_color="#FFFFFF",
             corner_radius=RADIUS_BUTTON,
             height=34,
-            width=120
-        ).pack()
+            width=100
+        ).pack(side=tk.LEFT)
+
+    def _open_updater(self) -> None:
+        self.destroy()
+        UpdateModal(self.master)
+
 
 
 class HelpModal(ctk.CTkToplevel):
@@ -763,4 +788,387 @@ class DynamicPerfusionModal(ctk.CTkToplevel):
         )
         if path and hasattr(self, 'fig'):
             self.fig.savefig(path, dpi=200, bbox_inches='tight')
+
+
+class UpdateModal(ctk.CTkToplevel):
+    """Modernes Software-Update Modal für IGNITE im Google Material 3 Design."""
+
+    def __init__(
+        self,
+        master,
+        update_info: Optional[Any] = None,
+        on_notify: Optional[Callable[[str, str], None]] = None,
+        **kwargs
+    ) -> None:
+        super().__init__(master, **kwargs)
+
+        self.title("IGNITE – Software-Update")
+        self.geometry("600x520")
+        self.resizable(False, False)
+        self.transient(master)
+        self.configure(fg_color=COLOR_BG_APP)
+
+        self.update_info = update_info
+        self.on_notify = on_notify
+        self._cancel_event = threading.Event()
+        self._is_downloading = False
+
+        self._build_ui()
+
+        if self.update_info is None:
+            self._start_check()
+        else:
+            self._display_update_info()
+
+    def _build_ui(self) -> None:
+        container = make_material_card(self, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD)
+        container.pack(fill=ctk.BOTH, expand=True, padx=14, pady=14)
+
+        self.inner = ctk.CTkFrame(container, fg_color="transparent")
+        self.inner.pack(fill=ctk.BOTH, expand=True, padx=18, pady=18)
+
+        # Header
+        ctk.CTkLabel(
+            self.inner,
+            text="IGNITE Software-Aktualisierung",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=18, weight="bold"),
+            text_color=COLOR_TEXT_PRIMARY
+        ).pack(anchor="w", pady=(0, 2))
+
+        ctk.CTkLabel(
+            self.inner,
+            text="Automatische Versionsprüfung & Release-Installation via GitHub",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+            text_color=COLOR_TEXT_MUTED
+        ).pack(anchor="w", pady=(0, 14))
+
+        # Dynamischer Inhalts-Container
+        self.content_frame = ctk.CTkFrame(self.inner, fg_color="transparent")
+        self.content_frame.pack(fill=ctk.BOTH, expand=True)
+
+        # Progress / Status-Bereich (initial verborgen)
+        self.progress_frame = ctk.CTkFrame(self.inner, fg_color="transparent")
+        self.pbar = ctk.CTkProgressBar(self.progress_frame, height=8, progress_color=COLOR_PRIMARY)
+        self.pbar.set(0.0)
+        self.pbar.pack(fill=ctk.X, pady=(0, 4))
+        
+        self.lbl_progress = ctk.CTkLabel(
+            self.progress_frame,
+            text="Bereite Download vor...",
+            font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=10),
+            text_color=COLOR_TEXT_MUTED
+        )
+        self.lbl_progress.pack(anchor="w")
+
+        # Footer Button-Bar
+        self.button_bar = ctk.CTkFrame(self.inner, fg_color="transparent")
+        self.button_bar.pack(fill=ctk.X, pady=(12, 0))
+
+    def _start_check(self) -> None:
+        """Führt die Versionsprüfung im Hintergrund-Thread durch."""
+        for widget in self.content_frame.winfo_children():
+            widget.destroy()
+
+        loading_box = make_material_card(self.content_frame, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD_VARIANT)
+        loading_box.pack(fill=ctk.BOTH, expand=True, pady=10)
+
+        ctk.CTkLabel(
+            loading_box,
+            text="🔄 Prüfe GitHub Releases auf neuere Versionen...",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"),
+            text_color=COLOR_PRIMARY
+        ).pack(expand=True)
+
+        def _do_check():
+            import config
+            from gui.services.update_service import UpdateService
+            info = UpdateService.check_for_updates(
+                current_version=getattr(config, "APP_VERSION", "3.3.0"),
+                repo=getattr(config, "GITHUB_REPO", UpdateService.DEFAULT_REPO)
+            )
+            self.after(0, lambda: self._on_check_finished(info))
+
+        threading.Thread(target=_do_check, daemon=True).start()
+
+    def _on_check_finished(self, info: Optional[Any]) -> None:
+        self.update_info = info
+        self._display_update_info()
+
+    def _display_update_info(self) -> None:
+        import webbrowser
+        import config
+        from gui.services.update_service import is_frozen_app
+
+        for widget in self.content_frame.winfo_children():
+            widget.destroy()
+        for widget in self.button_bar.winfo_children():
+            widget.destroy()
+
+        cur_ver = getattr(config, "APP_VERSION", "3.3.0")
+
+        # Fall 1: Keine Verbindung oder Fehler
+        if self.update_info is None:
+            card = make_material_card(self.content_frame, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD_VARIANT)
+            card.pack(fill=ctk.BOTH, expand=True, pady=10, padx=4)
+
+            ctk.CTkLabel(
+                card,
+                text="⚠️ Verbindung zu GitHub konnte nicht hergestellt werden.",
+                font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"),
+                text_color="#F59E0B"
+            ).pack(pady=(20, 6))
+
+            ctk.CTkLabel(
+                card,
+                text="Bitte überprüfe deine Internetverbindung oder versuche es später erneut.",
+                font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+                text_color=COLOR_TEXT_MUTED
+            ).pack(pady=(0, 20))
+
+            ctk.CTkButton(
+                self.button_bar,
+                text="Erneut versuchen",
+                command=self._start_check,
+                font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+                fg_color=COLOR_PRIMARY,
+                hover_color=COLOR_PRIMARY_HOVER,
+                corner_radius=RADIUS_BUTTON,
+                height=32
+            ).pack(side=tk.LEFT)
+
+            ctk.CTkButton(
+                self.button_bar,
+                text="Schließen",
+                command=self.destroy,
+                font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+                fg_color=COLOR_BG_CARD_VARIANT,
+                hover_color=COLOR_BG_CARD_HOVER,
+                corner_radius=RADIUS_BUTTON,
+                height=32
+            ).pack(side=tk.RIGHT)
+            return
+
+        # Fall 2: Version ist aktuell
+        if not self.update_info.is_newer:
+            card = make_material_card(self.content_frame, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD_VARIANT)
+            card.pack(fill=ctk.BOTH, expand=True, pady=10, padx=4)
+
+            ctk.CTkLabel(
+                card,
+                text=f"✓ Ihre Version v{cur_ver} ist auf dem neuesten Stand!",
+                font=ctk.CTkFont(family=FONT_FAMILY, size=14, weight="bold"),
+                text_color="#10B981"
+            ).pack(pady=(24, 6))
+
+            ctk.CTkLabel(
+                card,
+                text=f"Neuestes Release auf GitHub: {self.update_info.tag_name}\nKeine Aktualisierung erforderlich.",
+                font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+                text_color=COLOR_TEXT_MUTED,
+                justify="center"
+            ).pack(pady=(0, 24))
+
+            ctk.CTkButton(
+                self.button_bar,
+                text="Auf GitHub ansehen",
+                command=lambda: webbrowser.open(self.update_info.html_url),
+                font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+                fg_color=COLOR_BG_CARD_VARIANT,
+                hover_color=COLOR_BG_CARD_HOVER,
+                corner_radius=RADIUS_BUTTON,
+                height=32
+            ).pack(side=tk.LEFT)
+
+            ctk.CTkButton(
+                self.button_bar,
+                text="Schließen",
+                command=self.destroy,
+                font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+                fg_color=COLOR_PRIMARY,
+                hover_color=COLOR_PRIMARY_HOVER,
+                corner_radius=RADIUS_BUTTON,
+                height=32
+            ).pack(side=tk.RIGHT)
+            return
+
+        # Fall 3: Neues Update verfügbar!
+        # Versions-Vergleichs-Banner
+        banner = make_material_card(self.content_frame, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD_VARIANT)
+        banner.pack(fill=ctk.X, pady=(0, 10))
+
+        banner_inner = ctk.CTkFrame(banner, fg_color="transparent")
+        banner_inner.pack(fill=ctk.X, padx=12, pady=10)
+
+        # Aktuell vs Neu
+        ver_row = ctk.CTkFrame(banner_inner, fg_color="transparent")
+        ver_row.pack(fill=ctk.X)
+
+        ctk.CTkLabel(
+            ver_row,
+            text=f"Aktuell: v{cur_ver}",
+            font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=11, weight="bold"),
+            text_color=COLOR_TEXT_MUTED
+        ).pack(side=tk.LEFT)
+
+        ctk.CTkLabel(
+            ver_row,
+            text=" ➔ ",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
+            text_color=COLOR_PRIMARY
+        ).pack(side=tk.LEFT, padx=6)
+
+        ctk.CTkLabel(
+            ver_row,
+            text=f"Verfügbar: {self.update_info.tag_name}",
+            font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=11, weight="bold"),
+            text_color="#38BDF8"
+        ).pack(side=tk.LEFT)
+
+        # Asset-Info
+        size_mb = self.update_info.asset_size / (1024 * 1024) if self.update_info.asset_size > 0 else 0
+        asset_info_text = f"Asset: {self.update_info.asset_name}"
+        if size_mb > 0:
+            asset_info_text += f" ({size_mb:.1f} MB)"
+
+        ctk.CTkLabel(
+            banner_inner,
+            text=asset_info_text,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=10),
+            text_color=COLOR_TEXT_MUTED
+        ).pack(anchor="w", pady=(4, 0))
+
+        # Release Notes Label
+        ctk.CTkLabel(
+            self.content_frame,
+            text="Versionshinweise / Changelog:",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            text_color=COLOR_TEXT_PRIMARY
+        ).pack(anchor="w", pady=(4, 4))
+
+        # Release Notes Scrollable Box
+        notes_box = ctk.CTkScrollableFrame(
+            self.content_frame,
+            fg_color=COLOR_BG_CARD_VARIANT,
+            corner_radius=RADIUS_CARD,
+            height=140
+        )
+        notes_box.pack(fill=ctk.BOTH, expand=True, pady=(0, 6))
+
+        notes_text = self.update_info.release_notes or "Keine detaillierten Versionshinweise angegeben."
+        ctk.CTkLabel(
+            notes_box,
+            text=notes_text,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=10),
+            text_color=COLOR_TEXT_SECONDARY,
+            justify="left",
+            wraplength=520
+        ).pack(anchor="w", padx=8, pady=8)
+
+        # Button-Bar
+        frozen = is_frozen_app()
+
+        ctk.CTkButton(
+            self.button_bar,
+            text="Auf GitHub ansehen",
+            command=lambda: webbrowser.open(self.update_info.html_url),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+            fg_color=COLOR_BG_CARD_VARIANT,
+            hover_color=COLOR_BG_CARD_HOVER,
+            corner_radius=RADIUS_BUTTON,
+            height=34
+        ).pack(side=tk.LEFT)
+
+        ctk.CTkButton(
+            self.button_bar,
+            text="Später",
+            command=self.destroy,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+            fg_color=COLOR_BG_CARD_VARIANT,
+            hover_color=COLOR_BG_CARD_HOVER,
+            corner_radius=RADIUS_BUTTON,
+            height=34
+        ).pack(side=tk.RIGHT, padx=(8, 0))
+
+        btn_action_text = "Jetzt aktualisieren & neu starten" if frozen else "Installer herunterladen"
+        self.btn_update = ctk.CTkButton(
+            self.button_bar,
+            text=btn_action_text,
+            command=self._start_download_and_install,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            fg_color=COLOR_PRIMARY,
+            hover_color=COLOR_PRIMARY_HOVER,
+            text_color="#FFFFFF",
+            corner_radius=RADIUS_BUTTON,
+            height=34
+        )
+        self.btn_update.pack(side=tk.RIGHT)
+
+    def _start_download_and_install(self) -> None:
+        """Startet den Download des Release-Assets und die anschließende Installation."""
+        if not self.update_info or not self.update_info.asset_url:
+            if self.on_notify:
+                self.on_notify("Fehler", "Keine gültige Download-URL gefunden.")
+            return
+
+        self._is_downloading = True
+        self.btn_update.configure(state="disabled", text="Wird vorbereitet...")
+        self.progress_frame.pack(fill=ctk.X, pady=(4, 8))
+
+        def _worker():
+            from gui.services.update_service import UpdateService, is_frozen_app
+
+            def _on_progress(pct: float, current_b: int, total_b: int):
+                cur_mb = current_b / (1024 * 1024)
+                tot_mb = total_b / (1024 * 1024)
+                self.after(0, lambda: self._update_progress_ui(pct, cur_mb, tot_mb))
+
+            try:
+                installer_file = UpdateService.download_update_asset(
+                    asset_url=self.update_info.asset_url,
+                    dest_filename=self.update_info.asset_name,
+                    progress_callback=_on_progress,
+                    cancel_event=self._cancel_event
+                )
+
+                self.after(0, lambda: self._on_download_complete(installer_file))
+
+            except Exception as e:
+                self.after(0, lambda: self._on_download_error(str(e)))
+
+        threading.Thread(target=_worker, daemon=True).start()
+
+    def _update_progress_ui(self, pct: float, cur_mb: float, tot_mb: float) -> None:
+        self.pbar.set(pct)
+        pct_int = int(pct * 100)
+        self.lbl_progress.configure(
+            text=f"Lade herunter: {cur_mb:.1f} MB / {tot_mb:.1f} MB ({pct_int}%)"
+        )
+        self.btn_update.configure(text=f"Download {pct_int}%...")
+
+    def _on_download_complete(self, installer_path: str) -> None:
+        import webbrowser
+        from gui.services.update_service import UpdateService, is_frozen_app
+
+        self.pbar.set(1.0)
+        self.lbl_progress.configure(text="✓ Download erfolgreich abgeschlossen!")
+
+        if is_frozen_app():
+            self.lbl_progress.configure(text="Starte Setup-Programm & beende Anwendung...")
+            self.after(600, lambda: UpdateService.apply_update(installer_path))
+        else:
+            # Im Entwickler-Modus Datei im Explorer anzeigen
+            self.lbl_progress.configure(text=f"Gespeichert in: {installer_path}")
+            if sys.platform.startswith("win"):
+                os.system(f'explorer.exe /select,"{installer_path}"')
+            if self.on_notify:
+                self.on_notify("Download abgeschlossen", f"Installer gespeichert unter: {installer_path}")
+            self.btn_update.configure(state="normal", text="Installer ausführen", command=lambda: UpdateService.apply_update(installer_path))
+
+    def _on_download_error(self, err_msg: str) -> None:
+        self._is_downloading = False
+        self.lbl_progress.configure(text=f"❌ Download fehlgeschlagen: {err_msg}")
+        self.btn_update.configure(state="normal", text="Erneut versuchen")
+        if self.on_notify:
+            self.on_notify("Update-Fehler", f"Download fehlgeschlagen: {err_msg}")
+
 

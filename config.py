@@ -34,6 +34,9 @@ _DEFAULT_SETTINGS: Dict[str, Any] = {
     "REFLECTED_TEMP_C": 20.0,
     "UI_SCALE": 1.0,
     "SALT": secrets.token_hex(16),
+    "APP_VERSION": "3.3.0",
+    "GITHUB_REPO": "noackjona-hash/JonaNoackIgnite",
+    "AUTO_CHECK_UPDATES": True,
     # ── Neue erweiterte Algorithmus-Parameter (v3.3 & v3.4) ───────────────────
     "DEFAULT_MULTISCALE_TOPHAT": True,
     "DEFAULT_MULTISCALE_FACTORS": [0.025, 0.050, 0.100],
@@ -134,9 +137,15 @@ DEFAULT_ENABLE_BILATERAL_MAP = _settings.get("DEFAULT_ENABLE_BILATERAL_MAP", Tru
 # ── UI-Skalierung ──────────────────────────────────────────────────────────────
 UI_SCALE = _settings.get("UI_SCALE", 1.0)
 
+# ── Update & Versions-Konfiguration ───────────────────────────────────────────
+APP_VERSION = _settings.get("APP_VERSION", "3.3.0")
+GITHUB_REPO = _settings.get("GITHUB_REPO", "noackjona-hash/JonaNoackIgnite")
+AUTO_CHECK_UPDATES = _settings.get("AUTO_CHECK_UPDATES", True)
+
 SALT = _settings["SALT"]
 
 def init_output_dir() -> None:
     """Erstellt den Ausgabeordner, falls er noch nicht existiert."""
     if not os.path.exists(OUTPUT_DIR):
         os.makedirs(OUTPUT_DIR)
+
