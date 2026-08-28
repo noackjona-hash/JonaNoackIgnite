@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""tests/conftest.py – Global pytest configuration & environment setup."""
+"""conftest.py – Root pytest configuration & environment setup."""
 
 import os
 import sys

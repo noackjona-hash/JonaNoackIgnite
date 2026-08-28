@@ -2,9 +2,19 @@ name: Multi-OS Build and Release (Windows & Linux)
 
 on:
   push:
+    branches:
+      - main
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Release-Tag / Version (z. B. v3.2.0)'
+        required: false
+        default: 'v3.2.0'
+
+permissions:
+  contents: write
 
 jobs:
   build-windows:
@@ -46,6 +56,7 @@ jobs:
         with:
           name: IGNITE_Windows_Setup
           path: IGNITE_Setup_*.exe
+          if-no-files-found: error
 
   build-linux:
     name: Build Linux Package (.tar.gz)
@@ -92,6 +103,7 @@ jobs:
         with:
           name: IGNITE_Linux_Package
           path: IGNITE_Linux_x86_64.tar.gz
+          if-no-files-found: error
 
   create-release:
     name: Create GitHub Release
@@ -104,18 +116,39 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: IGNITE_Windows_Setup
+          path: dist_release
 
       - name: Download Linux Artifact
         uses: actions/download-artifact@v4
         with:
           name: IGNITE_Linux_Package
+          path: dist_release
 
-      - name: Create Release
+      - name: Inspect Release Artifacts
+        run: |
+          ls -la dist_release/
+
+      - name: Determine Tag Name
+        id: tag_info
+        run: |
+          if [ -n "${{ inputs.tag_name }}" ]; then
+            echo "tag=${{ inputs.tag_name }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=v3.2.0" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create or Update GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.tag_info.outputs.tag }}
+          name: IGNITE Medical Imaging Suite ${{ steps.tag_info.outputs.tag }}
           files: |
-            IGNITE_Setup_*.exe
-            IGNITE_Linux_x86_64.tar.gz
+            dist_release/IGNITE_Setup_*.exe
+            dist_release/IGNITE_Linux_x86_64.tar.gz
           generate_release_notes: true
+          draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

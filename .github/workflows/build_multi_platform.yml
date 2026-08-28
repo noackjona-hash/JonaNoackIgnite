@@ -1,9 +1,6 @@
 name: Multi-OS CI Build (Windows & Linux)
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
     branches:
       - main
@@ -61,12 +58,12 @@ jobs:
         if: runner.os == 'Windows'
         uses: actions/upload-artifact@v4
         with:
-          name: IGNITE_Setup_Windows
+          name: IGNITE_Setup_Windows_CI
           path: IGNITE_Setup_*.exe
 
       - name: Upload Linux Artifact
         if: runner.os == 'Linux'
         uses: actions/upload-artifact@v4
         with:
-          name: IGNITE_Package_Linux
+          name: IGNITE_Package_Linux_CI
           path: IGNITE_Linux_x86_64.tar.gz
