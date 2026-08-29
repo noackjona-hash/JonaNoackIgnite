@@ -626,7 +626,8 @@ def apply_hysteresis_thresholding(
     mask: np.ndarray,
     k_high: float = _config.DEFAULT_HYSTERESIS_K_HIGH,
     k_low: float = _config.DEFAULT_HYSTERESIS_K_LOW,
-    use_mad: bool = False
+    use_mad: bool = False,
+    orig_img: Optional[np.ndarray] = None
 ) -> np.ndarray:
     """
     Adaptive Hysterese-Segmentierung mit morphologischer Geodäten-Rekonstruktion.
@@ -646,16 +647,24 @@ def apply_hysteresis_thresholding(
         sigma = max(1e-5, 1.4826 * mad)
         thresh_high = med + k_high * sigma
         thresh_low = med + k_low * sigma
+        mu_orig = float(np.median(orig_img[mask > 0])) if orig_img is not None else 0.0
     else:
         mean_v = float(np.mean(valid_pixels))
         sigma = max(1e-5, float(np.std(valid_pixels)))
         thresh_high = mean_v + k_high * sigma
         thresh_low = mean_v + k_low * sigma
+        mu_orig = float(np.mean(orig_img[mask > 0])) if orig_img is not None else 0.0
 
-    strong_mask = ((diff_img >= thresh_high) & (mask > 0)).astype(np.uint8) * 255
-    weak_mask = ((diff_img >= thresh_low) & (mask > 0)).astype(np.uint8) * 255
+    strong_cond = (diff_img > thresh_high) & (mask > 0)
+    weak_cond = (diff_img > thresh_low) & (mask > 0)
+    if orig_img is not None:
+        strong_cond = strong_cond & (orig_img > mu_orig)
+        weak_cond = weak_cond & (orig_img > mu_orig)
 
-    num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(weak_mask)
+    strong_mask = strong_cond.astype(np.uint8) * 255
+    weak_mask = weak_cond.astype(np.uint8) * 255
+
+    num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(weak_mask, connectivity=4)
     final_hysteresis = np.zeros_like(diff_img, dtype=np.uint8)
 
     for i in range(1, num_labels):
@@ -868,7 +877,9 @@ def _pytorch_gpu_pipeline(
     otsu_min: int = _config.DEFAULT_OTSU_MIN,
     otsu_max: int = _config.DEFAULT_OTSU_MAX,
     dist_erosion_factor: float = _config.DEFAULT_DIST_EROSION_FACTOR,
-    use_mad: bool = _config.DEFAULT_USE_MAD
+    use_mad: bool = _config.DEFAULT_USE_MAD,
+    enable_hysteresis: bool = False,
+    hysteresis_k_low: Optional[float] = None
 ) -> tuple[np.ndarray, np.ndarray]:
     """GPU-beschleunigte Pipeline unter Verwendung von PyTorch CUDA."""
     mask_cpu = extract_body_mask_multi_otsu(img, otsu_min, otsu_max, dist_erosion_factor)
@@ -895,27 +906,34 @@ def _pytorch_gpu_pipeline(
 
         diff_t = _TORCH.where(mask_t > 0, tophat_t, _TORCH.zeros_like(tophat_t))
 
-        body_pixels = diff_t[mask_t > 0]
-        orig_body_pixels = img_t[mask_t > 0]
+        diff_np = diff_t.cpu().numpy().astype(np.uint8)
+
+    if enable_hysteresis:
+        k_high = sigma_k
+        k_low = hysteresis_k_low if hysteresis_k_low is not None else min(sigma_k * 0.5, _config.DEFAULT_HYSTERESIS_K_LOW)
+        binary_raw_np = apply_hysteresis_thresholding(
+            diff_np, mask_cpu, k_high=k_high, k_low=k_low, use_mad=use_mad, orig_img=img
+        )
+    else:
+        body_pixels = diff_np[mask_cpu > 0]
+        orig_body_pixels = img[mask_cpu > 0]
 
         if use_mad:
-            median_diff = body_pixels.median()
-            mad_diff = (body_pixels - median_diff).abs().median()
+            median_diff = float(np.median(body_pixels))
+            mad_diff = float(np.median(np.abs(body_pixels - median_diff)))
             sigma_diff = 1.4826 * mad_diff
             T_rel = median_diff + sigma_k * sigma_diff
-            mu_orig = orig_body_pixels.median()
+            mu_orig = float(np.median(orig_body_pixels))
         else:
-            mu_diff = body_pixels.mean()
-            sigma_diff = body_pixels.std()
+            mu_diff = float(np.mean(body_pixels))
+            sigma_diff = float(np.std(body_pixels))
             T_rel = mu_diff + sigma_k * sigma_diff
-            mu_orig = orig_body_pixels.mean()
+            mu_orig = float(np.mean(orig_body_pixels))
 
-        binary_raw_t = (diff_t > T_rel) & (img_t > mu_orig)
-        binary_raw_np = (binary_raw_t.cpu().numpy() * 255).astype(np.uint8)
+        binary_raw_np = ((diff_np > T_rel) & (img > mu_orig)).astype(np.uint8) * 255
 
     final_mask = _filter_geometric_noise(binary_raw_np, mask_cpu, min_area_factor, min_circularity)
 
-    diff_np = diff_t.cpu().numpy()
     min_val = diff_np.min()
     max_val = diff_np.max()
     diff_range = max_val - min_val
@@ -938,6 +956,8 @@ def _python_fallback_pipeline(
     use_mad: bool = _config.DEFAULT_USE_MAD,
     multiscale: bool = False,
     pre_blur: bool = False,
+    enable_hysteresis: bool = False,
+    hysteresis_k_low: Optional[float] = None
 ) -> tuple[np.ndarray, np.ndarray]:
     """Python-Fallback der Hotspot-Pipeline.
 
@@ -984,23 +1004,35 @@ def _python_fallback_pipeline(
         tophat = cv2.subtract(img_blurred, opened)
         diff_img = cv2.bitwise_and(tophat, tophat, mask=mask)
 
-    # 3. Statistik-Thresholding
+    # 3. Statistik-Thresholding (Single vs. Hysteresis Seeded Region Growing)
     body_pixels = diff_img[mask > 0]
     orig_body_pixels = img_blurred[mask > 0]
 
-    if use_mad:
-        median_diff = float(np.median(body_pixels))
-        mad_diff = float(np.median(np.abs(body_pixels - median_diff)))
-        sigma_diff = 1.4826 * mad_diff
-        T_rel = median_diff + sigma_k * sigma_diff
-        mu_orig = float(np.median(orig_body_pixels))
+    if enable_hysteresis:
+        k_high = sigma_k
+        k_low = hysteresis_k_low if hysteresis_k_low is not None else min(sigma_k * 0.5, _config.DEFAULT_HYSTERESIS_K_LOW)
+        binary_raw = apply_hysteresis_thresholding(
+            diff_img,
+            mask,
+            k_high=k_high,
+            k_low=k_low,
+            use_mad=use_mad,
+            orig_img=img_blurred
+        )
     else:
-        mu_diff = float(np.mean(body_pixels))
-        sigma_diff = float(np.std(body_pixels))
-        T_rel = mu_diff + sigma_k * sigma_diff
-        mu_orig = float(np.mean(orig_body_pixels))
+        if use_mad:
+            median_diff = float(np.median(body_pixels))
+            mad_diff = float(np.median(np.abs(body_pixels - median_diff)))
+            sigma_diff = 1.4826 * mad_diff
+            T_rel = median_diff + sigma_k * sigma_diff
+            mu_orig = float(np.median(orig_body_pixels))
+        else:
+            mu_diff = float(np.mean(body_pixels))
+            sigma_diff = float(np.std(body_pixels))
+            T_rel = mu_diff + sigma_k * sigma_diff
+            mu_orig = float(np.mean(orig_body_pixels))
 
-    binary_raw = ((diff_img > T_rel) & (img_blurred > mu_orig)).astype(np.uint8) * 255
+        binary_raw = ((diff_img > T_rel) & (img_blurred > mu_orig)).astype(np.uint8) * 255
 
     # 4. Geometrischer Rauschfilter
     final_mask = _filter_geometric_noise(binary_raw, mask, min_area_factor, min_circularity)
@@ -1022,7 +1054,9 @@ def run_rust_pipeline(
     otsu_min: int = _config.DEFAULT_OTSU_MIN,
     otsu_max: int = _config.DEFAULT_OTSU_MAX,
     dist_erosion_factor: float = _config.DEFAULT_DIST_EROSION_FACTOR,
-    use_mad: bool = _config.DEFAULT_USE_MAD
+    use_mad: bool = _config.DEFAULT_USE_MAD,
+    enable_hysteresis: bool = False,
+    hysteresis_k_low: Optional[float] = None
 ) -> tuple[np.ndarray, np.ndarray]:
     """Führt die vollständige Bildverarbeitungs-Pipeline aus."""
     global FORCED_BACKEND
@@ -1031,7 +1065,8 @@ def run_rust_pipeline(
         if _GPU_AVAILABLE:
             return _pytorch_gpu_pipeline(
                 img, sigma_k, tophat_factor, min_area_factor, min_circularity,
-                otsu_min, otsu_max, dist_erosion_factor, use_mad
+                otsu_min, otsu_max, dist_erosion_factor, use_mad,
+                enable_hysteresis=enable_hysteresis, hysteresis_k_low=hysteresis_k_low
             )
         else:
             raise RuntimeError("GPU-Backend (CUDA) ist nicht verfügbar!")
@@ -1041,7 +1076,7 @@ def run_rust_pipeline(
             img_contiguous = np.ascontiguousarray(img, dtype=np.uint8)
             return _ignite_core.process_thermal_pipeline(
                 img_contiguous, sigma_k, tophat_factor, min_area_factor, min_circularity,
-                otsu_min, otsu_max, dist_erosion_factor, use_mad
+                otsu_min, otsu_max, dist_erosion_factor, use_mad, enable_hysteresis, hysteresis_k_low
             )
         else:
             raise RuntimeError("Natives Rust-Core-Modul ist nicht verfügbar!")
@@ -1049,7 +1084,8 @@ def run_rust_pipeline(
     elif FORCED_BACKEND == "python":
         return _python_fallback_pipeline(
             img, sigma_k, tophat_factor, min_area_factor, min_circularity,
-            otsu_min, otsu_max, dist_erosion_factor, use_mad
+            otsu_min, otsu_max, dist_erosion_factor, use_mad,
+            enable_hysteresis=enable_hysteresis, hysteresis_k_low=hysteresis_k_low
         )
 
     else:  # auto
@@ -1057,7 +1093,8 @@ def run_rust_pipeline(
             try:
                 return _pytorch_gpu_pipeline(
                     img, sigma_k, tophat_factor, min_area_factor, min_circularity,
-                    otsu_min, otsu_max, dist_erosion_factor, use_mad
+                    otsu_min, otsu_max, dist_erosion_factor, use_mad,
+                    enable_hysteresis=enable_hysteresis, hysteresis_k_low=hysteresis_k_low
                 )
             except Exception as e:
                 warnings.warn(
@@ -1070,12 +1107,13 @@ def run_rust_pipeline(
             img_contiguous = np.ascontiguousarray(img, dtype=np.uint8)
             return _ignite_core.process_thermal_pipeline(
                 img_contiguous, sigma_k, tophat_factor, min_area_factor, min_circularity,
-                otsu_min, otsu_max, dist_erosion_factor, use_mad
+                otsu_min, otsu_max, dist_erosion_factor, use_mad, enable_hysteresis, hysteresis_k_low
             )
         else:
             return _python_fallback_pipeline(
                 img, sigma_k, tophat_factor, min_area_factor, min_circularity,
-                otsu_min, otsu_max, dist_erosion_factor, use_mad
+                otsu_min, otsu_max, dist_erosion_factor, use_mad,
+                enable_hysteresis=enable_hysteresis, hysteresis_k_low=hysteresis_k_low
             )
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -308,6 +308,14 @@ class SettingsView(ctk.CTkFrame):
         )
         self.sliders["dist_erosion_factor"] = (s_er, l_er)
 
+        s_hkl, l_hkl = make_slider_setting(
+            c_inner, "Hysterese-Schwelle k_low (Perifokale Ausdehnung)",
+            "Schwacher Schwellenwert für das Seeded-Region-Growing entlang perifokaler Gradienten",
+            0.5, 3.0, getattr(config, "DEFAULT_HYSTERESIS_K_LOW", 1.8), 0.1, "",
+            command=lambda v: self._on_change()
+        )
+        self.sliders["hysteresis_k_low"] = (s_hkl, l_hkl)
+
         # Switches
         sw_mad = ctk.CTkSwitch(
             c_inner,
@@ -320,6 +328,18 @@ class SettingsView(ctk.CTkFrame):
             sw_mad.select()
         sw_mad.pack(fill=ctk.X, pady=(8, 2))
         self.switches["use_mad"] = sw_mad
+
+        sw_hyst = ctk.CTkSwitch(
+            c_inner,
+            text="Adaptive Hysterese (Zwei-Schwellenwert-Region-Growing für erhöhte Sensitivität)",
+            command=self._on_change,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
+            progress_color=COLOR_PRIMARY
+        )
+        if getattr(config, "DEFAULT_ENABLE_HYSTERESIS", True):
+            sw_hyst.select()
+        sw_hyst.pack(fill=ctk.X, pady=(4, 2))
+        self.switches["enable_hysteresis"] = sw_hyst
 
     def _build_podology_panel(self) -> None:
         panel = ctk.CTkFrame(self.scroll_body, fg_color="transparent")
@@ -644,6 +664,8 @@ class SettingsView(ctk.CTkFrame):
             "dist_erosion_factor": float(self.sliders["dist_erosion_factor"][0].get()),
             "temp_offset": float(self.sliders.get("temp_offset", (None,))[0].get() if "temp_offset" in self.sliders else 0.0),
             "use_mad": self.switches["use_mad"].get() == 1 if "use_mad" in self.switches else False,
+            "enable_hysteresis": self.switches["enable_hysteresis"].get() == 1 if "enable_hysteresis" in self.switches else True,
+            "hysteresis_k_low": float(self.sliders["hysteresis_k_low"][0].get()) if "hysteresis_k_low" in self.sliders else config.DEFAULT_HYSTERESIS_K_LOW,
             "enable_asymmetry": self.switches["enable_asymmetry"].get() == 1 if "enable_asymmetry" in self.switches else True,
             "emissivity": em,
             "otsu_min": config.DEFAULT_OTSU_MIN,

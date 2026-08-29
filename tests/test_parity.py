@@ -104,6 +104,36 @@ def test_pipeline_parity_mad(synthetic_thermal_image):
         assert np.mean(diff_abs) < 0.5, f"Mean MAD diff error too large: {np.mean(diff_abs)}"
 
 
+def test_pipeline_parity_hysteresis(synthetic_thermal_image):
+    """
+    Tests that Hysteresis / Seeded Region Growing produces equivalent output across Python and Rust backends.
+    """
+    py_diff, py_mask = image_processing._python_fallback_pipeline(
+        synthetic_thermal_image, enable_hysteresis=True, hysteresis_k_low=1.5
+    )
+    assert np.sum(py_mask) > 0, "Python baseline with Hysteresis failed to detect hotspots"
+
+    if image_processing._RUST_BACKEND_AVAILABLE and image_processing._ignite_core is not None:
+        img_contiguous = np.ascontiguousarray(synthetic_thermal_image, dtype=np.uint8)
+        rust_diff, rust_mask = image_processing._ignite_core.process_thermal_pipeline(
+            img_contiguous,
+            image_processing._config.DEFAULT_SIGMA_K,
+            image_processing._config.DEFAULT_TOPHAT_FACTOR,
+            image_processing._config.DEFAULT_MIN_AREA_FACTOR,
+            image_processing._config.DEFAULT_MIN_CIRCULARITY,
+            image_processing._config.DEFAULT_OTSU_MIN,
+            image_processing._config.DEFAULT_OTSU_MAX,
+            image_processing._config.DEFAULT_DIST_EROSION_FACTOR,
+            False,
+            True,
+            1.5
+        )
+        _assert_mask_iou_at_least(rust_mask, py_mask, 0.60, "Rust vs. Python (Hysteresis)")
+        diff_abs = np.abs(rust_diff.astype(int) - py_diff.astype(int))
+        assert np.mean(diff_abs) < 0.5, f"Mean Hysteresis diff error too large: {np.mean(diff_abs)}"
+
+
+
 
 # ── Paritaet auf echten Aufnahmen ────────────────────────────────────────────
 # Der bisherige Paritaetsnachweis beruhte ausschliesslich auf einem synthetischen

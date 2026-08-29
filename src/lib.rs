@@ -712,6 +712,8 @@ fn threshold_statistical(
     mask: &ImageMatrix,
     k: f64,
     use_mad: bool,
+    enable_hysteresis: bool,
+    hysteresis_k_low: Option<f64>,
 ) -> Result<ImageMatrix, String> {
     let (h, w) = diff_img.dim();
 
@@ -724,6 +726,8 @@ fn threshold_statistical(
     if n_body == 0 {
         return Err("Body-Mask ist leer – keine Körper-Pixel für Statistik gefunden.".to_string());
     }
+
+    let k_low = hysteresis_k_low.unwrap_or_else(|| (k * 0.5).min(1.8));
 
     let mut body_diff_vals: Vec<u8> = Vec::new();
     let mut body_orig_vals: Vec<u8> = Vec::new();
@@ -740,7 +744,7 @@ fn threshold_statistical(
         }
     }
 
-    let (threshold_diff, mu_orig) = if use_mad {
+    let (thresh_high, thresh_low, mu_orig) = if use_mad {
         // u8-Werte: Median via Zaehlsortierung (O(n)) statt Vergleichssortierung.
         let mut sorted_diff = body_diff_vals;
         sorted_diff.sort_unstable();
@@ -761,7 +765,8 @@ fn threshold_statistical(
 
         // Standard-Normalverteilungs-Skalierungsfaktor 1.4826
         let sigma_mad = 1.4826 * mad;
-        let thresh = (median_diff + k * sigma_mad).clamp(0.0, 254.0);
+        let thresh_h = (median_diff + k * sigma_mad).clamp(0.0, 254.0);
+        let thresh_l = (median_diff + k_low * sigma_mad).clamp(0.0, 254.0);
 
         let mut sorted_orig = body_orig_vals;
         sorted_orig.sort_unstable();
@@ -771,7 +776,7 @@ fn threshold_statistical(
             sorted_orig[len / 2] as f64
         };
 
-        (thresh, med_orig)
+        (thresh_h, thresh_l, med_orig)
     } else {
         // Einzelner paralleler Reduktionslauf ueber die Maske: Summen in u64,
         // ohne die Werte vorher zu materialisieren.
@@ -805,22 +810,68 @@ fn threshold_statistical(
         let variance_diff = (sum_sq_diff / n) - mu_diff.powi(2);
         let sigma_diff = variance_diff.max(0.0).sqrt();
 
-        let thresh = (mu_diff + k * sigma_diff).clamp(0.0, 254.0);
-        (thresh, mu_orig)
+        let thresh_h = (mu_diff + k * sigma_diff).clamp(0.0, 254.0);
+        let thresh_l = (mu_diff + k_low * sigma_diff).clamp(0.0, 254.0);
+        (thresh_h, thresh_l, mu_orig)
     };
 
-    let mut binary = Array2::<u8>::zeros((h, w));
-    
-    // Binarisierung parallel über Zeilen
-    binary.axis_iter_mut(ndarray::Axis(0)).into_par_iter().enumerate().for_each(|(y, mut row)| {
+    if !enable_hysteresis {
+        let mut binary = Array2::<u8>::zeros((h, w));
+        // Binarisierung parallel über Zeilen
+        binary.axis_iter_mut(ndarray::Axis(0)).into_par_iter().enumerate().for_each(|(y, mut row)| {
+            for x in 0..w {
+                let diff_val = diff_img[[y, x]] as f64;
+                let orig_val = original_img[[y, x]] as f64;
+                if diff_val > thresh_high && orig_val > mu_orig {
+                    row[x] = 255;
+                }
+            }
+        });
+        return Ok(binary);
+    }
+
+    // Adaptive Hysterese / Seeded Region Growing
+    let mut weak_binary = Array2::<u8>::zeros((h, w));
+    let mut strong_binary = Array2::<u8>::zeros((h, w));
+
+    for y in 0..h {
         for x in 0..w {
-            let diff_val = diff_img[[y, x]] as f64;
-            let orig_val = original_img[[y, x]] as f64;
-            if diff_val > threshold_diff && orig_val > mu_orig {
-                row[x] = 255;
+            if mask[[y, x]] > 0 {
+                let diff_val = diff_img[[y, x]] as f64;
+                let orig_val = original_img[[y, x]] as f64;
+                if orig_val > mu_orig {
+                    if diff_val > thresh_low {
+                        weak_binary[[y, x]] = 255;
+                    }
+                    if diff_val > thresh_high {
+                        strong_binary[[y, x]] = 255;
+                    }
+                }
             }
         }
-    });
+    }
+
+    let (labels, max_label) = connected_components(&weak_binary);
+    let mut has_seed = vec![false; max_label as usize + 1];
+
+    for y in 0..h {
+        for x in 0..w {
+            let lbl = labels[[y, x]] as usize;
+            if lbl > 0 && strong_binary[[y, x]] > 0 {
+                has_seed[lbl] = true;
+            }
+        }
+    }
+
+    let mut binary = Array2::<u8>::zeros((h, w));
+    for y in 0..h {
+        for x in 0..w {
+            let lbl = labels[[y, x]] as usize;
+            if lbl > 0 && has_seed[lbl] {
+                binary[[y, x]] = 255;
+            }
+        }
+    }
 
     Ok(binary)
 }
@@ -1150,7 +1201,7 @@ fn normalize_minmax(img: &ImageMatrix) -> ImageMatrix {
 /// - Leerem Bild oder leerer Body-Mask
 /// - Internen Berechnungsfehlern (werden mit Kontext weitergereicht)
 #[pyfunction]
-#[pyo3(name = "process_thermal_pipeline", signature = (gray_array, sigma_k, tophat_factor, min_area_factor, min_circularity, otsu_min, otsu_max, dist_erosion_factor, use_mad=None))]
+#[pyo3(name = "process_thermal_pipeline", signature = (gray_array, sigma_k, tophat_factor, min_area_factor, min_circularity, otsu_min, otsu_max, dist_erosion_factor, use_mad=None, enable_hysteresis=None, hysteresis_k_low=None))]
 fn process_thermal_pipeline<'py>(
     py: Python<'py>,
     gray_array: PyReadonlyArray2<u8>,
@@ -1162,8 +1213,11 @@ fn process_thermal_pipeline<'py>(
     otsu_max: u8,
     dist_erosion_factor: f64,
     use_mad: Option<bool>,
+    enable_hysteresis: Option<bool>,
+    hysteresis_k_low: Option<f64>,
 ) -> PyResult<(Py<PyArray2<u8>>, Py<PyArray2<u8>>)> {
     let use_mad_flag = use_mad.unwrap_or(false);
+    let enable_hysteresis_flag = enable_hysteresis.unwrap_or(false);
     // ── Schritt 0: Eingabe-Validierung ─────────────────────────────────────
     let array = gray_array.as_array();
     let shape = array.shape();
@@ -1229,7 +1283,15 @@ fn process_thermal_pipeline<'py>(
 
             // ── Feature D: Statistischer Schwellenwert µ + k·σ / Robust MAD ───
             let _t_stage = std::time::Instant::now();
-            let binary_raw = threshold_statistical(&img, &diff_img, &mask, sigma_k, use_mad_flag)
+            let binary_raw = threshold_statistical(
+                &img,
+                &diff_img,
+                &mask,
+                sigma_k,
+                use_mad_flag,
+                enable_hysteresis_flag,
+                hysteresis_k_low,
+            )
                 .map_err(|e| format!("Schwellenwert Fehler: {}", e))?;
             ignite_debug!("[ignite_core][profil] Threshold: {:.2} ms", _t_stage.elapsed().as_secs_f64() * 1000.0);
 

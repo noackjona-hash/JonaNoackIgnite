@@ -77,7 +77,9 @@ class ThermalProcessingService:
                     otsu_min=int(params.get("otsu_min", config.DEFAULT_OTSU_MIN)),
                     otsu_max=int(params.get("otsu_max", config.DEFAULT_OTSU_MAX)),
                     dist_erosion_factor=params.get("dist_erosion_factor", config.DEFAULT_DIST_EROSION_FACTOR),
-                    use_mad=bool(params.get("use_mad", config.DEFAULT_USE_MAD))
+                    use_mad=bool(params.get("use_mad", config.DEFAULT_USE_MAD)),
+                    enable_hysteresis=bool(params.get("enable_hysteresis", config.DEFAULT_ENABLE_HYSTERESIS)),
+                    hysteresis_k_low=params.get("hysteresis_k_low", config.DEFAULT_HYSTERESIS_K_LOW)
                 )
 
                 with cls._lock:
