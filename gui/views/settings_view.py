@@ -48,25 +48,25 @@ class SettingsView(ctk.CTkFrame):
             "sigma_k": 3.0, "tophat_factor": 0.05, "min_area_factor": 0.0005,
             "min_circularity": 0.08, "otsu_min": 35, "otsu_max": 50, "dist_erosion_factor": 0.05,
             "use_mad": False, "enable_asymmetry": True, "asym_thresh": 2.2, "alpha": 0.5,
-            "emissivity": 0.98, "refl_temp": 20.0, "cutoff_y": 0.65
+            "emissivity": 0.98, "refl_temp": 20.0, "forefoot_ratio": 0.40, "midfoot_ratio": 0.70
         },
         "Hochempfindlich (Frühdiagnose)": {
             "sigma_k": 2.2, "tophat_factor": 0.04, "min_area_factor": 0.0002,
             "min_circularity": 0.04, "otsu_min": 30, "otsu_max": 45, "dist_erosion_factor": 0.03,
             "use_mad": False, "enable_asymmetry": True, "asym_thresh": 1.8, "alpha": 0.6,
-            "emissivity": 0.98, "refl_temp": 20.0, "cutoff_y": 0.65
+            "emissivity": 0.98, "refl_temp": 20.0, "forefoot_ratio": 0.40, "midfoot_ratio": 0.70
         },
         "Podologie / Diabetischer Fuß": {
             "sigma_k": 3.0, "tophat_factor": 0.06, "min_area_factor": 0.0008,
             "min_circularity": 0.10, "otsu_min": 35, "otsu_max": 55, "dist_erosion_factor": 0.05,
             "use_mad": True, "enable_asymmetry": True, "asym_thresh": 2.2, "alpha": 0.5,
-            "emissivity": 0.98, "refl_temp": 20.0, "cutoff_y": 0.70
+            "emissivity": 0.98, "refl_temp": 20.0, "forefoot_ratio": 0.40, "midfoot_ratio": 0.70
         },
         "Rauschunterdrückung (Robust)": {
             "sigma_k": 3.6, "tophat_factor": 0.05, "min_area_factor": 0.0012,
             "min_circularity": 0.14, "otsu_min": 40, "otsu_max": 65, "dist_erosion_factor": 0.08,
             "use_mad": True, "enable_asymmetry": True, "asym_thresh": 2.5, "alpha": 0.4,
-            "emissivity": 0.98, "refl_temp": 20.0, "cutoff_y": 0.60
+            "emissivity": 0.98, "refl_temp": 20.0, "forefoot_ratio": 0.40, "midfoot_ratio": 0.70
         }
     }
 
@@ -358,14 +358,23 @@ class SettingsView(ctk.CTkFrame):
         )
         self.sliders["asym_thresh"] = (s_asym, l_asym)
 
-        s_cut, l_cut = make_slider_setting(
-            c_inner, "Anatomischer Knöchel-Cutoff Y (%)",
-            "Schneidet thermische Einflüsse von Unterschenkeln und Knöcheln oberhalb dieser Höhe ab",
-            0.40, 0.90, config.ANATOMICAL_LOWER_CUTOFF_Y, 0.05, "",
+        s_fore, l_fore = make_slider_setting(
+            c_inner, "Vorfuß-Zonengrenze (PCA %)",
+            "Anatomische Grenze für Metatarsalköpfe und Zehen entlang der Fußhauptachse",
+            0.20, 0.55, getattr(config, "DEFAULT_FOREFOOT_RATIO", 0.40), 0.05, "",
             command=lambda v: self._on_change(),
             is_percent=True
         )
-        self.sliders["cutoff_y"] = (s_cut, l_cut)
+        self.sliders["forefoot_ratio"] = (s_fore, l_fore)
+
+        s_mid, l_mid = make_slider_setting(
+            c_inner, "Mittelfuß-Zonengrenze (PCA %)",
+            "Anatomische Grenze zwischen Längsgewölbe und Calcaneus/Ferse entlang der Fußhauptachse",
+            0.55, 0.85, getattr(config, "DEFAULT_MIDFOOT_RATIO", 0.70), 0.05, "",
+            command=lambda v: self._on_change(),
+            is_percent=True
+        )
+        self.sliders["midfoot_ratio"] = (s_mid, l_mid)
 
         sw_asym = ctk.CTkSwitch(
             c_inner,
@@ -614,11 +623,11 @@ class SettingsView(ctk.CTkFrame):
         if not p:
             return
 
-        for k in ["sigma_k", "tophat_factor", "min_area_factor", "min_circularity", "dist_erosion_factor", "asym_thresh", "cutoff_y", "alpha"]:
+        for k in ["sigma_k", "tophat_factor", "min_area_factor", "min_circularity", "dist_erosion_factor", "asym_thresh", "forefoot_ratio", "midfoot_ratio", "alpha"]:
             if k in p and k in self.sliders:
                 slider, label = self.sliders[k]
                 slider.set(p[k])
-                if k in ("tophat_factor", "min_area_factor", "dist_erosion_factor", "cutoff_y", "alpha"):
+                if k in ("tophat_factor", "min_area_factor", "dist_erosion_factor", "forefoot_ratio", "midfoot_ratio", "alpha"):
                     label.configure(text=f"{p[k]*100:.1f} %")
                 else:
                     label.configure(text=f"{p[k]:.1f}".rstrip('0').rstrip('.'))
@@ -671,6 +680,7 @@ class SettingsView(ctk.CTkFrame):
             "otsu_min": config.DEFAULT_OTSU_MIN,
             "otsu_max": config.DEFAULT_OTSU_MAX,
             "asym_thresh": float(self.sliders.get("asym_thresh", (None,))[0].get() if "asym_thresh" in self.sliders else 2.2),
-            "cutoff_y": float(self.sliders.get("cutoff_y", (None,))[0].get() if "cutoff_y" in self.sliders else 0.65),
+            "forefoot_ratio": float(self.sliders.get("forefoot_ratio", (None,))[0].get() if "forefoot_ratio" in self.sliders else 0.40),
+            "midfoot_ratio": float(self.sliders.get("midfoot_ratio", (None,))[0].get() if "midfoot_ratio" in self.sliders else 0.70),
             "alpha": float(self.sliders.get("alpha", (None,))[0].get() if "alpha" in self.sliders else 0.5),
         }

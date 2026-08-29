@@ -1076,9 +1076,6 @@ fn filter_geometric(
     let min_area_rel = min_area_factor * total_body_area;
     let min_area = min_area_rel.max(10.0);
 
-    let (h, _w) = closed.dim();
-    let y_threshold = h as f64 * 0.65;
-
     // Connected Components für die Filterung
     let (labels, max_label) = connected_components(&closed);
     if max_label == 0 {
@@ -1090,19 +1087,14 @@ fn filter_geometric(
 
     let keep_flags: Vec<bool> = stats
         .par_iter()
-        .map(|&(area, perimeter, touches_b, max_dist_component, centroid_y)| {
-            // Anatomische Einschränkung: Hotspots am Knöchel/Ferse/Hosenbein liegen
-            // anatomisch im unteren 35% Bildbereich. Entzündeter Zeh liegt weit oben.
-            if centroid_y > y_threshold {
-                return false;
-            }
+        .map(|&(area, perimeter, touches_b, max_dist_component, _centroid_y)| {
             // Bedingung 0: Bildrand-Berührung
             if touches_b {
                 return false;
             }
             // Bedingung 1: Distanztransformation – Hotspot muss tief genug im
-            // Körperinneren liegen. Rand-Artefakte (Knöchel, Fersen) liegen
-            // am Übergang Körper→Hintergrund (kleine Distanzwerte).
+            // Körperinneren liegen. Rand-Artefakte liegen am Übergang
+            // Körper→Hintergrund (kleine Distanzwerte).
             if max_dist_component < min_dist_from_border {
                 return false;
             }

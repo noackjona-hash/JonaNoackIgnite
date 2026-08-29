@@ -99,6 +99,33 @@ def test_pca_foot_alignment_and_rotation():
     assert "arch_type" in pca_res["left"]
 
 
+def test_pca_zone_categorization_and_heel_hotspot_preservation():
+    """
+    Stellt sicher, dass Hotspots im Fersenbereich (y > 0.65) nicht mehr starr verworfen werden,
+    sondern dynamisch der PCA-Ferse zugeordnet werden.
+    """
+    img = np.full((400, 400), 20, dtype=np.uint8)
+    left_foot_mask = np.zeros((400, 400), dtype=np.uint8)
+    cv2.ellipse(left_foot_mask, (100, 200), (40, 120), 0, 0, 360, 255, -1)
+
+    right_foot_mask = np.zeros((400, 400), dtype=np.uint8)
+    cv2.ellipse(right_foot_mask, (300, 200), (40, 120), 0, 0, 360, 255, -1)
+
+    body_mask = cv2.bitwise_or(left_foot_mask, right_foot_mask)
+    img[body_mask > 0] = 140
+
+    # Fersen-Hotspot im linken Fuß (y = 280 > 400 * 0.65 = 260)
+    hotspot_mask = np.zeros((400, 400), dtype=np.uint8)
+    cv2.circle(hotspot_mask, (100, 280), 12, 255, -1)
+
+    pca_res = image_processing.compute_pca_foot_alignment_and_zones(img, body_mask, 20.0, 40.0)
+    categorized = image_processing.categorize_hotspots_by_pca_zones(hotspot_mask, pca_res)
+
+    assert len(categorized["left"]) == 1
+    assert categorized["left"][0]["zone"] == "heel"
+
+
+
 def test_thermal_severity_index_classification():
     """Testet die TSI-Risikoklassifikation für Normalbefund und akute Entzündung."""
     # 1. Normalbefund: kein Delta-T, keine Hotspots

@@ -23,7 +23,9 @@ _DEFAULT_SETTINGS: Dict[str, Any] = {
     "DEFAULT_TEMP_MIN": 20.0,
     "DEFAULT_TEMP_MAX": 40.0,
     "OUTPUT_DIR": "ignite_steps_output",
-    "ANATOMICAL_LOWER_CUTOFF_Y": 0.65,
+    "ANATOMICAL_LOWER_CUTOFF_Y": 1.0,  # Veraltet / Deaktiviert zugunsten dynamischer PCA-Zonensegmentierung
+    "DEFAULT_FOREFOOT_RATIO": 0.40,   # Vorfuß-Grenze entlang PCA-Längsachse (0.0–0.40)
+    "DEFAULT_MIDFOOT_RATIO": 0.70,    # Mittelfuß-Grenze entlang PCA-Längsachse (0.40–0.70)
     "MIN_DIST_FROM_BORDER_FACTOR": 0.015,
     "MIN_DIST_FROM_BORDER_ABS": 12.0,
     "BORDER_MARGIN_PX": 10,
@@ -107,8 +109,10 @@ OUTPUT_DIR = _settings["OUTPUT_DIR"]
 # Audit-Trail-Pfad (persistente klinische Protokolldatei)
 AUDIT_TRAIL_PATH = os.path.join(OUTPUT_DIR, "ignite_audit_trail.csv")
 
-# ── Anatomische Filterparameter ────────────────────────────────────────────────
-ANATOMICAL_LOWER_CUTOFF_Y = _settings["ANATOMICAL_LOWER_CUTOFF_Y"]
+# ── Anatomische Filter- & PCA-Zonen-Parameter ──────────────────────────────────
+ANATOMICAL_LOWER_CUTOFF_Y = _settings.get("ANATOMICAL_LOWER_CUTOFF_Y", 1.0)
+DEFAULT_FOREFOOT_RATIO = _settings.get("DEFAULT_FOREFOOT_RATIO", 0.40)
+DEFAULT_MIDFOOT_RATIO = _settings.get("DEFAULT_MIDFOOT_RATIO", 0.70)
 MIN_DIST_FROM_BORDER_FACTOR = _settings["MIN_DIST_FROM_BORDER_FACTOR"]
 MIN_DIST_FROM_BORDER_ABS = _settings["MIN_DIST_FROM_BORDER_ABS"]
 BORDER_MARGIN_PX = _settings["BORDER_MARGIN_PX"]

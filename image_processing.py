@@ -341,7 +341,9 @@ def compute_pca_foot_alignment_and_zones(
     img: np.ndarray,
     body_mask: np.ndarray,
     temp_min_c: float = _config.DEFAULT_TEMP_MIN,
-    temp_max_c: float = _config.DEFAULT_TEMP_MAX
+    temp_max_c: float = _config.DEFAULT_TEMP_MAX,
+    forefoot_ratio: float = 0.40,
+    midfoot_ratio: float = 0.70
 ) -> dict[str, Any]:
     """
     Segmentiert linken und rechten Fuß, ermittelt per Hauptkomponentenanalyse (PCA / Trägheitsmomente)
@@ -356,7 +358,7 @@ def compute_pca_foot_alignment_and_zones(
     def _analyze_single_foot(mask_side: np.ndarray, x_offset: int = 0) -> dict[str, Any]:
         num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(mask_side)
         if num_labels <= 1:
-            return {"exists": False, "angle_deg": 0.0, "fore_c": 0.0, "mid_c": 0.0, "heel_c": 0.0, "bbox": None}
+            return {"exists": False, "angle_deg": 0.0, "fore_c": 0.0, "mid_c": 0.0, "heel_c": 0.0, "bbox": None, "center": None, "main_vec": None}
 
         # Größte Komponente als Fuß wählen
         largest_idx = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
@@ -364,7 +366,7 @@ def compute_pca_foot_alignment_and_zones(
         ys, xs = np.where(foot_mask)
 
         if len(ys) < 30:
-            return {"exists": False, "angle_deg": 0.0, "fore_c": 0.0, "mid_c": 0.0, "heel_c": 0.0, "bbox": None}
+            return {"exists": False, "angle_deg": 0.0, "fore_c": 0.0, "mid_c": 0.0, "heel_c": 0.0, "bbox": None, "center": None, "main_vec": None}
 
         # Bounding-Box
         bx = int(stats[largest_idx, cv2.CC_STAT_LEFT]) + x_offset
@@ -402,15 +404,15 @@ def compute_pca_foot_alignment_and_zones(
         p_range = max(1e-5, p_max - p_min)
 
         # 3 anatomische Zonen entlang der longitudinalen Hauptachse:
-        # Vorfuß (Metatarsus/Zehen, 0-40%), Mittelfuß (Gewölbe, 40-70%), Ferse (Calcaneus, 70-100%)
+        # Vorfuß (Metatarsus/Zehen, 0-forefoot_ratio), Mittelfuß (Gewölbe, forefoot_ratio-midfoot_ratio), Ferse (Calcaneus, midfoot_ratio-1.0)
         norm_proj = (proj - p_min) / p_range
-        # Wenn Hauptvektor nach oben zeigt, invertieren wir für anatomische Konsistenz
+        # Wenn Hauptvektor nach oben zeigt, invertieren wir für anatomische Konsistenz (Zehen oben, Ferse unten)
         if main_vec[1] < 0:
             norm_proj = 1.0 - norm_proj
 
-        z_fore = norm_proj <= 0.40
-        z_mid = (norm_proj > 0.40) & (norm_proj <= 0.70)
-        z_heel = norm_proj > 0.70
+        z_fore = norm_proj <= forefoot_ratio
+        z_mid = (norm_proj > forefoot_ratio) & (norm_proj <= midfoot_ratio)
+        z_heel = norm_proj > midfoot_ratio
 
         # Cavanagh & Rodgers Plantar Arch Index (AI = Area_Midfoot / Area_Total)
         n_fore = int(np.sum(z_fore))
@@ -452,7 +454,11 @@ def compute_pca_foot_alignment_and_zones(
             "arch_type": arch_type,
             "arch_code": arch_code,
             "zone_counts": {"fore": n_fore, "mid": n_mid, "heel": n_heel},
-            "bbox": (bx, by, bw, bh)
+            "bbox": (bx, by, bw, bh),
+            "center": (int(cx + x_offset), int(cy)),
+            "main_vec": (float(main_vec[0]), float(main_vec[1])),
+            "p_min": p_min,
+            "p_max": p_max
         }
 
     left_mask = (body_mask[:, :mid_x] > 0).astype(np.uint8) * 255
@@ -471,8 +477,76 @@ def compute_pca_foot_alignment_and_zones(
         "delta_fore_c": round(d_fore, 2),
         "delta_mid_c": round(d_mid, 2),
         "delta_heel_c": round(d_heel, 2),
-        "pca_aligned": True
+        "pca_aligned": True,
+        "forefoot_ratio": forefoot_ratio,
+        "midfoot_ratio": midfoot_ratio
     }
+
+
+def categorize_hotspots_by_pca_zones(
+    hotspots_mask: np.ndarray,
+    pca_info: dict[str, Any]
+) -> dict[str, list[dict[str, Any]]]:
+    """
+    Ordnet segmentierte Hotspot-Komponenten über die PCA-Längsachsenprojektion
+    den anatomischen Zonen Vorfuß, Mittelfuß oder Ferse zu.
+    """
+    if hotspots_mask is None or np.sum(hotspots_mask > 0) == 0:
+        return {"left": [], "right": []}
+
+    h, w = hotspots_mask.shape[:2]
+    mid_x = w // 2
+
+    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats((hotspots_mask > 0).astype(np.uint8) * 255)
+    categorized: dict[str, list[dict[str, Any]]] = {"left": [], "right": []}
+
+    for side in ("left", "right"):
+        foot_info = pca_info.get(side, {})
+        if not foot_info.get("exists"):
+            continue
+
+        cx, cy = foot_info.get("center", (0, 0))
+        main_vec = np.array(foot_info.get("main_vec", (0.0, 1.0)))
+        p_min = foot_info.get("p_min", 0.0)
+        p_max = foot_info.get("p_max", 1.0)
+        p_range = max(1e-5, p_max - p_min)
+        fore_r = pca_info.get("forefoot_ratio", 0.40)
+        mid_r = pca_info.get("midfoot_ratio", 0.70)
+
+        for i in range(1, num_labels):
+            cx_comp = centroids[i][0]
+            cy_comp = centroids[i][1]
+
+            # Seitenzuordnung
+            if side == "left" and cx_comp >= mid_x:
+                continue
+            if side == "right" and cx_comp < mid_x:
+                continue
+
+            # Projektion auf Hauptachse
+            dx = cx_comp - cx
+            dy = cy_comp - cy
+            proj = dx * main_vec[0] + dy * main_vec[1]
+            norm_proj = (proj - p_min) / p_range
+            if main_vec[1] < 0:
+                norm_proj = 1.0 - norm_proj
+
+            if norm_proj <= fore_r:
+                zone = "forefoot"
+            elif norm_proj <= mid_r:
+                zone = "midfoot"
+            else:
+                zone = "heel"
+
+            categorized[side].append({
+                "label": i,
+                "area_px": int(stats[i, cv2.CC_STAT_AREA]),
+                "centroid": (float(cx_comp), float(cy_comp)),
+                "zone": zone,
+                "norm_proj": round(float(norm_proj), 3)
+            })
+
+    return categorized
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 6. THERMAL SEVERITY INDEX (TSI) & IWGDF-RISIKOKLASSIFIKATION
@@ -827,10 +901,6 @@ def _filter_geometric_noise(
     h_img, w_img = binary_raw.shape[:2]
 
     for i in range(1, num_labels):
-        centroid_y = centroids[i][1]
-        if centroid_y > h_img * _config.ANATOMICAL_LOWER_CUTOFF_Y:
-            continue
-
         area = stats[i, cv2.CC_STAT_AREA]
         if area < min_area:
             continue
