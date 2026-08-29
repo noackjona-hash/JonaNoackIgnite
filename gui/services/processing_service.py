@@ -96,15 +96,19 @@ class ThermalProcessingService:
                     calibrated_img, body_mask_vis
                 )
 
-                # 5. Kontralaterale Asymmetrie-Analyse inklusive PCA-Ausrichtung
+                # 5. Kontralaterale Asymmetrie-Analyse inklusive PCA-Ausrichtung für gewählte Anatomie
+                region_key = params.get("anatomy_region", getattr(config, "DEFAULT_ANATOMY_REGION", "feet"))
+                asym_threshold = float(params.get("asym_thresh", config.ANATOMICAL_REGIONS.get(region_key, {}).get("asym_thresh_c", config.ASYMMETRY_THRESHOLD_C)))
+
                 asym_results = image_processing.compute_contralateral_asymmetry(
-                    calibrated_img, body_mask_vis, t_min_c, t_max_c, config.ASYMMETRY_THRESHOLD_C
+                    calibrated_img, body_mask_vis, t_min_c, t_max_c, asym_threshold, region_key=region_key
                 )
                 pca_results = asym_results.get("pca")
 
                 # 6. Zonen-Statistiken (PCA-unterstützt) & Hotspot-Objekte
                 zonal_stats = cls._compute_zonal_stats(calibrated_img, body_mask_vis, pca_results)
                 general_hotspots = cls._compute_general_hotspots(calibrated_img, hotspot_mask)
+                categorized_hotspots = image_processing.categorize_hotspots_by_pca_zones(hotspot_mask, pca_results) if pca_results else {"left": [], "right": []}
 
                 # 7. Pixel-Statistiken über Gewebe
                 body_pixels = calibrated_img[body_mask_vis > 0]
@@ -182,8 +186,10 @@ class ThermalProcessingService:
                     "asym_results": asym_results,
                     "zonal_stats": zonal_stats,
                     "general_hotspots": general_hotspots,
+                    "categorized_hotspots": categorized_hotspots,
                     "gradient_results": gradient_results,
                     "pca_results": pca_results,
+                    "anatomy_region": region_key,
                     "tsi_results": tsi_results,
                     "body_pixel_count": len(body_pixels),
                     "hotspot_pixel_count": hotspot_pixels,
@@ -216,29 +222,41 @@ class ThermalProcessingService:
 
     @staticmethod
     def _compute_zonal_stats(img: np.ndarray, body_mask: np.ndarray, pca_results: Optional[dict[str, Any]] = None) -> dict[str, Any]:
-        """Berechnet das klinische 3-Zonen-Modell mit bevorzugter PCA-Hauptachsenorientierung und Cavanagh-Arch-Index."""
+        """Berechnet das klinische 3-Zonen-Modell mit bevorzugter PCA-Hauptachsenorientierung für die aktive Anatomie-Region."""
         if pca_results and pca_results.get("left", {}).get("exists") and pca_results.get("right", {}).get("exists"):
             l_info = pca_results["left"]
             r_info = pca_results["right"]
             return {
+                "region_key": pca_results.get("region_key", "feet"),
+                "region_name": pca_results.get("region_name", "Anatomische Region"),
+                "region_icon": pca_results.get("region_icon", "🩺"),
+                "zone_1_name": pca_results.get("zone_1_name", "Zone 1"),
+                "zone_2_name": pca_results.get("zone_2_name", "Zone 2"),
+                "zone_3_name": pca_results.get("zone_3_name", "Zone 3"),
                 "left": {
-                    "fore": l_info["fore_c"],
-                    "mid": l_info["mid_c"],
-                    "heel": l_info["heel_c"],
-                    "arch_index": l_info.get("arch_index", 0.24),
-                    "arch_type": l_info.get("arch_type", "Normales Längsgewölbe"),
-                    "arch_code": l_info.get("arch_code", "normal"),
+                    "zone_1": l_info.get("zone_1_c", l_info.get("fore_c", 0.0)),
+                    "zone_2": l_info.get("zone_2_c", l_info.get("mid_c", 0.0)),
+                    "zone_3": l_info.get("zone_3_c", l_info.get("heel_c", 0.0)),
+                    "fore": l_info.get("fore_c", 0.0),
+                    "mid": l_info.get("mid_c", 0.0),
+                    "heel": l_info.get("heel_c", 0.0),
+                    "arch_index": l_info.get("arch_index"),
+                    "arch_type": l_info.get("arch_type"),
+                    "arch_code": l_info.get("arch_code"),
                     "exists": True,
                     "bbox": l_info.get("bbox"),
                     "angle_deg": l_info.get("angle_deg", 0.0)
                 },
                 "right": {
-                    "fore": r_info["fore_c"],
-                    "mid": r_info["mid_c"],
-                    "heel": r_info["heel_c"],
-                    "arch_index": r_info.get("arch_index", 0.24),
-                    "arch_type": r_info.get("arch_type", "Normales Längsgewölbe"),
-                    "arch_code": r_info.get("arch_code", "normal"),
+                    "zone_1": r_info.get("zone_1_c", r_info.get("fore_c", 0.0)),
+                    "zone_2": r_info.get("zone_2_c", r_info.get("mid_c", 0.0)),
+                    "zone_3": r_info.get("zone_3_c", r_info.get("heel_c", 0.0)),
+                    "fore": r_info.get("fore_c", 0.0),
+                    "mid": r_info.get("mid_c", 0.0),
+                    "heel": r_info.get("heel_c", 0.0),
+                    "arch_index": r_info.get("arch_index"),
+                    "arch_type": r_info.get("arch_type"),
+                    "arch_code": r_info.get("arch_code"),
                     "exists": True,
                     "bbox": r_info.get("bbox"),
                     "angle_deg": r_info.get("angle_deg", 0.0)

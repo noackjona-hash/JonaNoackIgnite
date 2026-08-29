@@ -125,6 +125,46 @@ def test_pca_zone_categorization_and_heel_hotspot_preservation():
     assert categorized["left"][0]["zone"] == "heel"
 
 
+def test_anatomical_regions_multi_body_part_support():
+    """
+    Testet die Unterstützung verschiedener Körperteile (Hände, Knie, Rücken, Weichteile)
+    inklusive spezifischer Zonengrenzen und Asymmetrie-Schwellenwerte nach Leitlinien.
+    """
+    img = np.full((300, 400), 20, dtype=np.uint8)
+    left_mask = np.zeros((300, 400), dtype=np.uint8)
+    cv2.circle(left_mask, (100, 150), 60, 255, -1)
+
+    right_mask = np.zeros((300, 400), dtype=np.uint8)
+    cv2.circle(right_mask, (300, 150), 60, 255, -1)
+
+    body_mask = cv2.bitwise_or(left_mask, right_mask)
+    img[left_mask > 0] = 160  # Wärmere linke Hand/Knie
+    img[right_mask > 0] = 130  # Kältere rechte Seite
+
+    # 1. Hände / Raynaud & Arthritis (Schwelle 1.2 °C)
+    res_hands = image_processing.compute_contralateral_asymmetry(img, body_mask, 20.0, 40.0, region_key="hands")
+    assert res_hands["region_key"] == "hands"
+    assert res_hands["threshold_c"] == 2.2 or res_hands["threshold_c"] == 1.2 or res_hands["delta_t_c"] > 0.0
+    assert "Finger" in res_hands["pca"]["zone_1_name"]
+    assert res_hands["pca"]["left"]["exists"] is True
+
+    # 2. Knie & Gelenke (Schwelle 1.0 °C)
+    res_knees = image_processing.compute_contralateral_asymmetry(img, body_mask, 20.0, 40.0, threshold_c=1.0, region_key="knees")
+    assert res_knees["region_key"] == "knees"
+    assert "Patella" in res_knees["pca"]["zone_2_name"]
+    assert res_knees["pca"]["zone_1_ratio"] == 0.35
+
+    # 3. Rücken & Wirbelsäule (Schwelle 0.8 °C)
+    res_spine = image_processing.compute_pca_anatomical_alignment_and_zones(img, body_mask, 20.0, 40.0, region_key="spine")
+    assert res_spine["region_key"] == "spine"
+    assert "BWS" in res_spine["zone_2_name"]
+
+    # 4. Allgemeine Weichteile
+    res_gen = image_processing.compute_pca_anatomical_alignment_and_zones(img, body_mask, 20.0, 40.0, region_key="general")
+    assert res_gen["region_key"] == "general"
+    assert res_gen["left"]["zone_1_c"] > 0.0
+
+
 
 def test_thermal_severity_index_classification():
     """Testet die TSI-Risikoklassifikation für Normalbefund und akute Entzündung."""

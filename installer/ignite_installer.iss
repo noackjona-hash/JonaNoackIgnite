@@ -3,14 +3,14 @@
 ; Entwickelt von Jona Noack
 
 #ifndef AppVersion
-  #define AppVersion "3.3.3"
+  #define AppVersion "4.0.0"
 #endif
 
 [Setup]
 ; Einzigartige AppId
 AppId={{928C6EFA-C40C-46C4-AE4B-0FEA0388B2A6}}
 AppName=IGNITE Medical Imaging Suite
-AppVersion=3.3.3
+AppVersion=4.0.0
 AppPublisher=Jona Noack
 AppPublisherURL=https://github.com/noackjona-hash/JonaNoackIgnite
 AppSupportURL=https://github.com/noackjona-hash/JonaNoackIgnite/issues
@@ -24,18 +24,18 @@ ArchitecturesAllowed=x64
 ArchitecturesInstallIn64BitMode=x64
 
 ; Versionierung und Metadaten für die Installer-EXE
-VersionInfoVersion=3.3.3
+VersionInfoVersion=4.0.0
 VersionInfoCompany=Jona Noack
 VersionInfoDescription=IGNITE Medical Imaging Suite – Thermografische Entzündungsdetektion
 VersionInfoCopyright=Copyright (C) 2026 Jona Noack
 VersionInfoProductName=IGNITE Medical Imaging Suite
-VersionInfoProductVersion=3.3.3
+VersionInfoProductVersion=4.0.0
 
 ; Pfad zur Icon-Datei für den Installer selbst
 SetupIconFile=..\icon\LogoRund.ico
 ; Speicherort und Name des fertigen Installers (Repo-Root, wie zuvor)
 OutputDir=..
-OutputBaseFilename=IGNITE_Setup_v3.3.3
+OutputBaseFilename=IGNITE_Setup_v4.0.0
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern

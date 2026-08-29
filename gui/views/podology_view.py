@@ -60,10 +60,18 @@ class PodologyView(ctk.CTkFrame):
 
         ctk.CTkLabel(
             top_bar,
-            text="PODOLOGISCHES SYMMETRIE-BILD",
+            text="KLINISCHES SYMMETRIE- & ZONENBILD",
             font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
             text_color=COLOR_TEXT_PRIMARY
         ).pack(side=ctk.LEFT)
+
+        self.region_badge = ctk.CTkLabel(
+            top_bar,
+            text="🦶 Füße & Podologie",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            text_color=COLOR_PRIMARY
+        )
+        self.region_badge.pack(side=ctk.LEFT, padx=(12, 0))
 
         self.pca_lbl = ctk.CTkLabel(
             top_bar,
@@ -91,7 +99,7 @@ class PodologyView(ctk.CTkFrame):
         scroll = ctk.CTkScrollableFrame(self.side_card, fg_color="transparent", width=390)
         scroll.pack(fill=ctk.BOTH, expand=True, padx=8, pady=10)
 
-        # 1. Klinischer Goldstandard Banner (Armstrong 1997)
+        # 1. Klinischer Goldstandard Banner
         ctk.CTkLabel(
             scroll,
             text="KLINISCHER SYMMETRIESTATUS",
@@ -137,10 +145,13 @@ class PodologyView(ctk.CTkFrame):
         self.zones_box.pack(fill=ctk.X, padx=4)
 
         self.zone_rows = {}
+        self.zone_title_lbls = {}
+        self.zone_hint_lbls = {}
+
         zones = [
-            ("fore", "Vorfuß (Ballen / Zehen)", "Druckstellen, Ulzera & Mikroläsionen"),
-            ("mid",  "Mittelfuß (Längsgewölbe)", "Charcot-Fuß Frühstadium"),
-            ("heel", "Ferse (Rückfuß)", "Fersensporn & Überlastung")
+            ("fore", "Zone 1 (Vorfuß / Finger / Proximal)", "Druckstellen, Ulzera, Phalangen & Mikroläsionen"),
+            ("mid",  "Zone 2 (Mittelfuß / Mittelhand / Patella)", "Längsgewölbe, Gelenkspalt, Charcot-Frühstadium"),
+            ("heel", "Zone 3 (Ferse / Handwurzel / Distal)", "Calcaneus, Handwurzelknochen, Überlastung")
         ]
 
         for z_key, title, hint in zones:
@@ -150,21 +161,25 @@ class PodologyView(ctk.CTkFrame):
             z_inner = ctk.CTkFrame(z_card, fg_color="transparent")
             z_inner.pack(fill=ctk.X, padx=12, pady=10)
 
-            ctk.CTkLabel(
+            t_lbl = ctk.CTkLabel(
                 z_inner,
                 text=title,
                 font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
                 text_color=COLOR_TEXT_PRIMARY,
                 anchor="w"
-            ).pack(fill=ctk.X)
+            )
+            t_lbl.pack(fill=ctk.X)
+            self.zone_title_lbls[z_key] = t_lbl
 
-            ctk.CTkLabel(
+            h_lbl = ctk.CTkLabel(
                 z_inner,
                 text=hint,
                 font=ctk.CTkFont(family=FONT_FAMILY, size=10),
                 text_color=COLOR_TEXT_MUTED,
                 anchor="w"
-            ).pack(fill=ctk.X, pady=(1, 4))
+            )
+            h_lbl.pack(fill=ctk.X, pady=(1, 4))
+            self.zone_hint_lbls[z_key] = h_lbl
 
             # Grid mit Werten L vs R vs Delta
             val_grid = ctk.CTkFrame(z_inner, fg_color="transparent")
@@ -202,14 +217,15 @@ class PodologyView(ctk.CTkFrame):
 
             self.zone_rows[z_key] = (lbl_l, lbl_r, lbl_d)
 
-        # 3. Cavanagh & Rodgers Plantar Arch Index (Biomechanik)
-        ctk.CTkLabel(
+        # 3. Cavanagh & Rodgers Plantar Arch Index (Biomechanik - nur bei Füßen)
+        self.arch_header_lbl = ctk.CTkLabel(
             scroll,
             text="PLANTARER GEWÖLBE-INDEX (CAVANAGH & RODGERS)",
             font=ctk.CTkFont(family=FONT_FAMILY, size=10, weight="bold"),
             text_color=COLOR_TEXT_MUTED,
             anchor="w"
-        ).pack(fill=ctk.X, padx=4, pady=(10, 6))
+        )
+        self.arch_header_lbl.pack(fill=ctk.X, padx=4, pady=(10, 6))
 
         self.arch_card = make_material_card(scroll, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD_VARIANT)
         self.arch_card.pack(fill=ctk.X, padx=4, pady=(0, 10))
@@ -219,7 +235,7 @@ class PodologyView(ctk.CTkFrame):
 
         self.arch_l_lbl = ctk.CTkLabel(
             a_inner,
-            text="Linker Fuß: AI = -- (Normal)",
+            text="Linke Seite: AI = -- (Normal)",
             font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
             text_color=COLOR_TEXT_PRIMARY,
             anchor="w"
@@ -228,7 +244,7 @@ class PodologyView(ctk.CTkFrame):
 
         self.arch_r_lbl = ctk.CTkLabel(
             a_inner,
-            text="Rechter Fuß: AI = -- (Normal)",
+            text="Rechte Seite: AI = -- (Normal)",
             font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
             text_color=COLOR_TEXT_PRIMARY,
             anchor="w"
@@ -253,7 +269,7 @@ class PodologyView(ctk.CTkFrame):
 
         ctk.CTkLabel(
             n_inner,
-            text="Wissenschaftlicher Goldstandard",
+            text="Wissenschaftlicher Leitlinien-Goldstandard",
             font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
             text_color=COLOR_PRIMARY,
             anchor="w"
@@ -281,6 +297,15 @@ class PodologyView(ctk.CTkFrame):
         t_min = result.get("t_min_c", 20.0)
         t_max = result.get("t_max_c", 40.0)
 
+        region_key = result.get("anatomy_region", getattr(config, "DEFAULT_ANATOMY_REGION", "feet"))
+        reg_info = getattr(config, "ANATOMICAL_REGIONS", {}).get(region_key, {})
+        thresh_c = float(result.get("asym_results", {}).get("threshold_c", reg_info.get("asym_thresh_c", 2.2)))
+
+        # Region Badge aktualisieren
+        r_name = reg_info.get("name", "Anatomische Region")
+        r_icon = reg_info.get("icon", "🩺")
+        self.region_badge.configure(text=f"{r_icon} {r_name}")
+
         # 1. Asymmetrie-Banner aktualisieren
         asym = result.get("asym_results", {})
         delta_t = asym.get("delta_t_c", 0.0)
@@ -289,11 +314,11 @@ class PodologyView(ctk.CTkFrame):
         if is_asym:
             self.asym_banner.configure(fg_color=COLOR_CONTAINER_RED)
             self.asym_status_lbl.configure(text="Pathologische Asymmetrie", text_color=COLOR_DANGER)
-            self.asym_delta_lbl.configure(text=f"Seiten-Differenz ΔT = {delta_t:.1f} °C (> 2.2 °C Grenzwert)")
+            self.asym_delta_lbl.configure(text=f"Seiten-Differenz ΔT = {delta_t:.1f} °C (> {thresh_c:.1f} °C Grenzwert)")
         else:
             self.asym_banner.configure(fg_color=COLOR_CONTAINER_GREEN)
             self.asym_status_lbl.configure(text="Physiologisch Symmetrisch", text_color=COLOR_SUCCESS)
-            self.asym_delta_lbl.configure(text=f"Seiten-Differenz ΔT = {delta_t:.1f} °C (Normbereich <= 2.2 °C)")
+            self.asym_delta_lbl.configure(text=f"Seiten-Differenz ΔT = {delta_t:.1f} °C (Normbereich <= {thresh_c:.1f} °C)")
 
         # PCA-Winkel anzeigen
         pca = result.get("pca_results")
@@ -303,6 +328,15 @@ class PodologyView(ctk.CTkFrame):
             self.pca_lbl.configure(text=f"PCA-Achsen: L: {l_ang:+.1f}° | R: {r_ang:+.1f}° (Entzerrt)", text_color=COLOR_PRIMARY)
         else:
             self.pca_lbl.configure(text="PCA-Ausrichtung: Standard", text_color=COLOR_TEXT_MUTED)
+
+        # Zonen-Titel dynamisch anpassen
+        z1_name = reg_info.get("zone_1_name", "Zone 1")
+        z2_name = reg_info.get("zone_2_name", "Zone 2")
+        z3_name = reg_info.get("zone_3_name", "Zone 3")
+
+        self.zone_title_lbls["fore"].configure(text=f"1. {z1_name}")
+        self.zone_title_lbls["mid"].configure(text=f"2. {z2_name}")
+        self.zone_title_lbls["heel"].configure(text=f"3. {z3_name}")
 
         # 2. 3-Zonen-Tabelle
         zonal = result.get("zonal_stats", {})
@@ -319,26 +353,38 @@ class PodologyView(ctk.CTkFrame):
                 lbl_l.configure(text=f"L: {l_c:.1f} °C")
                 lbl_r.configure(text=f"R: {r_c:.1f} °C")
 
-                d_color = COLOR_DANGER if d_c > 2.2 else COLOR_SUCCESS
-                warn_sym = " ⚠️" if d_c > 2.2 else ""
+                d_color = COLOR_DANGER if d_c > thresh_c else COLOR_SUCCESS
+                warn_sym = " ⚠️" if d_c > thresh_c else ""
                 lbl_d.configure(text=f"Δ {d_c:.1f} °C{warn_sym}", text_color=d_color)
 
-            # 3. Arch Index aktualisieren
-            ai_l = zonal["left"].get("arch_index")
-            type_l = zonal["left"].get("arch_type", "Normal")
-            code_l = zonal["left"].get("arch_code", "normal")
-            col_l = COLOR_DANGER if code_l == "planus" else (COLOR_WARNING if code_l == "cavus" else COLOR_SUCCESS)
-            if ai_l is not None:
-                self.arch_l_lbl.configure(text=f"Linker Fuß: AI = {ai_l:.3f} ({type_l})", text_color=col_l)
+            # 3. Arch Index aktualisieren (nur bei Füßen)
+            show_arch = reg_info.get("show_arch_index", region_key == "feet")
+            if show_arch:
+                self.arch_header_lbl.pack(fill=ctk.X, padx=4, pady=(10, 6))
+                self.arch_card.pack(fill=ctk.X, padx=4, pady=(0, 10))
 
-            ai_r = zonal["right"].get("arch_index")
-            type_r = zonal["right"].get("arch_type", "Normal")
-            code_r = zonal["right"].get("arch_code", "normal")
-            col_r = COLOR_DANGER if code_r == "planus" else (COLOR_WARNING if code_r == "cavus" else COLOR_SUCCESS)
-            if ai_r is not None:
-                self.arch_r_lbl.configure(text=f"Rechter Fuß: AI = {ai_r:.3f} ({type_r})", text_color=col_r)
+                ai_l = zonal["left"].get("arch_index")
+                type_l = zonal["left"].get("arch_type", "Normal")
+                code_l = zonal["left"].get("arch_code", "normal")
+                col_l = COLOR_DANGER if code_l == "planus" else (COLOR_WARNING if code_l == "cavus" else COLOR_SUCCESS)
+                if ai_l is not None:
+                    self.arch_l_lbl.configure(text=f"Linker Fuß: AI = {ai_l:.3f} ({type_l})", text_color=col_l)
 
-        # 4. Bild rendern
+                ai_r = zonal["right"].get("arch_index")
+                type_r = zonal["right"].get("arch_type", "Normal")
+                code_r = zonal["right"].get("arch_code", "normal")
+                col_r = COLOR_DANGER if code_r == "planus" else (COLOR_WARNING if code_r == "cavus" else COLOR_SUCCESS)
+                if ai_r is not None:
+                    self.arch_r_lbl.configure(text=f"Rechter Fuß: AI = {ai_r:.3f} ({type_r})", text_color=col_r)
+            else:
+                self.arch_header_lbl.pack_forget()
+                self.arch_card.pack_forget()
+
+        # 4. Leitlinien-Referenztext aktualisieren
+        citation_text = reg_info.get("citation", "Klinische Asymmetrie-Richtlinien der medizinischen Thermografie.")
+        self.note_lbl.configure(text=f"Leitlinie ({r_name}): {citation_text}. Temperaturschwelle ΔT > {thresh_c:.1f} °C.")
+
+        # 5. Bild rendern
         self.redraw()
 
     def redraw(self) -> None:

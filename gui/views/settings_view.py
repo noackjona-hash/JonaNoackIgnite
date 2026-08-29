@@ -35,7 +35,7 @@ class SettingsView(ctk.CTkFrame):
 
     CATEGORIES = [
         ("algo",     "Algorithmus & Hotspots"),
-        ("podology", "Podologie & Symmetrie"),
+        ("podology", "Anatomie & Symmetrie"),
         ("radio",    "Radiometrie & Physik"),
         ("visual",   "Anzeige & Overlays"),
         ("hardware", "Performance & Engine"),
@@ -45,25 +45,49 @@ class SettingsView(ctk.CTkFrame):
 
     PRESETS = {
         "Standard (Jugend forscht 2026)": {
-            "sigma_k": 3.0, "tophat_factor": 0.05, "min_area_factor": 0.0005,
+            "anatomy_region": "feet", "sigma_k": 3.0, "tophat_factor": 0.05, "min_area_factor": 0.0005,
             "min_circularity": 0.08, "otsu_min": 35, "otsu_max": 50, "dist_erosion_factor": 0.05,
             "use_mad": False, "enable_asymmetry": True, "asym_thresh": 2.2, "alpha": 0.5,
             "emissivity": 0.98, "refl_temp": 20.0, "forefoot_ratio": 0.40, "midfoot_ratio": 0.70
         },
+        "Hände & Finger (Raynaud / Rheuma)": {
+            "anatomy_region": "hands", "sigma_k": 2.5, "tophat_factor": 0.04, "min_area_factor": 0.0003,
+            "min_circularity": 0.05, "otsu_min": 30, "otsu_max": 45, "dist_erosion_factor": 0.03,
+            "use_mad": False, "enable_asymmetry": True, "asym_thresh": 1.2, "alpha": 0.5,
+            "emissivity": 0.98, "refl_temp": 20.0, "forefoot_ratio": 0.45, "midfoot_ratio": 0.75
+        },
+        "Knie & Gelenke (Gonarthrose / Entzündung)": {
+            "anatomy_region": "knees", "sigma_k": 2.8, "tophat_factor": 0.05, "min_area_factor": 0.0005,
+            "min_circularity": 0.08, "otsu_min": 35, "otsu_max": 50, "dist_erosion_factor": 0.05,
+            "use_mad": False, "enable_asymmetry": True, "asym_thresh": 1.0, "alpha": 0.5,
+            "emissivity": 0.98, "refl_temp": 20.0, "forefoot_ratio": 0.35, "midfoot_ratio": 0.65
+        },
+        "Rücken & Wirbelsäule (Myofaszial)": {
+            "anatomy_region": "spine", "sigma_k": 3.0, "tophat_factor": 0.05, "min_area_factor": 0.0006,
+            "min_circularity": 0.06, "otsu_min": 35, "otsu_max": 50, "dist_erosion_factor": 0.05,
+            "use_mad": True, "enable_asymmetry": True, "asym_thresh": 0.8, "alpha": 0.5,
+            "emissivity": 0.98, "refl_temp": 20.0, "forefoot_ratio": 0.33, "midfoot_ratio": 0.66
+        },
+        "Allgemeine Weichteile & Wundheilung": {
+            "anatomy_region": "general", "sigma_k": 3.0, "tophat_factor": 0.05, "min_area_factor": 0.0005,
+            "min_circularity": 0.08, "otsu_min": 35, "otsu_max": 50, "dist_erosion_factor": 0.05,
+            "use_mad": False, "enable_asymmetry": True, "asym_thresh": 1.5, "alpha": 0.5,
+            "emissivity": 0.98, "refl_temp": 20.0, "forefoot_ratio": 0.33, "midfoot_ratio": 0.66
+        },
         "Hochempfindlich (Frühdiagnose)": {
-            "sigma_k": 2.2, "tophat_factor": 0.04, "min_area_factor": 0.0002,
+            "anatomy_region": "feet", "sigma_k": 2.2, "tophat_factor": 0.04, "min_area_factor": 0.0002,
             "min_circularity": 0.04, "otsu_min": 30, "otsu_max": 45, "dist_erosion_factor": 0.03,
             "use_mad": False, "enable_asymmetry": True, "asym_thresh": 1.8, "alpha": 0.6,
             "emissivity": 0.98, "refl_temp": 20.0, "forefoot_ratio": 0.40, "midfoot_ratio": 0.70
         },
         "Podologie / Diabetischer Fuß": {
-            "sigma_k": 3.0, "tophat_factor": 0.06, "min_area_factor": 0.0008,
+            "anatomy_region": "feet", "sigma_k": 3.0, "tophat_factor": 0.06, "min_area_factor": 0.0008,
             "min_circularity": 0.10, "otsu_min": 35, "otsu_max": 55, "dist_erosion_factor": 0.05,
             "use_mad": True, "enable_asymmetry": True, "asym_thresh": 2.2, "alpha": 0.5,
             "emissivity": 0.98, "refl_temp": 20.0, "forefoot_ratio": 0.40, "midfoot_ratio": 0.70
         },
         "Rauschunterdrückung (Robust)": {
-            "sigma_k": 3.6, "tophat_factor": 0.05, "min_area_factor": 0.0012,
+            "anatomy_region": "feet", "sigma_k": 3.6, "tophat_factor": 0.05, "min_area_factor": 0.0012,
             "min_circularity": 0.14, "otsu_min": 40, "otsu_max": 65, "dist_erosion_factor": 0.08,
             "use_mad": True, "enable_asymmetry": True, "asym_thresh": 2.5, "alpha": 0.4,
             "emissivity": 0.98, "refl_temp": 20.0, "forefoot_ratio": 0.40, "midfoot_ratio": 0.70
@@ -345,32 +369,84 @@ class SettingsView(ctk.CTkFrame):
         panel = ctk.CTkFrame(self.scroll_body, fg_color="transparent")
         self.category_panels["podology"] = panel
 
+        self.selected_region_key = getattr(config, "DEFAULT_ANATOMY_REGION", "feet")
+
+        # 1. Auswahl der anatomischen Körperregion
+        reg_card = make_material_card(panel, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD_VARIANT)
+        reg_card.pack(fill=ctk.X, pady=(4, 6))
+        r_inner = ctk.CTkFrame(reg_card, fg_color="transparent")
+        r_inner.pack(fill=ctk.X, padx=16, pady=12)
+
+        ctk.CTkLabel(
+            r_inner,
+            text="Anatomischer Untersuchungsbereich & Leitlinie:",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
+            text_color=COLOR_TEXT_PRIMARY
+        ).pack(anchor="w", pady=(0, 4))
+
+        self.region_mapping = {
+            "🦶 Füße & Podologie": "feet",
+            "🖐️ Hände & Finger (Raynaud / Rheuma)": "hands",
+            "🦵 Knie & Gelenke (Arthrose / Meniskus)": "knees",
+            "👤 Rücken & Wirbelsäule (Myofaszial)": "spine",
+            "🩹 Allgemeine Weichteile & Wundheilung": "general"
+        }
+        self.region_rev_mapping = {v: k for k, v in self.region_mapping.items()}
+
+        current_label = self.region_rev_mapping.get(self.selected_region_key, "🦶 Füße & Podologie")
+
+        self.region_opt = ctk.CTkOptionMenu(
+            r_inner,
+            values=list(self.region_mapping.keys()),
+            command=self._on_region_selected,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
+            fg_color=COLOR_PRIMARY,
+            button_color=COLOR_PRIMARY_HOVER,
+            dropdown_font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+            corner_radius=RADIUS_BUTTON,
+            height=34
+        )
+        self.region_opt.set(current_label)
+        self.region_opt.pack(fill=ctk.X, pady=(2, 6))
+
+        reg_info = config.ANATOMICAL_REGIONS.get(self.selected_region_key, {})
+        self.region_citation_lbl = ctk.CTkLabel(
+            r_inner,
+            text=f"📚 {reg_info.get('citation', '')}",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=10),
+            text_color=COLOR_TEXT_MUTED,
+            wraplength=480,
+            justify="left"
+        )
+        self.region_citation_lbl.pack(fill=ctk.X, pady=(2, 0))
+
+        # 2. Parameter-Karte für Symmetrie & Zonen
         card = make_material_card(panel, corner_radius=RADIUS_CARD, fg_color=COLOR_BG_CARD_VARIANT)
         card.pack(fill=ctk.X, pady=4)
         c_inner = ctk.CTkFrame(card, fg_color="transparent")
         c_inner.pack(fill=ctk.X, padx=16, pady=12)
 
         s_asym, l_asym = make_slider_setting(
-            c_inner, "Armstrong Asymmetrie-Grenzwert ΔT (°C)",
-            "Klinischer Goldstandard nach Armstrong et al. (1997). Werte über dieser Differenz gelten als pathologisch.",
-            0.5, 5.0, config.ASYMMETRY_THRESHOLD_C, 0.1, "°C",
+            c_inner, "Leitlinien-Asymmetrie-Grenzwert ΔT (°C)",
+            "Klinisch validierte Temperaturschwelle. Werte über dieser Differenz gelten als pathologisch.",
+            0.4, 4.0, reg_info.get("asym_thresh_c", config.ASYMMETRY_THRESHOLD_C), 0.1, "°C",
             command=lambda v: self._on_change()
         )
         self.sliders["asym_thresh"] = (s_asym, l_asym)
 
         s_fore, l_fore = make_slider_setting(
-            c_inner, "Vorfuß-Zonengrenze (PCA %)",
-            "Anatomische Grenze für Metatarsalköpfe und Zehen entlang der Fußhauptachse",
-            0.20, 0.55, getattr(config, "DEFAULT_FOREFOOT_RATIO", 0.40), 0.05, "",
+            c_inner, "Zone-1-Grenze (PCA %)",
+            "Grenze für Zone 1 (Vorfuß / Finger / Suprapatellar / HWS) entlang der Längsachse",
+            0.20, 0.55, reg_info.get("zone_1_ratio", getattr(config, "DEFAULT_FOREFOOT_RATIO", 0.40)), 0.05, "",
             command=lambda v: self._on_change(),
             is_percent=True
         )
         self.sliders["forefoot_ratio"] = (s_fore, l_fore)
 
         s_mid, l_mid = make_slider_setting(
-            c_inner, "Mittelfuß-Zonengrenze (PCA %)",
-            "Anatomische Grenze zwischen Längsgewölbe und Calcaneus/Ferse entlang der Fußhauptachse",
-            0.55, 0.85, getattr(config, "DEFAULT_MIDFOOT_RATIO", 0.70), 0.05, "",
+            c_inner, "Zone-2-Grenze (PCA %)",
+            "Grenze für Zone 2 (Mittelfuß / Mittelhand / Patella / BWS) entlang der Längsachse",
+            0.55, 0.85, reg_info.get("zone_2_ratio", getattr(config, "DEFAULT_MIDFOOT_RATIO", 0.70)), 0.05, "",
             command=lambda v: self._on_change(),
             is_percent=True
         )
@@ -618,10 +694,47 @@ class SettingsView(ctk.CTkFrame):
 
     # ── Callbacks ─────────────────────────────────────────────────────────────
 
+    def _on_region_selected(self, choice_label: str) -> None:
+        reg_key = self.region_mapping.get(choice_label, "feet")
+        self.selected_region_key = reg_key
+        reg_info = config.ANATOMICAL_REGIONS.get(reg_key, {})
+
+        # Aktualisiere Zitat
+        if hasattr(self, "region_citation_lbl"):
+            self.region_citation_lbl.configure(text=f"📚 {reg_info.get('citation', '')}")
+
+        # Setze leitliniengerechte Standard-Schwellenwerte für diese Region
+        if "asym_thresh" in self.sliders:
+            new_thresh = reg_info.get("asym_thresh_c", 2.2)
+            self.sliders["asym_thresh"][0].set(new_thresh)
+            self.sliders["asym_thresh"][1].configure(text=f"{new_thresh:.1f} °C")
+
+        if "forefoot_ratio" in self.sliders:
+            new_z1 = reg_info.get("zone_1_ratio", 0.40)
+            self.sliders["forefoot_ratio"][0].set(new_z1)
+            self.sliders["forefoot_ratio"][1].configure(text=f"{new_z1*100:.1f} %")
+
+        if "midfoot_ratio" in self.sliders:
+            new_z2 = reg_info.get("zone_2_ratio", 0.70)
+            self.sliders["midfoot_ratio"][0].set(new_z2)
+            self.sliders["midfoot_ratio"][1].configure(text=f"{new_z2*100:.1f} %")
+
+        self.on_notify(f"Anatomische Region umgestellt auf: {choice_label}", "info")
+        self.on_param_changed()
+
     def _apply_preset(self, choice: str) -> None:
         p = self.PRESETS.get(choice)
         if not p:
             return
+
+        if "anatomy_region" in p and hasattr(self, "region_opt"):
+            reg_k = p["anatomy_region"]
+            self.selected_region_key = reg_k
+            lbl = self.region_rev_mapping.get(reg_k, "🦶 Füße & Podologie")
+            self.region_opt.set(lbl)
+            reg_info = config.ANATOMICAL_REGIONS.get(reg_k, {})
+            if hasattr(self, "region_citation_lbl"):
+                self.region_citation_lbl.configure(text=f"📚 {reg_info.get('citation', '')}")
 
         for k in ["sigma_k", "tophat_factor", "min_area_factor", "min_circularity", "dist_erosion_factor", "asym_thresh", "forefoot_ratio", "midfoot_ratio", "alpha"]:
             if k in p and k in self.sliders:
@@ -666,6 +779,7 @@ class SettingsView(ctk.CTkFrame):
             em = config.SKIN_EMISSIVITY
 
         return {
+            "anatomy_region": getattr(self, "selected_region_key", "feet"),
             "sigma_k": float(self.sliders["sigma_k"][0].get()),
             "tophat_factor": float(self.sliders["tophat_factor"][0].get()),
             "min_area_factor": float(self.sliders["min_area_factor"][0].get()),

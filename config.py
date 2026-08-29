@@ -36,7 +36,7 @@ _DEFAULT_SETTINGS: Dict[str, Any] = {
     "REFLECTED_TEMP_C": 20.0,
     "UI_SCALE": 1.0,
     "SALT": secrets.token_hex(16),
-    "APP_VERSION": "3.3.3",
+    "APP_VERSION": "4.0.0",
     "GITHUB_REPO": "noackjona-hash/JonaNoackIgnite",
     "AUTO_CHECK_UPDATES": True,
     # ── Neue erweiterte Algorithmus-Parameter (v3.3 & v3.4) ───────────────────
@@ -57,7 +57,72 @@ _DEFAULT_SETTINGS: Dict[str, Any] = {
     "FRANGI_SCALE_RANGE": [1.0, 2.0, 3.0],
     "FRANGI_BETA": 0.5,
     "FRANGI_C": 15.0,
+    "DEFAULT_ANATOMY_REGION": "feet", # Standard-Anatomie-Region ("feet", "hands", "knees", "spine", "general")
     "DEFAULT_ENABLE_BILATERAL_MAP": True
+}
+
+# ── Klinische & wissenschaftliche Parameter für verschiedene Körperregionen ──
+ANATOMICAL_REGIONS: Dict[str, Dict[str, Any]] = {
+    "feet": {
+        "name": "Füße & Podologie",
+        "icon": "🦶",
+        "asym_thresh_c": 2.2,
+        "citation": "Armstrong et al. (1997) - Goldstandard für diabetische Fußulkus-Früherkennung",
+        "zone_1_name": "Vorfuß / Metatarsus",
+        "zone_2_name": "Mittelfuß / Gewölbe",
+        "zone_3_name": "Ferse / Calcaneus",
+        "zone_1_ratio": 0.40,
+        "zone_2_ratio": 0.70,
+        "show_arch_index": True
+    },
+    "hands": {
+        "name": "Hände & Finger (Raynaud / Rheuma)",
+        "icon": "🖐️",
+        "asym_thresh_c": 1.2,
+        "citation": "Ring & Ammer (2012) / EULAR - Thermografische Kriterien für Raynaud & Arthritis",
+        "zone_1_name": "Finger / Phalangen (D1-D5)",
+        "zone_2_name": "Mittelhand / Metacarpus",
+        "zone_3_name": "Handwurzel / Carpus",
+        "zone_1_ratio": 0.45,
+        "zone_2_ratio": 0.75,
+        "show_arch_index": False
+    },
+    "knees": {
+        "name": "Knie & Gelenke (Arthrose / Meniskus)",
+        "icon": "🦵",
+        "asym_thresh_c": 1.0,
+        "citation": "Selfe et al. (2010) / Collins et al. (1974) - Patellare & periphere Gelenkthermografie",
+        "zone_1_name": "Suprapatellare Bursa / Oberschenkel",
+        "zone_2_name": "Patella / Gelenkspalt",
+        "zone_3_name": "Tuberositas tibiae / Unterschenkel",
+        "zone_1_ratio": 0.35,
+        "zone_2_ratio": 0.65,
+        "show_arch_index": False
+    },
+    "spine": {
+        "name": "Rücken & Wirbelsäule (Myofasziale Dysbalance)",
+        "icon": "👤",
+        "asym_thresh_c": 0.8,
+        "citation": "Feldman & Nickoloff (1984) - Paravertebrale thermografische Asymmetrie",
+        "zone_1_name": "HWS / Obere BWS (Trapezius)",
+        "zone_2_name": "Mittlere BWS / Rhomboidei",
+        "zone_3_name": "LWS / Sakralbereich",
+        "zone_1_ratio": 0.33,
+        "zone_2_ratio": 0.66,
+        "show_arch_index": False
+    },
+    "general": {
+        "name": "Allgemeine Weichteile & Wundbereich",
+        "icon": "🩹",
+        "asym_thresh_c": 1.5,
+        "citation": "IWGDF & Standard Medical Thermography - Allgemeine Weichteil-Hyperthermie",
+        "zone_1_name": "Proximaler Bereich",
+        "zone_2_name": "Zentraler Wund-/Gewebebereich",
+        "zone_3_name": "Distaler Bereich",
+        "zone_1_ratio": 0.33,
+        "zone_2_ratio": 0.66,
+        "show_arch_index": False
+    }
 }
 
 def load_settings() -> Dict[str, Any]:
@@ -137,6 +202,7 @@ FRANGI_SCALE_RANGE = tuple(_settings.get("FRANGI_SCALE_RANGE", [1.0, 2.0, 3.0]))
 FRANGI_BETA = _settings.get("FRANGI_BETA", 0.5)
 FRANGI_C = _settings.get("FRANGI_C", 15.0)
 DEFAULT_ENABLE_BILATERAL_MAP = _settings.get("DEFAULT_ENABLE_BILATERAL_MAP", True)
+DEFAULT_ANATOMY_REGION = _settings.get("DEFAULT_ANATOMY_REGION", "feet")
 
 # ── UI-Skalierung ──────────────────────────────────────────────────────────────
 UI_SCALE = _settings.get("UI_SCALE", 1.0)

@@ -337,36 +337,69 @@ def compute_thermal_gradients_and_divergence(
 # ─────────────────────────────────────────────────────────────────────────────
 # 5. PCA-GESTÜTZTE ANATOMISCHE FUSSAUSRICHTUNG (ROTATIONSINVARIANZ)
 # ─────────────────────────────────────────────────────────────────────────────
-def compute_pca_foot_alignment_and_zones(
+def compute_pca_anatomical_alignment_and_zones(
     img: np.ndarray,
     body_mask: np.ndarray,
     temp_min_c: float = _config.DEFAULT_TEMP_MIN,
     temp_max_c: float = _config.DEFAULT_TEMP_MAX,
-    forefoot_ratio: float = 0.40,
-    midfoot_ratio: float = 0.70
+    region_key: str = "feet",
+    zone_1_ratio: Optional[float] = None,
+    zone_2_ratio: Optional[float] = None,
+    show_arch_index: Optional[bool] = None
 ) -> dict[str, Any]:
     """
-    Segmentiert linken und rechten Fuß, ermittelt per Hauptkomponentenanalyse (PCA / Trägheitsmomente)
-    den Rotationswinkel jedes Fußes und segmentiert Vorfuß, Mittelfuß und Ferse rotationsinvariant entlang
-    der anatomischen Längsachse.
+    Segmentiert linken und rechten Körperabschnitt (Extremität / ROI), ermittelt per
+    Hauptkomponentenanalyse (PCA / Trägheitsmomente) den Rotationswinkel jedes Abschnitts
+    und segmentiert diesen rotationsinvariant entlang der anatomischen Längsachse
+    in 3 anatomische Zonen (z. B. Vorfuß/Mittelfuß/Ferse oder Finger/Mittelhand/Handwurzel
+    oder Suprapatellar/Patella/Tuberositas).
     """
     h, w = img.shape[:2]
     mid_x = w // 2
 
     temp_range = max(1.0, temp_max_c - temp_min_c)
 
-    def _analyze_single_foot(mask_side: np.ndarray, x_offset: int = 0) -> dict[str, Any]:
+    # Anatomische Regionen-Konfiguration abrufen
+    reg_configs = getattr(_config, "ANATOMICAL_REGIONS", {})
+    reg_info = reg_configs.get(region_key, reg_configs.get("feet", {
+        "name": "Füße & Podologie",
+        "zone_1_name": "Vorfuß / Metatarsus",
+        "zone_2_name": "Mittelfuß / Gewölbe",
+        "zone_3_name": "Ferse / Calcaneus",
+        "zone_1_ratio": 0.40,
+        "zone_2_ratio": 0.70,
+        "show_arch_index": True
+    }))
+
+    z1_r = zone_1_ratio if zone_1_ratio is not None else reg_info.get("zone_1_ratio", 0.40)
+    z2_r = zone_2_ratio if zone_2_ratio is not None else reg_info.get("zone_2_ratio", 0.70)
+    z1_name = reg_info.get("zone_1_name", "Zone 1 (Proximal / Vorfuß / Finger)")
+    z2_name = reg_info.get("zone_2_name", "Zone 2 (Zentral / Mittelfuß / Patella)")
+    z3_name = reg_info.get("zone_3_name", "Zone 3 (Distal / Ferse / Wurzel)")
+    enable_arch = show_arch_index if show_arch_index is not None else reg_info.get("show_arch_index", region_key == "feet")
+
+    def _analyze_single_limb(mask_side: np.ndarray, x_offset: int = 0) -> dict[str, Any]:
         num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(mask_side)
         if num_labels <= 1:
-            return {"exists": False, "angle_deg": 0.0, "fore_c": 0.0, "mid_c": 0.0, "heel_c": 0.0, "bbox": None, "center": None, "main_vec": None}
+            return {
+                "exists": False, "angle_deg": 0.0,
+                "zone_1_c": 0.0, "zone_2_c": 0.0, "zone_3_c": 0.0,
+                "fore_c": 0.0, "mid_c": 0.0, "heel_c": 0.0,
+                "bbox": None, "center": None, "main_vec": None
+            }
 
-        # Größte Komponente als Fuß wählen
+        # Größte Komponente als Gliedmaße / ROI wählen
         largest_idx = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
-        foot_mask = (labels == largest_idx)
-        ys, xs = np.where(foot_mask)
+        limb_mask = (labels == largest_idx)
+        ys, xs = np.where(limb_mask)
 
         if len(ys) < 30:
-            return {"exists": False, "angle_deg": 0.0, "fore_c": 0.0, "mid_c": 0.0, "heel_c": 0.0, "bbox": None, "center": None, "main_vec": None}
+            return {
+                "exists": False, "angle_deg": 0.0,
+                "zone_1_c": 0.0, "zone_2_c": 0.0, "zone_3_c": 0.0,
+                "fore_c": 0.0, "mid_c": 0.0, "heel_c": 0.0,
+                "bbox": None, "center": None, "main_vec": None
+            }
 
         # Bounding-Box
         bx = int(stats[largest_idx, cv2.CC_STAT_LEFT]) + x_offset
@@ -403,57 +436,68 @@ def compute_pca_foot_alignment_and_zones(
         p_min, p_max = float(proj.min()), float(proj.max())
         p_range = max(1e-5, p_max - p_min)
 
-        # 3 anatomische Zonen entlang der longitudinalen Hauptachse:
-        # Vorfuß (Metatarsus/Zehen, 0-forefoot_ratio), Mittelfuß (Gewölbe, forefoot_ratio-midfoot_ratio), Ferse (Calcaneus, midfoot_ratio-1.0)
+        # 3 anatomische Zonen entlang der longitudinalen Hauptachse
         norm_proj = (proj - p_min) / p_range
-        # Wenn Hauptvektor nach oben zeigt, invertieren wir für anatomische Konsistenz (Zehen oben, Ferse unten)
+        # Wenn Hauptvektor nach oben zeigt, invertieren für anatomische Konsistenz
         if main_vec[1] < 0:
             norm_proj = 1.0 - norm_proj
 
-        z_fore = norm_proj <= forefoot_ratio
-        z_mid = (norm_proj > forefoot_ratio) & (norm_proj <= midfoot_ratio)
-        z_heel = norm_proj > midfoot_ratio
+        z_1 = norm_proj <= z1_r
+        z_2 = (norm_proj > z1_r) & (norm_proj <= z2_r)
+        z_3 = norm_proj > z2_r
 
-        # Cavanagh & Rodgers Plantar Arch Index (AI = Area_Midfoot / Area_Total)
-        n_fore = int(np.sum(z_fore))
-        n_mid = int(np.sum(z_mid))
-        n_heel = int(np.sum(z_heel))
-        n_tot = max(1, n_fore + n_mid + n_heel)
-        arch_index = float(n_mid / n_tot)
+        n_1 = int(np.sum(z_1))
+        n_2 = int(np.sum(z_2))
+        n_3 = int(np.sum(z_3))
+        n_tot = max(1, n_1 + n_2 + n_3)
 
-        if arch_index < 0.21:
-            arch_type = "Pes Cavus (Hohlfuß)"
-            arch_code = "cavus"
-        elif arch_index <= 0.26:
-            arch_type = "Normales Längsgewölbe"
-            arch_code = "normal"
+        # Plantar Arch Index (nur bei Füßen)
+        if enable_arch:
+            arch_index = float(n_2 / n_tot)
+            if arch_index < 0.21:
+                arch_type = "Pes Cavus (Hohlfuß)"
+                arch_code = "cavus"
+            elif arch_index <= 0.26:
+                arch_type = "Normales Längsgewölbe"
+                arch_code = "normal"
+            else:
+                arch_type = "Pes Planus (Senk-/Plattfuß / Charcot-Verdacht)"
+                arch_code = "planus"
         else:
-            arch_type = "Pes Planus (Senk-/Plattfuß / Charcot-Verdacht)"
-            arch_code = "planus"
+            arch_index = None
+            arch_type = None
+            arch_code = None
 
         # Pixelwerte an den entsprechenden Koordinaten
         actual_xs = xs + x_offset
         pixels_all = img[ys, actual_xs]
 
-        p_fore = pixels_all[z_fore]
-        p_mid = pixels_all[z_mid]
-        p_heel = pixels_all[z_heel]
+        p_1 = pixels_all[z_1]
+        p_2 = pixels_all[z_2]
+        p_3 = pixels_all[z_3]
 
         def _to_c(px_arr):
             if len(px_arr) == 0:
                 return 0.0
             return float(temp_min_c + (np.mean(px_arr) / 255.0) * temp_range)
 
+        t1_c = round(_to_c(p_1), 2)
+        t2_c = round(_to_c(p_2), 2)
+        t3_c = round(_to_c(p_3), 2)
+
         return {
             "exists": True,
             "angle_deg": round(angle_deg, 1),
-            "fore_c": round(_to_c(p_fore), 2),
-            "mid_c": round(_to_c(p_mid), 2),
-            "heel_c": round(_to_c(p_heel), 2),
-            "arch_index": round(arch_index, 3),
+            "zone_1_c": t1_c,
+            "zone_2_c": t2_c,
+            "zone_3_c": t3_c,
+            "fore_c": t1_c,
+            "mid_c": t2_c,
+            "heel_c": t3_c,
+            "arch_index": round(arch_index, 3) if arch_index is not None else None,
             "arch_type": arch_type,
             "arch_code": arch_code,
-            "zone_counts": {"fore": n_fore, "mid": n_mid, "heel": n_heel},
+            "zone_counts": {"zone_1": n_1, "zone_2": n_2, "zone_3": n_3, "fore": n_1, "mid": n_2, "heel": n_3},
             "bbox": (bx, by, bw, bh),
             "center": (int(cx + x_offset), int(cy)),
             "main_vec": (float(main_vec[0]), float(main_vec[1])),
@@ -464,23 +508,51 @@ def compute_pca_foot_alignment_and_zones(
     left_mask = (body_mask[:, :mid_x] > 0).astype(np.uint8) * 255
     right_mask = (body_mask[:, mid_x:] > 0).astype(np.uint8) * 255
 
-    left_res = _analyze_single_foot(left_mask, x_offset=0)
-    right_res = _analyze_single_foot(right_mask, x_offset=mid_x)
+    left_res = _analyze_single_limb(left_mask, x_offset=0)
+    right_res = _analyze_single_limb(right_mask, x_offset=mid_x)
 
-    d_fore = abs(left_res["fore_c"] - right_res["fore_c"]) if left_res["exists"] and right_res["exists"] else 0.0
-    d_mid = abs(left_res["mid_c"] - right_res["mid_c"]) if left_res["exists"] and right_res["exists"] else 0.0
-    d_heel = abs(left_res["heel_c"] - right_res["heel_c"]) if left_res["exists"] and right_res["exists"] else 0.0
+    d_1 = abs(left_res["zone_1_c"] - right_res["zone_1_c"]) if left_res["exists"] and right_res["exists"] else 0.0
+    d_2 = abs(left_res["zone_2_c"] - right_res["zone_2_c"]) if left_res["exists"] and right_res["exists"] else 0.0
+    d_3 = abs(left_res["zone_3_c"] - right_res["zone_3_c"]) if left_res["exists"] and right_res["exists"] else 0.0
 
     return {
+        "region_key": region_key,
+        "region_name": reg_info.get("name", "Anatomische Region"),
+        "region_icon": reg_info.get("icon", "🩺"),
+        "zone_1_name": z1_name,
+        "zone_2_name": z2_name,
+        "zone_3_name": z3_name,
         "left": left_res,
         "right": right_res,
-        "delta_fore_c": round(d_fore, 2),
-        "delta_mid_c": round(d_mid, 2),
-        "delta_heel_c": round(d_heel, 2),
+        "delta_zone_1_c": round(d_1, 2),
+        "delta_zone_2_c": round(d_2, 2),
+        "delta_zone_3_c": round(d_3, 2),
+        "delta_fore_c": round(d_1, 2),
+        "delta_mid_c": round(d_2, 2),
+        "delta_heel_c": round(d_3, 2),
         "pca_aligned": True,
-        "forefoot_ratio": forefoot_ratio,
-        "midfoot_ratio": midfoot_ratio
+        "zone_1_ratio": z1_r,
+        "zone_2_ratio": z2_r,
+        "forefoot_ratio": z1_r,
+        "midfoot_ratio": z2_r
     }
+
+
+def compute_pca_foot_alignment_and_zones(
+    img: np.ndarray,
+    body_mask: np.ndarray,
+    temp_min_c: float = _config.DEFAULT_TEMP_MIN,
+    temp_max_c: float = _config.DEFAULT_TEMP_MAX,
+    forefoot_ratio: float = 0.40,
+    midfoot_ratio: float = 0.70
+) -> dict[str, Any]:
+    """Abwärtskompatibler Delegator für compute_pca_anatomical_alignment_and_zones (Füße)."""
+    return compute_pca_anatomical_alignment_and_zones(
+        img, body_mask, temp_min_c, temp_max_c,
+        region_key="feet",
+        zone_1_ratio=forefoot_ratio,
+        zone_2_ratio=midfoot_ratio
+    )
 
 
 def categorize_hotspots_by_pca_zones(
@@ -489,7 +561,7 @@ def categorize_hotspots_by_pca_zones(
 ) -> dict[str, list[dict[str, Any]]]:
     """
     Ordnet segmentierte Hotspot-Komponenten über die PCA-Längsachsenprojektion
-    den anatomischen Zonen Vorfuß, Mittelfuß oder Ferse zu.
+    den anatomischen Zonen der gewählten Körperregion zu.
     """
     if hotspots_mask is None or np.sum(hotspots_mask > 0) == 0:
         return {"left": [], "right": []}
@@ -500,18 +572,22 @@ def categorize_hotspots_by_pca_zones(
     num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats((hotspots_mask > 0).astype(np.uint8) * 255)
     categorized: dict[str, list[dict[str, Any]]] = {"left": [], "right": []}
 
+    z1_r = pca_info.get("zone_1_ratio", pca_info.get("forefoot_ratio", 0.40))
+    z2_r = pca_info.get("zone_2_ratio", pca_info.get("midfoot_ratio", 0.70))
+    z1_name = pca_info.get("zone_1_name", "Vorfuß")
+    z2_name = pca_info.get("zone_2_name", "Mittelfuß")
+    z3_name = pca_info.get("zone_3_name", "Ferse")
+
     for side in ("left", "right"):
-        foot_info = pca_info.get(side, {})
-        if not foot_info.get("exists"):
+        limb_info = pca_info.get(side, {})
+        if not limb_info.get("exists"):
             continue
 
-        cx, cy = foot_info.get("center", (0, 0))
-        main_vec = np.array(foot_info.get("main_vec", (0.0, 1.0)))
-        p_min = foot_info.get("p_min", 0.0)
-        p_max = foot_info.get("p_max", 1.0)
+        cx, cy = limb_info.get("center", (0, 0))
+        main_vec = np.array(limb_info.get("main_vec", (0.0, 1.0)))
+        p_min = limb_info.get("p_min", 0.0)
+        p_max = limb_info.get("p_max", 1.0)
         p_range = max(1e-5, p_max - p_min)
-        fore_r = pca_info.get("forefoot_ratio", 0.40)
-        mid_r = pca_info.get("midfoot_ratio", 0.70)
 
         for i in range(1, num_labels):
             cx_comp = centroids[i][0]
@@ -531,18 +607,26 @@ def categorize_hotspots_by_pca_zones(
             if main_vec[1] < 0:
                 norm_proj = 1.0 - norm_proj
 
-            if norm_proj <= fore_r:
-                zone = "forefoot"
-            elif norm_proj <= mid_r:
-                zone = "midfoot"
+            if norm_proj <= z1_r:
+                zone_code = "zone_1"
+                legacy_zone = "forefoot"
+                zone_name = z1_name
+            elif norm_proj <= z2_r:
+                zone_code = "zone_2"
+                legacy_zone = "midfoot"
+                zone_name = z2_name
             else:
-                zone = "heel"
+                zone_code = "zone_3"
+                legacy_zone = "heel"
+                zone_name = z3_name
 
             categorized[side].append({
                 "label": i,
                 "area_px": int(stats[i, cv2.CC_STAT_AREA]),
                 "centroid": (float(cx_comp), float(cy_comp)),
-                "zone": zone,
+                "zone": legacy_zone,
+                "zone_code": zone_code,
+                "zone_name": zone_name,
                 "norm_proj": round(float(norm_proj), 3)
             })
 
@@ -1218,11 +1302,12 @@ def compute_contralateral_asymmetry(
     body_mask: np.ndarray,
     temp_min_c: float = _config.DEFAULT_TEMP_MIN,
     temp_max_c: float = _config.DEFAULT_TEMP_MAX,
-    threshold_c: float = _config.ASYMMETRY_THRESHOLD_C
+    threshold_c: float = _config.ASYMMETRY_THRESHOLD_C,
+    region_key: str = "feet"
 ) -> dict:
     """
     Berechnet die kontralaterale Temperatur-Asymmetrie zwischen linker und rechter Körperhälfte
-    inklusive PCA-basierter Fußwinkel-Erkennung.
+    inklusive PCA-basierter Gliedmaßen- und Zonen-Erkennung für die gewählte anatomische Region.
     """
     if img is None or body_mask is None or np.sum(body_mask == 255) == 0:
         return {
@@ -1231,7 +1316,8 @@ def compute_contralateral_asymmetry(
             "delta_t_c": 0.0,
             "is_asymmetric": False,
             "status": "Keine Gewebe-Maske",
-            "pca": None
+            "pca": None,
+            "region_key": region_key
         }
 
     h, w = img.shape[:2]
@@ -1250,7 +1336,8 @@ def compute_contralateral_asymmetry(
             "delta_t_c": 0.0,
             "is_asymmetric": False,
             "status": "Nur einseitiges Gewebe",
-            "pca": None
+            "pca": None,
+            "region_key": region_key
         }
 
     mu_left_raw = float(np.mean(left_px))
@@ -1262,13 +1349,17 @@ def compute_contralateral_asymmetry(
     delta_t_c = abs(left_temp_c - right_temp_c)
     is_asymmetric = delta_t_c > threshold_c
 
-    pca_info = compute_pca_foot_alignment_and_zones(img, body_mask, temp_min_c, temp_max_c)
+    pca_info = compute_pca_anatomical_alignment_and_zones(img, body_mask, temp_min_c, temp_max_c, region_key=region_key)
+
+    status_msg = f"Pathologische Asymmetrie (⚠️ > {threshold_c:.1f}°C)" if is_asymmetric else f"Physiologisch Symmetrisch (✓ <= {threshold_c:.1f}°C)"
 
     return {
         "left_mean_c": round(left_temp_c, 2),
         "right_mean_c": round(right_temp_c, 2),
         "delta_t_c": round(delta_t_c, 2),
+        "threshold_c": threshold_c,
         "is_asymmetric": is_asymmetric,
-        "status": "Pathologische Asymmetrie (⚠️ > 2.2°C)" if is_asymmetric else "Physiologisch Symmetrisch (✓)",
+        "status": status_msg,
+        "region_key": region_key,
         "pca": pca_info
     }
