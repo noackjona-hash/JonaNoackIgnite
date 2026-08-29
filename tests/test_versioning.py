@@ -64,7 +64,8 @@ def test_calculate_next_version():
 
 def test_bump_all_files_dry_run():
     curr = read_current_version()
-    updated = bump_all_files("4.0.0", curr, dry_run=True)
+    next_ver = calculate_next_version(curr, "minor")
+    updated = bump_all_files(next_ver, curr, dry_run=True)
     assert "VERSION" in updated
     assert "pyproject.toml" in updated
     assert "Cargo.toml" in updated
