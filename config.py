@@ -34,7 +34,7 @@ _DEFAULT_SETTINGS: Dict[str, Any] = {
     "REFLECTED_TEMP_C": 20.0,
     "UI_SCALE": 1.0,
     "SALT": secrets.token_hex(16),
-    "APP_VERSION": "3.3.2",
+    "APP_VERSION": "3.3.3",
     "GITHUB_REPO": "noackjona-hash/JonaNoackIgnite",
     "AUTO_CHECK_UPDATES": True,
     # ── Neue erweiterte Algorithmus-Parameter (v3.3 & v3.4) ───────────────────
