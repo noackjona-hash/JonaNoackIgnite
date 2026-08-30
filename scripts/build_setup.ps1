@@ -33,7 +33,7 @@ $RepoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $RepoRoot
 
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  IGNITE Core v4.0.0 – Rust Build" -ForegroundColor Cyan
+Write-Host "  IGNITE Core v4.0.1 – Rust Build" -ForegroundColor Cyan
 Write-Host "  Reine Rust-Implementierung (kein C++)" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""

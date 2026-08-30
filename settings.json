@@ -49,7 +49,7 @@
     "FRANGI_C": 15.0,
     "DEFAULT_ENABLE_BILATERAL_MAP": true,
     "DEFAULT_ANATOMY_REGION": "feet",
-    "APP_VERSION": "4.0.0",
+    "APP_VERSION": "4.0.1",
     "GITHUB_REPO": "noackjona-hash/JonaNoackIgnite",
     "AUTO_CHECK_UPDATES": true
 }
