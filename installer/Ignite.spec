@@ -6,7 +6,10 @@ import os
 # main.py und icon/ unabhängig vom Aufrufort korrekt gefunden werden.
 REPO_ROOT = os.path.dirname(SPECPATH)
 
-datas = [(os.path.join(REPO_ROOT, 'icon'), 'icon')]
+datas = [
+    (os.path.join(REPO_ROOT, 'icon'), 'icon'),
+    (os.path.join(REPO_ROOT, 'VERSION'), '.'),
+]
 binaries = []
 hiddenimports = ['matplotlib.backends.backend_tkagg', 'mpl_toolkits.mplot3d']
 tmp_ret = collect_all('customtkinter')

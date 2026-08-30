@@ -45,6 +45,34 @@ def test_version_files_consistency():
 
     # 5. config.APP_VERSION
     assert config.APP_VERSION == canonical_ver
+    assert config.CANONICAL_APP_VERSION == canonical_ver
+
+
+def test_stale_settings_json_overwritten_by_app_version(tmp_path, monkeypatch):
+    """Prüft, dass ein veralteter Versionsstring in settings.json automatisch mit der echten App-Version synchronisiert wird."""
+    temp_settings = tmp_path / "settings.json"
+    temp_settings.write_text(json.dumps({"APP_VERSION": "3.2.0", "DEFAULT_SIGMA_K": 3.0}), encoding="utf-8")
+    
+    monkeypatch.setattr(config, "SETTINGS_FILE", str(temp_settings))
+    
+    loaded = config.load_settings()
+    assert loaded["APP_VERSION"] == config.APP_VERSION
+    assert loaded["APP_VERSION"] == read_current_version()
+    
+    # Sicherstellen, dass die Datei auf der Festplatte auch aktualisiert wurde
+    disk_data = json.loads(temp_settings.read_text(encoding="utf-8"))
+    assert disk_data["APP_VERSION"] == config.APP_VERSION
+
+
+def test_get_app_version_resolves_correctly(tmp_path, monkeypatch):
+    """Testet die dynamische Auflösung von get_app_version aus verschiedenen Pfaden."""
+    # Testfall: VERSION-Datei existiert in einem temporären Verzeichnis
+    fake_ver_file = tmp_path / "VERSION"
+    fake_ver_file.write_text("9.9.9\n", encoding="utf-8")
+    
+    # Mocke sys._MEIPASS
+    monkeypatch.setattr(config.sys, "_MEIPASS", str(tmp_path), raising=False)
+    assert config.get_app_version() == "9.9.9"
 
 
 def test_parse_semver_variants():

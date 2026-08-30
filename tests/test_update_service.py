@@ -210,3 +210,34 @@ def test_update_modal_dialog_rendering(app_root):
     assert modal2 is not None
     modal2.destroy()
 
+
+def test_apply_update_windows_flow(tmp_path):
+    """Testet, dass apply_update unter Windows mit Force-Close-Parametern gestartet und der Prozess beendet wird."""
+    dummy_installer = tmp_path / "IGNITE_Setup_test.exe"
+    dummy_installer.write_text("DUMMY_EXE_CONTENT", encoding="utf-8")
+
+    with mock.patch("sys.platform", "win32"), \
+         mock.patch("subprocess.Popen") as mock_popen, \
+         mock.patch("os._exit") as mock_exit, \
+         mock.patch("time.sleep"):
+
+        UpdateService.apply_update(str(dummy_installer), is_silent=False)
+
+        assert mock_popen.called
+        call_args = mock_popen.call_args[0][0]
+        assert str(dummy_installer) in call_args[0]
+        assert "/FORCECLOSEAPPLICATIONS" in call_args
+        assert "/CLOSEAPPLICATIONS" in call_args
+        assert "/RESTARTAPPLICATIONS" in call_args
+        assert "/SP-" in call_args
+
+        # Sicherstellen, dass os._exit(0) aufgerufen wurde
+        mock_exit.assert_called_once_with(0)
+
+
+def test_apply_update_file_not_found():
+    """Testet, dass bei nicht vorhandener Datei FileNotFoundError ausgelöst wird."""
+    with pytest.raises(FileNotFoundError):
+        UpdateService.apply_update("non_existent_setup_12345.exe")
+
+

@@ -212,8 +212,9 @@ class UpdateService:
             # Inno Setup Parameter:
             # /SP- : Bestätigungsdialog vor Installation überspringen
             # /CLOSEAPPLICATIONS : Laufende App vor Überschreiben beenden
+            # /FORCECLOSEAPPLICATIONS : Schließen aller Instanzen erzwingen
             # /RESTARTAPPLICATIONS : App nach erfolgreichem Update neu starten
-            args = [installer_path, "/SP-", "/CLOSEAPPLICATIONS", "/RESTARTAPPLICATIONS"]
+            args = [installer_path, "/SP-", "/CLOSEAPPLICATIONS", "/FORCECLOSEAPPLICATIONS", "/RESTARTAPPLICATIONS"]
             if is_silent:
                 args.append("/SILENT")
 
@@ -228,9 +229,9 @@ class UpdateService:
                 creationflags=flags,
                 close_fds=True
             )
-            # App sauber beenden
-            time.sleep(0.5)
-            sys.exit(0)
+            # App sofort und rückstandslos beenden, damit keine DLL-/Exe-Locks bestehen bleiben
+            time.sleep(0.3)
+            os._exit(0)
         else:
             # Linux: Dateimanager öffnen oder Berechtigung setzen
             try:
@@ -242,4 +243,4 @@ class UpdateService:
                 subprocess.Popen(["xdg-open", os.path.dirname(installer_path)])
             else:
                 subprocess.Popen([installer_path])
-            sys.exit(0)
+            os._exit(0)

@@ -128,48 +128,31 @@ def bump_all_files(new_version: str, old_version: str, dry_run: bool = False) ->
             pass
 
     # 5. config.py
-    if update_file_regex(
+    c1 = update_file_regex(
+        REPO_ROOT / "config.py",
+        r'(CANONICAL_APP_VERSION\s*=\s*")[^"]+(")',
+        rf'\g<1>{new_version}\g<2>',
+        dry_run
+    )
+    c2 = update_file_regex(
         REPO_ROOT / "config.py",
         r'("APP_VERSION":\s*")[^"]+(")',
         rf'\g<1>{new_version}\g<2>',
         dry_run
-    ):
+    )
+    if c1 or c2:
         updated.append("config.py")
 
     # 6. installer/ignite_installer.iss
     iss_file = REPO_ROOT / "installer" / "ignite_installer.iss"
     if iss_file.exists():
-        update_file_regex(
+        if update_file_regex(
             iss_file,
             r'(#define AppVersion\s*")[^"]+(")',
             rf'\g<1>{new_version}\g<2>',
             dry_run
-        )
-        update_file_regex(
-            iss_file,
-            r'(AppVersion\s*=\s*)[^\r\n]+',
-            rf'\g<1>{new_version}',
-            dry_run
-        )
-        update_file_regex(
-            iss_file,
-            r'(VersionInfoVersion\s*=\s*)[^\r\n]+',
-            rf'\g<1>{new_version}',
-            dry_run
-        )
-        update_file_regex(
-            iss_file,
-            r'(VersionInfoProductVersion\s*=\s*)[^\r\n]+',
-            rf'\g<1>{new_version}',
-            dry_run
-        )
-        update_file_regex(
-            iss_file,
-            r'(OutputBaseFilename\s*=\s*IGNITE_Setup_v)[^\r\n]+',
-            rf'\g<1>{new_version}',
-            dry_run
-        )
-        updated.append("installer/ignite_installer.iss")
+        ):
+            updated.append("installer/ignite_installer.iss")
 
     # 7. LICENSE
     if update_file_regex(

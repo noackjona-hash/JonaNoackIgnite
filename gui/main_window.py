@@ -48,7 +48,7 @@ from gui.services.scientific_report_service import ScientificReportService
 from gui.services.update_service import UpdateService, UpdateInfo
 from utils import get_resource_path
 
-APP_VERSION = getattr(config, "APP_VERSION", "3.2.0")
+APP_VERSION = getattr(config, "APP_VERSION", "4.0.0")
 
 
 class IgniteApp:

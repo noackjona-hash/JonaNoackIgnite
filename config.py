@@ -1,10 +1,52 @@
 import os
+import sys
 import json
 import secrets
 import logging
 from typing import Dict, Any
 
 SETTINGS_FILE = "settings.json"
+CANONICAL_APP_VERSION = "4.0.0"
+
+def get_app_version() -> str:
+    """Ermittelt die App-Version dynamisch aus der VERSION-Datei oder Fallback."""
+    candidates = []
+    
+    # 1. PyInstaller MEIPASS
+    if hasattr(sys, "_MEIPASS"):
+        candidates.append(os.path.join(sys._MEIPASS, "VERSION"))
+        
+    # 2. Executable-Verzeichnis (Installationspfad)
+    if hasattr(sys, "executable") and sys.executable:
+        exe_dir = os.path.dirname(sys.executable)
+        candidates.append(os.path.join(exe_dir, "VERSION"))
+        candidates.append(os.path.join(exe_dir, "_internal", "VERSION"))
+        
+    # 3. Modulpfad (__file__)
+    try:
+        file_dir = os.path.dirname(os.path.abspath(__file__))
+        candidates.append(os.path.join(file_dir, "VERSION"))
+        candidates.append(os.path.join(file_dir, "..", "VERSION"))
+    except Exception:
+        pass
+    
+    # 4. Arbeitsverzeichnis
+    candidates.append(os.path.join(os.getcwd(), "VERSION"))
+
+    for path in candidates:
+        try:
+            norm_path = os.path.abspath(path)
+            if os.path.exists(norm_path):
+                with open(norm_path, "r", encoding="utf-8") as f:
+                    v = f.read().strip()
+                    if v:
+                        return v
+        except Exception:
+            pass
+                
+    return CANONICAL_APP_VERSION
+
+APP_VERSION = get_app_version()
 
 _DEFAULT_SETTINGS: Dict[str, Any] = {
     "DEFAULT_SIGMA_K": 3.0,           # k=3.0 entspricht 99.86% Konfidenzintervall (Gauß)
@@ -126,7 +168,7 @@ ANATOMICAL_REGIONS: Dict[str, Dict[str, Any]] = {
 }
 
 def load_settings() -> Dict[str, Any]:
-    """Lädt Konfigurationeinstellungen aus settings.json mit Fallback zu Defaults."""
+    """Lädt Konfigurationseinstellungen aus settings.json mit Fallback zu Defaults."""
     if not os.path.exists(SETTINGS_FILE):
         with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
             json.dump(_DEFAULT_SETTINGS, f, indent=4)
@@ -141,6 +183,11 @@ def load_settings() -> Dict[str, Any]:
                 if k not in settings:
                     settings[k] = v
                     updated = True
+            
+            # WICHTIG: APP_VERSION muss immer die tatsächliche Code-/Binary-Version widerspiegeln
+            if settings.get("APP_VERSION") != APP_VERSION:
+                settings["APP_VERSION"] = APP_VERSION
+                updated = True
             
             if updated:
                 with open(SETTINGS_FILE, "w", encoding="utf-8") as f2:
@@ -208,20 +255,6 @@ DEFAULT_ANATOMY_REGION = _settings.get("DEFAULT_ANATOMY_REGION", "feet")
 UI_SCALE = _settings.get("UI_SCALE", 1.0)
 
 # ── Update & Versions-Konfiguration ───────────────────────────────────────────
-def get_app_version() -> str:
-    """Ermittelt die App-Version dynamisch aus der VERSION-Datei oder den Einstellungen."""
-    ver_path = os.path.join(os.path.dirname(__file__), "VERSION")
-    if os.path.exists(ver_path):
-        try:
-            with open(ver_path, "r", encoding="utf-8") as f:
-                v = f.read().strip()
-                if v:
-                    return v
-        except Exception:
-            pass
-    return _settings.get("APP_VERSION", "3.3.0")
-
-APP_VERSION = get_app_version()
 GITHUB_REPO = _settings.get("GITHUB_REPO", "noackjona-hash/JonaNoackIgnite")
 AUTO_CHECK_UPDATES = _settings.get("AUTO_CHECK_UPDATES", True)
 
@@ -231,4 +264,5 @@ def init_output_dir() -> None:
     """Erstellt den Ausgabeordner, falls er noch nicht existiert."""
     if not os.path.exists(OUTPUT_DIR):
         os.makedirs(OUTPUT_DIR)
+
 

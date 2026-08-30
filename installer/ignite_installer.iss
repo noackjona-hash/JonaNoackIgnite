@@ -10,7 +10,7 @@
 ; Einzigartige AppId
 AppId={{928C6EFA-C40C-46C4-AE4B-0FEA0388B2A6}}
 AppName=IGNITE Medical Imaging Suite
-AppVersion=4.0.0
+AppVersion={#AppVersion}
 AppPublisher=Jona Noack
 AppPublisherURL=https://github.com/noackjona-hash/JonaNoackIgnite
 AppSupportURL=https://github.com/noackjona-hash/JonaNoackIgnite/issues
@@ -18,24 +18,27 @@ DefaultDirName={autopf}\IGNITE Medical Imaging
 DefaultGroupName=IGNITE Medical Imaging
 AllowNoIcons=yes
 PrivilegesRequired=lowest
+PrivilegesRequiredOverridesAllowed=commandline
+CloseApplications=force
+CloseApplicationsFilter=*.exe,*.pyd,*.dll
 
 ; 64-Bit System-Enforcement
 ArchitecturesAllowed=x64
 ArchitecturesInstallIn64BitMode=x64
 
 ; Versionierung und Metadaten für die Installer-EXE
-VersionInfoVersion=4.0.0
+VersionInfoVersion={#AppVersion}
 VersionInfoCompany=Jona Noack
 VersionInfoDescription=IGNITE Medical Imaging Suite – Thermografische Entzündungsdetektion
 VersionInfoCopyright=Copyright (C) 2026 Jona Noack
 VersionInfoProductName=IGNITE Medical Imaging Suite
-VersionInfoProductVersion=4.0.0
+VersionInfoProductVersion={#AppVersion}
 
 ; Pfad zur Icon-Datei für den Installer selbst
 SetupIconFile=..\icon\LogoRund.ico
 ; Speicherort und Name des fertigen Installers (Repo-Root, wie zuvor)
 OutputDir=..
-OutputBaseFilename=IGNITE_Setup_v4.0.0
+OutputBaseFilename=IGNITE_Setup_v{#AppVersion}
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
@@ -49,6 +52,8 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 [Files]
 ; Hauptanwendung (Ordner-Inhalt von PyInstaller --onedir, liegt in dist/IGNITE/)
 Source: "..\dist\IGNITE\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+; VERSION-Datei für Versionsvalidierung
+Source: "..\VERSION"; DestDir: "{app}"; Flags: ignoreversion
 ; Logos/Icons für eventuelle Verknüpfungs-Referenzen mitinstallieren
 Source: "..\icon\LogoRund.ico"; DestDir: "{app}\icon"; Flags: ignoreversion
 Source: "..\icon\LogoRund.png"; DestDir: "{app}\icon"; Flags: ignoreversion
