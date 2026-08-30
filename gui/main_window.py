@@ -261,6 +261,15 @@ class IgniteApp:
         self.root.bind("<F5>", lambda e: self.run_pipeline())
         self.root.bind("<Control-r>", lambda e: self.run_pipeline())
         self.root.bind("<Control-R>", lambda e: self.run_pipeline())
+        self.root.bind("<F1>", lambda e: self.show_help_dialog())
+
+        # Schnellauswahl der Ansichten per Ctrl+1 .. Ctrl+6
+        self.root.bind("<Control-Key-1>", lambda e: self.nav_rail.select_tab("dashboard"))
+        self.root.bind("<Control-Key-2>", lambda e: self.nav_rail.select_tab("single"))
+        self.root.bind("<Control-Key-3>", lambda e: self.nav_rail.select_tab("analytics"))
+        self.root.bind("<Control-Key-4>", lambda e: self.nav_rail.select_tab("podology"))
+        self.root.bind("<Control-Key-5>", lambda e: self.nav_rail.select_tab("batch"))
+        self.root.bind("<Control-Key-6>", lambda e: self.nav_rail.select_tab("settings"))
 
     def switch_view(self, key: str) -> None:
         """Wechselt die aktive Ansicht."""

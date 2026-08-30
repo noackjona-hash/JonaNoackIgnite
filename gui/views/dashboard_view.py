@@ -41,10 +41,10 @@ class DashboardView(ctk.CTkFrame):
     """4-Stufen Haupt-Dashboard im High-Contrast Clinical Design."""
 
     PANEL_DEFS = [
-        ("1. Originalbild",             "1. Original-Wärmebild",          "Rohdaten & Kalibrierung"),
-        ("2. Hintergrund-Maske",        "2. Gewebe-Segmentierung",        "Hintergrund- & Artefaktfilter"),
-        ("3. Lokale Hitze-Differenz",   "3. Morphologische Differenz",    "Strukturelle Hitzekontraste"),
-        ("4. Erkannte Hotspots (Rust)", "4. Diagnose & Hotspots",         "Entzündungsherde & Bounding Boxes"),
+        ("1. Originalbild",             "Stufe 1/4: Original-Wärmebild",       "Rohdaten & Kalibrierung"),
+        ("2. Hintergrund-Maske",        "Stufe 2/4: Gewebe-Segmentierung",     "Hintergrund- & Artefaktfilter"),
+        ("3. Lokale Hitze-Differenz",   "Stufe 3/4: Morphologische Differenz", "Multi-Scale Top-Hat Hitzekontraste"),
+        ("4. Erkannte Hotspots (Rust)", "Stufe 4/4: Diagnose & Hotspots",      "Entzündungsherde & Bounding Boxes"),
     ]
 
     def __init__(
@@ -254,35 +254,70 @@ class DashboardView(ctk.CTkFrame):
     def _build_welcome_state(self) -> None:
         """Erstellt eine aufgeräumte, professionelle Workstation-Startansicht."""
         center_box = ctk.CTkFrame(self.welcome_card, fg_color="transparent")
-        center_box.pack(expand=True, padx=24, pady=24)
+        center_box.pack(expand=True, padx=32, pady=32)
+
+        # Workstation Icon & Titel
+        ctk.CTkLabel(
+            center_box,
+            text="🔬",
+            font=ctk.CTkFont(size=36)
+        ).pack(pady=(0, 4))
 
         ctk.CTkLabel(
             center_box,
-            text="Wärmebild zur Analyse laden",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=20, weight="bold"),
+            text="Klinische Wärmebild-Analyse starten",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=22, weight="bold"),
             text_color=COLOR_TEXT_PRIMARY
         ).pack(pady=(0, 6))
 
         ctk.CTkLabel(
             center_box,
-            text="Unterstützte Formate: Radiometrische und 8-Bit Infrarotaufnahmen (.jpg, .png, .tiff, .flir).\nAutomatische Entzündungsdetektion, Top-Hat-Filterung und Symmetrievergleich.",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=13),
+            text="Unterstützt FLIR, radiometrische TIFFs, 8-Bit RGB- und Graustufenaufnahmen.\nAutomatische Entzündungsdetektion, Multi-Scale Top-Hat Filterung und PCA-Symmetrieanalyse.",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
             text_color=COLOR_TEXT_MUTED,
             justify="center",
-            wraplength=520
-        ).pack(pady=(0, 24))
+            wraplength=560
+        ).pack(pady=(0, 16))
 
+        # Feature Badges
+        badges_row = ctk.CTkFrame(center_box, fg_color="transparent")
+        badges_row.pack(pady=(0, 20))
+
+        features = [
+            ("⚡ GPU/Rust Core", "Native Beschleunigung"),
+            ("🌡️ Radiometrisch", "Celsius-Kalibriert"),
+            ("🦶 PCA 3-Zonen", "Armstrong Standard"),
+            ("📊 TSI Index", "IWGDF Risikostufe"),
+        ]
+        for f_title, f_sub in features:
+            f_card = ctk.CTkFrame(
+                badges_row,
+                fg_color=COLOR_BG_CARD_VARIANT,
+                corner_radius=RADIUS_BADGE,
+                border_width=1,
+                border_color=COLOR_OUTLINE,
+                height=28
+            )
+            f_card.pack(side=ctk.LEFT, padx=4)
+            ctk.CTkLabel(
+                f_card,
+                text=f_title,
+                font=ctk.CTkFont(family=FONT_FAMILY, size=10, weight="bold"),
+                text_color=COLOR_TEXT_PRIMARY
+            ).pack(padx=8, pady=4)
+
+        # Primary Action Button
         ctk.CTkButton(
             center_box,
-            text="+ Wärmebild auswählen…",
+            text="📂 Wärmebild öffnen… (Ctrl+O)",
             command=self.on_load_click,
             font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"),
             fg_color=COLOR_PRIMARY,
             hover_color=COLOR_PRIMARY_HOVER,
             text_color="#FFFFFF",
             corner_radius=RADIUS_BUTTON,
-            height=40,
-            width=200
+            height=42,
+            width=240
         ).pack(pady=(0, 24))
 
         # Beispieldatensätze
@@ -291,15 +326,15 @@ class DashboardView(ctk.CTkFrame):
 
         ctk.CTkLabel(
             demo_box,
-            text="Oder Beispieldatensatz laden:",
+            text="Oder Beispieldatensatz zur Schnellinspektion laden:",
             font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
             text_color=COLOR_TEXT_MUTED
         ).pack(pady=(0, 8))
 
         demos = [
-            ("Diabetischer Fuß", "test-data/bild (4).jpeg"),
-            ("Entzündungsherd",  "test-data/bild (1).jpeg"),
-            ("Normalbefund",     "test-data/bild (15).jpeg")
+            ("🦶 Diabetischer Fuß (ΔT 3.1 °C)", "test-data/bild (4).jpeg"),
+            ("🔥 Entzündungsherd (Hotspot)",  "test-data/bild (1).jpeg"),
+            ("✅ Physiologischer Normalbefund", "test-data/bild (15).jpeg")
         ]
 
         demo_btns_row = ctk.CTkFrame(demo_box, fg_color="transparent")
@@ -319,8 +354,8 @@ class DashboardView(ctk.CTkFrame):
                     border_width=1,
                     border_color=COLOR_OUTLINE,
                     corner_radius=RADIUS_BUTTON,
-                    height=30,
-                    width=130
+                    height=32,
+                    width=175
                 ).pack(side=ctk.LEFT, padx=4)
 
     def show_empty_state(self) -> None:

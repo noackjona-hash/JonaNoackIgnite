@@ -88,7 +88,7 @@ class TopAppBar(ctk.CTkFrame):
 
         ctk.CTkLabel(
             title_row,
-            text=f" v{getattr(config, 'APP_VERSION', '3.3.0')} ",
+            text=f" v{config.APP_VERSION} ",
             font=ctk.CTkFont(family=FONT_FAMILY_MONO, size=11, weight="bold"),
             text_color=COLOR_TEXT_MUTED,
             fg_color=COLOR_BG_CARD_VARIANT,
@@ -138,7 +138,7 @@ class TopAppBar(ctk.CTkFrame):
         # 2. Command Search Button
         self.search_btn = ctk.CTkButton(
             right_box,
-            text="Befehle suchen… (Ctrl+K)",
+            text="🔍 Befehle… (Ctrl+K)",
             command=self.on_search_click,
             font=ctk.CTkFont(family=FONT_FAMILY, size=12),
             fg_color=COLOR_BG_INPUT,
@@ -148,14 +148,14 @@ class TopAppBar(ctk.CTkFrame):
             border_color=COLOR_OUTLINE,
             corner_radius=RADIUS_BUTTON,
             height=34,
-            width=200
+            width=190
         )
         self.search_btn.pack(side=ctk.LEFT, padx=(0, 8))
 
         # 3. Theme Toggle Button
         self.theme_btn = ctk.CTkButton(
             right_box,
-            text="Design",
+            text="🌓 Design",
             command=self.on_theme_click,
             font=ctk.CTkFont(family=FONT_FAMILY, size=12),
             fg_color=COLOR_BG_INPUT,
@@ -165,14 +165,14 @@ class TopAppBar(ctk.CTkFrame):
             border_color=COLOR_OUTLINE,
             corner_radius=RADIUS_BUTTON,
             height=34,
-            width=64
+            width=76
         )
         self.theme_btn.pack(side=ctk.LEFT, padx=(0, 8))
 
         # 4. Info / Help Button
         self.info_btn = ctk.CTkButton(
             right_box,
-            text="Info",
+            text="ℹ️ Info",
             command=self.on_info_click,
             font=ctk.CTkFont(family=FONT_FAMILY, size=12),
             fg_color=COLOR_BG_INPUT,
@@ -182,14 +182,14 @@ class TopAppBar(ctk.CTkFrame):
             border_color=COLOR_OUTLINE,
             corner_radius=RADIUS_BUTTON,
             height=34,
-            width=50
+            width=62
         )
         self.info_btn.pack(side=ctk.LEFT, padx=(0, 10))
 
         # 5. Primary Action Button
         self.load_btn = ctk.CTkButton(
             right_box,
-            text="+ Bild öffnen",
+            text="📂 Bild öffnen",
             command=self.on_load_click,
             font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"),
             fg_color=COLOR_PRIMARY,
@@ -197,7 +197,7 @@ class TopAppBar(ctk.CTkFrame):
             text_color="#FFFFFF",
             corner_radius=RADIUS_BUTTON,
             height=34,
-            width=140
+            width=135
         )
         self.load_btn.pack(side=ctk.LEFT)
 

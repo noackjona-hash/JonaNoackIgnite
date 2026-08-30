@@ -6,7 +6,7 @@ import logging
 from typing import Dict, Any
 
 SETTINGS_FILE = "settings.json"
-CANONICAL_APP_VERSION = "4.0.1"
+CANONICAL_APP_VERSION = "4.0.2"
 
 def get_app_version() -> str:
     """Ermittelt die App-Version dynamisch aus der VERSION-Datei oder Fallback."""
@@ -78,7 +78,7 @@ _DEFAULT_SETTINGS: Dict[str, Any] = {
     "REFLECTED_TEMP_C": 20.0,
     "UI_SCALE": 1.0,
     "SALT": secrets.token_hex(16),
-    "APP_VERSION": "4.0.1",
+    "APP_VERSION": "4.0.2",
     "GITHUB_REPO": "noackjona-hash/JonaNoackIgnite",
     "AUTO_CHECK_UPDATES": True,
     # ── Neue erweiterte Algorithmus-Parameter (v3.3 & v3.4) ───────────────────
