@@ -527,5 +527,81 @@ def test_single_view_isotherm_filter_and_presets(app_root):
     assert single_view.isotherm_color_name == "Neon-Bernstein"
 
 
+def test_thermal_processing_service_async_execution():
+    """Testet die vollständige asynchrone Pipeline von ThermalProcessingService."""
+    from gui.services.processing_service import ThermalProcessingService
+    import threading
+
+    test_image_path = "test-data/bild (1).jpeg"
+    if not os.path.exists(test_image_path):
+        pytest.skip("Testbild nicht vorhanden")
+
+    event = threading.Event()
+    result_holder = {}
+    error_holder = []
+
+    def on_success(res):
+        result_holder["res"] = res
+        event.set()
+
+    def on_error(err):
+        error_holder.append(err)
+        event.set()
+
+    progress_updates = []
+    def on_progress(frac, msg):
+        progress_updates.append((frac, msg))
+
+    params = {
+        "sigma_k": 3.0,
+        "tophat_factor": 0.05,
+        "min_area_factor": 0.001,
+        "min_circularity": 0.2,
+        "otsu_min": 60,
+        "otsu_max": 200,
+        "dist_erosion_factor": 0.15,
+        "t_min": 20.0,
+        "t_max": 40.0,
+    }
+
+    ThermalProcessingService.process_async(
+        image_path=test_image_path,
+        params=params,
+        t_min_c=20.0,
+        t_max_c=40.0,
+        analysis_mode="Podologische Symmetrieanalyse",
+        colormap_name="Turbo",
+        emissivity=0.98,
+        on_progress=on_progress,
+        on_success=on_success,
+        on_error=on_error,
+    )
+
+    success = event.wait(timeout=10.0)
+    assert success, "process_async hat das Timeout überschritten"
+    assert not error_holder, f"Fehler in process_async: {error_holder}"
+    assert "res" in result_holder
+
+    res = result_holder["res"]
+    assert "calibrated_original" in res
+    assert "body_mask" in res
+    assert "heat_diff" in res
+    assert "hotspot_mask" in res
+    assert "gradient_results" in res
+    assert "asym_results" in res
+    assert "tsi_results" in res
+    assert "bioheat_results" in res
+    assert "frangi_vesselness" in res
+    assert "overlay_rgb" in res
+
+    # Validieren, dass die Multi-Otsu Gewebemaske tatsächlich biologisches Gewebe segmentiert
+    body_mask = res["body_mask"]
+    assert body_mask.dtype == np.uint8
+    assert np.sum(body_mask > 0) > 0, "Gewebemaske darf nicht leer sein"
+    assert res["body_pixel_count"] > 0
+    assert len(progress_updates) >= 3
+
+
+
 
 

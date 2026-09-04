@@ -62,7 +62,7 @@ class AboutModal(ctk.CTkToplevel):
         import config
         ctk.CTkLabel(
             inner,
-            text=f"Version {getattr(config, 'APP_VERSION', '3.3.0')} · Jugend forscht 2026 (Fachgebiet Arbeitswelt)",
+            text=f"Version {getattr(config, 'APP_VERSION', '4.0.2')} · Jugend forscht 2026 (Fachgebiet Arbeitswelt)",
             font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
             text_color=COLOR_PRIMARY
         ).pack(pady=(0, 14))
@@ -883,7 +883,7 @@ class UpdateModal(ctk.CTkToplevel):
             import config
             from gui.services.update_service import UpdateService
             info = UpdateService.check_for_updates(
-                current_version=getattr(config, "APP_VERSION", "3.3.0"),
+                current_version=getattr(config, "APP_VERSION", "4.0.2"),
                 repo=getattr(config, "GITHUB_REPO", UpdateService.DEFAULT_REPO)
             )
             self.after(0, lambda: self._on_check_finished(info))
@@ -904,7 +904,7 @@ class UpdateModal(ctk.CTkToplevel):
         for widget in self.button_bar.winfo_children():
             widget.destroy()
 
-        cur_ver = getattr(config, "APP_VERSION", "3.3.0")
+        cur_ver = getattr(config, "APP_VERSION", "4.0.2")
 
         # Fall 1: Keine Verbindung oder Fehler
         if self.update_info is None:

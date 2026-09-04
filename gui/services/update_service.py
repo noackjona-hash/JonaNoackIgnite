@@ -79,11 +79,18 @@ class UpdateService:
     @classmethod
     def check_for_updates(
         cls,
-        current_version: str = "3.3.0",
+        current_version: Optional[str] = None,
         repo: str = DEFAULT_REPO,
         timeout: float = 8.0
     ) -> Optional[UpdateInfo]:
         """Fragt das neueste Release von GitHub ab und prüft auf Updates."""
+        if not current_version:
+            try:
+                import config
+                current_version = getattr(config, "APP_VERSION", "4.0.2")
+            except Exception:
+                current_version = "4.0.2"
+
         api_url = f"https://api.github.com/repos/{repo}/releases/latest"
         req = urllib.request.Request(
             api_url,

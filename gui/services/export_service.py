@@ -12,14 +12,18 @@ import cv2
 import numpy as np
 from PIL import Image
 
-from reportlab.lib.pagesizes import A4
-from reportlab.lib import colors
-from reportlab.lib.units import mm
-from reportlab.platypus import (
-    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image as RLImage, KeepTogether, HRFlowable
-)
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+try:
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.lib.units import mm
+    from reportlab.platypus import (
+        SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image as RLImage, KeepTogether, HRFlowable
+    )
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+    REPORTLAB_AVAILABLE = True
+except ImportError:
+    REPORTLAB_AVAILABLE = False
 
 import config
 from audit_log import write_audit_entry
@@ -541,6 +545,9 @@ class ExportService:
         output_filepath: Optional[str] = None
     ) -> str:
         """Erzeugt einen druckreifen, hochauflösenden A4-Klinikbefundbericht als PDF mit ReportLab."""
+        if not REPORTLAB_AVAILABLE:
+            raise ImportError("ReportLab ist nicht installiert. Bitte 'pip install reportlab' ausführen oder HTML-Export nutzen.")
+
         image_path = analysis_result.get("image_path", "Unbekannt")
         base_name = os.path.splitext(os.path.basename(image_path))[0]
 
@@ -798,6 +805,9 @@ class ExportService:
         output_dir: str
     ) -> str:
         """Erzeugt einen Gesamtübersichts-Bericht aller Batch-Bilder als druckfertiges PDF."""
+        if not REPORTLAB_AVAILABLE:
+            raise ImportError("ReportLab ist nicht installiert. Bitte 'pip install reportlab' ausführen oder HTML-Export nutzen.")
+
         summary_path = os.path.join(output_dir, "batch_summary_report.pdf")
         now_str = datetime.datetime.now().strftime("%d.%m.%Y, %H:%M Uhr")
 

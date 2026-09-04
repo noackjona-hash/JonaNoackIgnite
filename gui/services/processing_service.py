@@ -86,10 +86,21 @@ class ThermalProcessingService:
                     if job_id != cls._current_job_id:
                         return
 
+                # Robuste anatomische Gewebemasken-Segmentierung (Multi-Otsu & Distanzerosion)
+                try:
+                    body_mask_vis = image_processing.extract_body_mask_multi_otsu(
+                        calibrated_img,
+                        otsu_min=int(params.get("otsu_min", config.DEFAULT_OTSU_MIN)),
+                        otsu_max=int(params.get("otsu_max", config.DEFAULT_OTSU_MAX)),
+                        dist_erosion_factor=float(params.get("dist_erosion_factor", config.DEFAULT_DIST_EROSION_FACTOR))
+                    )
+                    if np.sum(body_mask_vis > 0) == 0:
+                        body_mask_vis = (diff_vis > 0).astype(np.uint8) * 255
+                except Exception:
+                    body_mask_vis = (diff_vis > 0).astype(np.uint8) * 255
+
                 if on_progress:
                     on_progress(0.75, "Analysiere PCA-Ausrichtung & thermische Gradienten...")
-
-                body_mask_vis = (diff_vis > 0).astype(np.uint8) * 255
 
                 # 4. Thermischer Gradientenfluss & Laplace-Divergenz
                 gradient_results = image_processing.compute_thermal_gradients_and_divergence(

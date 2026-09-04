@@ -103,3 +103,15 @@ def test_bump_all_files_dry_run():
 
     # Sicherstellen, dass im dry_run nichts überschrieben wurde
     assert read_current_version() == curr
+
+
+def test_no_stale_hardcoded_version_in_core_modules():
+    """Stellt sicher, dass keine veralteten 3.3.0 Hardcodings im UI- und Startup-Code verbleiben."""
+    main_py = (REPO_ROOT / "main.py").read_text(encoding="utf-8")
+    assert "v3.3.0 · Core" not in main_py
+    assert "v{config.APP_VERSION} · Core" in main_py
+
+    dialogs_py = (REPO_ROOT / "gui" / "widgets" / "dialogs.py").read_text(encoding="utf-8")
+    assert '"3.3.0"' not in dialogs_py
+    assert "'3.3.0'" not in dialogs_py
+

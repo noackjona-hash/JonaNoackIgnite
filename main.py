@@ -14,6 +14,7 @@ if sys.platform.startswith("win"):
                 os.environ["TK_LIBRARY"] = os.path.join(base_tcl, item)
 
 import tkinter as tk
+import config
 
 # ─── Sofortiger Splash-Screen ─────────────────────────────────────────────────
 # Öffnet sich BEVOR schwere Imports geladen werden.
@@ -145,7 +146,7 @@ def create_instant_splash():
     badge_frame.pack(side=tk.LEFT, padx=(10, 0), pady=4)
     tk.Label(
         badge_frame,
-        text="v3.3.0 · Core",
+        text=f"v{config.APP_VERSION} · Core",
         font=("Segoe UI", 8, "bold"),
         fg="#38BDF8",
         bg="#1E293B"
@@ -331,31 +332,30 @@ def main():
                 f"[SYS] {platform.machine()} · {cpu_count} CPU-Threads · DPI {_dpi_scale_for(splash)}x"
             ))
 
-            # Schritt 2: Numerische Bibliotheken & Rust Core
+            # Schritt 2: Numerische Bibliotheken & Bildverarbeitungs-Engine
             time.sleep(0.2)
             import numpy as np
             loaded["np"] = np
+            import image_processing
+            loaded["image_processing"] = image_processing
 
-            rust_backend_str = "CPU-Rayon (4 Kerne)"
+            active_engine = image_processing.get_active_backend()
+            backend_label = getattr(image_processing, "_BACKEND_LABELS", {}).get(active_engine, active_engine)
             try:
                 import ignite_core
                 loaded["ignite_core"] = ignite_core
-                rust_backend_str = getattr(ignite_core, "__backend__", f"v{getattr(ignite_core, '__version__', '3.3.0')}")
             except Exception:
                 pass
 
             splash.after(0, lambda: update_splash(
                 splash,
                 0.35,
-                "Lade Rust FFI-Bindings & Rayon Core...",
-                f"[RUST] ignite_core initialisiert · {rust_backend_str} bereit"
+                "Lade Hochleistungs-Bildverarbeitungs-Engine...",
+                f"[ENGINE] {backend_label} aktiv"
             ))
 
             # Schritt 3: Computer-Vision & Morphologie
             time.sleep(0.2)
-            import image_processing
-            loaded["image_processing"] = image_processing
-
             splash.after(0, lambda: update_splash(
                 splash,
                 0.55,

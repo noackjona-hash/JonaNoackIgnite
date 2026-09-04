@@ -248,7 +248,17 @@ class BatchView(ctk.CTkFrame):
                     use_mad=bool(params.get("use_mad", config.DEFAULT_USE_MAD))
                 )
 
-                body_mask = (diff_vis > 0).astype(np.uint8) * 255
+                try:
+                    body_mask = image_processing.extract_body_mask_multi_otsu(
+                        raw_img,
+                        otsu_min=int(params.get("otsu_min", config.DEFAULT_OTSU_MIN)),
+                        otsu_max=int(params.get("otsu_max", config.DEFAULT_OTSU_MAX)),
+                        dist_erosion_factor=float(params.get("dist_erosion_factor", config.DEFAULT_DIST_EROSION_FACTOR))
+                    )
+                    if np.sum(body_mask > 0) == 0:
+                        body_mask = (diff_vis > 0).astype(np.uint8) * 255
+                except Exception:
+                    body_mask = (diff_vis > 0).astype(np.uint8) * 255
                 hotspot_count = int(np.sum(hotspot_mask == 255))
                 asym = image_processing.compute_contralateral_asymmetry(raw_img, body_mask)
                 delta_t = asym.get("delta_t_c", 0.0)
