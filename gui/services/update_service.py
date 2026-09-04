@@ -87,9 +87,9 @@ class UpdateService:
         if not current_version:
             try:
                 import config
-                current_version = getattr(config, "APP_VERSION", "4.0.2")
+                current_version = getattr(config, "APP_VERSION", getattr(config, "CANONICAL_APP_VERSION", None))
             except Exception:
-                current_version = "4.0.2"
+                current_version = None
 
         api_url = f"https://api.github.com/repos/{repo}/releases/latest"
         req = urllib.request.Request(

@@ -3,7 +3,7 @@
 ; Entwickelt von Jona Noack
 
 #ifndef AppVersion
-  #define AppVersion "4.0.2"
+  #define AppVersion "4.0.3"
 #endif
 
 [Setup]
