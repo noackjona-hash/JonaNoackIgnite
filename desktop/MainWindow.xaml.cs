@@ -137,6 +137,10 @@ end";
                 if (result == null)
                     return;
 
+                result.Hotspots ??= new();
+                result.Stats ??= new();
+                result.Timing ??= new();
+
                 _latestResult = result;
 
                 // Update UI metrics
@@ -155,21 +159,25 @@ end";
                 // Update Perfusion Tab
                 if (result.Perfusion != null)
                 {
-                    TxtPerfusionStatus.Text = $"STATUS: {result.Perfusion.Status}";
-                    TxtPerfusionStatus.Foreground = result.Perfusion.Status.Contains("CRITICAL") ? Brushes.Red : Brushes.LightGreen;
+                    string perfStatus = result.Perfusion.Status ?? "NORMAL";
+                    TxtPerfusionStatus.Text = $"STATUS: {perfStatus}";
+                    TxtPerfusionStatus.Foreground = perfStatus.Contains("CRITICAL") ? Brushes.Red : Brushes.LightGreen;
                     TxtPerfusionDrop.Text = $"Maximaler Gradientenabfall: {result.Perfusion.MaxGradientDrop:F2} K/Zeile";
-                    TxtPerfusionDesc.Text = result.Perfusion.Description;
+                    TxtPerfusionDesc.Text = result.Perfusion.Description ?? string.Empty;
                 }
 
                 // Render Overlays in Viewport 2
                 RenderAnalysisResultOverlay(result, vascular);
 
-                // Log into SQLite database
-                double maxVal = result.Hotspots.Count > 0 ? result.Hotspots.Max(h => h.Region.MaxVal) - result.Stats.OrigMedian : 0;
-                _dbService.LogEvaluation(_activePatientId, _currentImagePath, "INFLAMMATION_HOTSPOTS", result.TotalHotspots, maxVal, result.HighestRisk, result.Timing.TotalMs);
-                RefreshAuditGrid();
+                // Log into SQLite database safely
+                double maxVal = result.Hotspots.Count > 0 ? result.Hotspots.Max(h => (h?.Region?.MaxVal ?? 0)) - result.Stats.OrigMedian : 0;
+                if (_dbService != null && !string.IsNullOrEmpty(_activePatientId) && !string.IsNullOrEmpty(_currentImagePath))
+                {
+                    _dbService.LogEvaluation(_activePatientId, _currentImagePath, "INFLAMMATION_HOTSPOTS", result.TotalHotspots, maxVal, result.HighestRisk ?? "BENIGN", result.Timing.TotalMs);
+                    RefreshAuditGrid();
+                }
 
-                StatusText.Text = $"Analyse abgeschlossen: {result.TotalHotspots} Herde gefunden (Status: {result.HighestRisk}).";
+                StatusText.Text = $"Analyse abgeschlossen: {result.TotalHotspots} Herde gefunden (Status: {result.HighestRisk ?? "OK"}).";
             }
             catch (Exception ex)
             {
@@ -184,7 +192,7 @@ end";
 
         private void RenderAnalysisResultOverlay(AnalysisResult result, bool showVeins)
         {
-            if (_originalBitmap == null)
+            if (_originalBitmap == null || result == null)
                 return;
 
             int w = _originalBitmap.PixelWidth;
@@ -194,10 +202,17 @@ end";
             BitmapSource baseBmp = PaletteService.ApplyPalette(_originalBitmap, _activePalette);
 
             // If vein overlay is requested and mask exists, blend veins in cyan!
-            string veinMaskPath = System.IO.Path.Combine(_engineService.CacheDirectory, "vascular_mask.png");
-            if (showVeins && File.Exists(veinMaskPath))
+            if (showVeins)
             {
-                baseBmp = PaletteService.BlendVeinOverlay(baseBmp, veinMaskPath);
+                try
+                {
+                    string veinMaskPath = System.IO.Path.Combine(_engineService.CacheDirectory, "vascular_mask.png");
+                    if (File.Exists(veinMaskPath))
+                    {
+                        baseBmp = PaletteService.BlendVeinOverlay(baseBmp, veinMaskPath);
+                    }
+                }
+                catch { }
             }
 
             ImgResult.Source = baseBmp;
@@ -207,20 +222,32 @@ end";
             OverlayResultCanvas.Width = w;
             OverlayResultCanvas.Height = h;
 
+            if (result.Hotspots == null)
+                return;
+
+            double origMed = result.Stats?.OrigMedian ?? 0;
+
             // Draw professional medical highlight boxes and tags for each confirmed hotspot
             foreach (var hspot in result.Hotspots)
             {
+                if (hspot == null || hspot.Region == null)
+                    continue;
+
                 var box = hspot.Region.BoundingBox;
+                if (box == null || box.Length < 4)
+                    continue;
+
                 int minX = box[0], minY = box[1], maxX = box[2], maxY = box[3];
                 int bw = maxX - minX;
                 int bh = maxY - minY;
+                var risk = hspot.Assessment?.RiskLevel ?? "NORMAL";
 
                 // Pulsing highlight glow
                 var rect = new System.Windows.Shapes.Rectangle
                 {
                     Width = Math.Max(bw, 12),
                     Height = Math.Max(bh, 12),
-                    Stroke = hspot.Assessment.RiskLevel == "CRITICAL" ? new SolidColorBrush(Color.FromRgb(255, 45, 85)) : Brushes.Yellow,
+                    Stroke = risk == "CRITICAL" ? new SolidColorBrush(Color.FromRgb(255, 45, 85)) : Brushes.Yellow,
                     StrokeThickness = 2.5,
                     RadiusX = 4,
                     RadiusY = 4,
@@ -253,7 +280,7 @@ end";
                 OverlayResultCanvas.Children.Add(crosshairV);
 
                 // Floating clinical badge with delta T
-                double deltaT = Math.Round((hspot.Region.MaxVal - result.Stats.OrigMedian) * 0.1, 1);
+                double deltaT = Math.Round((hspot.Region.MaxVal - origMed) * 0.1, 1);
                 var labelBorder = new Border
                 {
                     Background = new SolidColorBrush(Color.FromArgb(230, 20, 20, 24)),
@@ -264,7 +291,7 @@ end";
                 };
                 var tb = new TextBlock
                 {
-                    Text = $"🔥 HERD #{hspot.Region.Id} (ΔT = +{deltaT:F1} K) [{hspot.Assessment.RiskLevel}]",
+                    Text = $"🔥 HERD #{hspot.Region.Id} (ΔT = +{deltaT:F1} K) [{risk}]",
                     FontSize = 11,
                     FontWeight = FontWeights.Bold,
                     Foreground = Brushes.White
@@ -400,10 +427,11 @@ end";
                 var symRes = await _engineService.RunBilateralSymmetryAsync(_currentImagePath, _currentImagePath);
                 if (symRes != null)
                 {
+                    symRes.Zones ??= new();
                     GridSymmetry.ItemsSource = symRes.Zones;
-                    TxtSymmetryAssessment.Text = $"{symRes.OverallStatus}: {symRes.ClinicalAssessment} (Max ΔT = {symRes.MaxDeltaT:F1} K)";
+                    TxtSymmetryAssessment.Text = $"{symRes.OverallStatus ?? "NORMAL"}: {symRes.ClinicalAssessment ?? string.Empty} (Max ΔT = {symRes.MaxDeltaT:F1} K)";
                     InspectorTabs.SelectedIndex = 3; // Switch to bilateral tab
-                    StatusText.Text = $"Beide Füße erfolgreich verglichen: Max ΔT = {symRes.MaxDeltaT:F1} K (Armstrong Stufe 3 Alarm auf Großzehe!).";
+                    StatusText.Text = $"Beide Füße erfolgreich verglichen: Max ΔT = {symRes.MaxDeltaT:F1} K.";
                 }
             }
             catch (Exception ex)
@@ -420,7 +448,7 @@ end";
         {
             try
             {
-                var list = _dbService.GetRecentEvaluations();
+                var list = _dbService?.GetRecentEvaluations() ?? new();
                 GridAudit.ItemsSource = list;
             }
             catch { }
@@ -469,8 +497,9 @@ end";
                 var symRes = await _engineService.RunBilateralSymmetryAsync(_currentImagePath, _contralateralImagePath);
                 if (symRes != null)
                 {
+                    symRes.Zones ??= new();
                     GridSymmetry.ItemsSource = symRes.Zones;
-                    TxtSymmetryAssessment.Text = $"{symRes.OverallStatus}: {symRes.ClinicalAssessment} (Max ΔT = {symRes.MaxDeltaT:F1} K)";
+                    TxtSymmetryAssessment.Text = $"{symRes.OverallStatus ?? "NORMAL"}: {symRes.ClinicalAssessment ?? string.Empty} (Max ΔT = {symRes.MaxDeltaT:F1} K)";
                     InspectorTabs.SelectedIndex = 3;
                     StatusText.Text = $"Seitenvergleich abgeschlossen: Max ΔT = {symRes.MaxDeltaT:F1} K";
                 }

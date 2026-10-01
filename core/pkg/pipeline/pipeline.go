@@ -189,7 +189,7 @@ func Run(src *imageutil.GrayMatrix, cfg PipelineConfig) AnalysisResult {
 	}
 
 	highestRisk := "BENIGN"
-	var summaries []HotspotSummary
+	summaries := make([]HotspotSummary, 0)
 	for _, r := range regions {
 		if r.Status != "CONFIRMED_HOTSPOT" {
 			continue
