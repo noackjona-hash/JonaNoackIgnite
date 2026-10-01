@@ -136,11 +136,48 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(status)
 }
 
+func parseROI(s string) (int, int, int, int, bool) {
+	if s == "" {
+		return 0, 0, 0, 0, false
+	}
+	var x1, y1, x2, y2 int
+	n, err := fmt.Sscanf(s, "%d,%d,%d,%d", &x1, &y1, &x2, &y2)
+	if err != nil || n != 4 || x2 <= x1 || y2 <= y1 {
+		return 0, 0, 0, 0, false
+	}
+	return x1, y1, x2, y2, true
+}
+
+func pasteMask(dst, src *imageutil.GrayMatrix, ox, oy int) {
+	for y := 0; y < src.Height; y++ {
+		dy := oy + y
+		if dy < 0 || dy >= dst.Height {
+			continue
+		}
+		for x := 0; x < src.Width; x++ {
+			dx := ox + x
+			if dx >= 0 && dx < dst.Width {
+				dst.Set(dx, dy, src.At(x, y))
+			}
+		}
+	}
+}
+
 func main() {
-	mode := flag.String("mode", "cli", "Run mode: 'cli' or 'server'")
+	mode := flag.String("mode", "cli", "Run mode: 'cli', 'server', 'symmetry', 'split-symmetry'")
 	port := flag.Int("port", 54321, "Port for IPC/HTTP server")
 	inputPath := flag.String("input", "", "Path to thermal image for CLI analysis")
 	outputJSON := flag.String("output", "", "Path to output JSON result")
+	maskDir := flag.String("maskdir", "", "Directory to save output masks (vascular_mask.png, etc.)")
+	roiStr := flag.String("roi", "", "ROI bounding box: minX,minY,maxX,maxY")
+	kFactor := flag.Float64("k", 2.5, "Outlier threshold multiplier")
+	kernelFactor := flag.Float64("kernel", 0.05, "Top-Hat kernel size factor")
+	threshMode := flag.String("threshmode", "MAD", "Threshold mode: MAD or GAUSSIAN")
+	enableVascular := flag.Bool("vascular", true, "Enable Frangi vascular filter")
+	enablePerfusion := flag.Bool("perfusion", true, "Enable longitudinal perfusion profiling")
+	leftPath := flag.String("left", "", "Path to left image for bilateral symmetry")
+	rightPath := flag.String("right", "", "Path to right image for bilateral symmetry")
+	threshDelta := flag.Float64("threshdelta", 15.0, "Threshold delta for bilateral symmetry")
 	flag.Parse()
 
 	if *mode == "server" {
@@ -156,12 +193,62 @@ func main() {
 		return
 	}
 
+	if *mode == "split-symmetry" {
+		if *inputPath == "" {
+			log.Fatalf("split-symmetry requires -input")
+		}
+		gray, err := imageutil.LoadImageAsGray(*inputPath)
+		if err != nil {
+			log.Fatalf("Failed to load image: %v", err)
+		}
+		midX := gray.Width / 2
+		leftHalf := gray.SubMatrix(0, 0, midX, gray.Height)
+		rightHalf := gray.SubMatrix(midX, 0, gray.Width, gray.Height)
+		symRes := symmetry.AnalyzeBilateralSymmetry(leftHalf, rightHalf, nil, nil, float32(*threshDelta))
+		data, err := json.MarshalIndent(symRes, "", "  ")
+		if err != nil {
+			log.Fatalf("Serialization failed: %v", err)
+		}
+		if *outputJSON != "" {
+			_ = os.WriteFile(*outputJSON, data, 0644)
+		} else {
+			fmt.Println(string(data))
+		}
+		return
+	}
+
+	if *mode == "symmetry" {
+		if *leftPath == "" || *rightPath == "" {
+			log.Fatalf("symmetry requires -left and -right paths")
+		}
+		leftGray, err := imageutil.LoadImageAsGray(*leftPath)
+		if err != nil {
+			log.Fatalf("Failed to load left image: %v", err)
+		}
+		rightGray, err := imageutil.LoadImageAsGray(*rightPath)
+		if err != nil {
+			log.Fatalf("Failed to load right image: %v", err)
+		}
+		symRes := symmetry.AnalyzeBilateralSymmetry(leftGray, rightGray, nil, nil, float32(*threshDelta))
+		data, err := json.MarshalIndent(symRes, "", "  ")
+		if err != nil {
+			log.Fatalf("Serialization failed: %v", err)
+		}
+		if *outputJSON != "" {
+			_ = os.WriteFile(*outputJSON, data, 0644)
+		} else {
+			fmt.Println(string(data))
+		}
+		return
+	}
+
 	// CLI Mode
 	if *inputPath == "" {
 		fmt.Println("IGNITE Core v5.0.0 (Go + x86_64 AVX2)")
 		fmt.Println("Usage:")
 		fmt.Println("  ignite-core -mode=server -port=54321")
 		fmt.Println("  ignite-core -mode=cli -input=\"path/to/image.jpg\" -output=\"result.json\"")
+		fmt.Println("  ignite-core -mode=split-symmetry -input=\"dual_feet.jpg\" -output=\"sym.json\"")
 		return
 	}
 
@@ -170,8 +257,71 @@ func main() {
 		log.Fatalf("Failed to load image: %v", err)
 	}
 
+	fullW, fullH := gray.Width, gray.Height
+	rx1, ry1, rx2, ry2, hasROI := parseROI(*roiStr)
+	imgToProcess := gray
+	if hasROI {
+		imgToProcess = gray.SubMatrix(rx1, ry1, rx2, ry2)
+	}
+
 	cfg := pipeline.DefaultPipelineConfig()
-	result := pipeline.Run(gray, cfg)
+	cfg.KFactor = *kFactor
+	cfg.KernelFactor = *kernelFactor
+	cfg.ThresholdMode = *threshMode
+	cfg.RunVascularMap = *enableVascular
+	cfg.RunPerfusion = *enablePerfusion
+
+	result := pipeline.Run(imgToProcess, cfg)
+
+	if hasROI {
+		for i := range result.Hotspots {
+			result.Hotspots[i].Region.CenterX += rx1
+			result.Hotspots[i].Region.CenterY += ry1
+			result.Hotspots[i].Region.BoundingBox[0] += rx1
+			result.Hotspots[i].Region.BoundingBox[1] += ry1
+			result.Hotspots[i].Region.BoundingBox[2] += rx1
+			result.Hotspots[i].Region.BoundingBox[3] += ry1
+		}
+	}
+
+	if *maskDir != "" {
+		_ = os.MkdirAll(*maskDir, 0755)
+		if hasROI {
+			if result.BodyMask != nil {
+				fullMask := imageutil.NewGrayMatrix(fullW, fullH)
+				pasteMask(fullMask, result.BodyMask, rx1, ry1)
+				_ = saveGrayAsPNG(fullMask, filepath.Join(*maskDir, "body_mask.png"))
+			}
+			if result.TopHatDiff != nil {
+				fullDiff := imageutil.NewGrayMatrix(fullW, fullH)
+				pasteMask(fullDiff, result.TopHatDiff, rx1, ry1)
+				_ = saveGrayAsPNG(fullDiff, filepath.Join(*maskDir, "tophat_diff.png"))
+			}
+			if result.HotspotMask != nil {
+				fullHot := imageutil.NewGrayMatrix(fullW, fullH)
+				pasteMask(fullHot, result.HotspotMask, rx1, ry1)
+				_ = saveGrayAsPNG(fullHot, filepath.Join(*maskDir, "hotspot_mask.png"))
+			}
+			if result.VascularMask != nil {
+				fullVasc := imageutil.NewGrayMatrix(fullW, fullH)
+				pasteMask(fullVasc, result.VascularMask, rx1, ry1)
+				_ = saveGrayAsPNG(fullVasc, filepath.Join(*maskDir, "vascular_mask.png"))
+			}
+		} else {
+			if result.BodyMask != nil {
+				_ = saveGrayAsPNG(result.BodyMask, filepath.Join(*maskDir, "body_mask.png"))
+			}
+			if result.TopHatDiff != nil {
+				_ = saveGrayAsPNG(result.TopHatDiff, filepath.Join(*maskDir, "tophat_diff.png"))
+			}
+			if result.HotspotMask != nil {
+				_ = saveGrayAsPNG(result.HotspotMask, filepath.Join(*maskDir, "hotspot_mask.png"))
+			}
+			if result.VascularMask != nil {
+				_ = saveGrayAsPNG(result.VascularMask, filepath.Join(*maskDir, "vascular_mask.png"))
+			}
+		}
+	}
 
 	data, err := json.MarshalIndent(result, "", "  ")
 	if err != nil {

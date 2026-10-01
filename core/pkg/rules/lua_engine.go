@@ -73,6 +73,7 @@ func (e *LuaRuleEngine) EvaluateHotspot(h statistics.HotspotRegion, stats statis
 	// Prepare stats table
 	stable := e.L.NewTable()
 	stable.RawSetString("median", lua.LNumber(stats.Median))
+	stable.RawSetString("orig_median", lua.LNumber(stats.OrigMedian))
 	stable.RawSetString("mad", lua.LNumber(stats.MAD))
 	stable.RawSetString("mean", lua.LNumber(stats.Mean))
 	stable.RawSetString("std_dev", lua.LNumber(stats.StdDev))

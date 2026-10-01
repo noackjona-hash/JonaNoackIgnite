@@ -84,16 +84,16 @@ func AnalyzeBilateralSymmetry(leftImg, rightImg *imageutil.GrayMatrix, leftMask,
 		meanDelta = float32(sumDelta / float64(validPixels))
 	}
 
-	// Anatomical zonal analysis (Heel: 0-25% height, Midfoot: 25-60%, Forefoot/Toes: 60-100%)
+	// Anatomical zonal analysis (Distal to Proximal: Toes/Hallux: 10-40%, Forefoot: 40-60%, Midfoot: 60-75%, Heel: 75-95%)
 	zoneDefs := []struct {
 		name string
 		y0   float64
 		y1   float64
 	}{
-		{"Ferse (Kalkaneus)", 0.0, 0.25},
-		{"Mittelfuß & Fußgewölbe", 0.25, 0.60},
-		{"Vorfuß & Mittelfußköpfchen", 0.60, 0.85},
-		{"Zehen & Hallux", 0.85, 1.0},
+		{"Zehen & Hallux (Großzehe)", 0.10, 0.40},
+		{"Vorfuß & Mittelfußköpfchen", 0.40, 0.60},
+		{"Mittelfuß & Fußgewölbe", 0.60, 0.75},
+		{"Ferse (Kalkaneus)", 0.75, 0.95},
 	}
 
 	zones := make([]SymmetryZone, 0, len(zoneDefs))

@@ -18,32 +18,38 @@ type HotspotRegion struct {
 	MaxVal      uint8   `json:"max_val"`
 	MeanVal     float64 `json:"mean_val"`
 	BoundingBox [4]int  `json:"bounding_box"` // [minX, minY, maxX, maxY]
-	Status      string  `json:"status"`       // "REJECTED_SMALL", "REJECTED_LINEAR", "CONFIRMED_HOTSPOT"
+	Status      string  `json:"status"`       // "REJECTED_SMALL", "REJECTED_LINEAR", "REJECTED_BORDER", "CONFIRMED_HOTSPOT"
 }
 
 // FilterOptions sets parameters for geometric region filtering.
 type FilterOptions struct {
-	MinAreaFraction float64 // default 0.0005 (0.05% of tissue)
-	MinCircularity  float64 // default 0.08 (allows irregular lesions, discards veins)
+	MinAreaFraction   float64 // default 0.0005 (0.05% of tissue)
+	MinCircularity    float64 // default 0.08 (allows irregular lesions, discards veins)
+	BorderMarginPx    int     // default 15 px (reject camera frame edges)
+	MinDistFromBorder float32 // default 8.0 px (reject skin-air interface artifacts)
+	AnatomicalCutoffY float64 // default 0.65 (reject warm ankles/calves below the feet)
 }
 
 // DefaultFilterOptions returns standard geometric parameters.
 func DefaultFilterOptions() FilterOptions {
 	return FilterOptions{
-		MinAreaFraction: 0.0005,
-		MinCircularity:  0.08,
+		MinAreaFraction:   0.0005,
+		MinCircularity:    0.08,
+		BorderMarginPx:    15,
+		MinDistFromBorder: 8.0,
+		AnatomicalCutoffY: 0.65, // As in original IGNITE publication
 	}
 }
 
-// ExtractHotspots identifies 4-connected components and filters by area and circularity.
-func ExtractHotspots(binaryMask *imageutil.GrayMatrix, original *imageutil.GrayMatrix, totalTissuePixels int, opts FilterOptions) ([]HotspotRegion, *imageutil.GrayMatrix) {
+// ExtractHotspots identifies 4-connected components and filters by area, circularity, and distance from tissue borders.
+func ExtractHotspots(binaryMask *imageutil.GrayMatrix, original *imageutil.GrayMatrix, distMap *imageutil.FloatMatrix, totalTissuePixels int, opts FilterOptions) ([]HotspotRegion, *imageutil.GrayMatrix) {
 	w, h := binaryMask.Width, binaryMask.Height
 	visited := make([]bool, w*h)
 	filteredMask := imageutil.NewGrayMatrix(w, h)
 
 	minArea := int(float64(totalTissuePixels) * opts.MinAreaFraction)
-	if minArea < 3 {
-		minArea = 3
+	if minArea < 15 {
+		minArea = 15
 	}
 
 	var regions []HotspotRegion
@@ -66,6 +72,7 @@ func ExtractHotspots(binaryMask *imageutil.GrayMatrix, original *imageutil.GrayM
 			var perimeter float64
 			var sumVal float64
 			var maxVal uint8
+			var maxDist float32
 
 			head := 0
 			for head < len(queue) {
@@ -95,7 +102,13 @@ func ExtractHotspots(binaryMask *imageutil.GrayMatrix, original *imageutil.GrayM
 					maxVal = origVal
 				}
 
-				// Check 4-neighbors for perimeter and expansion
+				if distMap != nil {
+					d := distMap.Data[curr]
+					if d > maxDist {
+						maxDist = d
+					}
+				}
+
 				neighbors := [4]int{
 					curr - 1, // left
 					curr + 1, // right
@@ -158,11 +171,24 @@ func ExtractHotspots(binaryMask *imageutil.GrayMatrix, original *imageutil.GrayM
 				BoundingBox: [4]int{minX, minY, maxX, maxY},
 			}
 
-			if area < minArea {
+			// 1. Rejection: Camera frame border artifacts
+			margin := opts.BorderMarginPx
+			if minX <= margin || minY <= margin || maxX >= (w-margin) || maxY >= (h-margin) {
+				hr.Status = "REJECTED_BORDER"
+			} else if opts.AnatomicalCutoffY > 0 && float64(minY) > float64(h)*opts.AnatomicalCutoffY {
+				// Rejection: Anatomical cutoff (calves/ankles below the feet)
+				hr.Status = "REJECTED_ANATOMICAL"
+			} else if distMap != nil && maxDist < opts.MinDistFromBorder {
+				// 2. Rejection: Skin boundary air-leak artifact
+				hr.Status = "REJECTED_BORDER"
+			} else if area < minArea {
+				// 3. Rejection: Too small
 				hr.Status = "REJECTED_SMALL"
 			} else if circularity < opts.MinCircularity {
+				// 4. Rejection: Linear/focal artifact (vein/tendon)
 				hr.Status = "REJECTED_LINEAR"
 			} else {
+				// Confirmed real inflammation focus!
 				hr.Status = "CONFIRMED_HOTSPOT"
 				for _, p := range compPixels {
 					filteredMask.Data[p] = 255

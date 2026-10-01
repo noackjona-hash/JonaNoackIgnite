@@ -80,6 +80,9 @@ namespace Ignite.Desktop.Models
 
         [JsonPropertyName("mode")]
         public string Mode { get; set; } = string.Empty;
+
+        [JsonPropertyName("orig_median")]
+        public double OrigMedian { get; set; }
     }
 
     public class StageTiming

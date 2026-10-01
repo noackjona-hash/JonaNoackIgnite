@@ -64,6 +64,35 @@ func (m *GrayMatrix) Clone() *GrayMatrix {
 	return cp
 }
 
+// SubMatrix extracts a rectangular region [minX, minY, maxX, maxY) from the GrayMatrix.
+func (m *GrayMatrix) SubMatrix(minX, minY, maxX, maxY int) *GrayMatrix {
+	if minX < 0 {
+		minX = 0
+	}
+	if minY < 0 {
+		minY = 0
+	}
+	if maxX > m.Width {
+		maxX = m.Width
+	}
+	if maxY > m.Height {
+		maxY = m.Height
+	}
+	subW := maxX - minX
+	subH := maxY - minY
+	if subW <= 0 || subH <= 0 {
+		return NewGrayMatrix(1, 1)
+	}
+
+	sub := NewGrayMatrix(subW, subH)
+	for y := 0; y < subH; y++ {
+		srcOff := (minY+y)*m.Width + minX
+		dstOff := y * subW
+		copy(sub.Data[dstOff:dstOff+subW], m.Data[srcOff:srcOff+subW])
+	}
+	return sub
+}
+
 // ToFloat converts uint8 matrix to float32 matrix normalized to [0, 255] or [0, 1].
 func (m *GrayMatrix) ToFloat() *FloatMatrix {
 	fm := NewFloatMatrix(m.Width, m.Height)

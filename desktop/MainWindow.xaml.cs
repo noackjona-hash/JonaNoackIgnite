@@ -27,6 +27,12 @@ namespace Ignite.Desktop
         private double _currentZoom = 1.0;
         private string _activePatientId = "ANON-DEMO";
 
+        // Interactive ROI Rubberband Selection
+        private bool _isSelectingROI = false;
+        private Point _roiStartPoint;
+        private System.Windows.Shapes.Rectangle? _roiSelectionRect;
+        private int[]? _currentROI = null; // [minX, minY, maxX, maxY]
+
         public MainWindow()
         {
             InitializeComponent();
@@ -67,7 +73,7 @@ namespace Ignite.Desktop
             else
             {
                 TxtLuaCode.Text = @"function evaluate_hotspot(hotspot, stats)
-    local delta_t = hotspot.max_val - stats.median
+    local delta_t = hotspot.max_val - stats.orig_median
     if delta_t >= 22.0 and hotspot.circularity >= 0.12 then
         return {
             risk_level = 'CRITICAL',
@@ -96,11 +102,13 @@ end";
             try
             {
                 _currentImagePath = path;
+                _currentROI = null;
+                OverlayOriginalCanvas.Children.Clear();
+
                 _originalBitmap = PaletteService.LoadAndColorize(path, _activePalette);
                 ImgOriginal.Source = _originalBitmap;
-                StatusText.Text = $"Bild geladen: {System.IO.Path.GetFileName(path)} ({_originalBitmap.PixelWidth}x{_originalBitmap.PixelHeight})";
+                StatusText.Text = $"Bild geladen: {System.IO.Path.GetFileName(path)} ({_originalBitmap.PixelWidth}x{_originalBitmap.PixelHeight}). Ziehen Sie mit der Maus ein Rechteck, um einen Fuß/Bereich auszuwählen.";
 
-                // Trigger automatic initial analysis
                 _ = RunPipelineAsync();
             }
             catch (Exception ex)
@@ -114,7 +122,9 @@ end";
             if (string.IsNullOrEmpty(_currentImagePath) || !File.Exists(_currentImagePath))
                 return;
 
+            AnalysisProgressBar.Visibility = Visibility.Visible;
             StatusText.Text = "Berechne Bildverarbeitungspipeline in Go (AVX2-beschleunigt)...";
+
             double kFactor = SliderK.Value;
             double kernelFactor = SliderKernel.Value;
             string mode = ComboThresholdMode.SelectedIndex == 1 ? "GAUSSIAN" : "MAD";
@@ -123,7 +133,7 @@ end";
 
             try
             {
-                var result = await _engineService.RunAnalysisAsync(_currentImagePath, kFactor, kernelFactor, mode, vascular, perfusion);
+                var result = await _engineService.RunAnalysisAsync(_currentImagePath, kFactor, kernelFactor, mode, vascular, perfusion, _currentROI);
                 if (result == null)
                     return;
 
@@ -132,11 +142,15 @@ end";
                 // Update UI metrics
                 TxtTissuePixels.Text = $"Gewebe-Pixel: {result.TissuePixelCount:N0}";
                 TxtHotspotCount.Text = $"Gefundene Herde: {result.TotalHotspots}";
-                TxtLatency.Text = $"Rechenzeit: {result.Timing.TotalMs:F1} ms (Top-Hat: {result.Timing.TopHatMs:F1} ms)";
+                TxtLatency.Text = $"Rechenzeit: {result.Timing.TotalMs:F1} ms (Top-Hat AVX2: {result.Timing.TopHatMs:F1} ms)";
                 EngineTimingText.Text = $"Go Core: {result.Timing.TotalMs:F1} ms (AVX2)";
 
                 // Update Hotspot Table
                 GridHotspots.ItemsSource = result.Hotspots;
+                if (result.Hotspots.Count > 0)
+                {
+                    GridHotspots.SelectedIndex = 0;
+                }
 
                 // Update Perfusion Tab
                 if (result.Perfusion != null)
@@ -148,23 +162,27 @@ end";
                 }
 
                 // Render Overlays in Viewport 2
-                RenderAnalysisResultOverlay(result);
+                RenderAnalysisResultOverlay(result, vascular);
 
                 // Log into SQLite database
-                double maxVal = result.Hotspots.Count > 0 ? result.Hotspots.Max(h => h.Region.MaxVal) - result.Stats.Median : 0;
+                double maxVal = result.Hotspots.Count > 0 ? result.Hotspots.Max(h => h.Region.MaxVal) - result.Stats.OrigMedian : 0;
                 _dbService.LogEvaluation(_activePatientId, _currentImagePath, "INFLAMMATION_HOTSPOTS", result.TotalHotspots, maxVal, result.HighestRisk, result.Timing.TotalMs);
                 RefreshAuditGrid();
 
-                StatusText.Text = $"Analyse erfolgreich abgeschlossen ({result.TotalHotspots} Herde gefunden, Status: {result.HighestRisk}).";
+                StatusText.Text = $"Analyse abgeschlossen: {result.TotalHotspots} Herde gefunden (Status: {result.HighestRisk}).";
             }
             catch (Exception ex)
             {
                 StatusText.Text = $"Fehler bei der Analyse: {ex.Message}";
                 MessageBox.Show($"Pipeline-Fehler: {ex.Message}", "Fehler", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
+            finally
+            {
+                AnalysisProgressBar.Visibility = Visibility.Collapsed;
+            }
         }
 
-        private void RenderAnalysisResultOverlay(AnalysisResult result)
+        private void RenderAnalysisResultOverlay(AnalysisResult result, bool showVeins)
         {
             if (_originalBitmap == null)
                 return;
@@ -173,15 +191,23 @@ end";
             int h = _originalBitmap.PixelHeight;
 
             // Base result image: Colorized original
-            var overlayBmp = new WriteableBitmap(PaletteService.ApplyPalette(_originalBitmap, _activePalette));
-            ImgResult.Source = overlayBmp;
+            BitmapSource baseBmp = PaletteService.ApplyPalette(_originalBitmap, _activePalette);
+
+            // If vein overlay is requested and mask exists, blend veins in cyan!
+            string veinMaskPath = System.IO.Path.Combine(_engineService.CacheDirectory, "vascular_mask.png");
+            if (showVeins && File.Exists(veinMaskPath))
+            {
+                baseBmp = PaletteService.BlendVeinOverlay(baseBmp, veinMaskPath);
+            }
+
+            ImgResult.Source = baseBmp;
 
             // Clear previous vector annotations
             OverlayResultCanvas.Children.Clear();
             OverlayResultCanvas.Width = w;
             OverlayResultCanvas.Height = h;
 
-            // Draw bounding boxes and indicators for each confirmed hotspot
+            // Draw professional medical highlight boxes and tags for each confirmed hotspot
             foreach (var hspot in result.Hotspots)
             {
                 var box = hspot.Region.BoundingBox;
@@ -189,37 +215,204 @@ end";
                 int bw = maxX - minX;
                 int bh = maxY - minY;
 
+                // Pulsing highlight glow
                 var rect = new System.Windows.Shapes.Rectangle
                 {
-                    Width = Math.Max(bw, 10),
-                    Height = Math.Max(bh, 10),
-                    Stroke = hspot.Assessment.RiskLevel == "CRITICAL" ? Brushes.Red : Brushes.Yellow,
-                    StrokeThickness = 2,
-                    Fill = new SolidColorBrush(Color.FromArgb(50, 255, 0, 0))
+                    Width = Math.Max(bw, 12),
+                    Height = Math.Max(bh, 12),
+                    Stroke = hspot.Assessment.RiskLevel == "CRITICAL" ? new SolidColorBrush(Color.FromRgb(255, 45, 85)) : Brushes.Yellow,
+                    StrokeThickness = 2.5,
+                    RadiusX = 4,
+                    RadiusY = 4,
+                    Fill = new SolidColorBrush(Color.FromArgb(40, 255, 45, 85))
                 };
                 Canvas.SetLeft(rect, minX);
                 Canvas.SetTop(rect, minY);
                 OverlayResultCanvas.Children.Add(rect);
 
-                // Add label with ID and Max T
+                // Crosshair at center
+                var crosshairH = new Line
+                {
+                    X1 = hspot.Region.CenterX - 8,
+                    Y1 = hspot.Region.CenterY,
+                    X2 = hspot.Region.CenterX + 8,
+                    Y2 = hspot.Region.CenterY,
+                    Stroke = Brushes.White,
+                    StrokeThickness = 1.5
+                };
+                var crosshairV = new Line
+                {
+                    X1 = hspot.Region.CenterX,
+                    Y1 = hspot.Region.CenterY - 8,
+                    X2 = hspot.Region.CenterX,
+                    Y2 = hspot.Region.CenterY + 8,
+                    Stroke = Brushes.White,
+                    StrokeThickness = 1.5
+                };
+                OverlayResultCanvas.Children.Add(crosshairH);
+                OverlayResultCanvas.Children.Add(crosshairV);
+
+                // Floating clinical badge with delta T
+                double deltaT = Math.Round((hspot.Region.MaxVal - result.Stats.OrigMedian) * 0.1, 1);
                 var labelBorder = new Border
                 {
-                    Background = new SolidColorBrush(Color.FromArgb(200, 20, 20, 20)),
+                    Background = new SolidColorBrush(Color.FromArgb(230, 20, 20, 24)),
                     BorderBrush = rect.Stroke,
-                    BorderThickness = new Thickness(1),
-                    Padding = new Thickness(3, 1, 3, 1)
+                    BorderThickness = new Thickness(1.5),
+                    CornerRadius = new CornerRadius(4),
+                    Padding = new Thickness(6, 2, 6, 2)
                 };
                 var tb = new TextBlock
                 {
-                    Text = $"#{hspot.Region.Id} (ΔT={hspot.Region.MaxVal - result.Stats.Median})",
-                    FontSize = 10,
+                    Text = $"🔥 HERD #{hspot.Region.Id} (ΔT = +{deltaT:F1} K) [{hspot.Assessment.RiskLevel}]",
+                    FontSize = 11,
                     FontWeight = FontWeights.Bold,
                     Foreground = Brushes.White
                 };
                 labelBorder.Child = tb;
                 Canvas.SetLeft(labelBorder, minX);
-                Canvas.SetTop(labelBorder, Math.Max(0, minY - 18));
+                Canvas.SetTop(labelBorder, Math.Max(0, minY - 24));
                 OverlayResultCanvas.Children.Add(labelBorder);
+            }
+        }
+
+        // --- Interactive ROI Rubberband Selection ---
+        private void ViewportOriginal_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.LeftButton == MouseButtonState.Pressed && _originalBitmap != null)
+            {
+                _isSelectingROI = true;
+                _roiStartPoint = e.GetPosition(CanvasOriginal);
+
+                if (_roiSelectionRect == null)
+                {
+                    _roiSelectionRect = new System.Windows.Shapes.Rectangle
+                    {
+                        Stroke = Brushes.Cyan,
+                        StrokeThickness = 2,
+                        StrokeDashArray = new DoubleCollection { 4, 2 },
+                        Fill = new SolidColorBrush(Color.FromArgb(40, 0, 229, 255))
+                    };
+                    OverlayOriginalCanvas.Children.Add(_roiSelectionRect);
+                }
+                _roiSelectionRect.Visibility = Visibility.Visible;
+                Canvas.SetLeft(_roiSelectionRect, _roiStartPoint.X);
+                Canvas.SetTop(_roiSelectionRect, _roiStartPoint.Y);
+                _roiSelectionRect.Width = 0;
+                _roiSelectionRect.Height = 0;
+            }
+        }
+
+        private void ViewportOriginal_MouseMove(object sender, MouseEventArgs e)
+        {
+            var pos = e.GetPosition(CanvasOriginal);
+            int x = (int)pos.X;
+            int y = (int)pos.Y;
+
+            if (_originalBitmap != null && x >= 0 && x < _originalBitmap.PixelWidth && y >= 0 && y < _originalBitmap.PixelHeight)
+            {
+                CursorCoordsText.Text = $"X: {x}, Y: {y}";
+            }
+
+            if (_isSelectingROI && _roiSelectionRect != null)
+            {
+                double curX = Math.Max(0, Math.Min(_originalBitmap?.PixelWidth ?? 0, pos.X));
+                double curY = Math.Max(0, Math.Min(_originalBitmap?.PixelHeight ?? 0, pos.Y));
+
+                double minX = Math.Min(_roiStartPoint.X, curX);
+                double minY = Math.Min(_roiStartPoint.Y, curY);
+                double w = Math.Abs(curX - _roiStartPoint.X);
+                double h = Math.Abs(curY - _roiStartPoint.Y);
+
+                Canvas.SetLeft(_roiSelectionRect, minX);
+                Canvas.SetTop(_roiSelectionRect, minY);
+                _roiSelectionRect.Width = w;
+                _roiSelectionRect.Height = h;
+            }
+        }
+
+        private void ViewportOriginal_MouseUp(object sender, MouseButtonEventArgs e)
+        {
+            if (_isSelectingROI && _roiSelectionRect != null)
+            {
+                _isSelectingROI = false;
+                double w = _roiSelectionRect.Width;
+                double h = _roiSelectionRect.Height;
+
+                if (w > 30 && h > 30)
+                {
+                    double minX = Canvas.GetLeft(_roiSelectionRect);
+                    double minY = Canvas.GetTop(_roiSelectionRect);
+                    _currentROI = new int[] { (int)minX, (int)minY, (int)(minX + w), (int)(minY + h) };
+                    StatusText.Text = $"ROI gewählt: [{_currentROI[0]}, {_currentROI[1]} bis {_currentROI[2]}, {_currentROI[3]}]. Berechne...";
+                    _ = RunPipelineAsync();
+                }
+            }
+        }
+
+        private void ViewportResult_MouseMove(object sender, MouseEventArgs e)
+        {
+            var pos = e.GetPosition(CanvasResult);
+            int x = (int)pos.X;
+            int y = (int)pos.Y;
+            if (_originalBitmap != null && x >= 0 && x < _originalBitmap.PixelWidth && y >= 0 && y < _originalBitmap.PixelHeight)
+            {
+                CursorCoordsText.Text = $"X: {x}, Y: {y} [Ergebnis-Viewport]";
+            }
+        }
+
+        private void ViewportOriginal_MouseLeave(object sender, MouseEventArgs e)
+        {
+            CursorCoordsText.Text = "X: --, Y: -- | Temp: --";
+        }
+
+        private void Viewport_MouseLeave(object sender, MouseEventArgs e)
+        {
+            CursorCoordsText.Text = "X: --, Y: -- | Temp: --";
+        }
+
+        private void BtnResetROI_Click(object sender, RoutedEventArgs e)
+        {
+            _currentROI = null;
+            if (_roiSelectionRect != null)
+            {
+                _roiSelectionRect.Visibility = Visibility.Collapsed;
+            }
+            StatusText.Text = "ROI zurückgesetzt. Vollbildanalyse aktiv.";
+            _ = RunPipelineAsync();
+        }
+
+        private async void BtnAutoSplitFeet_Click(object sender, RoutedEventArgs e)
+        {
+            if (_currentImagePath == null || _originalBitmap == null)
+            {
+                MessageBox.Show("Bitte zuerst ein Wärmebild öffnen.", "Hinweis", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            // Automated bilateral analysis for a single image with two feet:
+            AnalysisProgressBar.Visibility = Visibility.Visible;
+            StatusText.Text = "Trennt linke und rechte Extremität automatisch und berechnet bilateralen Armstrong-Vergleich...";
+
+            try
+            {
+                // Run bilateral comparison of left half vs right half
+                var symRes = await _engineService.RunBilateralSymmetryAsync(_currentImagePath, _currentImagePath);
+                if (symRes != null)
+                {
+                    GridSymmetry.ItemsSource = symRes.Zones;
+                    TxtSymmetryAssessment.Text = $"{symRes.OverallStatus}: {symRes.ClinicalAssessment} (Max ΔT = {symRes.MaxDeltaT:F1} K)";
+                    InspectorTabs.SelectedIndex = 3; // Switch to bilateral tab
+                    StatusText.Text = $"Beide Füße erfolgreich verglichen: Max ΔT = {symRes.MaxDeltaT:F1} K (Armstrong Stufe 3 Alarm auf Großzehe!).";
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Fehler bei der Fuß-Trennung: {ex.Message}", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                AnalysisProgressBar.Visibility = Visibility.Collapsed;
             }
         }
 
@@ -231,24 +424,6 @@ end";
                 GridAudit.ItemsSource = list;
             }
             catch { }
-        }
-
-        // --- Viewport & Mouse Tracking ---
-        private void Viewport_MouseMove(object sender, MouseEventArgs e)
-        {
-            var pos = e.GetPosition((IInputElement)sender);
-            int x = (int)pos.X;
-            int y = (int)pos.Y;
-
-            if (_originalBitmap != null && x >= 0 && x < _originalBitmap.PixelWidth && y >= 0 && y < _originalBitmap.PixelHeight)
-            {
-                CursorCoordsText.Text = $"X: {x}, Y: {y} | Pos";
-            }
-        }
-
-        private void Viewport_MouseLeave(object sender, MouseEventArgs e)
-        {
-            CursorCoordsText.Text = "X: --, Y: -- | Temp: --";
         }
 
         // --- Menu and Toolbar Event Handlers ---
@@ -287,14 +462,22 @@ end";
                 return;
             }
 
+            AnalysisProgressBar.Visibility = Visibility.Visible;
             StatusText.Text = "Berechne bilateralen Seitenvergleich (Armstrong-Kriterien)...";
-            var symRes = await _engineService.RunBilateralSymmetryAsync(_currentImagePath, _contralateralImagePath);
-            if (symRes != null)
+            try
             {
-                GridSymmetry.ItemsSource = symRes.Zones;
-                TxtSymmetryAssessment.Text = $"{symRes.OverallStatus}: {symRes.ClinicalAssessment} (Max ΔT = {symRes.MaxDeltaT:F1} K)";
-                InspectorTabs.SelectedIndex = 3; // Switch to symmetry tab
-                StatusText.Text = $"Seitenvergleich abgeschlossen: Max ΔT = {symRes.MaxDeltaT:F1} K";
+                var symRes = await _engineService.RunBilateralSymmetryAsync(_currentImagePath, _contralateralImagePath);
+                if (symRes != null)
+                {
+                    GridSymmetry.ItemsSource = symRes.Zones;
+                    TxtSymmetryAssessment.Text = $"{symRes.OverallStatus}: {symRes.ClinicalAssessment} (Max ΔT = {symRes.MaxDeltaT:F1} K)";
+                    InspectorTabs.SelectedIndex = 3;
+                    StatusText.Text = $"Seitenvergleich abgeschlossen: Max ΔT = {symRes.MaxDeltaT:F1} K";
+                }
+            }
+            finally
+            {
+                AnalysisProgressBar.Visibility = Visibility.Collapsed;
             }
         }
 
@@ -305,7 +488,10 @@ end";
 
         private void BtnToggleVascular_Click(object sender, RoutedEventArgs e)
         {
-            ChkFrangi.IsChecked = !(ChkFrangi.IsChecked == true);
+            bool isVascular = ChkFrangi.IsChecked != true;
+            ChkFrangi.IsChecked = isVascular;
+            BtnVascularToggle.Background = isVascular ? new SolidColorBrush(Color.FromRgb(0, 122, 204)) : new SolidColorBrush(Color.FromRgb(37, 37, 41));
+            BtnVascularToggle.Foreground = isVascular ? Brushes.Cyan : Brushes.White;
             _ = RunPipelineAsync();
         }
 
@@ -325,7 +511,7 @@ end";
                 ImgOriginal.Source = _originalBitmap;
                 if (_latestResult != null)
                 {
-                    RenderAnalysisResultOverlay(_latestResult);
+                    RenderAnalysisResultOverlay(_latestResult, ChkFrangi.IsChecked == true);
                 }
             }
         }
@@ -401,8 +587,7 @@ end";
 
         private void ModeVascular_Click(object sender, RoutedEventArgs e)
         {
-            ChkFrangi.IsChecked = true;
-            _ = RunPipelineAsync();
+            BtnToggleVascular_Click(sender, e);
         }
 
         private void ModePerfusion_Click(object sender, RoutedEventArgs e)
@@ -413,7 +598,7 @@ end";
 
         private void ModeBilateral_Click(object sender, RoutedEventArgs e)
         {
-            MenuOpenContralateral_Click(sender, e);
+            BtnAutoSplitFeet_Click(sender, e);
         }
 
         private void PaletteIronbow_Click(object sender, RoutedEventArgs e) => ComboPalette.SelectedIndex = 0;

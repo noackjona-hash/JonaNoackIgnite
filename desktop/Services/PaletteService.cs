@@ -137,5 +137,60 @@ namespace Ignite.Desktop.Services
 
             return ApplyPalette(bi, palette);
         }
+
+        // Blends a detected vascular/vein mask (in glowing cyan #00E5FF) on top of the base image
+        public static BitmapSource BlendVeinOverlay(BitmapSource baseSource, string veinMaskPath)
+        {
+            if (!File.Exists(veinMaskPath))
+                return baseSource;
+
+            var veinImg = new BitmapImage();
+            veinImg.BeginInit();
+            veinImg.UriSource = new Uri(Path.GetFullPath(veinMaskPath));
+            veinImg.CacheOption = BitmapCacheOption.OnLoad;
+            veinImg.EndInit();
+
+            int w = baseSource.PixelWidth;
+            int h = baseSource.PixelHeight;
+
+            var baseBgra = new FormatConvertedBitmap(baseSource, PixelFormats.Bgra32, null, 0);
+            var veinGray = new FormatConvertedBitmap(veinImg, PixelFormats.Gray8, null, 0);
+
+            uint[] basePixels = new uint[w * h];
+            byte[] veinPixels = new byte[w * h];
+
+            baseBgra.CopyPixels(basePixels, w * 4, 0);
+            veinGray.CopyPixels(veinPixels, w, 0);
+
+            uint[] output = new uint[w * h];
+            for (int i = 0; i < basePixels.Length; i++)
+            {
+                byte v = veinPixels[i];
+                if (v > 25) // Vessel pixel
+                {
+                    double alpha = Math.Min(1.0, (v / 255.0) * 1.3);
+                    uint orig = basePixels[i];
+                    byte ob = (byte)(orig & 0xFF);
+                    byte og = (byte)((orig >> 8) & 0xFF);
+                    byte or = (byte)((orig >> 16) & 0xFF);
+
+                    // Blend with glowing Cyan (R=0, G=229, B=255)
+                    byte nb = (byte)(ob * (1 - alpha) + 255 * alpha);
+                    byte ng = (byte)(og * (1 - alpha) + 229 * alpha);
+                    byte nr = (byte)(or * (1 - alpha) + 0 * alpha);
+
+                    output[i] = (uint)((255 << 24) | (nr << 16) | (ng << 8) | nb);
+                }
+                else
+                {
+                    output[i] = basePixels[i];
+                }
+            }
+
+            var res = new WriteableBitmap(w, h, 96, 96, PixelFormats.Bgra32, null);
+            res.WritePixels(new System.Windows.Int32Rect(0, 0, w, h), output, w * 4, 0);
+            res.Freeze();
+            return res;
+        }
     }
 }

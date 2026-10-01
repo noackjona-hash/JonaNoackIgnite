@@ -13,6 +13,9 @@ func maxVectorAVX2(src, dst *byte, count int)
 //go:noescape
 func subVectorAVX2(a, b, dst *byte, count int)
 
+//go:noescape
+func absDiffVectorAVX2(a, b, dst *byte, count int)
+
 // MinVector applies dst[i] = min(dst[i], src[i])
 func MinVector(src, dst []uint8) {
 	n := len(src)
@@ -50,4 +53,19 @@ func SubVector(a, b, dst []uint8) {
 		return
 	}
 	subVectorAVX2(&a[0], &b[0], &dst[0], n)
+}
+
+// AbsDiffVector applies dst[i] = |a[i] - b[i]| using AVX2 SIMD
+func AbsDiffVector(a, b, dst []uint8) {
+	n := len(a)
+	if len(b) < n {
+		n = len(b)
+	}
+	if len(dst) < n {
+		n = len(dst)
+	}
+	if n == 0 {
+		return
+	}
+	absDiffVectorAVX2(&a[0], &b[0], &dst[0], n)
 }

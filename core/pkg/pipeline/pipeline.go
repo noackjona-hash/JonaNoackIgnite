@@ -1,6 +1,7 @@
 package pipeline
 
 import (
+	"math"
 	"time"
 
 	"ignite-core/pkg/imageutil"
@@ -16,13 +17,15 @@ import (
 type PipelineConfig struct {
 	KernelFactor     float64 `json:"kernel_factor"`      // default 0.05
 	MarginFactor     float32 `json:"margin_factor"`      // default 0.05
-	KFactor          float64 `json:"k_factor"`           // default 2.5
+	KFactor          float64 `json:"k_factor"`           // default 3.0
 	ThresholdMode    string  `json:"threshold_mode"`     // "MAD" or "GAUSSIAN"
 	MinAreaFraction  float64 `json:"min_area_fraction"`  // default 0.0005
 	MinCircularity   float64 `json:"min_circularity"`   // default 0.08
 	RunVascularMap   bool    `json:"run_vascular_map"`   // enable Frangi filter
 	RunPerfusion     bool    `json:"run_perfusion"`      // enable longitudinal gradient
 	LuaScriptPath    string  `json:"lua_script_path"`    // optional path to custom Lua rule
+	ROI              [4]int  `json:"roi"`                // [minX, minY, maxX, maxY], if [0,0,0,0] full image
+	AutoBilateral    bool    `json:"auto_bilateral"`     // auto-split into left & right limb
 }
 
 // DefaultPipelineConfig returns standard research parameters.
@@ -30,11 +33,11 @@ func DefaultPipelineConfig() PipelineConfig {
 	return PipelineConfig{
 		KernelFactor:    0.05,
 		MarginFactor:    0.05,
-		KFactor:         2.5,
+		KFactor:         3.0, // Calibrated standard
 		ThresholdMode:   "MAD",
 		MinAreaFraction: 0.0005,
 		MinCircularity:  0.08,
-		RunVascularMap:  true,
+		RunVascularMap:  false, // Off by default for instant speed, enabled on demand
 		RunPerfusion:    true,
 	}
 }
@@ -53,13 +56,13 @@ type StageTiming struct {
 
 // AnalysisResult encapsulates all outputs of the multi-stage analysis.
 type AnalysisResult struct {
-	Hotspots         []HotspotSummary          `json:"hotspots"`
-	Stats            statistics.OutlierStats   `json:"stats"`
-	Timing           StageTiming               `json:"timing"`
+	Hotspots         []HotspotSummary            `json:"hotspots"`
+	Stats            statistics.OutlierStats     `json:"stats"`
+	Timing           StageTiming                 `json:"timing"`
 	Perfusion        *perfusion.PerfusionProfile `json:"perfusion,omitempty"`
-	TissuePixelCount int                       `json:"tissue_pixel_count"`
-	TotalHotspots    int                       `json:"total_hotspots"`
-	HighestRisk      string                    `json:"highest_risk"`
+	TissuePixelCount int                         `json:"tissue_pixel_count"`
+	TotalHotspots    int                         `json:"total_hotspots"`
+	HighestRisk      string                      `json:"highest_risk"`
 	
 	// Binary/Grayscale matrices (kept for image export/GUI rendering)
 	BodyMask     *imageutil.GrayMatrix `json:"-"`
@@ -79,10 +82,23 @@ func Run(src *imageutil.GrayMatrix, cfg PipelineConfig) AnalysisResult {
 	startTotal := time.Now()
 	var timing StageTiming
 
-	// 1. Body mask & distance erosion
+	// 1. Body mask & distance field
 	t0 := time.Now()
 	rawMask := segmentation.SegmentBodyMask(src)
+	distMap := segmentation.ChamferDistanceTransform(rawMask)
 	bodyMask := segmentation.ErodeBodyMask(rawMask, cfg.MarginFactor)
+
+	// If ROI is specified, mask out everything outside ROI
+	if cfg.ROI[2] > cfg.ROI[0] && cfg.ROI[3] > cfg.ROI[1] {
+		for y := 0; y < src.Height; y++ {
+			for x := 0; x < src.Width; x++ {
+				if x < cfg.ROI[0] || x > cfg.ROI[2] || y < cfg.ROI[1] || y > cfg.ROI[3] {
+					bodyMask.Set(x, y, 0)
+				}
+			}
+		}
+	}
+
 	timing.BodyMaskMs = float64(time.Since(t0).Microseconds()) / 1000.0
 
 	var tissuePixels int
@@ -98,27 +114,30 @@ func Run(src *imageutil.GrayMatrix, cfg PipelineConfig) AnalysisResult {
 	topHatDiff := morphology.TopHat(src, radius)
 	timing.TopHatMs = float64(time.Since(t0).Microseconds()) / 1000.0
 
-	// 3. Statistical outlier thresholding
+	// 3. Statistical outlier thresholding (with tissue median hyperthermia check!)
 	t0 = time.Now()
 	var stats statistics.OutlierStats
 	if cfg.ThresholdMode == "GAUSSIAN" {
-		stats = statistics.CalculateGaussianThreshold(topHatDiff, bodyMask, cfg.KFactor)
+		stats = statistics.CalculateGaussianThreshold(topHatDiff, src, bodyMask, cfg.KFactor)
 	} else {
-		stats = statistics.CalculateMADThreshold(topHatDiff, bodyMask, cfg.KFactor)
+		stats = statistics.CalculateMADThreshold(topHatDiff, src, bodyMask, cfg.KFactor)
 	}
-	binaryHotspots := statistics.ApplyThreshold(topHatDiff, bodyMask, stats.Threshold)
+	binaryHotspots := statistics.ApplyThreshold(topHatDiff, src, bodyMask, stats.Threshold, uint8(math.Round(stats.OrigMedian)))
 	timing.ThresholdMs = float64(time.Since(t0).Microseconds()) / 1000.0
 
-	// 4. Connected components & geometric circularity filter
+	// 4. Connected components & boundary/geometric circularity filter
 	t0 = time.Now()
 	fOpts := statistics.FilterOptions{
-		MinAreaFraction: cfg.MinAreaFraction,
-		MinCircularity:  cfg.MinCircularity,
+		MinAreaFraction:   cfg.MinAreaFraction,
+		MinCircularity:    cfg.MinCircularity,
+		BorderMarginPx:    15,
+		MinDistFromBorder: 8.0,
+		AnatomicalCutoffY: 0.65,
 	}
-	regions, filteredMask := statistics.ExtractHotspots(binaryHotspots, src, tissuePixels, fOpts)
+	regions, filteredMask := statistics.ExtractHotspots(binaryHotspots, src, distMap, tissuePixels, fOpts)
 	timing.GeometryMs = float64(time.Since(t0).Microseconds()) / 1000.0
 
-	// 5. Optional: Vascular mapping (Frangi vesselness)
+	// 5. Optional: Vascular mapping (Fast Separable Frangi vesselness)
 	var vascularMask *imageutil.GrayMatrix
 	if cfg.RunVascularMap {
 		t0 = time.Now()
@@ -143,20 +162,19 @@ func Run(src *imageutil.GrayMatrix, cfg PipelineConfig) AnalysisResult {
 	if cfg.LuaScriptPath != "" {
 		_ = luaEngine.LoadScriptFromFile(cfg.LuaScriptPath)
 	} else {
-		// Embedded default clinical rule:
 		_ = luaEngine.LoadScriptFromString(`
 		function evaluate_hotspot(hotspot, stats)
-			local delta = hotspot.max_val - stats.median
-			if delta >= 25 and hotspot.circularity >= 0.12 then
+			local delta = hotspot.max_val - stats.orig_median
+			if delta >= 22 and hotspot.circularity >= 0.12 then
 				return {
 					risk_level = "CRITICAL",
-					recommendation = "Pathologischer Entzündungsherd (ΔT hoch). Druckentlastung und fachärztliche Abklärung.",
-					score = 9.0
+					recommendation = "Pathologischer Entzündungsherd (Armstrong Delta T >= 2.2 K). Druckentlastung und fachärztliche Abklärung.",
+					score = 9.5
 				}
-			elseif delta >= 15 then
+			elseif delta >= 12 then
 				return {
 					risk_level = "MODERATE",
-					recommendation = "Lokale Hyperthermie. Kontrolle in 48 Stunden.",
+					recommendation = "Mäßige Hyperthermie. Kontrolle in 48 Stunden.",
 					score = 5.5
 				}
 			else

@@ -45,3 +45,21 @@ func SubVector(a, b, dst []uint8) {
 		}
 	}
 }
+
+// AbsDiffVector scalar fallback
+func AbsDiffVector(a, b, dst []uint8) {
+	n := len(a)
+	if len(b) < n {
+		n = len(b)
+	}
+	if len(dst) < n {
+		n = len(dst)
+	}
+	for i := 0; i < n; i++ {
+		if a[i] > b[i] {
+			dst[i] = a[i] - b[i]
+		} else {
+			dst[i] = b[i] - a[i]
+		}
+	}
+}
