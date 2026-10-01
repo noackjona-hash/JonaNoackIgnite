@@ -22,7 +22,9 @@ namespace Ignite.Desktop
         DualView,
         CurtainWipe,
         Relief3D,
-        PureDSA
+        PureDSA,
+        IsothermSlice,
+        DigitalSubtraction
     }
 
     public enum ActiveCanvasTool
@@ -62,6 +64,13 @@ namespace Ignite.Desktop
         private byte _veinThreshold = 20;
         private VeinRenderMode _veinRenderMode = VeinRenderMode.FluorescentCyan;
         private bool _enableVeinOverlay = true;
+
+        // Angiosome, Predictive Risk & Isotherm State
+        private double _isothermLow = 32.0;
+        private double _isothermHigh = 36.0;
+        private double _dstOffset = -1.2;
+        private List<AngiosomeTerritory> _cachedAngiosomes = new();
+        private PredictiveUlcerRisk? _latestPredictiveRisk;
 
         // Curtain Wipe Split Compare State
         private bool _isDraggingCurtain = false;
@@ -516,6 +525,9 @@ end";
                 // Update Histogram
                 UpdateHistogramData();
 
+                // Update Angiosome territories & Predictive 7-Day Ulceration Risk
+                UpdateAngiosomesAndPrediction();
+
                 // Log into SQLite database safely
                 if (_dbService != null && !string.IsNullOrEmpty(_activePatientId) && !string.IsNullOrEmpty(_currentImagePath))
                 {
@@ -599,6 +611,20 @@ end";
                 return;
             }
 
+            if (_activeViewMode == ActiveViewMode.IsothermSlice && _rawGrayPixels != null)
+            {
+                ImgResult.Source = ClinicalAngiosomeService.RenderIsothermSlice(_rawGrayPixels, w, h, _isothermLow, _isothermHigh);
+                OverlayResultCanvas.Children.Clear();
+                return;
+            }
+
+            if (_activeViewMode == ActiveViewMode.DigitalSubtraction && _rawGrayPixels != null)
+            {
+                ImgResult.Source = ClinicalAngiosomeService.RenderDigitalSubtraction(_rawGrayPixels, w, h, _dstOffset);
+                OverlayResultCanvas.Children.Clear();
+                return;
+            }
+
             BitmapSource baseBmp = _rawGrayPixels != null
                 ? PaletteService.ApplyPalette(_rawGrayPixels, w, h, _activePalette, _windowWidth, _windowCenter)
                 : PaletteService.ApplyPalette(_originalBitmap, _activePalette, _windowWidth, _windowCenter);
@@ -612,7 +638,7 @@ end";
             UpdateHudReadouts();
         }
 
-        // --- View Mode Selector (Dual, Curtain Wipe, 3D Relief, Pure DSA) ---
+        // --- View Mode Selector (Dual, Curtain Wipe, 3D Relief, Pure DSA, Isotherm, Subtraction DST) ---
         private void ViewMode_Checked(object sender, RoutedEventArgs e)
         {
             if (RbViewDual == null) return;
@@ -660,6 +686,26 @@ end";
                 _enableVeinOverlay = true;
                 _veinRenderMode = VeinRenderMode.PureAngiography;
                 TxtVp2Title.Text = "DIGITALE SUBTRAKTIONS-ANGIOGRAPHIE (DSA / REINER GEFÄSSBAUM)";
+            }
+            else if (RbViewIsotherm != null && RbViewIsotherm.IsChecked == true)
+            {
+                _activeViewMode = ActiveViewMode.IsothermSlice;
+                ColViewport1.Width = new GridLength(1, GridUnitType.Star);
+                ColDivider.Width = new GridLength(1);
+                ColViewport2.Width = new GridLength(1, GridUnitType.Star);
+                ImgCurtainRaw.Visibility = Visibility.Collapsed;
+                CanvasCurtain.Visibility = Visibility.Collapsed;
+                TxtVp2Title.Text = $"ISOTHERMEN-BAND: [{_isothermLow:F1}°C bis {_isothermHigh:F1}°C]";
+            }
+            else if (RbViewDST != null && RbViewDST.IsChecked == true)
+            {
+                _activeViewMode = ActiveViewMode.DigitalSubtraction;
+                ColViewport1.Width = new GridLength(1, GridUnitType.Star);
+                ColDivider.Width = new GridLength(1);
+                ColViewport2.Width = new GridLength(1, GridUnitType.Star);
+                ImgCurtainRaw.Visibility = Visibility.Collapsed;
+                CanvasCurtain.Visibility = Visibility.Collapsed;
+                TxtVp2Title.Text = $"DIGITAL SUBTRACTION THERMOGRAPHY (DST ΔΔT = {_dstOffset:+0.0;-0.0} K)";
             }
 
             RefreshResultImageOnly();
@@ -2072,6 +2118,89 @@ end";
                 _dbService.LogAuditAction("EXPORT_REPORT", $"Befundbericht exportiert nach {dlg.FileName}");
                 MessageBox.Show($"Befundbericht erfolgreich gespeichert:\n{dlg.FileName}", "Export abgeschlossen", MessageBoxButton.OK, MessageBoxImage.Information);
             }
+        }
+
+        private void SliderIsotherm_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (SliderIsothermLow == null || SliderIsothermHigh == null || TxtIsothermRange == null) return;
+            _isothermLow = SliderIsothermLow.Value;
+            _isothermHigh = SliderIsothermHigh.Value;
+            if (_isothermHigh < _isothermLow)
+            {
+                _isothermHigh = _isothermLow;
+                SliderIsothermHigh.Value = _isothermHigh;
+            }
+            TxtIsothermRange.Text = $"{_isothermLow:F1} °C - {_isothermHigh:F1} °C";
+            if (_activeViewMode == ActiveViewMode.IsothermSlice)
+            {
+                RefreshResultImageOnly();
+            }
+        }
+
+        private void SliderDst_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (SliderDstOffset == null || TxtDstOffset == null) return;
+            _dstOffset = SliderDstOffset.Value;
+            string trend = _dstOffset < -0.5 ? "(Besserung / Heilung)" : (_dstOffset > 0.5 ? "(Progression / Alarm)" : "(Stabil)");
+            TxtDstOffset.Text = $"{_dstOffset:+0.0;-0.0} K {trend}";
+            if (_activeViewMode == ActiveViewMode.DigitalSubtraction)
+            {
+                RefreshResultImageOnly();
+            }
+        }
+
+        private void UpdateAngiosomesAndPrediction()
+        {
+            if (_rawGrayPixels == null || _latestResult == null) return;
+            int w = _rawWidth > 0 ? _rawWidth : (_originalBitmap?.PixelWidth ?? 640);
+            int h = _rawHeight > 0 ? _rawHeight : (_originalBitmap?.PixelHeight ?? 480);
+
+            try
+            {
+                var angiosomes = ClinicalAngiosomeService.ComputeAngiosomes(_rawGrayPixels, w, h);
+                _cachedAngiosomes = angiosomes;
+                if (GridAngiosomes != null)
+                {
+                    GridAngiosomes.ItemsSource = angiosomes;
+                }
+
+                double maxDeltaT = 0.0;
+                if (_latestResult.Hotspots != null && _latestResult.Hotspots.Count > 0)
+                {
+                    byte maxVal = _latestResult.Hotspots.Max(h => h.Region.MaxVal);
+                    double peakT = ThermalAnalysisHelper.RawToTemperature(maxVal);
+                    double medT = ThermalAnalysisHelper.RawToTemperature((byte)Math.Clamp((int)Math.Round(_latestResult.Stats?.OrigMedian ?? 128), 0, 255));
+                    maxDeltaT = Math.Max(0.0, peakT - medT);
+                }
+                else if (_latestResult.Stats != null)
+                {
+                    double peakT = ThermalAnalysisHelper.RawToTemperature((byte)Math.Clamp((int)Math.Round(_latestResult.Stats.Median + 20), 0, 255));
+                    double medT = ThermalAnalysisHelper.RawToTemperature((byte)Math.Clamp((int)Math.Round(_latestResult.Stats.OrigMedian > 0 ? _latestResult.Stats.OrigMedian : _latestResult.Stats.Median), 0, 255));
+                    maxDeltaT = Math.Max(0.0, peakT - medT);
+                }
+                int hotCount = _latestResult.TotalHotspots > 0 ? _latestResult.TotalHotspots : (_latestResult.Hotspots?.Count ?? 0);
+                var pred = ClinicalAngiosomeService.CalculatePredictiveRisk(_rawGrayPixels, w, h, maxDeltaT, hotCount);
+                _latestPredictiveRisk = pred;
+
+                if (TxtPredProbability != null) TxtPredProbability.Text = $"{pred.ProbabilityPercent:F1} %";
+                if (TxtPredTier != null) TxtPredTier.Text = pred.RiskTier;
+                if (TxtPredStage != null) TxtPredStage.Text = pred.WagnerArmstrongStage;
+                if (TxtPredThdi != null) TxtPredThdi.Text = $"{pred.ThermalDissipationIndex:F1} K/px²";
+                if (TxtPredAns != null) TxtPredAns.Text = $"{pred.AutonomicNeuropathyScore:F1} / 10";
+                if (TxtPredCharcot != null) TxtPredCharcot.Text = pred.CharcotRiskStatus;
+                if (TxtPredIntervention != null) TxtPredIntervention.Text = pred.ImmediateIntervention;
+
+                if (TxtPredProbability != null)
+                {
+                    if (pred.ProbabilityPercent >= 70.0)
+                        TxtPredProbability.Foreground = (Brush)FindResource("CriticalBrush");
+                    else if (pred.ProbabilityPercent >= 30.0)
+                        TxtPredProbability.Foreground = (Brush)FindResource("WarningBrush");
+                    else
+                        TxtPredProbability.Foreground = (Brush)FindResource("SuccessBrush");
+                }
+            }
+            catch { }
         }
 
         private void MenuAbout_Click(object sender, RoutedEventArgs e)

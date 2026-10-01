@@ -152,6 +152,8 @@
                             <RadioButton x:Name="RbViewCurtain" Style="{StaticResource MedicalToolRadioStyle}" GroupName="ViewModes" Content="VORHANG-SPLIT" Checked="ViewMode_Checked" ToolTip="Interaktiver Schiebe-Vorhang: Ziehen Sie die Trennlinie zwischen Rohbild und Befund-Overlay"/>
                             <RadioButton x:Name="RbView3DRelief" Style="{StaticResource MedicalToolRadioStyle}" GroupName="ViewModes" Content="3D-TOPOGRAFIE" Checked="ViewMode_Checked" ToolTip="2.5D Isometrisches Relief: Heißes Entzündungsgewebe erhebt sich dreidimensional mit Hillshading"/>
                             <RadioButton x:Name="RbViewDSA" Style="{StaticResource MedicalToolRadioStyle}" GroupName="ViewModes" Content="DSA-ANGIO" Checked="ViewMode_Checked" ToolTip="Digitale Subtraktions-Angiographie: Isolierter Gefäßbaum auf dunklem Hintergrund"/>
+                            <RadioButton x:Name="RbViewIsotherm" Style="{StaticResource MedicalToolRadioStyle}" GroupName="ViewModes" Content="ISOTHERM" Checked="ViewMode_Checked" ToolTip="Isothermen-Slicing: Isoliert gezielt einen Temperaturkorridor in Farbe"/>
+                            <RadioButton x:Name="RbViewDST" Style="{StaticResource MedicalToolRadioStyle}" GroupName="ViewModes" Content="SUBTRAKTION DST" Checked="ViewMode_Checked" ToolTip="Digital Subtraction Thermography: Verlaufsvergleich &amp; Therapiekontrolle"/>
                         </StackPanel>
                     </Border>
 
@@ -858,6 +860,143 @@
                                 </StackPanel>
                             </Border>
                         </Grid>
+                    </TabItem>
+
+                    <!-- TAB 7B: 6 TAYLOR-PALMER ANGIOSOME VASCULAR TERRITORIES -->
+                    <TabItem x:Name="TabAngiosomes" Header="🩺 Angiosome">
+                        <Grid Margin="10">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <StackPanel Grid.Row="0" Margin="0,0,0,8">
+                                <TextBlock Text="Taylor &amp; Palmer Angiosom-Gefäßterritorien (6 Territorien)" FontWeight="Bold" FontSize="12.5" Foreground="{StaticResource CyanBrush}"/>
+                                <TextBlock Text="Zuordnung der Gewebetemperaturen zu den versorgenden Arterien (A. tibialis post., A. peronea, A. tibialis ant.)." FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                            </StackPanel>
+
+                            <DataGrid Grid.Row="1" x:Name="GridAngiosomes">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="55"/>
+                                    <DataGridTextColumn Header="Territorium" Binding="{Binding TerritoryName}" Width="135"/>
+                                    <DataGridTextColumn Header="Zubringerarterie" Binding="{Binding FeederArtery}" Width="160"/>
+                                    <DataGridTextColumn Header="T Mean" Binding="{Binding MeanTemp, StringFormat={}{0:F1} °C}" Width="55"/>
+                                    <DataGridTextColumn Header="ΔT" Binding="{Binding DeltaT, StringFormat={}{0:F1} K}" Width="45"/>
+                                    <DataGridTextColumn Header="Vaskulärer Befund" Binding="{Binding PerfusionStatus}" Width="*"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+
+                            <Border Grid.Row="2" Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="3" Padding="10" Margin="0,8,0,0">
+                                <StackPanel>
+                                    <TextBlock Text="Gefäßchirurgische Leitlinien-Beurteilung:" FontWeight="Bold" FontSize="10.5" Foreground="{StaticResource TextMutedBrush}"/>
+                                    <TextBlock Text="• Mediales Plantar-Angiosom: Höchste Inzidenz für Ulkushäufung bei Stenose der A. tibialis posterior.&#x0a;• Laterales Calcaneus-Angiosom: Indikator für distale Peroneal-Perfusion." FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </TabItem>
+
+                    <!-- TAB 7C: PREDICTIVE 7-DAY ULCER RISK FORECASTER -->
+                    <TabItem x:Name="TabPrediction" Header="🔮 Prädiktion">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="12">
+                            <StackPanel>
+                                <TextBlock Text="Multivariates 7-Tage Ulzerations-Risikomodell" FontWeight="Bold" FontSize="13" Foreground="{StaticResource CyanBrush}" Margin="0,0,0,2"/>
+                                <TextBlock Text="Prädiktive Wahrscheinlichkeitsrechnung basierend auf Armstrong-Delta, Laplace-Wärmestau (THDI) und mikrovaskulärer Stauung." FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+
+                                <!-- Big KPI Risk Banner -->
+                                <Border Background="#1A1828" BorderBrush="{StaticResource CriticalBrush}" BorderThickness="1" CornerRadius="3" Padding="12" Margin="0,0,0,10">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="7-TAGE ULKUS-WAHRSCHEINLICHKEIT:" FontSize="10" FontWeight="Bold" Foreground="{StaticResource TextMutedBrush}"/>
+                                            <TextBlock x:Name="TxtPredProbability" Text="-- %" FontSize="26" FontWeight="Black" Foreground="{StaticResource CriticalBrush}" Margin="0,2,0,0"/>
+                                            <TextBlock x:Name="TxtPredTier" Text="KEINE DATEN" FontSize="11" FontWeight="Bold" Foreground="#FCA5A5" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                        <Border Grid.Column="1" VerticalAlignment="Center" Background="#122538" BorderBrush="{StaticResource CyanBrush}" BorderThickness="1" CornerRadius="3" Padding="10,6">
+                                            <StackPanel>
+                                                <TextBlock Text="ARMSTRONG STAGE" FontSize="8.5" FontWeight="Bold" Foreground="{StaticResource TextMutedBrush}"/>
+                                                <TextBlock x:Name="TxtPredStage" Text="Grad 0" FontSize="13" FontWeight="Bold" Foreground="{StaticResource CyanBrush}" HorizontalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Laplace Heat Entrapment & Autonomic Neuropathy -->
+                                <Grid Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="3" Padding="8" Margin="0,0,3,0">
+                                        <StackPanel>
+                                            <TextBlock Text="WÄRMESTAU-INDEX (THDI)" FontSize="9" FontWeight="Bold" Foreground="{StaticResource WarningBrush}"/>
+                                            <TextBlock x:Name="TxtPredThdi" Text="-- K/px²" FontSize="14" FontWeight="Bold" Foreground="#FFFFFF" Margin="0,2,0,0"/>
+                                            <TextBlock Text="Laplace-Verdichtung (Hitzeinsel)" FontSize="9.5" Foreground="{StaticResource TextMutedBrush}"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <Border Grid.Column="1" Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="3" Padding="8" Margin="3,0,0,0">
+                                        <StackPanel>
+                                            <TextBlock Text="AUTONOME NEUROPATHIE" FontSize="9" FontWeight="Bold" Foreground="{StaticResource CyanBrush}"/>
+                                            <TextBlock x:Name="TxtPredAns" Text="-- / 10" FontSize="14" FontWeight="Bold" Foreground="#FFFFFF" Margin="0,2,0,0"/>
+                                            <TextBlock Text="Mikrozirkulatorische Parese" FontSize="9.5" Foreground="{StaticResource TextMutedBrush}"/>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+
+                                <!-- Clinical Risk Analysis Card -->
+                                <Border Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="3" Padding="10" Margin="0,0,0,10">
+                                    <StackPanel>
+                                        <TextBlock Text="Charcot-Arthropathie Frühwarnung:" FontWeight="Bold" FontSize="10.5" Foreground="{StaticResource TextMutedBrush}"/>
+                                        <TextBlock x:Name="TxtPredCharcot" Text="Unauffällig" FontWeight="SemiBold" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,2,0,6"/>
+                                        
+                                        <TextBlock Text="Sofortige Klinische Intervention:" FontWeight="Bold" FontSize="10.5" Foreground="{StaticResource TextMutedBrush}"/>
+                                        <TextBlock x:Name="TxtPredIntervention" Text="Pipeline ausführen für prädiktive Risikoeinschätzung..." TextWrapping="Wrap" FontSize="11" Foreground="{StaticResource CyanBrush}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </TabItem>
+
+                    <!-- TAB 7D: ISOTHERM SLICING & DIGITAL SUBTRACTION THERMOGRAPHY -->
+                    <TabItem x:Name="TabIsotherms" Header="🌐 Isothermen">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="12">
+                            <StackPanel>
+                                <TextBlock Text="Isothermen-Bandfilterung &amp; Digital Subtraction (DST)" FontWeight="Bold" FontSize="13" Foreground="{StaticResource CyanBrush}" Margin="0,0,0,2"/>
+                                <TextBlock Text="Selektive farbliche Isolierung definierter Temperaturkorridore und Verlaufs-Differenzanalyse." FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+
+                                <!-- Isotherm Window Slider -->
+                                <Border Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="3" Padding="10" Margin="0,0,0,8">
+                                    <StackPanel>
+                                        <Grid>
+                                            <TextBlock Text="Isothermes Temperatur-Band [T_low, T_high]:" FontWeight="Bold" FontSize="11"/>
+                                            <TextBlock x:Name="TxtIsothermRange" Text="32.0 °C - 36.0 °C" HorizontalAlignment="Right" FontWeight="Bold" Foreground="{StaticResource CyanBrush}" FontSize="11"/>
+                                        </Grid>
+                                        
+                                        <TextBlock Text="Untere Temperaturschwelle:" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,1"/>
+                                        <Slider x:Name="SliderIsothermLow" Minimum="20.0" Maximum="38.0" Value="32.0" SmallChange="0.5" ValueChanged="SliderIsotherm_ValueChanged"/>
+
+                                        <TextBlock Text="Obere Temperaturschwelle:" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,1"/>
+                                        <Slider x:Name="SliderIsothermHigh" Minimum="24.0" Maximum="42.0" Value="36.0" SmallChange="0.5" ValueChanged="SliderIsotherm_ValueChanged"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Digital Subtraction Tracking -->
+                                <Border Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="3" Padding="10" Margin="0,0,0,8">
+                                    <StackPanel>
+                                        <Grid>
+                                            <TextBlock Text="Digital Subtraction Thermography (DST):" FontWeight="Bold" FontSize="11"/>
+                                            <TextBlock x:Name="TxtDstOffset" Text="-1.2 K (Besserung)" HorizontalAlignment="Right" FontWeight="Bold" Foreground="{StaticResource SuccessBrush}" FontSize="11"/>
+                                        </Grid>
+                                        <TextBlock Text="Simulierte longitudinale Therapiedifferenz (ΔΔT):" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,1"/>
+                                        <Slider x:Name="SliderDstOffset" Minimum="-3.0" Maximum="3.0" Value="-1.2" SmallChange="0.2" ValueChanged="SliderDst_ValueChanged"/>
+                                        <TextBlock Text="• Blau = Signifikante Gewebeabkühlung / Heilung&#x0a;• Rot = Entzündungszunahme / Progression&#x0a;• Grün/Grau = Stabiler Befund" FontSize="10" Foreground="{StaticResource TextMutedBrush}" Margin="0,4,0,0"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </ScrollViewer>
                     </TabItem>
 
                     <!-- TAB 8: BILATERAL SYMMETRY (ARMSTRONG CRITERIA) -->

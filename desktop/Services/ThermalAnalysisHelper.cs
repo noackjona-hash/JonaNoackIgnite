@@ -45,6 +45,13 @@ namespace Ignite.Desktop.Services
             return tMin + (val / 255.0) * (tMax - tMin);
         }
 
+        public static byte TemperatureToRaw(double temp, double tMin = DefaultTMin, double tMax = DefaultTMax)
+        {
+            if (tMax <= tMin) return 0;
+            double norm = (temp - tMin) / (tMax - tMin);
+            return (byte)Math.Clamp((int)Math.Round(norm * 255.0), 0, 255);
+        }
+
         public static ThermalProfileStats SampleProfileLine(
             byte[] rawGray,
             int width,
