@@ -16,6 +16,15 @@ func subVectorAVX2(a, b, dst *byte, count int)
 //go:noescape
 func absDiffVectorAVX2(a, b, dst *byte, count int)
 
+//go:noescape
+func fmaVectorFloat32AVX2(src, dst *float32, factor float32, count int)
+
+//go:noescape
+func mulScalarFloat32AVX2(src, dst *float32, factor float32, count int)
+
+//go:noescape
+func thresholdMaskAVX2(diff, orig, mask, dst *byte, count int, threshold, origMedian byte)
+
 // MinVector applies dst[i] = min(dst[i], src[i])
 func MinVector(src, dst []uint8) {
 	n := len(src)
@@ -68,4 +77,48 @@ func AbsDiffVector(a, b, dst []uint8) {
 		return
 	}
 	absDiffVectorAVX2(&a[0], &b[0], &dst[0], n)
+}
+
+// FMAVectorFloat32 computes dst[i] += factor * src[i] using 256-bit AVX2
+func FMAVectorFloat32(src, dst []float32, factor float32) {
+	n := len(src)
+	if len(dst) < n {
+		n = len(dst)
+	}
+	if n == 0 {
+		return
+	}
+	fmaVectorFloat32AVX2(&src[0], &dst[0], factor, n)
+}
+
+// MulScalarFloat32 computes dst[i] = factor * src[i] using 256-bit AVX2
+func MulScalarFloat32(src, dst []float32, factor float32) {
+	n := len(src)
+	if len(dst) < n {
+		n = len(dst)
+	}
+	if n == 0 {
+		return
+	}
+	mulScalarFloat32AVX2(&src[0], &dst[0], factor, n)
+}
+
+// ThresholdMaskAVX2 performs fast multi-condition binarization using AVX2:
+// dst[i] = (diff[i] >= threshold && (orig == nil || orig[i] >= origMedian) && (mask == nil || mask[i] > 0)) ? 255 : 0
+func ThresholdMaskAVX2(diff, orig, mask, dst []uint8, threshold, origMedian uint8) {
+	n := len(diff)
+	if len(dst) < n {
+		n = len(dst)
+	}
+	if n == 0 {
+		return
+	}
+	var origPtr, maskPtr *byte
+	if orig != nil && len(orig) >= n {
+		origPtr = &orig[0]
+	}
+	if mask != nil && len(mask) >= n {
+		maskPtr = &mask[0]
+	}
+	thresholdMaskAVX2(&diff[0], origPtr, maskPtr, &dst[0], n, threshold, origMedian)
 }

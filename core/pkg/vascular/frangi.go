@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"ignite-core/pkg/imageutil"
+	"ignite-core/pkg/morphology"
 )
 
 // FrangiOptions defines parameters for multiscale vesselness filtering.
@@ -87,7 +88,7 @@ func convolve1DHorizontal(src *imageutil.FloatMatrix, kernel []float32, radius i
 	return dst
 }
 
-// Convolve1DVertical applies a 1D filter vertically across columns.
+// Convolve1DVertical applies a 1D filter vertically across columns using AVX2 SIMD FMA.
 func convolve1DVertical(src *imageutil.FloatMatrix, kernel []float32, radius int) *imageutil.FloatMatrix {
 	w, h := src.Width, src.Height
 	dst := imageutil.NewFloatMatrix(w, h)
@@ -108,18 +109,17 @@ func convolve1DVertical(src *imageutil.FloatMatrix, kernel []float32, radius int
 		go func(start, end int) {
 			defer wg.Done()
 			for y := start; y < end; y++ {
-				for x := 0; x < w; x++ {
-					var sum float32
-					for k := -radius; k <= radius; k++ {
-						py := y + k
-						if py < 0 {
-							py = 0
-						} else if py >= h {
-							py = h - 1
-						}
-						sum += src.Data[py*w+x] * kernel[k+radius]
+				dstRow := dst.Data[y*w : (y+1)*w]
+				for k := -radius; k <= radius; k++ {
+					py := y + k
+					if py < 0 {
+						py = 0
+					} else if py >= h {
+						py = h - 1
 					}
-					dst.Data[y*w+x] = sum
+					coeff := kernel[k+radius]
+					srcRow := src.Data[py*w : (py+1)*w]
+					morphology.FMAVectorFloat32(srcRow, dstRow, coeff)
 				}
 			}
 		}(r0, r1)

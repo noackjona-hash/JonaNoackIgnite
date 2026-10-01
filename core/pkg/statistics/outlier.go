@@ -4,6 +4,7 @@ import (
 	"math"
 
 	"ignite-core/pkg/imageutil"
+	"ignite-core/pkg/morphology"
 )
 
 // ThresholdMode selects the statistical model.
@@ -180,7 +181,7 @@ func CalculateGaussianThreshold(diff *imageutil.GrayMatrix, orig *imageutil.Gray
 	}
 }
 
-// ApplyThreshold binarizes the Top-Hat difference image against the statistical threshold.
+// ApplyThreshold binarizes the Top-Hat difference image against the statistical threshold using AVX2 SIMD.
 // CRITICAL FIX: The pixel MUST satisfy both:
 // 1. diff >= threshold (statistically anomalous peak)
 // 2. orig > origMedian (genuinely warmer than the baseline tissue, not cold background noise!)
@@ -188,17 +189,14 @@ func ApplyThreshold(diff *imageutil.GrayMatrix, orig *imageutil.GrayMatrix, mask
 	w, h := diff.Width, diff.Height
 	dst := imageutil.NewGrayMatrix(w, h)
 
-	for i, v := range diff.Data {
-		if mask != nil && mask.Data[i] == 0 {
-			dst.Data[i] = 0
-			continue
-		}
-		// Must be an outlier AND must be hotter than the tissue baseline!
-		if v >= threshold && (orig == nil || orig.Data[i] >= origMedian) {
-			dst.Data[i] = 255
-		} else {
-			dst.Data[i] = 0
-		}
+	var origData, maskData []uint8
+	if orig != nil {
+		origData = orig.Data
 	}
+	if mask != nil {
+		maskData = mask.Data
+	}
+
+	morphology.ThresholdMaskAVX2(diff.Data, origData, maskData, dst.Data, threshold, origMedian)
 	return dst
 }

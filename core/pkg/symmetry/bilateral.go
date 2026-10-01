@@ -4,6 +4,7 @@ import (
 	"math"
 
 	"ignite-core/pkg/imageutil"
+	"ignite-core/pkg/morphology"
 )
 
 // SymmetryZone represents an anatomical zone with bilateral comparison metrics.
@@ -49,6 +50,8 @@ func AnalyzeBilateralSymmetry(leftImg, rightImg *imageutil.GrayMatrix, leftMask,
 	}
 
 	diffMap := imageutil.NewGrayMatrix(w, h)
+	morphology.AbsDiffVector(leftImg.Data, rightMirrored.Data, diffMap.Data)
+
 	var sumDelta float64
 	var maxDelta float32
 	var validPixels int
@@ -57,16 +60,15 @@ func AnalyzeBilateralSymmetry(leftImg, rightImg *imageutil.GrayMatrix, leftMask,
 		for x := 0; x < w; x++ {
 			idx := y*w + x
 			if leftMask != nil && leftMask.Data[idx] == 0 {
+				diffMap.Data[idx] = 0
 				continue
 			}
 			if rightMaskMirrored != nil && rightMaskMirrored.Data[idx] == 0 {
+				diffMap.Data[idx] = 0
 				continue
 			}
 
-			valL := float32(leftImg.Data[idx])
-			valR := float32(rightMirrored.Data[idx])
-			diff := float32(math.Abs(float64(valL - valR)))
-
+			diff := float32(diffMap.Data[idx])
 			if diff > maxDelta {
 				maxDelta = diff
 			}

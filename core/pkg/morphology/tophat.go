@@ -1,203 +1,63 @@
 package morphology
 
 import (
-	"sync"
-
 	"ignite-core/pkg/imageutil"
 )
 
 // Morphological opening = Dilation of Erosion.
 // Top-Hat = Input - Opening(Input).
 
-// Erode1DHorizontal computes 1D horizontal erosion along image rows with radius r.
+// Erode1DHorizontal computes 1D horizontal erosion along image rows with radius r using AVX2 SIMD MinVector.
 func Erode1DHorizontal(src *imageutil.GrayMatrix, r int) *imageutil.GrayMatrix {
 	w, h := src.Width, src.Height
-	dst := imageutil.NewGrayMatrix(w, h)
-	var wg sync.WaitGroup
-	workers := 8
-	chunk := (h + workers - 1) / workers
-
-	for wid := 0; wid < workers; wid++ {
-		startRow := wid * chunk
-		endRow := startRow + chunk
-		if endRow > h {
-			endRow = h
+	dst := src.Clone()
+	for k := 1; k <= r; k++ {
+		for y := 0; y < h; y++ {
+			row := y * w
+			MinVector(src.Data[row+k:row+w], dst.Data[row:row+w-k])
+			MinVector(src.Data[row:row+w-k], dst.Data[row+k:row+w])
 		}
-		if startRow >= endRow {
-			continue
-		}
-
-		wg.Add(1)
-		go func(r0, r1 int) {
-			defer wg.Done()
-			for y := r0; y < r1; y++ {
-				rowOffset := y * w
-				for x := 0; x < w; x++ {
-					minVal := uint8(255)
-					xMin := x - r
-					if xMin < 0 {
-						xMin = 0
-					}
-					xMax := x + r
-					if xMax >= w {
-						xMax = w - 1
-					}
-					for kx := xMin; kx <= xMax; kx++ {
-						v := src.Data[rowOffset+kx]
-						if v < minVal {
-							minVal = v
-						}
-					}
-					dst.Data[rowOffset+x] = minVal
-				}
-			}
-		}(startRow, endRow)
 	}
-	wg.Wait()
 	return dst
 }
 
-// Erode1DVertical computes 1D vertical erosion along image columns with radius r.
+// Erode1DVertical computes 1D vertical erosion along image columns with radius r using AVX2 SIMD MinVector.
 func Erode1DVertical(src *imageutil.GrayMatrix, r int) *imageutil.GrayMatrix {
 	w, h := src.Width, src.Height
-	dst := imageutil.NewGrayMatrix(w, h)
-	var wg sync.WaitGroup
-	workers := 8
-	chunk := (h + workers - 1) / workers
-
-	for wid := 0; wid < workers; wid++ {
-		startRow := wid * chunk
-		endRow := startRow + chunk
-		if endRow > h {
-			endRow = h
+	dst := src.Clone()
+	for k := 1; k <= r; k++ {
+		for y := 0; y < h-k; y++ {
+			MinVector(src.Data[(y+k)*w:(y+k+1)*w], dst.Data[y*w:(y+1)*w])
+			MinVector(src.Data[y*w:(y+1)*w], dst.Data[(y+k)*w:(y+k+1)*w])
 		}
-		if startRow >= endRow {
-			continue
-		}
-
-		wg.Add(1)
-		go func(r0, r1 int) {
-			defer wg.Done()
-			for y := r0; y < r1; y++ {
-				yMin := y - r
-				if yMin < 0 {
-					yMin = 0
-				}
-				yMax := y + r
-				if yMax >= h {
-					yMax = h - 1
-				}
-				rowOffset := y * w
-				for x := 0; x < w; x++ {
-					minVal := uint8(255)
-					for ky := yMin; ky <= yMax; ky++ {
-						v := src.Data[ky*w+x]
-						if v < minVal {
-							minVal = v
-						}
-					}
-					dst.Data[rowOffset+x] = minVal
-				}
-			}
-		}(startRow, endRow)
 	}
-	wg.Wait()
 	return dst
 }
 
-// Dilate1DHorizontal computes 1D horizontal dilation along image rows with radius r.
+// Dilate1DHorizontal computes 1D horizontal dilation along image rows with radius r using AVX2 SIMD MaxVector.
 func Dilate1DHorizontal(src *imageutil.GrayMatrix, r int) *imageutil.GrayMatrix {
 	w, h := src.Width, src.Height
-	dst := imageutil.NewGrayMatrix(w, h)
-	var wg sync.WaitGroup
-	workers := 8
-	chunk := (h + workers - 1) / workers
-
-	for wid := 0; wid < workers; wid++ {
-		startRow := wid * chunk
-		endRow := startRow + chunk
-		if endRow > h {
-			endRow = h
+	dst := src.Clone()
+	for k := 1; k <= r; k++ {
+		for y := 0; y < h; y++ {
+			row := y * w
+			MaxVector(src.Data[row+k:row+w], dst.Data[row:row+w-k])
+			MaxVector(src.Data[row:row+w-k], dst.Data[row+k:row+w])
 		}
-		if startRow >= endRow {
-			continue
-		}
-
-		wg.Add(1)
-		go func(r0, r1 int) {
-			defer wg.Done()
-			for y := r0; y < r1; y++ {
-				rowOffset := y * w
-				for x := 0; x < w; x++ {
-					maxVal := uint8(0)
-					xMin := x - r
-					if xMin < 0 {
-						xMin = 0
-					}
-					xMax := x + r
-					if xMax >= w {
-						xMax = w - 1
-					}
-					for kx := xMin; kx <= xMax; kx++ {
-						v := src.Data[rowOffset+kx]
-						if v > maxVal {
-							maxVal = v
-						}
-					}
-					dst.Data[rowOffset+x] = maxVal
-				}
-			}
-		}(startRow, endRow)
 	}
-	wg.Wait()
 	return dst
 }
 
-// Dilate1DVertical computes 1D vertical dilation along image columns with radius r.
+// Dilate1DVertical computes 1D vertical dilation along image columns with radius r using AVX2 SIMD MaxVector.
 func Dilate1DVertical(src *imageutil.GrayMatrix, r int) *imageutil.GrayMatrix {
 	w, h := src.Width, src.Height
-	dst := imageutil.NewGrayMatrix(w, h)
-	var wg sync.WaitGroup
-	workers := 8
-	chunk := (h + workers - 1) / workers
-
-	for wid := 0; wid < workers; wid++ {
-		startRow := wid * chunk
-		endRow := startRow + chunk
-		if endRow > h {
-			endRow = h
+	dst := src.Clone()
+	for k := 1; k <= r; k++ {
+		for y := 0; y < h-k; y++ {
+			MaxVector(src.Data[(y+k)*w:(y+k+1)*w], dst.Data[y*w:(y+1)*w])
+			MaxVector(src.Data[y*w:(y+1)*w], dst.Data[(y+k)*w:(y+k+1)*w])
 		}
-		if startRow >= endRow {
-			continue
-		}
-
-		wg.Add(1)
-		go func(r0, r1 int) {
-			defer wg.Done()
-			for y := r0; y < r1; y++ {
-				yMin := y - r
-				if yMin < 0 {
-					yMin = 0
-				}
-				yMax := y + r
-				if yMax >= h {
-					yMax = h - 1
-				}
-				rowOffset := y * w
-				for x := 0; x < w; x++ {
-					maxVal := uint8(0)
-					for ky := yMin; ky <= yMax; ky++ {
-						v := src.Data[ky*w+x]
-						if v > maxVal {
-							maxVal = v
-						}
-					}
-					dst.Data[rowOffset+x] = maxVal
-				}
-			}
-		}(startRow, endRow)
 	}
-	wg.Wait()
 	return dst
 }
 
