@@ -44,3 +44,18 @@ desktop.ini
 /target/
 ignite_steps_output/
 *.spec
+
+# .NET / C#
+**/bin/
+**/obj/
+*.user
+*.suo
+
+# Go
+core/ignite-core.exe
+
+# SQLite databases
+*.db
+*.sqlite
+*.db-journal
+*.db-wal
