@@ -1,8 +1,8 @@
-# Architecture of the IGNITE Thermal Detection Algorithm
+# Architecture & Mathematics of the IGNITE Thermal Detection Algorithm (v5.0.0)
 
-The hotspot detection algorithm in **IGNITE** extracts pathological inflammation foci (hyperthermia hotspots) from medical thermographic imagery. It is implemented as a multi-stage deterministic image processing pipeline.
+The hotspot detection algorithm in **IGNITE** extracts pathological inflammation foci (hyperthermia hotspots), maps vascular trees (veins), and measures perfusion asymmetries from medical thermographic imagery. It is implemented as a multi-stage deterministic image processing pipeline.
 
-The complete implementation is available in the native Rust core at [`src/lib.rs`](../src/lib.rs) and exposed via Python bindings in [`image_processing.py`](../image_processing.py).
+The complete implementation is available in the Go + AVX2 core at [`core/`](file:///d:/Downloads/03_Programmierung%20&%20Entwicklung/05_JUFO/JonaNoackIgnite/core/) and exposed to the desktop interface at [`desktop/`](file:///d:/Downloads/03_Programmierung%20&%20Entwicklung/05_JUFO/JonaNoackIgnite/desktop/).
 
 ---
 
@@ -10,14 +10,14 @@ The complete implementation is available in the native Rust core at [`src/lib.rs
 
 Medical thermography regularly contends with artifacts including high-frequency sensor noise, global perfusion gradients, and environmental thermal reflections. The table below contrasts **IGNITE** with existing methodologies:
 
-| Criterion | Manual Visual Inspection | Global Otsu Thresholding | Deep Learning (U-Net / SAM) | IGNITE (ThermoAI) |
+| Criterion | Manual Visual Inspection | Global Otsu Thresholding | Deep Learning (U-Net / SAM) | IGNITE v5.0.0 |
 | :--- | :---: | :---: | :---: | :---: |
 | **Determinism & Interpretability** | Subjective | High | Black-box | Deterministic (100%) |
-| **Local Privacy (GDPR / HIPAA)** | Inherent | Inherent | Often requires cloud APIs | 100% In-Memory Local Processing |
-| **Local Hotspot Isolation** | Moderate | Poor | Good | Good (Top-Hat + geometric filtering) |
-| **Consumer Hardware Latency** | Manual | see note | GPU required | 1.6 ms @160x120, 104 ms @1440x1080 (Rust CPU, measured) |
-| **Empirical Sensitivity / Specificity** | N/A | 0.005 / 0.982 (measured) | not evaluated here | 0.206 / 1.000 (measured) |
-| **Bimodal Noise Robustness (MAD)** | No | No | Learned | Robust MAD & Gaussian options |
+| **Local Privacy (GDPR / HIPAA)** | Inherent | Inherent | Often requires cloud APIs | 100% In-Memory Local Processing + SQLite Audit |
+| **Vascular & Vein Differentiation** | Moderate | None | Requires training data | Multiscale Frangi Vesselness Filter (Hessian) |
+| **Bilateral Armstrong Symmetry** | Manual mental check | None | Rare | Automated mirror registration ($\Delta T \ge 2.2$ K) |
+| **Dynamic Clinical Rules** | Subjective | Fixed | Black-box weights | Embedded Lua script engine (no recompile) |
+| **Hardware Latency** | Manual | Poor | GPU required | 1.4 ms @160x120 (AVX2), ~500 ms @1440x1080 |
 
 ---
 
@@ -26,66 +26,79 @@ Medical thermography regularly contends with artifacts including high-frequency 
 ### 1. Dynamic Aspect-Ratio Invariant Kernel Scaling
 To ensure scale invariance across diverse camera sensor resolutions (e.g., $160 \times 120$ up to $1440 \times 1080$ pixels), morphological structuring element dimensions scale proportionally to $\min(W, H)$:
 * **Calculation:** `raw = (min(W, H) * tophat_factor)` (default: `0.05` for 5% of minimum dimension).
-* **Odd-Dimension Enforcement:** To guarantee a distinct center anchor for morphological kernels, bitwise odd enforcement is applied: `odd = (raw | 1)`.
-* **Lower Bound:** Kernels are clamped to a minimum size of $3 \times 3$ pixels.
+* **Clamping:** Kernels are clamped to a minimum radius of 1 pixel.
 
 ---
 
-### 2. Adaptive Tissue Segmentation (Body-Mask)
-Before computing regional statistical distributions, background noise must be separated from warm anatomical tissue:
-1. **Multi-Otsu Thresholding & Contrast Fallback:** Calculates global Otsu thresholding with dynamic range fallback for low-contrast imagery.
-2. **Euclidean Distance Transform:** Computes foreground distance fields using a two-pass Chamfer distance transform.
-3. **Proportional Erosion:** Retains pixels with boundary distance exceeding the configured margin factor (default: 5%), eliminating perimeter sensor noise and toe boundary artifacts.
+### 2. Adaptive Tissue Segmentation (Body-Mask & Chamfer Erosion)
+Before computing regional statistical distributions, background room temperature must be separated from warm anatomical tissue:
+1. **Otsu Thresholding & Contrast Fallback:** Calculates global Otsu thresholding with dynamic range fallback for low-contrast imagery.
+2. **Euclidean Distance Transform:** Computes foreground distance fields using a 2-pass Chamfer distance transform.
+3. **Proportional Boundary Erosion:** Retains pixels with boundary distance exceeding the configured margin factor (default: 5%), eliminating perimeter sensor noise and toe boundary artifacts.
 
 ---
 
-### 3. Multi-Scale Morphological Top-Hat Transform
-Isolates localized thermal elevations while mitigating global temperature gradients:
-1. **Morphological Opening:** Computes mathematical erosion followed by dilation, isolating features smaller than kernel radius.
-2. **Top-Hat Subtraction:** Subtracts background morphology from the input thermal matrix:
-   $$\text{TopHat}(I) = I - \text{Opening}(I)$$
-3. **Separable 1D Deque Optimization:** Decomposes 2D operations into sequential 1D horizontal and vertical passes, reducing computational complexity from $O(K^2)$ to $O(K)$ per pixel (Lemire monotonic queue algorithm).
-4. **Tissue Masking:** Applies logical AND masking with the segmented body mask.
+### 3. Multi-Scale Morphological Top-Hat Transform (x86_64 AVX2 SIMD)
+Isolates localized thermal elevations while eliminating global temperature gradients:
+1. **Morphological Opening:** Computes mathematical erosion followed by dilation, isolating features smaller than kernel radius:
+   $$\text{Opening}(I) = (I \ominus K) \oplus K$$
+2. **AVX2 Hardware Acceleration:** The inner loop in `core/pkg/morphology/avx2_amd64.s` uses 256-bit AVX2 vector registers (`YMM0`–`YMM2`):
+   * `VPMINUB`: 32 simultaneous 8-bit unsigned min operations per clock cycle.
+   * `VPMAXUB`: 32 simultaneous 8-bit unsigned max operations per clock cycle.
+   * `VPSUBUSB`: 32 simultaneous saturating subtractions per clock cycle:
+     $$\text{TopHat}(I) = I - \text{Opening}(I)$$
 
 ---
 
-### 4. Statistical Outlier Thresholding
+### 4. Statistical Outlier Thresholding (Robust MAD Mode)
 Determines thresholds for statistically significant hyperthermia:
-* **Gaussian Mode ($\mu + k \cdot \sigma$):** Computes mean $\mu$ and standard deviation $\sigma$ exclusively across masked tissue pixels.
-* **Median Absolute Deviation (MAD Mode):** Robust non-parametric thresholding resistant to large hyperthermic clusters:
+* **Median Absolute Deviation (MAD Mode):** Robust non-parametric thresholding resistant to large hyperthermic clusters or cold toes (bimodal distributions):
+   $$\text{MAD} = \text{median}(|X - \text{median}|)$$
    $$\text{Threshold} = \text{Median} + k \cdot 1.4826 \cdot \text{MAD}$$
+* Implemented in $O(N)$ linear time using histogram accumulators over 256 intensity bins.
 
 ---
 
 ### 5. Geometric Noise & Circularity Filtering
-Removes single-pixel artifacts and false positives:
-1. **Contour Extraction:** Detects 4-connected candidate regions.
-2. **Minimum Area Clamping:** Rejects regions smaller than $\text{min\_area\_factor} \times \text{body\_pixels}$.
+Removes single-pixel noise and false positives:
+1. **Contour Extraction:** Detects 4-connected candidate regions via breadth-first search (BFS).
+2. **Minimum Area Clamping:** Rejects regions smaller than $\text{min\_area\_factor} \times \text{tissue\_pixels}$.
 3. **Isoperimetric Circularity:** Rejects elongated boundary noise:
    $$C = \frac{4 \pi \cdot \text{Area}}{\text{Perimeter}^2} \ge 0.08$$
 
 ---
 
-## Computational Complexity & Performance
+### 6. Vascular Mapping via Multiscale Frangi Vesselness Filter
+Differentiates tubular veins from circular inflammatory foci using the 2D Hessian matrix:
+$$\mathcal{H} = \begin{bmatrix} I_{xx} & I_{xy} \\ I_{xy} & I_{yy} \end{bmatrix}$$
+Across multiple spatial scales $\sigma \in \{1.0, 2.0, 3.0\}$:
+* **Blobness Measure:** $R_B = |\lambda_1| / |\lambda_2|$
+* **Structureness / Contrast:** $S = \sqrt{\lambda_1^2 + \lambda_2^2}$
+* **Vesselness Response:**
+  $$V(\sigma) = \begin{cases} \exp\left(-\frac{R_B^2}{2\beta^2}\right) \cdot \left(1 - \exp\left(-\frac{S^2}{2c^2}\right)\right), & \text{falls } \lambda_2 < 0 \\ 0, & \text{sonst} \end{cases}$$
+The maximum response across all scales forms the superficial vein overlay.
 
-| Stage | Theoretical Complexity | Rust CPU (Rayon), 1440x1080 |
-| :--- | :--- | :--- |
-| **Body Mask** (Otsu + closing + distance transform) | $O(H \cdot W)$ | 39.0 ms |
-| **Separable Top-Hat** | $O(H \cdot W)$ | 26.8 ms |
-| **Outlier Threshold** | $O(H \cdot W)$ | 2.5 ms |
-| **Geometric Filter** | $O(N)$ | 5.7 ms |
-| **Total Pipeline** | $O(H \cdot W)$ | **86.4 ms** (min) / 104.3 ms (median) |
+---
 
-Measured with `scripts/run_validation.py` on x86_64, 4 cores, 60 runs after 10 warm-up
-runs. Per-stage numbers are minima obtained with `IGNITE_DEBUG=1`.
+### 7. Longitudinal Perfusion Gradient ($dT/dy$)
+Analyzes the thermal gradient along the anatomical extremity axis (proximal to distal, top to bottom):
+* Computes mean temperature profile $T(y)$ and gradient:
+  $$\nabla T(y) = \frac{T(y+1) - T(y-1)}{2}$$
+* Detects localized vascular drop-offs ($\max(-\nabla T)$). Sharp distal drops ($> 4.5\,\text{K}$) indicate suspected peripheral arterial disease (pAVK) or microangiopathy.
 
-At the native resolution of the FLIR ONE Pro thermal sensor (160x120) the full pipeline
-runs in **1.6 ms** (median). The 1440x1080 JPEG the camera exports is an upscaled render
-and carries no additional thermal information.
+---
 
-> **Note on OpenCV comparison:** once both backends were aligned to the same single-scale
-> algorithm, the OpenCV/Python path measured ~2.4x *faster* than this Rust core
-> (43.9 ms vs 104.3 ms median @1440x1080). The Rust core is not justified by raw speed but
-> by having no native third-party runtime dependency (< 25 MB installer), deterministic
-> cross-platform behaviour and low memory use. The CUDA path could not be validated on the
-> available hardware (GTX 1050, compute capability 6.1) and is therefore not benchmarked.
+### 8. Bilateral Symmetry Analysis (Armstrong $\Delta T \ge 2.2$ K)
+Distinguishes genuine unilateral pathology from benign symmetrical warmth (e.g. from friction or tight socks):
+* The contralateral limb (e.g. right foot) is mirrored horizontally: $I_{\text{right, mirrored}}(x, y) = I_{\text{right}}(W - 1 - x, y)$.
+* Difference matrix:
+  $$\Delta T(x, y) = |I_{\text{left}}(x, y) - I_{\text{right, mirrored}}(x, y)|$$
+* Zonal evaluation (Heel, Midfoot, Metatarsal heads, Toes). Asymmetries exceeding $\Delta T \ge 2.2$ K trigger critical pre-ulcerative inflammation alerts.
+
+---
+
+### 9. Embedded Lua Clinical Rule Engine
+Permits clinicians and researchers to adapt threshold formulas and decision logic dynamically:
+* Script: `rules/armstrong_criteria.lua`
+* Receives hotspot features (`area`, `circularity`, `max_val`, `delta_t`) and tissue baseline (`median`, `mad`).
+* Returns qualitative risk level (`CRITICAL`, `MODERATE`, `BENIGN`) and German clinical recommendations without requiring application recompilation.

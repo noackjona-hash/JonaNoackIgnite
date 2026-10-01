@@ -1,0 +1,60 @@
+name: Build & Test IGNITE v5.0.0
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    name: Build Go Core (AVX2) & C# Desktop (.NET 10)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Go 1.27
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.x'
+          cache-dependency-path: core/go.sum
+
+      - name: Test Go Core & AVX2 Assembly
+        working-directory: core
+        run: |
+          go test -v ./...
+
+      - name: Build Go Core Executable
+        working-directory: core
+        run: |
+          go build -v -o ignite-core.exe ./cmd/ignite-core
+
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore C# WPF Dependencies
+        working-directory: desktop
+        run: |
+          dotnet restore
+
+      - name: Build C# WPF Workstation
+        working-directory: desktop
+        run: |
+          dotnet build -c Release --no-restore
+
+      - name: Copy Go Core to WPF Release Folder
+        run: |
+          Copy-Item -Path "core\ignite-core.exe" -Destination "desktop\bin\Release\net10.0-windows\" -Force
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ignite-v5-Windows-x64
+          path: |
+            desktop/bin/Release/net10.0-windows/
+            rules/
+            db/schema.sql

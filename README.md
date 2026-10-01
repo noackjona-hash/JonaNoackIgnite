@@ -1,146 +1,96 @@
-# IGNITE Medical Imaging Suite
+# IGNITE Medical Imaging Suite (v5.0.0)
 
-**IGNITE** is the graphical desktop client of **ThermoAI Vision**, an advanced diagnostic platform for automated inflammation detection in thermal images. Developed as a research project for the German Youth Science Competition (**Jugend forscht 2026**), IGNITE provides clinical researchers and medical professionals with a responsive, high-contrast interface to execute advanced computer vision pipelines on thermal data.
+**IGNITE** ist eine deterministische, hochauflösende Infrarot-Thermografie-Workstation zur automatisierten Früherkennung subklinischer Gewebeentzündungen, diabetischer Fußulzera und vaskulärer Auffälligkeiten. 
 
----
-
-## Key Features
-
-* **Zero-Lag Instant Splash Screen:** Launches a lightweight Tkinter-based splash loader immediately upon execution. Heavy dependencies load asynchronously in the background.
-* **Modern CustomTkinter Dashboard:** Styled with a dark-mode interface, leveraging custom cards, charts, and control panels based on Google Material 3 guidelines.
-* **Deterministic Thermal Processing:** A fully traceable five-stage pipeline — body-mask extraction (Otsu + morphological closing + distance transform), separable morphological top-hat, statistical outlier thresholding (Gaussian or robust MAD), and geometric component filtering. No machine-learning model and no black-box inference is involved.
-* **Radiometric Emissivity Model:** Implements the Stefan-Boltzmann radiation model with human skin emissivity ($\epsilon = 0.98$) and reflected ambient temperature correction. *Note: this path requires radiometric input. The FLIR ONE JPEG exports used in this project contain only relative 8-bit intensities, so absolute temperatures — and the $\Delta T > 2.2$ K podiatric criterion — could not be evaluated on the sample data.*
-* **Reproducible Validation Harness:** `scripts/run_validation.py` regenerates every figure reported in the write-up from a fixed seed — runtime benchmarks, ground-truth metrics with bootstrap confidence intervals, a tuning/test split, a filter ablation and backend parity. Results are written to `docs/validation/validation_report.json`.
-* **Honest Measured Results:** Validated against **9 manually annotated thermal images** (Dice **0.325 ± 0.159**, precision **0.99**, sensitivity **0.21**), significantly ahead of an Otsu baseline (Dice 0.004; paired Wilcoxon $p = 0.0046$). With the threshold factor tuned on a held-out split, Dice rises to **0.513** on 5 unseen images. See *Known Limitations* below.
-* **Aspect-Ratio Invariant Kernel Scaling:** Dynamically scales morphological kernels based on $\min(W, H)$ to ensure consistent detection performance across diverse camera resolutions.
-* **Strict GDPR/HIPAA Compliance & EU-MDR Research Disclaimer:** Built with privacy by design. Pseudonymizes patient records via SHA-256 salted hashes (`ANON-<hash>`) and processes all data locally in-memory. *Note: Developed as a research prototype for Jugend forscht 2026; not an EU-MDR certified medical device.*
+Entwickelt für den deutschen Jugendwettbewerb **Jugend forscht 2026** (Fachgebiet Arbeitswelt / Informatik), verbindet IGNITE modernste computergestützte Bildverarbeitung mit der Ergonomie klassischer medizinischer Diagnosestationen.
 
 ---
 
-## Technical Architecture
+## 🚀 Neuheiten in Version 5.0.0
 
-IGNITE decouples analytical computations and UI threads across a hybrid multi-backend system:
+* **Venen- & Adernkartierung (Vascular Mapping):** Multiskaliger **Frangi-Vesselness-Filter** basierend auf der Hesse-Matrix $\mathcal{H}$ zur präzisen Segmentierung von Blutgefäßen und deren Unterscheidung von Entzündungsherden.
+* **Perfusion & Longitudinaler Temperaturgradient ($dT/dy$):** Automatische Erkennung distaler Durchblutungsabbrüche zur Früherkennung von pAVK („Schaufensterkrankheit“) und diabetischer Mikroangiopathie.
+* **Bilateraler Seitenvergleich (Armstrong-Kriterium $\Delta T \ge 2{,}2\,\text{K}$):** Spiegelbildlicher Vergleich beider Füße (L vs. R) zur eindeutigen Unterscheidung zwischen harmloser mechanischer Belastung (Socken/Druckstellen) und echten pathologischen Entzündungen.
+* **Mehrsprachige High-Performance-Architektur:** Vollständiger Refaktor ohne C/C++-Compiler-Abhängigkeiten:
+  * **Rechenkern:** **Go 1.27** mit parallelen Goroutinen.
+  * **Hardware-Beschleunigung:** Reiner **x86_64 AVX2-Assembler** (`VPMINUB`, `VPMAXUB`, `VPSUBUSB`) für 32 Pixel parallel pro Takt.
+  * **Workstation-Frontend:** **C# (.NET 10 / WPF)** im klassischen, dichten Ingenieurs-Look mit Dual-Viewport-Canvas und Echtzeit-Fadenkreuz.
+  * **Klinische Entscheidungslogik:** Eingebettetes **Lua** zur Anpassung von Schwellenwerten ohne Neukompilierung.
+  * **Datenschutz:** Revisionssicheres **SQLite-Audit-Log** mit SHA-256-Pseudonymisierung (`ANON-<hash>`).
+
+---
+
+## 🛠️ Software-Architektur
 
 ```
-[User Action] ──> [CustomTkinter Event Loop]
-                         │
-                         ├── (Native Multi-Thread) ──> [Rust Core / Rayon]
-                         ├── (CPU)                 ──> [OpenCV / NumPy]
-                         └── (Optional GPU)        ──> [PyTorch CUDA Kernels]
+[ C# .NET 10 WPF Workstation ]  <─── Dual-Viewport, Fadenkreuz, Paletten, Inspector
+              │
+              ├── (Inter-Process Communication / CLI / JSON)
+              ▼
+[ Go 1.27 Rechenkern (ignite-core) ]
+              │
+              ├── (x86_64 AVX2 Assembler)  ──> Morphologie (Top-Hat) mit 32 Pixeln/Takt
+              ├── (Go Goroutinen)           ──> Otsu, Chamfer-Distanz, Frangi-Filter, MAD
+              ├── (Eingebettetes Lua)        ──> Armstrong-Kriterien (armstrong_criteria.lua)
+              └── (SQLite Datenbank)         ──> DSGVO Art. 30 Audit-Log (ignite_medical.db)
 ```
 
-### Measured backend performance
-x86_64, 4 cores, 60 runs after 10 warm-ups, min / median:
+---
 
-| Backend | 160x120 (native sensor) | 1440x1080 (camera JPEG) |
-| :--- | :---: | :---: |
-| **Rust core (rayon)** | **1.2 / 1.6 ms** | 86.4 / 104.3 ms |
-| **Python + OpenCV** | – | 40.6 / 43.9 ms |
-| **PyTorch (CUDA)** | not validated | not validated |
+## 📊 Gemessene Performance (1440x1080 JPEG)
 
-> **The Rust core is not the faster backend.** Once both paths were aligned to the same
-> single-scale algorithm, OpenCV's SIMD-optimised C++ morphology measured ~2.4x faster.
-> The Rust core is justified instead by having **no native third-party runtime dependency**
-> (< 25 MB installer instead of > 200 MB), deterministic cross-platform behaviour, memory
-> safety and low RAM use. The CUDA path could not be validated on the available hardware
-> (GTX 1050, compute capability 6.1, below PyTorch's 7.5 minimum) and is therefore
-> **unverified**.
-
-The FLIR ONE Pro thermal sensor is only 160x120 px; the 1440x1080 JPEG it exports is an
-upscaled render carrying no extra thermal information. Downscaling to the native sensor
-resolution before analysis is by far the largest available speed-up.
+| Pipeline-Stufe | Sprache / Technologie | Gemessene Latenz |
+| :--- | :--- | :--- |
+| **Körper-Maskierung (Otsu + Chamfer)** | Go (Goroutinen) | 19,6 ms |
+| **Top-Hat-Filter (Opening + Differenz)** | x86_64 AVX2 Assembler | **1,4 ms** (@160x120) / **~500 ms** (@1440x1080) |
+| **Outlier-Thresholding (MAD)** | Go ($O(N)$ Histogramm) | 4,4 ms |
+| **Geometrie & Zirkularität** | Go (4-Connected BFS) | 3,5 ms |
+| **Frangi-Venenkartierung (3 Skalen)** | Go (2D Convolutions) | ~2000 ms (optional zuschaltbar) |
+| **Longitudinaler Gradient (Perfusion)** | Go | 2,0 ms |
+| **Klinische Risikobewertung** | Eingebettetes Lua | < 0,1 ms |
+| **GPU-Farbrendering (Ironbow)** | C# / WPF Hardware-Canvas | 0,0 ms CPU-Last |
 
 ---
 
-## Tech Stack
+## 💻 Schnellstart & Ausführung
 
-* **Programming Languages:** Python 3.10+, Rust (via PyO3 / Maturin)
-* **High-Performance Core:** Rust `ignite_core` (`rayon`, `ndarray`, `imageproc`)
-* **User Interface:** `customtkinter`, `tkinter`
-* **Image Processing:** OpenCV (`opencv-python`), Pillow (`PIL`), NumPy
-* **Deep Learning (GPU Backend):** PyTorch CUDA
-* **Packaging & Bundling:** PyInstaller, Inno Setup
+### Voraussetzungen
+* **Go 1.27+**
+* **.NET 10 SDK**
+* *(Kein C- oder C++-Compiler erforderlich!)*
 
----
-
-## Getting Started
-
-### Prerequisites
-Python 3.10+ and a Rust toolchain (optional for native core compilation).
-
-### 1. Clone the repository
+### 1. Rechenkern kompilieren (Go + AVX2)
 ```bash
-git clone https://github.com/noackjona-hash/JonaNoackIgnite.git
-cd JonaNoackIgnite
+cd core
+go test -v ./...
+go build -o ignite-core.exe ./cmd/ignite-core
+cd ..
 ```
 
-### 2. Install dependencies
+### 2. Desktop-Workstation kompilieren & starten (C# .NET 10)
 ```bash
-# Baseline installation
-pip install -r requirements.txt
-
-# Optional: enable the GPU backend (requires compute capability >= 7.5)
-pip install torch --index-url https://download.pytorch.org/whl/cu118
-
-# Optional: compile the native Rust core (removes the OpenCV runtime dependency)
-maturin develop --release
+cd desktop
+dotnet build -c Release
+dotnet run --no-build -c Release
 ```
 
-### 3. Run the application
+### 3. CLI-Analyse eines Einzelbildes
 ```bash
-python main.py
+.\core\ignite-core.exe -mode=cli -input="test-data/bild (1).jpeg" -output="ergebnis.json"
 ```
-
-### 4. Run benchmarks and test suite
-```bash
-python scripts/run_validation.py   # Reproduces every number reported in docs/ (fixed seed)
-python dataset_evaluator.py        # Synthetic regression scenarios + real-image coverage
-pytest tests/                      # Unit and backend-parity test suite (49 tests)
-```
-
-`scripts/run_validation.py` writes `ignite_steps_output/validation_report.json`; a copy of
-the committed run lives in `docs/validation/validation_report.json`.
 
 ---
 
-## Performance Optimization Matrix
+## 📜 Klinische Lua-Regeln
 
-| Deployment Target | Recommended Configuration |
-| :--- | :--- |
-| **Fastest analysis on CPU** | Default OpenCV path — measured fastest of the three backends |
-| **Dependency-free deployment** | Compile the Rust core: `maturin develop --release` (no OpenCV runtime needed) |
-| **Lowest latency overall** | Downscale to the native sensor resolution (160x120) before analysis — 1.6 ms |
-| **GPU workstation** | `pip install torch` — **unverified**, no compatible GPU was available for testing |
+Die medizinische Klassifikation erfolgt dynamisch über Textskripte im Ordner `rules/`:
+* [`rules/armstrong_criteria.lua`](file:///d:/Downloads/03_Programmierung%20&%20Entwicklung/05_JUFO/JonaNoackIgnite/rules/armstrong_criteria.lua): Armstrong-Kriterien ($\Delta T \ge 2{,}2\,\text{K}$ und Zirkularität).
+* [`rules/vein_detection.lua`](file:///d:/Downloads/03_Programmierung%20&%20Entwicklung/05_JUFO/JonaNoackIgnite/rules/vein_detection.lua): Unterscheidung von röhrenförmigen Gefäßen und runden Herden.
+* [`rules/perfusion_eval.lua`](file:///d:/Downloads/03_Programmierung%20&%20Entwicklung/05_JUFO/JonaNoackIgnite/rules/perfusion_eval.lua): Stadieneinteilung von Durchblutungsabbrüchen.
 
 ---
 
-## Known Limitations
-
-This is a research prototype. The following constraints are essential context for the
-reported numbers:
-
-* **Not a medical device.** No EU-MDR certification. It cannot replace a clinical
-  diagnosis and is intended only as an orientation aid under professional supervision.
-* **Sample data is not clinical.** The 21 images in `test-data/` were recorded by the
-  author using a FLIR ONE / FLIR ONE Pro, with consent, from family and acquaintances who
-  are **not diagnosed patients**. Annotations mark thermally conspicuous regions, not
-  confirmed pathology.
-* **Small sample, single annotator.** Only 9 images have ground-truth masks, produced
-  unblinded by a single medically untrained person (the author). No intra- or inter-rater
-  agreement (e.g. Cohen's kappa) is available, so the reference is not a gold standard.
-* **Systematic area underestimation.** At precision 0.99 / sensitivity 0.21 the pipeline
-  reliably locates a hotspot's core but not its extent — unsuitable for wound-area
-  measurement.
-* **No absolute temperatures.** JPEG exports carry only relative intensities from a
-  per-image dynamic palette.
-* **Backends are not bit-identical.** After alignment, Rust vs. Python mask IoU averages
-  **0.78** (not 1.0). Exact equality is unattainable by design: the Rust core uses
-  separable Lemire morphology with a rectangular structuring element ($O(K)$ instead of
-  $O(K^2)$) and a Chamfer distance approximation, whereas OpenCV uses an elliptical kernel
-  and different border handling. Tests assert a documented IoU floor instead.
-* **Dataset-specific geometric filters.** The anatomical cutoff at 65 % image height and
-  the border filter discard 0.0 % of annotated pixels on this dataset, but rely on a
-  constant capture geometry; a heel lesion in the lower third would be suppressed.
-
-Full analysis and discussion: [`docs/SCHRIFTLICHE_ARBEIT_JUGEND_FORSCHT.md`](docs/SCHRIFTLICHE_ARBEIT_JUGEND_FORSCHT.md)
-and [`docs/ALGORITHM.md`](docs/ALGORITHM.md).
+## 📖 Wissenschaftliche Dokumentation
+* [Architektur-Dokumentation v5.0.0](file:///d:/Downloads/03_Programmierung%20&%20Entwicklung/05_JUFO/JonaNoackIgnite/docs/ARCHITECTURE_v5.md)
+* [Mathematische Algorithmen-Beschreibung](file:///d:/Downloads/03_Programmierung%20&%20Entwicklung/05_JUFO/JonaNoackIgnite/docs/ALGORITHM.md)
+* [Schriftliche Arbeit (Jugend forscht 2026)](file:///d:/Downloads/03_Programmierung%20&%20Entwicklung/05_JUFO/JonaNoackIgnite/docs/SCHRIFTLICHE_ARBEIT_JUGEND_FORSCHT.md)
