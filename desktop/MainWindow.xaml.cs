@@ -17,6 +17,14 @@ using Ignite.Desktop.Services;
 
 namespace Ignite.Desktop
 {
+    public enum ActiveViewMode
+    {
+        DualView,
+        CurtainWipe,
+        Relief3D,
+        PureDSA
+    }
+
     public enum ActiveCanvasTool
     {
         PanZoom,
@@ -42,8 +50,9 @@ namespace Ignite.Desktop
         private double _currentZoom = 1.0;
         private string _activePatientId = "ANON-DEMO";
 
-        // Active Tool Mode
+        // Active Modes
         private ActiveCanvasTool _activeTool = ActiveCanvasTool.PanZoom;
+        private ActiveViewMode _activeViewMode = ActiveViewMode.DualView;
 
         // Vascular & Window/Level State
         private byte[]? _cachedVeinPixels = null;
@@ -53,6 +62,10 @@ namespace Ignite.Desktop
         private byte _veinThreshold = 20;
         private VeinRenderMode _veinRenderMode = VeinRenderMode.FluorescentCyan;
         private bool _enableVeinOverlay = true;
+
+        // Curtain Wipe Split Compare State
+        private bool _isDraggingCurtain = false;
+        private double _curtainPositionX = 0.5; // Normalized (0.0 to 1.0)
 
         // Interactive ROI Rubberband Selection
         private bool _isSelectingROI = false;
@@ -81,10 +94,13 @@ namespace Ignite.Desktop
         private double _panStartHScroll;
         private double _panStartVScroll;
 
-        // Viewport Synchronization
+        // Viewport Synchronization & Extrema Tracker
         private bool _syncViewports = true;
         private bool _isSyncingScroll = false;
         private bool _showMinMaxTracker = true;
+
+        // Histogram & Topography Cache
+        private ThermalHistogramData? _cachedHistogram;
 
         // Filmstrip Gallery
         private readonly List<string> _filmstripFiles = new();
@@ -148,7 +164,7 @@ namespace Ignite.Desktop
                             Background = (Brush)FindResource("SurfaceCardBrush"),
                             BorderBrush = (Brush)FindResource("BorderBrush"),
                             BorderThickness = new Thickness(1),
-                            CornerRadius = new CornerRadius(4),
+                            CornerRadius = new CornerRadius(5),
                             Margin = new Thickness(3, 2, 3, 2),
                             Padding = new Thickness(4),
                             Cursor = Cursors.Hand,
@@ -192,7 +208,7 @@ namespace Ignite.Desktop
                         card.MouseEnter += (s, e) =>
                         {
                             if (card.Tag is int idx && idx != _activeFilmstripIndex)
-                                card.BorderBrush = (Brush)FindResource("MedicalBlueBrush");
+                                card.BorderBrush = (Brush)FindResource("CyanBrush");
                         };
                         card.MouseLeave += (s, e) =>
                         {
@@ -237,7 +253,7 @@ namespace Ignite.Desktop
                     {
                         card.BorderBrush = (Brush)FindResource("CyanBrush");
                         card.BorderThickness = new Thickness(2);
-                        card.Background = new SolidColorBrush(Color.FromArgb(50, 0, 229, 255));
+                        card.Background = new SolidColorBrush(Color.FromArgb(50, 0, 240, 255));
                     }
                     else
                     {
@@ -354,14 +370,20 @@ end";
                 _rawHeight = cal.height;
 
                 ImgOriginal.Source = _originalBitmap;
+                ImgCurtainRaw.Source = _originalBitmap;
                 OverlayOriginalCanvas.Width = _rawWidth;
                 OverlayOriginalCanvas.Height = _rawHeight;
                 OverlayResultCanvas.Width = _rawWidth;
                 OverlayResultCanvas.Height = _rawHeight;
 
+                // Compute real-time histogram & anatomical zones
+                UpdateHistogramData();
+                UpdateAnatomicalZonesData();
+
                 StatusText.Text = $"Thermogramm geladen: {System.IO.Path.GetFileName(path)} ({_rawWidth}x{_rawHeight} Radiometrie-Matrix).";
 
                 UpdateHudReadouts();
+                UpdateCurtainGeometry();
                 RedrawInteractiveOverlays();
                 _ = RunPipelineAsync();
             }
@@ -371,17 +393,30 @@ end";
             }
         }
 
+        private void UpdateHistogramData()
+        {
+            if (_rawGrayPixels == null || _rawWidth <= 0 || _rawHeight <= 0) return;
+            _cachedHistogram = ThermalTopographyService.ComputeHistogram(_rawGrayPixels, _rawWidth, _rawHeight, SliderK.Value);
+            TxtHistoMedian.Text = $"{_cachedHistogram.MedianTemp:F1} °C";
+            TxtHistoMad.Text = $"{_cachedHistogram.MadTemp:F1} K";
+            TxtHistoThreshold.Text = $"{_cachedHistogram.OutlierThresholdTemp:F1} °C";
+            RenderHistogram(_cachedHistogram);
+        }
+
+        private void UpdateAnatomicalZonesData()
+        {
+            if (_rawGrayPixels == null || _rawWidth <= 0 || _rawHeight <= 0) return;
+            var zones = ThermalTopographyService.ComputeAnatomicalZones(_rawGrayPixels, _rawWidth, _rawHeight);
+            GridAnatomicalZones.ItemsSource = zones;
+        }
+
         // --- Drag & Drop Support ---
         private void Window_DragOver(object sender, DragEventArgs e)
         {
             if (e.Data.GetDataPresent(DataFormats.FileDrop))
-            {
                 e.Effects = DragDropEffects.Copy;
-            }
             else
-            {
                 e.Effects = DragDropEffects.None;
-            }
             e.Handled = true;
         }
 
@@ -449,6 +484,22 @@ end";
                 // Invalidate cached vein pixels so new ones are loaded
                 _cachedVeinPixels = null;
 
+                // Update AI Header Status Chip
+                bool isCrit = (result.HighestRisk == "CRITICAL");
+                double maxVal = result.Hotspots.Count > 0 ? (result.Hotspots.Max(h => (h?.Region?.MaxVal ?? 0)) - result.Stats.OrigMedian) * 0.1 : 0;
+                if (isCrit)
+                {
+                    BadgeAiStatusDot.Background = (Brush)FindResource("CriticalBrush");
+                    TxtHeaderAiStatus.Text = $"AI BEFUND: PATHOLOGISCHES RISIKO (ΔT = +{maxVal:F1} K)";
+                    TxtHeaderAiStatus.Foreground = (Brush)FindResource("CriticalBrush");
+                }
+                else
+                {
+                    BadgeAiStatusDot.Background = (Brush)FindResource("SuccessBrush");
+                    TxtHeaderAiStatus.Text = "AI BEFUND: PHYSIOLOGISCH NORMAL";
+                    TxtHeaderAiStatus.Foreground = (Brush)FindResource("SuccessBrush");
+                }
+
                 // Update Perfusion Tab
                 if (result.Perfusion != null)
                 {
@@ -462,8 +513,10 @@ end";
                 // Render Overlays in Viewport 2
                 RenderAnalysisResultOverlay(result, vascular);
 
+                // Update Histogram
+                UpdateHistogramData();
+
                 // Log into SQLite database safely
-                double maxVal = result.Hotspots.Count > 0 ? result.Hotspots.Max(h => (h?.Region?.MaxVal ?? 0)) - result.Stats.OrigMedian : 0;
                 if (_dbService != null && !string.IsNullOrEmpty(_activePatientId) && !string.IsNullOrEmpty(_currentImagePath))
                 {
                     _dbService.LogEvaluation(_activePatientId, _currentImagePath, "INFLAMMATION_HOTSPOTS", result.TotalHotspots, maxVal, result.HighestRisk ?? "BENIGN", result.Timing.TotalMs);
@@ -490,6 +543,15 @@ end";
 
             int w = _rawWidth > 0 ? _rawWidth : _originalBitmap.PixelWidth;
             int h = _rawHeight > 0 ? _rawHeight : _originalBitmap.PixelHeight;
+
+            // Handle 3D Relief mode
+            if (_activeViewMode == ActiveViewMode.Relief3D && _rawGrayPixels != null)
+            {
+                var reliefBmp = ThermalTopographyService.Generate3DReliefMap(_rawGrayPixels, w, h, _activePalette);
+                ImgResult.Source = reliefBmp;
+                OverlayResultCanvas.Children.Clear();
+                return;
+            }
 
             BitmapSource baseBmp = _rawGrayPixels != null
                 ? PaletteService.ApplyPalette(_rawGrayPixels, w, h, _activePalette, _windowWidth, _windowCenter)
@@ -530,6 +592,13 @@ end";
             int w = _rawWidth > 0 ? _rawWidth : _originalBitmap.PixelWidth;
             int h = _rawHeight > 0 ? _rawHeight : _originalBitmap.PixelHeight;
 
+            if (_activeViewMode == ActiveViewMode.Relief3D && _rawGrayPixels != null)
+            {
+                ImgResult.Source = ThermalTopographyService.Generate3DReliefMap(_rawGrayPixels, w, h, _activePalette);
+                OverlayResultCanvas.Children.Clear();
+                return;
+            }
+
             BitmapSource baseBmp = _rawGrayPixels != null
                 ? PaletteService.ApplyPalette(_rawGrayPixels, w, h, _activePalette, _windowWidth, _windowCenter)
                 : PaletteService.ApplyPalette(_originalBitmap, _activePalette, _windowWidth, _windowCenter);
@@ -541,6 +610,89 @@ end";
 
             ImgResult.Source = baseBmp;
             UpdateHudReadouts();
+        }
+
+        // --- View Mode Selector (Dual, Curtain Wipe, 3D Relief, Pure DSA) ---
+        private void ViewMode_Checked(object sender, RoutedEventArgs e)
+        {
+            if (RbViewDual == null) return;
+
+            if (RbViewDual.IsChecked == true)
+            {
+                _activeViewMode = ActiveViewMode.DualView;
+                ColViewport1.Width = new GridLength(1, GridUnitType.Star);
+                ColDivider.Width = new GridLength(1);
+                ColViewport2.Width = new GridLength(1, GridUnitType.Star);
+                ImgCurtainRaw.Visibility = Visibility.Collapsed;
+                CanvasCurtain.Visibility = Visibility.Collapsed;
+                TxtVp2Title.Text = "DIAGNOSTISCHER BEFUND (OVERLAYS & VENEN)";
+            }
+            else if (RbViewCurtain.IsChecked == true)
+            {
+                _activeViewMode = ActiveViewMode.CurtainWipe;
+                // Focus on Viewport 2 for the Wipe Curtain
+                ColViewport1.Width = new GridLength(0);
+                ColDivider.Width = new GridLength(0);
+                ColViewport2.Width = new GridLength(1, GridUnitType.Star);
+                ImgCurtainRaw.Visibility = Visibility.Visible;
+                CanvasCurtain.Visibility = Visibility.Visible;
+                TxtVp2Title.Text = "SCHIEBE-VORHANG: ROHBILD (LINKS) vs BEFUND & GEFÄSSE (RECHTS)";
+                UpdateCurtainGeometry();
+            }
+            else if (RbView3DRelief.IsChecked == true)
+            {
+                _activeViewMode = ActiveViewMode.Relief3D;
+                ColViewport1.Width = new GridLength(1, GridUnitType.Star);
+                ColDivider.Width = new GridLength(1);
+                ColViewport2.Width = new GridLength(1, GridUnitType.Star);
+                ImgCurtainRaw.Visibility = Visibility.Collapsed;
+                CanvasCurtain.Visibility = Visibility.Collapsed;
+                TxtVp2Title.Text = "TOPOGRAPHISCHES 3D-RELIEF (ISO-HÖHENMODELL DER HYPERTHERMIE)";
+            }
+            else if (RbViewDSA.IsChecked == true)
+            {
+                _activeViewMode = ActiveViewMode.PureDSA;
+                ColViewport1.Width = new GridLength(1, GridUnitType.Star);
+                ColDivider.Width = new GridLength(1);
+                ColViewport2.Width = new GridLength(1, GridUnitType.Star);
+                ImgCurtainRaw.Visibility = Visibility.Collapsed;
+                CanvasCurtain.Visibility = Visibility.Collapsed;
+                _enableVeinOverlay = true;
+                _veinRenderMode = VeinRenderMode.PureAngiography;
+                TxtVp2Title.Text = "DIGITALE SUBTRAKTIONS-ANGIOGRAPHIE (DSA / REINER GEFÄSSBAUM)";
+            }
+
+            RefreshResultImageOnly();
+        }
+
+        // --- Curtain Wipe Handle Dragging ---
+        private void CurtainHandle_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.LeftButton == MouseButtonState.Pressed)
+            {
+                _isDraggingCurtain = true;
+                BorderCurtainHandle.CaptureMouse();
+                e.Handled = true;
+            }
+        }
+
+        private void UpdateCurtainGeometry()
+        {
+            if (_rawWidth <= 0 || _rawHeight <= 0) return;
+
+            double curtainX = _curtainPositionX * _rawWidth;
+            CurtainClipRect.Rect = new Rect(0, 0, Math.Max(0, curtainX), _rawHeight);
+
+            CanvasCurtain.Width = _rawWidth;
+            CanvasCurtain.Height = _rawHeight;
+
+            LineCurtain.X1 = curtainX;
+            LineCurtain.Y1 = 0;
+            LineCurtain.X2 = curtainX;
+            LineCurtain.Y2 = _rawHeight;
+
+            Canvas.SetLeft(BorderCurtainHandle, curtainX - 17);
+            Canvas.SetTop(BorderCurtainHandle, (_rawHeight / 2.0) - 17);
         }
 
         // --- Interactive Overlays (Hotspots, Min/Max, Probes, Profile, ROI) ---
@@ -559,7 +711,7 @@ end";
             OverlayResultCanvas.Height = h;
 
             // 1. Draw Confirmed Hotspots on Viewport 2
-            if (_latestResult?.Hotspots != null)
+            if (_latestResult?.Hotspots != null && _activeViewMode != ActiveViewMode.Relief3D)
             {
                 double origMed = _latestResult.Stats?.OrigMedian ?? 0;
                 foreach (var hspot in _latestResult.Hotspots)
@@ -576,29 +728,29 @@ end";
                     {
                         Width = Math.Max(bw, 12),
                         Height = Math.Max(bh, 12),
-                        Stroke = risk == "CRITICAL" ? new SolidColorBrush(Color.FromRgb(211, 47, 47)) : Brushes.Yellow,
+                        Stroke = risk == "CRITICAL" ? new SolidColorBrush(Color.FromRgb(255, 42, 85)) : Brushes.Yellow,
                         StrokeThickness = 2.0,
-                        RadiusX = 2,
-                        RadiusY = 2,
-                        Fill = new SolidColorBrush(Color.FromArgb(35, 211, 47, 47))
+                        RadiusX = 3,
+                        RadiusY = 3,
+                        Fill = new SolidColorBrush(Color.FromArgb(40, 255, 42, 85))
                     };
                     Canvas.SetLeft(rect, minX);
                     Canvas.SetTop(rect, minY);
                     OverlayResultCanvas.Children.Add(rect);
 
-                    var crosshairH = new Line { X1 = hspot.Region.CenterX - 7, Y1 = hspot.Region.CenterY, X2 = hspot.Region.CenterX + 7, Y2 = hspot.Region.CenterY, Stroke = Brushes.White, StrokeThickness = 1.5 };
-                    var crosshairV = new Line { X1 = hspot.Region.CenterX, Y1 = hspot.Region.CenterY - 7, X2 = hspot.Region.CenterX, Y2 = hspot.Region.CenterY + 7, Stroke = Brushes.White, StrokeThickness = 1.5 };
+                    var crosshairH = new Line { X1 = hspot.Region.CenterX - 8, Y1 = hspot.Region.CenterY, X2 = hspot.Region.CenterX + 8, Y2 = hspot.Region.CenterY, Stroke = Brushes.White, StrokeThickness = 1.5 };
+                    var crosshairV = new Line { X1 = hspot.Region.CenterX, Y1 = hspot.Region.CenterY - 8, X2 = hspot.Region.CenterX, Y2 = hspot.Region.CenterY + 8, Stroke = Brushes.White, StrokeThickness = 1.5 };
                     OverlayResultCanvas.Children.Add(crosshairH);
                     OverlayResultCanvas.Children.Add(crosshairV);
 
                     double deltaT = Math.Round((hspot.Region.MaxVal - origMed) * 0.1, 1);
                     var labelBorder = new Border
                     {
-                        Background = new SolidColorBrush(Color.FromArgb(220, 18, 22, 30)),
+                        Background = new SolidColorBrush(Color.FromArgb(235, 10, 14, 22)),
                         BorderBrush = rect.Stroke,
                         BorderThickness = new Thickness(1),
-                        CornerRadius = new CornerRadius(2),
-                        Padding = new Thickness(4, 1, 4, 1)
+                        CornerRadius = new CornerRadius(3),
+                        Padding = new Thickness(5, 2, 5, 2)
                     };
                     labelBorder.Child = new TextBlock
                     {
@@ -608,7 +760,7 @@ end";
                         Foreground = Brushes.White
                     };
                     Canvas.SetLeft(labelBorder, minX);
-                    Canvas.SetTop(labelBorder, Math.Max(0, minY - 20));
+                    Canvas.SetTop(labelBorder, Math.Max(0, minY - 22));
                     OverlayResultCanvas.Children.Add(labelBorder);
                 }
             }
@@ -634,10 +786,10 @@ end";
                 {
                     Width = Math.Max(0, _currentROI[2] - _currentROI[0]),
                     Height = Math.Max(0, _currentROI[3] - _currentROI[1]),
-                    Stroke = Brushes.Cyan,
+                    Stroke = (Brush)FindResource("CyanBrush"),
                     StrokeThickness = 1.5,
                     StrokeDashArray = new DoubleCollection { 4, 2 },
-                    Fill = new SolidColorBrush(Color.FromArgb(25, 0, 229, 255))
+                    Fill = new SolidColorBrush(Color.FromArgb(25, 0, 240, 255))
                 };
                 Canvas.SetLeft(roiRect, _currentROI[0]);
                 Canvas.SetTop(roiRect, _currentROI[1]);
@@ -661,7 +813,7 @@ end";
 
         private void DrawExtremumPin(Canvas canvas, int x, int y, double temp, bool isMax)
         {
-            var brush = isMax ? new SolidColorBrush(Color.FromRgb(255, 60, 60)) : (Brush)FindResource("CyanBrush");
+            var brush = isMax ? new SolidColorBrush(Color.FromRgb(255, 42, 85)) : (Brush)FindResource("CyanBrush");
             var glyph = isMax ? "🔥" : "❄️";
             var text = isMax ? $"MAX: {temp:F1}°C" : $"MIN: {temp:F1}°C";
 
@@ -671,7 +823,7 @@ end";
                 Height = 14,
                 Stroke = brush,
                 StrokeThickness = 2.0,
-                Fill = new SolidColorBrush(Color.FromArgb(40, isMax ? (byte)255 : (byte)0, isMax ? (byte)60 : (byte)229, isMax ? (byte)60 : (byte)255))
+                Fill = new SolidColorBrush(Color.FromArgb(40, isMax ? (byte)255 : (byte)0, isMax ? (byte)42 : (byte)240, isMax ? (byte)85 : (byte)255))
             };
             Canvas.SetLeft(ring, x - 7);
             Canvas.SetTop(ring, y - 7);
@@ -679,10 +831,10 @@ end";
 
             var tag = new Border
             {
-                Background = new SolidColorBrush(Color.FromArgb(230, 10, 14, 20)),
+                Background = new SolidColorBrush(Color.FromArgb(235, 10, 14, 22)),
                 BorderBrush = brush,
                 BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(2),
+                CornerRadius = new CornerRadius(3),
                 Padding = new Thickness(4, 1, 4, 1)
             };
             tag.Child = new TextBlock
@@ -710,7 +862,6 @@ end";
             };
             canvas.Children.Add(line);
 
-            // Caliper start and end rings
             var r1 = new Ellipse { Width = 8, Height = 8, Fill = Brushes.White, Stroke = (Brush)FindResource("CyanBrush"), StrokeThickness = 1.5 };
             Canvas.SetLeft(r1, _profileStartPoint.X - 4);
             Canvas.SetTop(r1, _profileStartPoint.Y - 4);
@@ -721,13 +872,12 @@ end";
             Canvas.SetTop(r2, _profileEndPoint.Y - 4);
             canvas.Children.Add(r2);
 
-            // Center Callout badge
             double midX = (_profileStartPoint.X + _profileEndPoint.X) / 2.0;
             double midY = (_profileStartPoint.Y + _profileEndPoint.Y) / 2.0;
 
             var badge = new Border
             {
-                Background = new SolidColorBrush(Color.FromArgb(230, 12, 16, 24)),
+                Background = new SolidColorBrush(Color.FromArgb(235, 10, 14, 22)),
                 BorderBrush = (Brush)FindResource("CyanBrush"),
                 BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(3),
@@ -752,7 +902,6 @@ end";
                 var pt = _probePoints[i];
                 var brush = i == 0 ? (Brush)FindResource("CyanBrush") : (Brush)FindResource("WarningBrush");
 
-                // Target ring
                 var ring = new Ellipse
                 {
                     Width = 16,
@@ -765,16 +914,14 @@ end";
                 Canvas.SetTop(ring, pt.Position.Y - 8);
                 canvas.Children.Add(ring);
 
-                // Center dot
                 var dot = new Ellipse { Width = 4, Height = 4, Fill = brush };
                 Canvas.SetLeft(dot, pt.Position.X - 2);
                 Canvas.SetTop(dot, pt.Position.Y - 2);
                 canvas.Children.Add(dot);
 
-                // Badge
                 var b = new Border
                 {
-                    Background = new SolidColorBrush(Color.FromArgb(235, 12, 16, 24)),
+                    Background = new SolidColorBrush(Color.FromArgb(235, 10, 14, 22)),
                     BorderBrush = brush,
                     BorderThickness = new Thickness(1),
                     CornerRadius = new CornerRadius(3),
@@ -792,7 +939,6 @@ end";
                 canvas.Children.Add(b);
             }
 
-            // Connecting Caliper line between P1 and P2
             if (_probePoints.Count >= 2)
             {
                 var p1 = _probePoints[0].Position;
@@ -807,7 +953,7 @@ end";
                     Y1 = p1.Y,
                     X2 = p2.X,
                     Y2 = p2.Y,
-                    Stroke = isCrit ? Brushes.Red : Brushes.LightGreen,
+                    Stroke = isCrit ? (Brush)FindResource("CriticalBrush") : (Brush)FindResource("SuccessBrush"),
                     StrokeThickness = 1.8,
                     StrokeDashArray = new DoubleCollection { 4, 3 }
                 };
@@ -819,7 +965,7 @@ end";
                 var badge = new Border
                 {
                     Background = new SolidColorBrush(Color.FromArgb(240, isCrit ? (byte)150 : (byte)15, isCrit ? (byte)20 : (byte)60, isCrit ? (byte)20 : (byte)25)),
-                    BorderBrush = isCrit ? Brushes.Red : Brushes.LightGreen,
+                    BorderBrush = isCrit ? (Brush)FindResource("CriticalBrush") : (Brush)FindResource("SuccessBrush"),
                     BorderThickness = new Thickness(1.5),
                     CornerRadius = new CornerRadius(3),
                     Padding = new Thickness(6, 3, 6, 3)
@@ -890,7 +1036,7 @@ end";
             }
         }
 
-        // --- Mouse Events for Viewports (Pan, ROI, Profile, Probes, W/L) ---
+        // --- Mouse Events for Viewports (Pan, ROI, Profile, Probes, W/L, Curtain) ---
         private void ViewportOriginal_MouseDown(object sender, MouseButtonEventArgs e) => HandleViewportMouseDown(CanvasOriginal, ScrollOriginal, e);
         private void ViewportResult_MouseDown(object sender, MouseButtonEventArgs e) => HandleViewportMouseDown(CanvasResult, ScrollResult, e);
 
@@ -921,10 +1067,10 @@ end";
                         {
                             _roiSelectionRect = new System.Windows.Shapes.Rectangle
                             {
-                                Stroke = Brushes.Cyan,
+                                Stroke = (Brush)FindResource("CyanBrush"),
                                 StrokeThickness = 1.5,
                                 StrokeDashArray = new DoubleCollection { 4, 2 },
-                                Fill = new SolidColorBrush(Color.FromArgb(30, 0, 229, 255))
+                                Fill = new SolidColorBrush(Color.FromArgb(30, 0, 240, 255))
                             };
                             OverlayOriginalCanvas.Children.Add(_roiSelectionRect);
                         }
@@ -975,6 +1121,14 @@ end";
             Point pos = e.GetPosition(canvas);
             int x = (int)pos.X;
             int y = (int)pos.Y;
+
+            // Curtain Wipe Drag
+            if (_isDraggingCurtain && _rawWidth > 0)
+            {
+                _curtainPositionX = Math.Clamp(pos.X / _rawWidth, 0.02, 0.98);
+                UpdateCurtainGeometry();
+                return;
+            }
 
             // Radiometric Cursor Readout
             if (_rawGrayPixels != null && x >= 0 && x < _rawWidth && y >= 0 && y < _rawHeight)
@@ -1042,6 +1196,12 @@ end";
 
         private void HandleViewportMouseUp(Grid canvas, MouseButtonEventArgs e)
         {
+            if (_isDraggingCurtain)
+            {
+                _isDraggingCurtain = false;
+                BorderCurtainHandle.ReleaseMouseCapture();
+            }
+
             if (_isPanning)
             {
                 _isPanning = false;
@@ -1100,7 +1260,6 @@ end";
             byte val = _rawGrayPixels[y * _rawWidth + x];
             double temp = ThermalAnalysisHelper.RawToTemperature(val);
 
-            // Cycle between P1 and P2 (replace if >= 2)
             if (_probePoints.Count >= 2)
             {
                 _probePoints.Clear();
@@ -1142,11 +1301,11 @@ end";
 
                 if (eval.IsPathologic)
                 {
-                    BadgeArmstrongState.Background = Brushes.DarkRed;
+                    BadgeArmstrongState.Background = (Brush)FindResource("CriticalBrush");
                     TxtProbeRiskBadge.Text = "PATHOLOGISCH (≥ 2.2 K)";
                     TxtProbeRiskBadge.Foreground = Brushes.White;
-                    BorderArmstrongRiskCard.Background = new SolidColorBrush(Color.FromArgb(45, 211, 47, 47));
-                    BorderArmstrongRiskCard.BorderBrush = Brushes.Red;
+                    BorderArmstrongRiskCard.Background = new SolidColorBrush(Color.FromArgb(50, 255, 42, 85));
+                    BorderArmstrongRiskCard.BorderBrush = (Brush)FindResource("CriticalBrush");
 
                     FloatingArmstrongBanner.Visibility = Visibility.Visible;
                     TxtFloatingArmstrong.Text = $"ARMSTRONG-ALARM: ΔT = {eval.DeltaT:F1} K (≥ 2.2 K) — Hohes Ulkusrisiko!";
@@ -1155,7 +1314,7 @@ end";
                 {
                     BadgeArmstrongState.Background = new SolidColorBrush(Color.FromRgb(20, 50, 25));
                     TxtProbeRiskBadge.Text = "PHYSIOLOGISCH NORMAL";
-                    TxtProbeRiskBadge.Foreground = Brushes.LightGreen;
+                    TxtProbeRiskBadge.Foreground = (Brush)FindResource("SuccessBrush");
                     BorderArmstrongRiskCard.Background = (Brush)FindResource("SurfaceCardBrush");
                     BorderArmstrongRiskCard.BorderBrush = (Brush)FindResource("BorderBrush");
 
@@ -1188,6 +1347,89 @@ end";
             StatusText.Text = "Messpunkt-Sonden und Schnittprofil zurückgesetzt.";
         }
 
+        // --- Histogram Rendering ---
+        private void CanvasHistogram_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            if (_cachedHistogram != null)
+                RenderHistogram(_cachedHistogram);
+        }
+
+        private void RenderHistogram(ThermalHistogramData data)
+        {
+            CanvasHistogram.Children.Clear();
+            if (data == null || data.MaxBinCount == 0) return;
+
+            double w = CanvasHistogram.ActualWidth > 50 ? CanvasHistogram.ActualWidth : 380;
+            double h = CanvasHistogram.ActualHeight > 50 ? CanvasHistogram.ActualHeight : 180;
+
+            double padLeft = 20, padRight = 10, padTop = 15, padBottom = 20;
+            double plotW = w - padLeft - padRight;
+            double plotH = h - padTop - padBottom;
+
+            var polyline = new Polyline
+            {
+                Stroke = (Brush)FindResource("CyanBrush"),
+                StrokeThickness = 1.8,
+                StrokeLineJoin = PenLineJoin.Round
+            };
+
+            var area = new Polygon
+            {
+                Fill = new LinearGradientBrush(
+                    Color.FromArgb(90, 0, 240, 255),
+                    Color.FromArgb(10, 0, 100, 200),
+                    new Point(0, 0),
+                    new Point(0, 1))
+            };
+            area.Points.Add(new Point(padLeft, padTop + plotH));
+
+            // Plot bins 20..255 (skip background)
+            for (int b = 15; b < 256; b++)
+            {
+                double xNorm = (b - 15) / 240.0;
+                double yNorm = data.Bins[b] / (double)data.MaxBinCount;
+
+                double sx = padLeft + xNorm * plotW;
+                double sy = padTop + (1.0 - yNorm) * plotH;
+
+                var pt = new Point(sx, sy);
+                polyline.Points.Add(pt);
+                area.Points.Add(pt);
+            }
+
+            area.Points.Add(new Point(padLeft + plotW, padTop + plotH));
+            CanvasHistogram.Children.Add(area);
+            CanvasHistogram.Children.Add(polyline);
+
+            // Draw Threshold Line (Red)
+            if (data.OutlierThresholdRaw > 15)
+            {
+                double threshXNorm = (data.OutlierThresholdRaw - 15) / 240.0;
+                double threshX = padLeft + threshXNorm * plotW;
+
+                var threshLine = new Line
+                {
+                    X1 = threshX, Y1 = padTop,
+                    X2 = threshX, Y2 = padTop + plotH,
+                    Stroke = (Brush)FindResource("CriticalBrush"),
+                    StrokeThickness = 2.0,
+                    StrokeDashArray = new DoubleCollection { 3, 2 }
+                };
+                CanvasHistogram.Children.Add(threshLine);
+
+                var tagThresh = new Border
+                {
+                    Background = new SolidColorBrush(Color.FromArgb(230, 255, 42, 85)),
+                    CornerRadius = new CornerRadius(2),
+                    Padding = new Thickness(3, 1, 3, 1)
+                };
+                tagThresh.Child = new TextBlock { Text = $"k*MAD: {data.OutlierThresholdTemp:F1}°C", FontSize = 8.5, FontWeight = FontWeights.Bold, Foreground = Brushes.White };
+                Canvas.SetLeft(tagThresh, Math.Min(w - 75, threshX + 2));
+                Canvas.SetTop(tagThresh, padTop + 4);
+                CanvasHistogram.Children.Add(tagThresh);
+            }
+        }
+
         // --- Thermal Profile Graph 2D Vector Rendering ---
         private void UpdateProfileUI()
         {
@@ -1203,9 +1445,7 @@ end";
         private void CanvasProfileGraph_SizeChanged(object sender, SizeChangedEventArgs e)
         {
             if (_activeProfileStats != null)
-            {
                 RenderProfileGraph(_activeProfileStats);
-            }
         }
 
         private void RenderProfileGraph(ThermalProfileStats stats)
@@ -1214,16 +1454,14 @@ end";
             if (stats == null || stats.Samples.Count < 2) return;
 
             double w = CanvasProfileGraph.ActualWidth > 50 ? CanvasProfileGraph.ActualWidth : 420;
-            double h = CanvasProfileGraph.ActualHeight > 50 ? CanvasProfileGraph.ActualHeight : 210;
+            double h = CanvasProfileGraph.ActualHeight > 50 ? CanvasProfileGraph.ActualHeight : 200;
 
             double padLeft = 36, padRight = 14, padTop = 18, padBottom = 26;
             double plotW = w - padLeft - padRight;
             double plotH = h - padTop - padBottom;
 
-            // Temperature Axis (20°C to 42°C)
             double tMin = 20.0, tMax = 42.0;
 
-            // Draw Grid Lines & Labels
             for (double t = 20.0; t <= 40.0; t += 5.0)
             {
                 double yNorm = (t - tMin) / (tMax - tMin);
@@ -1231,11 +1469,9 @@ end";
 
                 var gridLine = new Line
                 {
-                    X1 = padLeft,
-                    Y1 = yScreen,
-                    X2 = w - padRight,
-                    Y2 = yScreen,
-                    Stroke = new SolidColorBrush(Color.FromRgb(32, 40, 54)),
+                    X1 = padLeft, Y1 = yScreen,
+                    X2 = w - padRight, Y2 = yScreen,
+                    Stroke = new SolidColorBrush(Color.FromRgb(30, 39, 58)),
                     StrokeThickness = 1.0,
                     StrokeDashArray = new DoubleCollection { 3, 2 }
                 };
@@ -1253,18 +1489,16 @@ end";
                 CanvasProfileGraph.Children.Add(tb);
             }
 
-            // Draw Area Fill under Curve
             var areaPolygon = new Polygon
             {
                 Fill = new LinearGradientBrush(
-                    Color.FromArgb(90, 0, 229, 255),
-                    Color.FromArgb(10, 0, 120, 212),
+                    Color.FromArgb(90, 0, 240, 255),
+                    Color.FromArgb(10, 0, 100, 200),
                     new Point(0, 0),
                     new Point(0, 1))
             };
             areaPolygon.Points.Add(new Point(padLeft, padTop + plotH));
 
-            // Draw Profile Curve
             var polyline = new Polyline
             {
                 Stroke = (Brush)FindResource("CyanBrush"),
@@ -1291,7 +1525,6 @@ end";
             CanvasProfileGraph.Children.Add(areaPolygon);
             CanvasProfileGraph.Children.Add(polyline);
 
-            // Bottom Axis Labels
             var tbStart = new TextBlock { Text = "0 px", FontSize = 9, Foreground = (Brush)FindResource("TextMutedBrush") };
             Canvas.SetLeft(tbStart, padLeft);
             Canvas.SetTop(tbStart, h - 18);
@@ -1421,9 +1654,7 @@ end";
 
                 case 2: // Gefäßstatus / DSA (Frangi)
                     ComboPalette.SelectedIndex = 0;
-                    ChkEnableVeinOverlay.IsChecked = true;
-                    _enableVeinOverlay = true;
-                    ComboVeinRenderMode.SelectedIndex = 1; // PureAngiography
+                    RbViewDSA.IsChecked = true;
                     InspectorTabs.SelectedItem = TabVascular;
                     RefreshResultImageOnly();
                     StatusText.Text = "Preset aktiv: Reiner Gefäßbaum DSA (Digital Subtraction Angiography).";
@@ -1439,7 +1670,7 @@ end";
 
                 case 4: // Ischämie-Verdacht (Perfusion)
                     ComboPalette.SelectedIndex = 2; // Inferno
-                    InspectorTabs.SelectedIndex = 3; // Perfusion
+                    InspectorTabs.SelectedIndex = 8; // Perfusion
                     StatusText.Text = "Preset aktiv: Longitudinale Perfusion & Temperaturgradient dT/dy.";
                     break;
             }
@@ -1478,7 +1709,7 @@ end";
                     symRes.Zones ??= new();
                     GridSymmetry.ItemsSource = symRes.Zones;
                     TxtSymmetryAssessment.Text = $"{symRes.OverallStatus ?? "NORMAL"}: {symRes.ClinicalAssessment ?? string.Empty} (Max ΔT = {symRes.MaxDeltaT:F1} K)";
-                    InspectorTabs.SelectedIndex = 4; // Switch to bilateral tab
+                    InspectorTabs.SelectedIndex = 7; // Switch to bilateral tab
                     StatusText.Text = $"Beide Füße erfolgreich verglichen: Max ΔT = {symRes.MaxDeltaT:F1} K.";
                 }
             }
@@ -1507,15 +1738,6 @@ end";
             {
                 RefreshResultImageOnly();
             }
-        }
-
-        private void BtnDSA_Click(object sender, RoutedEventArgs e)
-        {
-            InspectorTabs.SelectedItem = TabVascular;
-            ChkEnableVeinOverlay.IsChecked = true;
-            _enableVeinOverlay = true;
-            ComboVeinRenderMode.SelectedIndex = 1; // PureAngiography
-            RefreshResultImageOnly();
         }
 
         private void ChkEnableVeinOverlay_Click(object sender, RoutedEventArgs e)
@@ -1603,6 +1825,7 @@ end";
             if (_rawGrayPixels == null || _rawWidth == 0 || _rawHeight == 0) return;
             _originalBitmap = PaletteService.ApplyPalette(_rawGrayPixels, _rawWidth, _rawHeight, _activePalette, _windowWidth, _windowCenter);
             ImgOriginal.Source = _originalBitmap;
+            ImgCurtainRaw.Source = _originalBitmap;
             RefreshResultImageOnly();
         }
 
@@ -1639,6 +1862,7 @@ end";
             {
                 _originalBitmap = PaletteService.ApplyPalette(_rawGrayPixels, _rawWidth, _rawHeight, _activePalette, _windowWidth, _windowCenter);
                 ImgOriginal.Source = _originalBitmap;
+                ImgCurtainRaw.Source = _originalBitmap;
                 RefreshResultImageOnly();
                 UpdateHudReadouts();
             }
@@ -1729,7 +1953,7 @@ end";
                     symRes.Zones ??= new();
                     GridSymmetry.ItemsSource = symRes.Zones;
                     TxtSymmetryAssessment.Text = $"{symRes.OverallStatus ?? "NORMAL"}: {symRes.ClinicalAssessment ?? string.Empty} (Max ΔT = {symRes.MaxDeltaT:F1} K)";
-                    InspectorTabs.SelectedIndex = 4;
+                    InspectorTabs.SelectedIndex = 7;
                     StatusText.Text = $"Seitenvergleich abgeschlossen: Max ΔT = {symRes.MaxDeltaT:F1} K";
                 }
             }
@@ -1750,7 +1974,7 @@ end";
         private void ModeVascular_Click(object sender, RoutedEventArgs e) => BtnToggleVascular_Click(sender, e);
         private void ModePerfusion_Click(object sender, RoutedEventArgs e)
         {
-            InspectorTabs.SelectedIndex = 3;
+            InspectorTabs.SelectedIndex = 8;
             _ = RunPipelineAsync();
         }
         private void ModeBilateral_Click(object sender, RoutedEventArgs e) => BtnAutoSplitFeet_Click(sender, e);
@@ -1760,8 +1984,8 @@ end";
         private void PaletteInferno_Click(object sender, RoutedEventArgs e) => ComboPalette.SelectedIndex = 2;
         private void PaletteGray_Click(object sender, RoutedEventArgs e) => ComboPalette.SelectedIndex = 3;
 
-        private void MenuAuditLog_Click(object sender, RoutedEventArgs e) => InspectorTabs.SelectedIndex = 8;
-        private void MenuLuaEditor_Click(object sender, RoutedEventArgs e) => InspectorTabs.SelectedIndex = 7;
+        private void MenuAuditLog_Click(object sender, RoutedEventArgs e) => InspectorTabs.SelectedIndex = 10;
+        private void MenuLuaEditor_Click(object sender, RoutedEventArgs e) => InspectorTabs.SelectedIndex = 9;
 
         private void MenuBenchmark_Click(object sender, RoutedEventArgs e)
         {
@@ -1804,19 +2028,19 @@ end";
     <meta charset='utf-8'/>
     <title>IGNITE Medical Report - {_activePatientId}</title>
     <style>
-        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f0f11; color: #e1e1e6; padding: 30px; }}
-        h1 {{ color: #007acc; border-bottom: 2px solid #333; padding-bottom: 10px; }}
-        .card {{ background: #1c1c1f; border-radius: 8px; padding: 20px; margin-bottom: 20px; border: 1px solid #2d2d33; }}
+        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #07090e; color: #e1e8f5; padding: 30px; }}
+        h1 {{ color: #00f0ff; border-bottom: 2px solid #1e273a; padding-bottom: 10px; }}
+        .card {{ background: #131826; border-radius: 8px; padding: 20px; margin-bottom: 20px; border: 1px solid #1e273a; }}
         table {{ width: 100%; border-collapse: collapse; margin-top: 15px; }}
-        th, td {{ border: 1px solid #333; padding: 10px; text-align: left; }}
-        th {{ background: #25252b; color: #4ec9b0; }}
+        th, td {{ border: 1px solid #1e273a; padding: 10px; text-align: left; }}
+        th {{ background: #0d111a; color: #00f0ff; }}
         .badge {{ padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; }}
-        .critical {{ background: #900; color: #fff; }}
-        .benign {{ background: #070; color: #fff; }}
+        .critical {{ background: #ff2a55; color: #fff; }}
+        .benign {{ background: #00e676; color: #000; }}
     </style>
 </head>
 <body>
-    <h1>IGNITE Medical Imaging Suite - Klinischer Befundbericht</h1>
+    <h1>IGNITE Next-Gen Medical Imaging Suite - Klinischer Befundbericht</h1>
     <div class='card'>
         <p><strong>Patienten-Hash (DSGVO):</strong> {_activePatientId}</p>
         <p><strong>Untersuchungsdatum:</strong> {DateTime.Now:dd.MM.yyyy HH:mm:ss}</p>
@@ -1857,7 +2081,7 @@ end";
                 "Jugend Forscht 2026 - Fachgebiet Arbeitswelt / Informatik\n\n" +
                 "Architektur:\n" +
                 "• Rechenkern: Go 1.27 + x86_64 AVX2 Vektor-Assembler (Plan 9)\n" +
-                "• Desktop-Workstation: C# .NET 10 (WPF)\n" +
+                "• Desktop-Workstation: C# .NET 10 (WPF Next-Gen Obsidian Glass)\n" +
                 "• Klinische Regel-Engine: Eingebettetes Lua (Armstrong et al. 2007)\n" +
                 "• Datenschutz & Audit-Trail: SQLite (DSGVO Art. 30)\n\n" +
                 "Entwickelt für die automatisierte thermografische Entzündungs- und Ulkusfrüherkennung.",

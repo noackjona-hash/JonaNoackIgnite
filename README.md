@@ -8,12 +8,14 @@ Entwickelt für den deutschen Jugendwettbewerb **Jugend forscht 2026** (Fachgebi
 
 ## 🚀 Neuheiten & Highlights in Version 5.0.0
 
-* **Komplett redesignte Medical-Workstation-GUI:**
-  * **Obsidian Medical Dark Mode:** Ergonomisches, kontrastoptimiertes Farbkonzept (`#0B0E14` Basiston, `#00E5FF` Electric Cyan Akzente, `#00E676` Normalbefund, `#FF5252` Armstrong-Alarm).
-  * **Frosted-Glass-Header:** Integriertes DSGVO-Pseudonymisierungs-Badge (`ANON-<hash>`), Hardware-Status-Pills (AVX2-Aktivität, SQLite-Verschlüsselung, Lua-Regel-Engine).
+* **Next-Gen Obsidian Glass Cockpit & Ergonomie:**
+  * **Obsidian Medical Dark Mode:** Ergonomisches, kontrastoptimiertes Farbkonzept (`#07090E` Deep Space Canvas, `#0D111A` Frosted Slate Glass, `#00F0FF` Laser Cyan, `#2563EB` Cobalt Blue, `#FF2A55` Armstrong Alarm Red).
+  * **Interaktiver Vorhang-Wipe-Split-Slider (`[🌓 Vorhang-Wipe]`):** Stufenloses, interaktives Überblenden per beweglichem Center-Handle `[ ◀ 🌓 ▶ ]` zwischen dem Roh-Wärmebild und dem KI-Befund-Overlay mit hardware-beschleunigtem Clipping.
+  * **2.5D Isometrisches Relief-Topografie-Mapping (`[🏔️ 3D-Relief]`):** Räumliche 2.5D-Projektion der Temperaturwerte als 3D-Relief mit berechnetem Hillshading (Schattierungsvektor) – pathologische Hyperthermien heben sich wie vulkanische Bergspitzen unmittelbar vom kühleren Normalgewebe ab.
+  * **256-Kanal Radiometrisches Histogramm & Quantilspektrum (`[📊 Spektrum]`):** Live-Histogramm aller 256 Graustufen/Temperaturstufen mit visueller Kennzeichnung von Median, Normalinterquartilbereich (Q25–Q75) und pathologischen MAD-Ausreißerschwellen direkt über dem Farbskalen-Ramp.
+  * **5-Zonen Anatomische Armstrong-Matrix (`[🦶 Zonen]`):** Automatische anatomische Zerlegung des Fußes in Hallux (Großzehe), Metatarsale I–II (medialer Ballen), Metatarsale III–V (lateraler Ballen), Plantargewölbe (Mittelfuß) und Calcaneus (Ferse) mit zonenbasierter Ulkus-Risikostufe (Klasse 0 bis 3).
   * **Dual-Viewport & Live-Fadenkreuz:** Synchronisiertes Pan & Zoom zwischen Infrarot-Originalaufnahme und diagnostischem Befund-Overlay mit pixelgenauer Temperatur- & Differenzanzeige.
-  * **Kalibrierte Temperatur-Farbskala:** Vertikaler Ironbow/Rainbow-Gradient mit dynamischer $20^\circ\text{C}$–$42^\circ\text{C}$-Skalierung.
-  * **Modulare Inspector-Tabs:** Schneller Wechsel zwischen Entzündungsherden (Hotspots), Frangi-Venenkartierung und longitudinalem Perfusion-Gradienten.
+  * **Modulare Inspector-Tabs:** Schneller Wechsel zwischen Entzündungsherden (Hotspots), Frangi-Venenkartierung, Perfusion-Gradienten, Radiometrie-Spektrum und 5-Zonen-Matrix.
 * **Venen- & Adernkartierung (Vascular Mapping):** Multiskaliger **Frangi-Vesselness-Filter** basierend auf der 2D-Hesse-Matrix $\mathcal{H}$ zur präzisen Segmentierung tubulärer Blutgefäße und deren Unterscheidung von Entzündungsherden.
 * **Perfusion & Longitudinaler Temperaturgradient ($dT/dy$):** Automatische Erkennung distaler Durchblutungsabbrüche zur Früherkennung von pAVK („Schaufensterkrankheit“) und diabetischer Mikroangiopathie.
 * **Bilateraler Seitenvergleich (Armstrong-Kriterium $\Delta T \ge 2{,}2\,\text{K}$):** Spiegelbildlicher Vergleich beider Extremitäten (L vs. R) zur eindeutigen Unterscheidung zwischen harmloser mechanischer Belastung (Socken/Druckstellen) und echten pathologischen Entzündungen.
