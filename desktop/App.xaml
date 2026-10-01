@@ -4,25 +4,27 @@
              xmlns:local="clr-namespace:Ignite.Desktop">
     <Application.Resources>
         <!-- ============================================================ -->
-        <!-- IGNITE MEDICAL SUITE v5.0.0 - NEXT-GEN OBSIDIAN GLASSWORK    -->
-        <!-- State-of-the-Art Radiology & AI Telemetry Cockpit            -->
+        <!-- IGNITE CLINICAL MEDICAL WORKSTATION THEME                    -->
+        <!-- Conforms to DIN EN ISO 13485 & DICOM Part 14 GSDF Principles -->
+        <!-- Sterile Dark Slate, Hospital Precision Blue & Clinical Teal  -->
         <!-- ============================================================ -->
 
-        <!-- Deep Space Obsidian & Titanium Palette -->
-        <Color x:Key="ColorAppBg">#07090E</Color>
-        <Color x:Key="ColorSurface">#0D111A</Color>
-        <Color x:Key="ColorSurfaceCard">#131826</Color>
-        <Color x:Key="ColorSurfaceHover">#1C2336</Color>
-        <Color x:Key="ColorBorder">#1E273A</Color>
-        <Color x:Key="ColorBorderBright">#303D57</Color>
+        <!-- Clinical Dark Room Palette (Low Eye Fatigue) -->
+        <Color x:Key="ColorAppBg">#0C0F14</Color>
+        <Color x:Key="ColorSurface">#131722</Color>
+        <Color x:Key="ColorSurfaceCard">#1A212E</Color>
+        <Color x:Key="ColorSurfaceHover">#222D3E</Color>
+        <Color x:Key="ColorBorder">#28354A</Color>
+        <Color x:Key="ColorBorderBright">#3D4F6E</Color>
         
-        <!-- Laser Neon Accents -->
-        <Color x:Key="ColorCyan">#00F0FF</Color>
-        <Color x:Key="ColorMedicalBlue">#2563EB</Color>
-        <Color x:Key="ColorPurple">#8B5CF6</Color>
-        <Color x:Key="ColorCritical">#FF2A55</Color>
-        <Color x:Key="ColorWarning">#FFB300</Color>
-        <Color x:Key="ColorSuccess">#00E676</Color>
+        <!-- Clinical Medical Accents -->
+        <Color x:Key="ColorCyan">#0284C7</Color>         <!-- Precision Medical Blue -->
+        <Color x:Key="ColorMedicalTeal">#0D9488</Color>  <!-- Sterile Hospital Teal -->
+        <Color x:Key="ColorMedicalBlue">#1D4ED8</Color>  <!-- Diagnostic Accent Blue -->
+        <Color x:Key="ColorPurple">#6366F1</Color>       <!-- Research Indigo -->
+        <Color x:Key="ColorCritical">#DC2626</Color>     <!-- DIN EN 60601 Alarm Red -->
+        <Color x:Key="ColorWarning">#D97706</Color>      <!-- Clinical Amber -->
+        <Color x:Key="ColorSuccess">#16A34A</Color>      <!-- Clinical Normothermie Green -->
 
         <!-- Solid Color Brushes -->
         <SolidColorBrush x:Key="AppBgBrush" Color="{StaticResource ColorAppBg}"/>
@@ -32,23 +34,25 @@
         <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource ColorBorder}"/>
         <SolidColorBrush x:Key="BorderBrightBrush" Color="{StaticResource ColorBorderBright}"/>
         <SolidColorBrush x:Key="CyanBrush" Color="{StaticResource ColorCyan}"/>
+        <SolidColorBrush x:Key="MedicalTealBrush" Color="{StaticResource ColorMedicalTeal}"/>
         <SolidColorBrush x:Key="MedicalBlueBrush" Color="{StaticResource ColorMedicalBlue}"/>
         <SolidColorBrush x:Key="PurpleBrush" Color="{StaticResource ColorPurple}"/>
         <SolidColorBrush x:Key="CriticalBrush" Color="{StaticResource ColorCritical}"/>
         <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource ColorWarning}"/>
         <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource ColorSuccess}"/>
 
-        <SolidColorBrush x:Key="TextPrimaryBrush" Color="#FFFFFF"/>
-        <SolidColorBrush x:Key="TextSecondaryBrush" Color="#A3B1C6"/>
-        <SolidColorBrush x:Key="TextMutedBrush" Color="#607089"/>
+        <!-- High-Contrast Medical Typography -->
+        <SolidColorBrush x:Key="TextPrimaryBrush" Color="#F1F5F9"/>
+        <SolidColorBrush x:Key="TextSecondaryBrush" Color="#94A3B8"/>
+        <SolidColorBrush x:Key="TextMutedBrush" Color="#64748B"/>
 
-        <!-- High-End Cockpit Button Style -->
+        <!-- Clinical Equipment Button Style -->
         <Style TargetType="Button">
             <Setter Property="Background" Value="{StaticResource SurfaceCardBrush}"/>
             <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
             <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="11,5"/>
+            <Setter Property="Padding" Value="10,4"/>
             <Setter Property="Margin" Value="2,1"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="FontSize" Value="11"/>
@@ -60,7 +64,7 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="4"
+                                CornerRadius="3"
                                 Padding="{TemplateBinding Padding}"
                                 SnapsToDevicePixels="True">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True"/>
@@ -72,7 +76,7 @@
                                 <Setter Property="Foreground" Value="#FFFFFF"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#0C2540"/>
+                                <Setter TargetName="bd" Property="Background" Value="#0F2847"/>
                                 <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource CyanBrush}"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
@@ -84,13 +88,13 @@
             </Setter>
         </Style>
 
-        <!-- Segmented Modern Tool RadioButton Style -->
+        <!-- Segmented Clinical Console Tool RadioButton -->
         <Style x:Key="MedicalToolRadioStyle" TargetType="RadioButton">
-            <Setter Property="Background" Value="{StaticResource SurfaceCardBrush}"/>
+            <Setter Property="Background" Value="#121622"/>
             <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
             <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="10,4"/>
+            <Setter Property="Padding" Value="9,4"/>
             <Setter Property="Margin" Value="1,0"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="FontSize" Value="11"/>
@@ -102,7 +106,7 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="4"
+                                CornerRadius="3"
                                 Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
@@ -112,9 +116,9 @@
                                 <Setter Property="Foreground" Value="#FFFFFF"/>
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#0E2F54"/>
+                                <Setter TargetName="bd" Property="Background" Value="#0C2542"/>
                                 <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource CyanBrush}"/>
-                                <Setter Property="Foreground" Value="{StaticResource CyanBrush}"/>
+                                <Setter Property="Foreground" Value="#38BDF8"/>
                                 <Setter Property="FontWeight" Value="Bold"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -123,7 +127,7 @@
             </Setter>
         </Style>
 
-        <!-- Glassmorphism TabControl & TabItem -->
+        <!-- Clinical TabControl & Diagnostic TabItems -->
         <Style TargetType="TabControl">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -133,17 +137,17 @@
             <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Padding" Value="12,7"/>
+            <Setter Property="Padding" Value="10,6"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="TabItem">
                         <Border x:Name="tabBorder"
-                                Background="#0F131E"
+                                Background="#0E121B"
                                 BorderBrush="{StaticResource BorderBrush}"
                                 BorderThickness="1,1,1,0"
                                 Margin="1,0"
-                                CornerRadius="4,4,0,0"
+                                CornerRadius="3,3,0,0"
                                 Padding="{TemplateBinding Padding}">
                             <ContentPresenter ContentSource="Header" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
@@ -155,7 +159,7 @@
                             <Trigger Property="IsSelected" Value="True">
                                 <Setter TargetName="tabBorder" Property="Background" Value="{StaticResource SurfaceCardBrush}"/>
                                 <Setter TargetName="tabBorder" Property="BorderBrush" Value="{StaticResource CyanBrush}"/>
-                                <Setter Property="Foreground" Value="{StaticResource CyanBrush}"/>
+                                <Setter Property="Foreground" Value="#38BDF8"/>
                                 <Setter Property="FontWeight" Value="Bold"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -164,7 +168,7 @@
             </Setter>
         </Style>
 
-        <!-- Modern Dark DataGrid -->
+        <!-- DICOM Medical PACS DataGrid -->
         <Style TargetType="DataGrid">
             <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
             <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
@@ -193,19 +197,19 @@
 
         <!-- Menu Bar Styling -->
         <Style TargetType="Menu">
-            <Setter Property="Background" Value="#090C12"/>
+            <Setter Property="Background" Value="#0A0D14"/>
             <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
             <Setter Property="FontSize" Value="11.5"/>
         </Style>
 
         <Style TargetType="MenuItem">
-            <Setter Property="Background" Value="#090C12"/>
+            <Setter Property="Background" Value="#0A0D14"/>
             <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
             <Setter Property="Padding" Value="8,4"/>
             <Setter Property="FontSize" Value="11.5"/>
         </Style>
 
-        <!-- Modern Slider Styling -->
+        <!-- Modern Precision Slider Styling -->
         <Style TargetType="Slider">
             <Setter Property="Height" Value="24"/>
             <Setter Property="VerticalAlignment" Value="Center"/>

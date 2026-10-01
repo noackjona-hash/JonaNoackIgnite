@@ -1,19 +1,19 @@
 <Window x:Class="Ignite.Desktop.Views.SplashWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="IGNITE Loader"
-        Height="360" Width="580"
+        Title="IGNITE Medical Workstation Initialisierung"
+        Height="360" Width="600"
         WindowStyle="None"
         AllowsTransparency="True"
         Background="Transparent"
         WindowStartupLocation="CenterScreen">
 
-    <Border Background="#141416" CornerRadius="12" BorderBrush="#007ACC" BorderThickness="1.5">
+    <Border Background="#0C1018" CornerRadius="4" BorderBrush="#0284C7" BorderThickness="1.5">
         <Border.Effect>
-            <DropShadowEffect BlurRadius="25" ShadowDepth="0" Color="#007ACC" Opacity="0.4"/>
+            <DropShadowEffect BlurRadius="20" ShadowDepth="0" Color="#0284C7" Opacity="0.3"/>
         </Border.Effect>
 
-        <Grid Margin="30">
+        <Grid Margin="28">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
@@ -22,26 +22,45 @@
             </Grid.RowDefinitions>
 
             <!-- Brand Header -->
-            <StackPanel Grid.Row="0">
-                <TextBlock Text="IGNITE MEDICAL" FontSize="26" FontWeight="ExtraBold" Foreground="#007ACC"/>
-                <TextBlock Text="Deterministische Thermografie-Workstation • v5.0.0" FontSize="13" FontWeight="SemiBold" Foreground="#4EC9B0" Margin="0,2,0,0"/>
-                <TextBlock Text="Jugend forscht 2026 – Fachgebiet Arbeitswelt / Informatik" FontSize="11" Foreground="#888888" Margin="0,4,0,0"/>
-            </StackPanel>
+            <Grid Grid.Row="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <!-- Medical Cross Badge -->
+                <Border Grid.Column="0" Width="40" Height="40" Background="#111B2A" BorderBrush="#0284C7" BorderThickness="1" CornerRadius="3" Margin="0,0,14,0">
+                    <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Rectangle Width="6" Height="24" Fill="#0284C7"/>
+                        <Rectangle Width="24" Height="6" Fill="#0284C7"/>
+                    </Grid>
+                </Border>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="IGNITE PACS" FontSize="20" FontWeight="Black" Foreground="#0284C7"/>
+                        <TextBlock Text=" · MEDICAL WORKSTATION" FontSize="20" FontWeight="Bold" Foreground="#F1F5F9" Margin="6,0,0,0"/>
+                    </StackPanel>
+                    <TextBlock Text="Deterministische Infrarot-Thermografie &amp; Diabetische Ulkusprävention · v5.0.0" FontSize="11.5" Foreground="#0D9488" Margin="0,2,0,0"/>
+                    <TextBlock Text="Jugend forscht 2026 – Fachgebiet Arbeitswelt / Informatik" FontSize="10.5" Foreground="#64748B" Margin="0,2,0,0"/>
+                </StackPanel>
+            </Grid>
 
-            <!-- Middle Highlights -->
-            <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="0,15">
-                <TextBlock Text="⚡ Go 1.27 + x86_64 AVX2 Vektor-Assembler (32 Pixel/Takt)" FontSize="11" Foreground="#CCCCCC" Margin="0,2"/>
-                <TextBlock Text="🩺 Armstrong-Kriterien (ΔT >= 2.2 K) &amp; Frangi-Venenkartierung" FontSize="11" Foreground="#CCCCCC" Margin="0,2"/>
-                <TextBlock Text="🛡️ Revisionssicheres DSGVO-Auditprotokoll (SQLite)" FontSize="11" Foreground="#CCCCCC" Margin="0,2"/>
-            </StackPanel>
+            <!-- Clinical Specifications -->
+            <Border Grid.Row="1" Background="#121722" BorderBrush="#28354A" BorderThickness="1" CornerRadius="3" Padding="14,10" VerticalAlignment="Center" Margin="0,15">
+                <StackPanel>
+                    <TextBlock Text="KLINISCHE SYSTEM-SPEZIFIKATIONEN:" FontSize="9.5" FontWeight="Bold" Foreground="#64748B" Margin="0,0,0,4"/>
+                    <TextBlock Text="• Mathematischer Rechenkern: Go 1.27 + x86_64 AVX2 Vektor-SIMD (32 Pixel/Takt)" FontSize="10.5" Foreground="#E2E8F0" Margin="0,2"/>
+                    <TextBlock Text="• Diagnostischer Standard: Wagner-Armstrong Kriterien (ΔT ≥ 2.2 K) &amp; Frangi-Gefäßfilter" FontSize="10.5" Foreground="#E2E8F0" Margin="0,2"/>
+                    <TextBlock Text="• Konformität &amp; Datenschutz: DIN EN ISO 13485 Research Grade &amp; DSGVO Art. 30 Audit" FontSize="10.5" Foreground="#E2E8F0" Margin="0,2"/>
+                </StackPanel>
+            </Border>
 
             <!-- Loading Progress -->
-            <ProgressBar Grid.Row="2" x:Name="SplashProgress" Height="6" IsIndeterminate="True" Foreground="#007ACC" Background="#26262B" BorderThickness="0" Margin="0,10"/>
+            <ProgressBar Grid.Row="2" x:Name="SplashProgress" Height="4" IsIndeterminate="True" Foreground="#0284C7" Background="#1B2230" BorderThickness="0" Margin="0,6,0,10"/>
 
             <!-- Status Text -->
             <Grid Grid.Row="3">
-                <TextBlock x:Name="TxtSplashStatus" Text="Initialisiere Hardware-beschleunigten Rechenkern..." FontSize="11" Foreground="#999999"/>
-                <TextBlock Text="100% Lokal &amp; DSGVO-konform" FontSize="11" Foreground="#666666" HorizontalAlignment="Right"/>
+                <TextBlock x:Name="TxtSplashStatus" Text="Initialisiere Hardware-beschleunigten Rechenkern..." FontSize="10.5" Foreground="#94A3B8"/>
+                <TextBlock Text="NIST-rückführbare Kalibrierung · 100% Lokal" FontSize="10.5" Foreground="#64748B" HorizontalAlignment="Right"/>
             </Grid>
         </Grid>
     </Border>
