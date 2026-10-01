@@ -1,27 +1,29 @@
-name: Build & Test IGNITE v5.0.0
+name: Build, Test & Package IGNITE v5.0.0
 
 on:
   push:
     branches: [ main ]
+    tags: [ 'v*' ]
   pull_request:
     branches: [ main ]
 
 jobs:
-  build-and-test:
-    name: Build Go Core (AVX2) & C# Desktop (.NET 10)
+  build-and-package:
+    name: Build Go AVX2 Core, WPF Suite & Inno Setup Installer
     runs-on: windows-latest
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      # 1. Setup Go & Build AVX2 Core
       - name: Setup Go 1.27
         uses: actions/setup-go@v5
         with:
           go-version: '1.27.x'
           cache-dependency-path: core/go.sum
 
-      - name: Test Go Core & AVX2 Assembly
+      - name: Test Go Core & AVX2 Plan 9 Assembly
         working-directory: core
         run: |
           go test -v ./...
@@ -31,30 +33,41 @@ jobs:
         run: |
           go build -v -o ignite-core.exe ./cmd/ignite-core
 
+      # 2. Setup .NET & Publish Desktop Workstation
       - name: Setup .NET 10 SDK
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
 
-      - name: Restore C# WPF Dependencies
-        working-directory: desktop
+      - name: Publish .NET 10 WPF Desktop Application
         run: |
-          dotnet restore
+          dotnet publish desktop/Ignite.Desktop.csproj -c Release -r win-x64 --self-contained false -o release/publish
 
-      - name: Build C# WPF Workstation
-        working-directory: desktop
+      - name: Bundle Core Engine and Lua Rules into Publish Directory
         run: |
-          dotnet build -c Release --no-restore
+          Copy-Item -Path "core\ignite-core.exe" -Destination "release\publish\ignite-core.exe" -Force
+          Copy-Item -Path "rules" -Destination "release\publish\rules" -Recurse -Force
 
-      - name: Copy Go Core to WPF Release Folder
+      # 3. Setup Inno Setup & Build Installer
+      - name: Install Inno Setup
         run: |
-          Copy-Item -Path "core\ignite-core.exe" -Destination "desktop\bin\Release\net10.0-windows\" -Force
+          choco install innosetup --no-progress -y
 
-      - name: Upload Build Artifacts
+      - name: Compile Windows Installer with Inno Setup
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "installer\setup.iss"
+
+      # 4. Upload Installer & Publish Artifacts
+      - name: Upload Setup Installer
         uses: actions/upload-artifact@v4
         with:
-          name: Ignite-v5-Windows-x64
-          path: |
-            desktop/bin/Release/net10.0-windows/
-            rules/
-            db/schema.sql
+          name: IGNITE-v5-Installer-Windows-x64
+          path: dist/IGNITE_Medical_Suite_v5.0.0_Setup.exe
+          if-no-files-found: error
+
+      - name: Upload Portable Published Suite
+        uses: actions/upload-artifact@v4
+        with:
+          name: IGNITE-v5-Portable-Windows-x64
+          path: release/publish/
+          if-no-files-found: error

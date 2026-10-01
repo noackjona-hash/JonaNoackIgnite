@@ -17,7 +17,7 @@ Medical thermography regularly contends with artifacts including high-frequency 
 | **Vascular & Vein Differentiation** | Moderate | None | Requires training data | Multiscale Frangi Vesselness Filter (Hessian) |
 | **Bilateral Armstrong Symmetry** | Manual mental check | None | Rare | Automated mirror registration ($\Delta T \ge 2.2$ K) |
 | **Dynamic Clinical Rules** | Subjective | Fixed | Black-box weights | Embedded Lua script engine (no recompile) |
-| **Hardware Latency** | Manual | Poor | GPU required | 1.4 ms @160x120 (AVX2), ~500 ms @1440x1080 |
+| **Hardware Latency** | Manual | Poor | GPU required | **1.4 ms** @160x120 / **~169 ms** total pipeline @1440x1080 |
 
 ---
 
@@ -42,20 +42,22 @@ Before computing regional statistical distributions, background room temperature
 Isolates localized thermal elevations while eliminating global temperature gradients:
 1. **Morphological Opening:** Computes mathematical erosion followed by dilation, isolating features smaller than kernel radius:
    $$\text{Opening}(I) = (I \ominus K) \oplus K$$
-2. **AVX2 Hardware Acceleration:** The inner loop in `core/pkg/morphology/avx2_amd64.s` uses 256-bit AVX2 vector registers (`YMM0`–`YMM2`):
-   * `VPMINUB`: 32 simultaneous 8-bit unsigned min operations per clock cycle.
-   * `VPMAXUB`: 32 simultaneous 8-bit unsigned max operations per clock cycle.
-   * `VPSUBUSB`: 32 simultaneous saturating subtractions per clock cycle:
+2. **AVX2 Hardware Acceleration (`core/pkg/morphology/avx2_amd64.s`):**
+   * `VPMINUB`: 32 simultaneous 8-bit unsigned min operations per clock cycle (`minVectorAVX2`).
+   * `VPMAXUB`: 32 simultaneous 8-bit unsigned max operations per clock cycle (`maxVectorAVX2`).
+   * `VPSUBUSB`: 32 simultaneous saturating subtractions per clock cycle (`subVectorAVX2`):
      $$\text{TopHat}(I) = I - \text{Opening}(I)$$
 
 ---
 
-### 4. Statistical Outlier Thresholding (Robust MAD Mode)
+### 4. Statistical Outlier Thresholding (Robust MAD Mode with AVX2 SIMD)
 Determines thresholds for statistically significant hyperthermia:
 * **Median Absolute Deviation (MAD Mode):** Robust non-parametric thresholding resistant to large hyperthermic clusters or cold toes (bimodal distributions):
    $$\text{MAD} = \text{median}(|X - \text{median}|)$$
    $$\text{Threshold} = \text{Median} + k \cdot 1.4826 \cdot \text{MAD}$$
 * Implemented in $O(N)$ linear time using histogram accumulators over 256 intensity bins.
+* **AVX2 Vectorized Threshold & Masking (`thresholdMaskAVX2`):**
+  Uses `VPBROADCASTQ`, `VPMAXUB`, `VPCMPEQB`, and `VPAND` to simultaneously compare the Top-Hat difference against threshold, verify minimum tissue temperature, and apply the Chamfer body mask for 32 pixels in parallel.
 
 ---
 
@@ -68,7 +70,7 @@ Removes single-pixel noise and false positives:
 
 ---
 
-### 6. Vascular Mapping via Multiscale Frangi Vesselness Filter
+### 6. Vascular Mapping via Multiscale Frangi Vesselness Filter (AVX2 FMA Accelerated)
 Differentiates tubular veins from circular inflammatory foci using the 2D Hessian matrix:
 $$\mathcal{H} = \begin{bmatrix} I_{xx} & I_{xy} \\ I_{xy} & I_{yy} \end{bmatrix}$$
 Across multiple spatial scales $\sigma \in \{1.0, 2.0, 3.0\}$:
@@ -76,7 +78,8 @@ Across multiple spatial scales $\sigma \in \{1.0, 2.0, 3.0\}$:
 * **Structureness / Contrast:** $S = \sqrt{\lambda_1^2 + \lambda_2^2}$
 * **Vesselness Response:**
   $$V(\sigma) = \begin{cases} \exp\left(-\frac{R_B^2}{2\beta^2}\right) \cdot \left(1 - \exp\left(-\frac{S^2}{2c^2}\right)\right), & \text{falls } \lambda_2 < 0 \\ 0, & \text{sonst} \end{cases}$$
-The maximum response across all scales forms the superficial vein overlay.
+* **SIMD Gaussian Acceleration (`fmaVectorFloat32AVX2`):**
+  Separable 1D Gaussian kernel convolutions are computed using 256-bit AVX2 FMA instructions (`VMULPS` and `VADDPS`), processing 8 floating point values per cycle for an ~8x acceleration over scalar implementations.
 
 ---
 
@@ -88,10 +91,10 @@ Analyzes the thermal gradient along the anatomical extremity axis (proximal to d
 
 ---
 
-### 8. Bilateral Symmetry Analysis (Armstrong $\Delta T \ge 2.2$ K)
+### 8. Bilateral Symmetry Analysis (Armstrong $\Delta T \ge 2.2$ K, AVX2 SIMD)
 Distinguishes genuine unilateral pathology from benign symmetrical warmth (e.g. from friction or tight socks):
 * The contralateral limb (e.g. right foot) is mirrored horizontally: $I_{\text{right, mirrored}}(x, y) = I_{\text{right}}(W - 1 - x, y)$.
-* Difference matrix:
+* Difference matrix computed via AVX2 `absDiffVectorAVX2`:
   $$\Delta T(x, y) = |I_{\text{left}}(x, y) - I_{\text{right, mirrored}}(x, y)|$$
 * Zonal evaluation (Heel, Midfoot, Metatarsal heads, Toes). Asymmetries exceeding $\Delta T \ge 2.2$ K trigger critical pre-ulcerative inflammation alerts.
 
@@ -102,3 +105,4 @@ Permits clinicians and researchers to adapt threshold formulas and decision logi
 * Script: `rules/armstrong_criteria.lua`
 * Receives hotspot features (`area`, `circularity`, `max_val`, `delta_t`) and tissue baseline (`median`, `mad`).
 * Returns qualitative risk level (`CRITICAL`, `MODERATE`, `BENIGN`) and German clinical recommendations without requiring application recompilation.
+

@@ -41,6 +41,7 @@ desktop.ini
 *.msi
 /dist/
 /build/
+/release/
 /target/
 ignite_steps_output/
 *.spec
@@ -58,4 +59,8 @@ core/ignite-core.exe
 *.db
 *.sqlite
 *.db-journal
-*.db-wal
+*.db-wal
+
+# Temporary CLI outputs
+ergebnis.json
+

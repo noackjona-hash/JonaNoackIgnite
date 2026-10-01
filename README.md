@@ -6,75 +6,128 @@ Entwickelt für den deutschen Jugendwettbewerb **Jugend forscht 2026** (Fachgebi
 
 ---
 
-## 🚀 Neuheiten in Version 5.0.0
+## 🚀 Neuheiten & Highlights in Version 5.0.0
 
-* **Venen- & Adernkartierung (Vascular Mapping):** Multiskaliger **Frangi-Vesselness-Filter** basierend auf der Hesse-Matrix $\mathcal{H}$ zur präzisen Segmentierung von Blutgefäßen und deren Unterscheidung von Entzündungsherden.
+* **Komplett redesignte Medical-Workstation-GUI:**
+  * **Obsidian Medical Dark Mode:** Ergonomisches, kontrastoptimiertes Farbkonzept (`#0B0E14` Basiston, `#00E5FF` Electric Cyan Akzente, `#00E676` Normalbefund, `#FF5252` Armstrong-Alarm).
+  * **Frosted-Glass-Header:** Integriertes DSGVO-Pseudonymisierungs-Badge (`ANON-<hash>`), Hardware-Status-Pills (AVX2-Aktivität, SQLite-Verschlüsselung, Lua-Regel-Engine).
+  * **Dual-Viewport & Live-Fadenkreuz:** Synchronisiertes Pan & Zoom zwischen Infrarot-Originalaufnahme und diagnostischem Befund-Overlay mit pixelgenauer Temperatur- & Differenzanzeige.
+  * **Kalibrierte Temperatur-Farbskala:** Vertikaler Ironbow/Rainbow-Gradient mit dynamischer $20^\circ\text{C}$–$42^\circ\text{C}$-Skalierung.
+  * **Modulare Inspector-Tabs:** Schneller Wechsel zwischen Entzündungsherden (Hotspots), Frangi-Venenkartierung und longitudinalem Perfusion-Gradienten.
+* **Venen- & Adernkartierung (Vascular Mapping):** Multiskaliger **Frangi-Vesselness-Filter** basierend auf der 2D-Hesse-Matrix $\mathcal{H}$ zur präzisen Segmentierung tubulärer Blutgefäße und deren Unterscheidung von Entzündungsherden.
 * **Perfusion & Longitudinaler Temperaturgradient ($dT/dy$):** Automatische Erkennung distaler Durchblutungsabbrüche zur Früherkennung von pAVK („Schaufensterkrankheit“) und diabetischer Mikroangiopathie.
-* **Bilateraler Seitenvergleich (Armstrong-Kriterium $\Delta T \ge 2{,}2\,\text{K}$):** Spiegelbildlicher Vergleich beider Füße (L vs. R) zur eindeutigen Unterscheidung zwischen harmloser mechanischer Belastung (Socken/Druckstellen) und echten pathologischen Entzündungen.
-* **Mehrsprachige High-Performance-Architektur:** Vollständiger Refaktor ohne C/C++-Compiler-Abhängigkeiten:
-  * **Rechenkern:** **Go 1.27** mit parallelen Goroutinen.
-  * **Hardware-Beschleunigung:** Reiner **x86_64 AVX2-Assembler** (`VPMINUB`, `VPMAXUB`, `VPSUBUSB`) für 32 Pixel parallel pro Takt.
-  * **Workstation-Frontend:** **C# (.NET 10 / WPF)** im klassischen, dichten Ingenieurs-Look mit Dual-Viewport-Canvas und Echtzeit-Fadenkreuz.
-  * **Klinische Entscheidungslogik:** Eingebettetes **Lua** zur Anpassung von Schwellenwerten ohne Neukompilierung.
-  * **Datenschutz:** Revisionssicheres **SQLite-Audit-Log** mit SHA-256-Pseudonymisierung (`ANON-<hash>`).
+* **Bilateraler Seitenvergleich (Armstrong-Kriterium $\Delta T \ge 2{,}2\,\text{K}$):** Spiegelbildlicher Vergleich beider Extremitäten (L vs. R) zur eindeutigen Unterscheidung zwischen harmloser mechanischer Belastung (Socken/Druckstellen) und echten pathologischen Entzündungen.
+* **6 spezialisierte x86_64 AVX2-Assembler-Kernels:**
+  * `minVectorAVX2` & `maxVectorAVX2`: 32 Pixel parallel pro CPU-Takt für morphologische Erosion und Dilation.
+  * `subVectorAVX2`: Sättigende Subtraktion (`VPSUBUSB`) für die Top-Hat-Filterung.
+  * `absDiffVectorAVX2`: Vektorisierte Differenz $|a - b|$ für den Armstrong-Seitenvergleich.
+  * `thresholdMaskAVX2`: Gleichzeitiges Binarisieren, Schwellwertabgleich und Gewebemaskierung in 256-Bit-Registern.
+  * `fmaVectorFloat32AVX2`: Vektorisierte Gleitkomma-Faltung für den Frangi-Gefäßfilter.
+* **Automatisierter Windows-Installer (Inno Setup 6):**
+  * Standalone-Installationsassistent (`dist/IGNITE_Medical_Suite_v5.0.0_Setup.exe`, 28.3 MB) mit LZMA2/Ultra64-Kompression, Startmenü- und Desktop-Icons sowie sauberem Uninstaller.
+  * Ein-Klick-Buildskript [`installer/build_installer.ps1`](file:///d:/Downloads/03_Programmierung%20&%20Entwicklung/05_JUFO/JonaNoackIgnite/installer/build_installer.ps1).
+* **CI/CD GitHub Actions Workflow:** Vollautomatisches Testen des AVX2-Kerns, Kompilieren der .NET 10 WPF Suite, Bauen des Inno Setup Installers und Veröffentlichen von Release-Artefakten via [`.github/workflows/ci_v5.yml`](file:///d:/Downloads/03_Programmierung%20&%20Entwicklung/05_JUFO/JonaNoackIgnite/.github/workflows/ci_v5.yml).
 
 ---
 
 ## 🛠️ Software-Architektur
 
 ```
-[ C# .NET 10 WPF Workstation ]  <─── Dual-Viewport, Fadenkreuz, Paletten, Inspector
-              │
-              ├── (Inter-Process Communication / CLI / JSON)
-              ▼
-[ Go 1.27 Rechenkern (ignite-core) ]
-              │
-              ├── (x86_64 AVX2 Assembler)  ──> Morphologie (Top-Hat) mit 32 Pixeln/Takt
-              ├── (Go Goroutinen)           ──> Otsu, Chamfer-Distanz, Frangi-Filter, MAD
-              ├── (Eingebettetes Lua)        ──> Armstrong-Kriterien (armstrong_criteria.lua)
-              └── (SQLite Datenbank)         ──> DSGVO Art. 30 Audit-Log (ignite_medical.db)
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 1. C# (.NET 10 / WPF)                                                        │
+│    OBSIDIAN MEDICAL WORKSTATION GUI                                         │
+│    - Dual-Viewport mit synchronem Zoom/Pan und Fadenkreuz                   │
+│    - DSGVO-Pseudonymisierung (ANON-<hash>), Hardware-Status-Pills           │
+│    - Kalibrierte Farbskala (Ironbow/Rainbow), Docking-Tabs, Hotspot-Liste   │
+└──────────────────────────────────────┬──────────────────────────────────────┘
+                                       │ Lokaler IPC-Aufruf (CLI / JSON)
+                                       ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 2. Go (Golang 1.27)                                                         │
+│    ORCHESTRIERUNG & BILDVERARBEITUNG                                        │
+│    - Otsu-Binarisierung, 2-Pass Chamfer-L2 Distanzerosion                   │
+│    - Multiskaliger Frangi-Vesselness Filter (Gefäß-Eigenwerte)              │
+│    - O(N) Histogramm-basierter Median & MAD-Statistik (Outlier-Filter)      │
+│    - Parallele Verteilung auf alle CPU-Kerne via Goroutinen                 │
+└──────────────────────────────────────┬──────────────────────────────────────┘
+                                       │ Native Instruktions-Einbindung
+                                       ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 3. x86_64 Assembler (AVX2 / SIMD - Plan 9)                                  │
+│    HARDWARE INNER-LOOP (6 KERNELS)                                          │
+│    - VPMINUB, VPMAXUB, VPSUBUSB, VPOR, VMULPS, VADDPS                       │
+│    - 32 Byte-Pixel bzw. 8 Float32-Werte GLEICHZEITIG pro Taktzyklus         │
+│    - Völlig C-compilerfrei dank Go-integriertem Assembler (`go tool asm`)   │
+└──────────────────────────────────────┬──────────────────────────────────────┘
+                                       │ Eingebettete Skript-Ausführung
+                                       ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 4. Lua (GopherLua)                                                          │
+│    KLINISCHE DIAGNOSE-LOGIK & REGEL-ENGINE                                  │
+│    - Dynamische Schwellenwert- und Risikobewertung (Armstrong 2007)         │
+│    - Ärzte können Diagnose-Kriterien in Textdateien anpassen,                │
+│      OHNE dass das Programm neu kompiliert werden muss!                     │
+└──────────────────────────────────────┬──────────────────────────────────────┘
+                                       │ Audit-Transaktion
+                                       ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 5. SQL (SQLite)                                                             │
+│    REVISIONSSICHERES AUDIT-LOG & DATENSCHUTZ                                │
+│    - DSGVO Art. 30 Konformität: Lokale Pseudonymisierung (ANON-<hash>)      │
+│    - Speicherung von Messreihen, Parametern und Schwellenwerten             │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 📊 Gemessene Performance (1440x1080 JPEG)
+## 📊 Gemessene Performance (1440x1080 Thermogramm)
 
-| Pipeline-Stufe | Sprache / Technologie | Gemessene Latenz |
+| Pipeline-Stufe | Technologie / Instruktion | Gemessene Latenz |
 | :--- | :--- | :--- |
 | **Körper-Maskierung (Otsu + Chamfer)** | Go (Goroutinen) | 19,6 ms |
-| **Top-Hat-Filter (Opening + Differenz)** | x86_64 AVX2 Assembler | **1,4 ms** (@160x120) / **~500 ms** (@1440x1080) |
-| **Outlier-Thresholding (MAD)** | Go ($O(N)$ Histogramm) | 4,4 ms |
+| **Top-Hat-Filter (Opening + Differenz)** | x86_64 AVX2 (`VPMINUB`, `VPMAXUB`, `VPSUBUSB`) | **37,8 ms** (@1440x1080) / **1,4 ms** (@160x120) |
+| **Outlier-Thresholding (MAD + Maske)** | x86_64 AVX2 (`thresholdMaskAVX2`) | 4,2 ms |
 | **Geometrie & Zirkularität** | Go (4-Connected BFS) | 3,5 ms |
-| **Frangi-Venenkartierung (3 Skalen)** | Go (2D Convolutions) | ~2000 ms (optional zuschaltbar) |
-| **Longitudinaler Gradient (Perfusion)** | Go | 2,0 ms |
-| **Klinische Risikobewertung** | Eingebettetes Lua | < 0,1 ms |
+| **Frangi-Venenkartierung (3 Skalen)** | AVX2 Float32 FMA (`fmaVectorFloat32AVX2`) | 88,6 ms |
+| **Longitudinaler Gradient (Perfusion)** | Go ($dT/dy$ Kernel) | 2,0 ms |
+| **Bilateraler Seitenvergleich** | AVX2 Abs-Diff (`absDiffVectorAVX2`) | 5,8 ms |
+| **Klinische Risikobewertung** | Eingebettetes Lua (`armstrong_criteria.lua`) | < 0,1 ms |
+| **Gesamte Pipeline-Laufzeit** | **End-to-End** | **~169,5 ms** |
 | **GPU-Farbrendering (Ironbow)** | C# / WPF Hardware-Canvas | 0,0 ms CPU-Last |
 
 ---
 
-## 💻 Schnellstart & Ausführung
+## 📦 Installation & Ausführung
 
-### Voraussetzungen
-* **Go 1.27+**
-* **.NET 10 SDK**
-* *(Kein C- oder C++-Compiler erforderlich!)*
+### Option A: Windows Installer (Empfohlen)
+Laden Sie die aktuelle Setup-Datei aus dem Release-Verzeichnis oder GitHub Actions herunter und führen Sie sie aus:
+* **Datei:** `dist/IGNITE_Medical_Suite_v5.0.0_Setup.exe` (28.3 MB)
+* Installiert die vollständige Anwendung inklusive aller vorkompilierten AVX2-Binärdateien, Lua-Regeln, Testdaten und Dokumentationen.
 
-### 1. Rechenkern kompilieren (Go + AVX2)
+### Option B: Automatisiertes Build-Skript (PowerShell)
+Um das gesamte Projekt inklusive Go-Kern, .NET 10 WPF Suite und Inno Setup Installer aus dem Quellcode zu bauen:
+```powershell
+.\installer\build_installer.ps1
+```
+
+### Option C: Manueller Start für Entwickler
+
+#### 1. Rechenkern kompilieren & testen (Go + AVX2)
 ```bash
 cd core
-go test -v ./...
+go test -v ./pkg/...
 go build -o ignite-core.exe ./cmd/ignite-core
 cd ..
 ```
 
-### 2. Desktop-Workstation kompilieren & starten (C# .NET 10)
+#### 2. Desktop-Workstation kompilieren & starten (C# .NET 10)
 ```bash
 cd desktop
 dotnet build -c Release
 dotnet run --no-build -c Release
 ```
 
-### 3. CLI-Analyse eines Einzelbildes
+#### 3. CLI-Analyse eines Einzelbildes
 ```bash
 .\core\ignite-core.exe -mode=cli -input="test-data/bild (1).jpeg" -output="ergebnis.json"
 ```
@@ -94,3 +147,4 @@ Die medizinische Klassifikation erfolgt dynamisch über Textskripte im Ordner `r
 * [Architektur-Dokumentation v5.0.0](file:///d:/Downloads/03_Programmierung%20&%20Entwicklung/05_JUFO/JonaNoackIgnite/docs/ARCHITECTURE_v5.md)
 * [Mathematische Algorithmen-Beschreibung](file:///d:/Downloads/03_Programmierung%20&%20Entwicklung/05_JUFO/JonaNoackIgnite/docs/ALGORITHM.md)
 * [Schriftliche Arbeit (Jugend forscht 2026)](file:///d:/Downloads/03_Programmierung%20&%20Entwicklung/05_JUFO/JonaNoackIgnite/docs/SCHRIFTLICHE_ARBEIT_JUGEND_FORSCHT.md)
+

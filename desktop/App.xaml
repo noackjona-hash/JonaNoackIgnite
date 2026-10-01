@@ -3,6 +3,162 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:Ignite.Desktop">
     <Application.Resources>
-         
+        <!-- ============================================================ -->
+        <!-- IGNITE MEDICAL SUITE v5.0.0 - HIGH-END DESIGN SYSTEM TOKENS  -->
+        <!-- ============================================================ -->
+
+        <!-- Deep Obsidian Theme Palette -->
+        <Color x:Key="ColorAppBg">#0A0C14</Color>
+        <Color x:Key="ColorSurface">#131722</Color>
+        <Color x:Key="ColorSurfaceCard">#181E2E</Color>
+        <Color x:Key="ColorSurfaceHover">#222B40</Color>
+        <Color x:Key="ColorBorder">#253046</Color>
+        <Color x:Key="ColorBorderBright">#3B4A6A</Color>
+        
+        <!-- Clinical Neons & Accents -->
+        <Color x:Key="ColorCyan">#00E5FF</Color>
+        <Color x:Key="ColorCyanDark">#0097A7</Color>
+        <Color x:Key="ColorPurple">#7C4DFF</Color>
+        <Color x:Key="ColorCritical">#FF2D55</Color>
+        <Color x:Key="ColorWarning">#FFB300</Color>
+        <Color x:Key="ColorSuccess">#00E676</Color>
+
+        <!-- Typography Brushes -->
+        <SolidColorBrush x:Key="AppBgBrush" Color="{StaticResource ColorAppBg}"/>
+        <SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource ColorSurface}"/>
+        <SolidColorBrush x:Key="SurfaceCardBrush" Color="{StaticResource ColorSurfaceCard}"/>
+        <SolidColorBrush x:Key="SurfaceHoverBrush" Color="{StaticResource ColorSurfaceHover}"/>
+        <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource ColorBorder}"/>
+        <SolidColorBrush x:Key="BorderBrightBrush" Color="{StaticResource ColorBorderBright}"/>
+        <SolidColorBrush x:Key="CyanBrush" Color="{StaticResource ColorCyan}"/>
+        <SolidColorBrush x:Key="PurpleBrush" Color="{StaticResource ColorPurple}"/>
+        <SolidColorBrush x:Key="CriticalBrush" Color="{StaticResource ColorCritical}"/>
+        <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource ColorWarning}"/>
+        <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource ColorSuccess}"/>
+
+        <SolidColorBrush x:Key="TextPrimaryBrush" Color="#F8FAFC"/>
+        <SolidColorBrush x:Key="TextSecondaryBrush" Color="#94A3B8"/>
+        <SolidColorBrush x:Key="TextMutedBrush" Color="#64748B"/>
+
+        <!-- Modern Rounded Button Style -->
+        <Style TargetType="Button">
+            <Setter Property="Background" Value="{StaticResource SurfaceCardBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="14,6"/>
+            <Setter Property="Margin" Value="3,2"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="{StaticResource SurfaceHoverBrush}"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource CyanBrush}"/>
+                                <Setter Property="Foreground" Value="{StaticResource CyanBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#0F384C"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource CyanBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="border" Property="Opacity" Value="0.4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Segmented TabControl Style -->
+        <Style TargetType="TabControl">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+
+        <Style TargetType="TabItem">
+            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="14,8"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border x:Name="tabBorder"
+                                Background="Transparent"
+                                BorderBrush="Transparent"
+                                BorderThickness="0,0,0,2"
+                                Margin="2,0"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter ContentSource="Header" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="tabBorder" Property="Background" Value="#1A2030"/>
+                                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="tabBorder" Property="Background" Value="#1E2738"/>
+                                <Setter TargetName="tabBorder" Property="BorderBrush" Value="{StaticResource CyanBrush}"/>
+                                <Setter Property="Foreground" Value="{StaticResource CyanBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- DataGrid Modern Theme -->
+        <Style TargetType="DataGrid">
+            <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+            <Setter Property="RowBackground" Value="{StaticResource SurfaceBrush}"/>
+            <Setter Property="AlternatingRowBackground" Value="#161B28"/>
+            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="{StaticResource BorderBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="HeadersVisibility" Value="Column"/>
+            <Setter Property="AutoGenerateColumns" Value="False"/>
+            <Setter Property="CanUserAddRows" Value="False"/>
+            <Setter Property="RowHeight" Value="28"/>
+        </Style>
+
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="#101420"/>
+            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+        </Style>
+
+        <!-- Modern Menu Style -->
+        <Style TargetType="Menu">
+            <Setter Property="Background" Value="#0E111B"/>
+            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+
+        <Style TargetType="MenuItem">
+            <Setter Property="Background" Value="#0E111B"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+            <Setter Property="Padding" Value="8,4"/>
+        </Style>
+
     </Application.Resources>
 </Application>
