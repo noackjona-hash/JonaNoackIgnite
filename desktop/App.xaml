@@ -4,24 +4,25 @@
              xmlns:local="clr-namespace:Ignite.Desktop">
     <Application.Resources>
         <!-- ============================================================ -->
-        <!-- IGNITE MEDICAL SUITE v5.0.0 - HIGH-END DESIGN SYSTEM TOKENS  -->
+        <!-- IGNITE MEDICAL SUITE v5.0.0 - CLASSICAL MEDICAL WORKSTATION  -->
+        <!-- Authentic DICOM / Radiology Ergonomics (Siemens / OsiriX)    -->
         <!-- ============================================================ -->
 
-        <!-- Deep Obsidian Theme Palette -->
-        <Color x:Key="ColorAppBg">#0A0C14</Color>
-        <Color x:Key="ColorSurface">#131722</Color>
-        <Color x:Key="ColorSurfaceCard">#181E2E</Color>
-        <Color x:Key="ColorSurfaceHover">#222B40</Color>
-        <Color x:Key="ColorBorder">#253046</Color>
-        <Color x:Key="ColorBorderBright">#3B4A6A</Color>
+        <!-- Classical Medical Slate & Charcoal Palette -->
+        <Color x:Key="ColorAppBg">#14171E</Color>
+        <Color x:Key="ColorSurface">#1B1F28</Color>
+        <Color x:Key="ColorSurfaceCard">#232834</Color>
+        <Color x:Key="ColorSurfaceHover">#2C3342</Color>
+        <Color x:Key="ColorBorder">#353D4E</Color>
+        <Color x:Key="ColorBorderBright">#4A556D</Color>
         
-        <!-- Clinical Neons & Accents -->
+        <!-- Clinical Indicators & Diagnostic Accents -->
         <Color x:Key="ColorCyan">#00E5FF</Color>
-        <Color x:Key="ColorCyanDark">#0097A7</Color>
-        <Color x:Key="ColorPurple">#7C4DFF</Color>
-        <Color x:Key="ColorCritical">#FF2D55</Color>
-        <Color x:Key="ColorWarning">#FFB300</Color>
-        <Color x:Key="ColorSuccess">#00E676</Color>
+        <Color x:Key="ColorMedicalBlue">#0078D4</Color>
+        <Color x:Key="ColorPurple">#673AB7</Color>
+        <Color x:Key="ColorCritical">#D32F2F</Color>
+        <Color x:Key="ColorWarning">#F57C00</Color>
+        <Color x:Key="ColorSuccess">#2E7D32</Color>
 
         <!-- Typography Brushes -->
         <SolidColorBrush x:Key="AppBgBrush" Color="{StaticResource ColorAppBg}"/>
@@ -31,25 +32,26 @@
         <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource ColorBorder}"/>
         <SolidColorBrush x:Key="BorderBrightBrush" Color="{StaticResource ColorBorderBright}"/>
         <SolidColorBrush x:Key="CyanBrush" Color="{StaticResource ColorCyan}"/>
+        <SolidColorBrush x:Key="MedicalBlueBrush" Color="{StaticResource ColorMedicalBlue}"/>
         <SolidColorBrush x:Key="PurpleBrush" Color="{StaticResource ColorPurple}"/>
         <SolidColorBrush x:Key="CriticalBrush" Color="{StaticResource ColorCritical}"/>
         <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource ColorWarning}"/>
         <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource ColorSuccess}"/>
 
-        <SolidColorBrush x:Key="TextPrimaryBrush" Color="#F8FAFC"/>
-        <SolidColorBrush x:Key="TextSecondaryBrush" Color="#94A3B8"/>
-        <SolidColorBrush x:Key="TextMutedBrush" Color="#64748B"/>
+        <SolidColorBrush x:Key="TextPrimaryBrush" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="TextSecondaryBrush" Color="#9EABB8"/>
+        <SolidColorBrush x:Key="TextMutedBrush" Color="#6C798A"/>
 
-        <!-- Modern Rounded Button Style -->
+        <!-- Classical Medical Button Style -->
         <Style TargetType="Button">
             <Setter Property="Background" Value="{StaticResource SurfaceCardBrush}"/>
             <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
             <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="14,6"/>
-            <Setter Property="Margin" Value="3,2"/>
+            <Setter Property="Padding" Value="12,5"/>
+            <Setter Property="Margin" Value="2,1"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontSize" Value="11.5"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -58,7 +60,7 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="6"
+                                CornerRadius="3"
                                 Padding="{TemplateBinding Padding}"
                                 SnapsToDevicePixels="True">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True"/>
@@ -66,15 +68,15 @@
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="border" Property="Background" Value="{StaticResource SurfaceHoverBrush}"/>
-                                <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource CyanBrush}"/>
-                                <Setter Property="Foreground" Value="{StaticResource CyanBrush}"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource MedicalBlueBrush}"/>
+                                <Setter Property="Foreground" Value="#FFFFFF"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#0F384C"/>
+                                <Setter TargetName="border" Property="Background" Value="#005A9E"/>
                                 <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource CyanBrush}"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="border" Property="Opacity" Value="0.4"/>
+                                <Setter TargetName="border" Property="Opacity" Value="0.45"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -90,29 +92,30 @@
 
         <Style TargetType="TabItem">
             <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
-            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontSize" Value="11.5"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Padding" Value="14,8"/>
+            <Setter Property="Padding" Value="12,7"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="TabItem">
                         <Border x:Name="tabBorder"
-                                Background="Transparent"
-                                BorderBrush="Transparent"
-                                BorderThickness="0,0,0,2"
-                                Margin="2,0"
+                                Background="#1A1E27"
+                                BorderBrush="{StaticResource BorderBrush}"
+                                BorderThickness="1,1,1,0"
+                                Margin="1,0"
+                                CornerRadius="3,3,0,0"
                                 Padding="{TemplateBinding Padding}">
                             <ContentPresenter ContentSource="Header" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="tabBorder" Property="Background" Value="#1A2030"/>
+                                <Setter TargetName="tabBorder" Property="Background" Value="#252A36"/>
                                 <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="tabBorder" Property="Background" Value="#1E2738"/>
-                                <Setter TargetName="tabBorder" Property="BorderBrush" Value="{StaticResource CyanBrush}"/>
+                                <Setter TargetName="tabBorder" Property="Background" Value="{StaticResource SurfaceCardBrush}"/>
+                                <Setter TargetName="tabBorder" Property="BorderBrush" Value="{StaticResource MedicalBlueBrush}"/>
                                 <Setter Property="Foreground" Value="{StaticResource CyanBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -126,7 +129,7 @@
             <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
             <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
             <Setter Property="RowBackground" Value="{StaticResource SurfaceBrush}"/>
-            <Setter Property="AlternatingRowBackground" Value="#161B28"/>
+            <Setter Property="AlternatingRowBackground" Value="#171A22"/>
             <Setter Property="GridLinesVisibility" Value="Horizontal"/>
             <Setter Property="HorizontalGridLinesBrush" Value="{StaticResource BorderBrush}"/>
             <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
@@ -134,31 +137,32 @@
             <Setter Property="HeadersVisibility" Value="Column"/>
             <Setter Property="AutoGenerateColumns" Value="False"/>
             <Setter Property="CanUserAddRows" Value="False"/>
-            <Setter Property="RowHeight" Value="28"/>
+            <Setter Property="RowHeight" Value="26"/>
+            <Setter Property="FontSize" Value="11"/>
         </Style>
 
         <Style TargetType="DataGridColumnHeader">
-            <Setter Property="Background" Value="#101420"/>
+            <Setter Property="Background" Value="#161921"/>
             <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="FontSize" Value="11"/>
-            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="Padding" Value="8,5"/>
             <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="0,0,1,1"/>
         </Style>
 
         <!-- Modern Menu Style -->
         <Style TargetType="Menu">
-            <Setter Property="Background" Value="#0E111B"/>
+            <Setter Property="Background" Value="#11141A"/>
             <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
-            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontSize" Value="11.5"/>
         </Style>
 
         <Style TargetType="MenuItem">
-            <Setter Property="Background" Value="#0E111B"/>
+            <Setter Property="Background" Value="#11141A"/>
             <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
             <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="FontSize" Value="11.5"/>
         </Style>
-
     </Application.Resources>
 </Application>

@@ -13,6 +13,14 @@ namespace Ignite.Desktop.Services
         Grayscale
     }
 
+    public enum VeinRenderMode
+    {
+        FluorescentCyan,   // Glowing Cyan (#00E5FF) on thermal image
+        RoyalCobalt,       // Deep Cobalt Blue (#1E88E5)
+        SurgicalGreen,     // ICG Fluorescence Green (#00E676)
+        PureAngiography    // Digital Subtraction Angiography (Black background, luminous vessels)
+    }
+
     public static class PaletteService
     {
         private static readonly uint[] IronbowLUT = GenerateIronbowLUT();
@@ -93,13 +101,8 @@ namespace Ignite.Desktop.Services
             return lut;
         }
 
-        public static BitmapSource ApplyPalette(BitmapSource graySource, ColorPalette palette)
+        public static BitmapSource ApplyPalette(BitmapSource graySource, ColorPalette palette, double windowWidth = 255.0, double windowCenter = 127.5)
         {
-            if (palette == ColorPalette.Grayscale)
-            {
-                return graySource;
-            }
-
             int width = graySource.PixelWidth;
             int height = graySource.PixelHeight;
 
@@ -114,10 +117,27 @@ namespace Ignite.Desktop.Services
                 _ => IronbowLUT
             };
 
+            double wMin = windowCenter - (windowWidth / 2.0);
+            double wMax = windowCenter + (windowWidth / 2.0);
+            if (wMax <= wMin) wMax = wMin + 1.0;
+
             uint[] coloredPixels = new uint[width * height];
             for (int i = 0; i < grayPixels.Length; i++)
             {
-                coloredPixels[i] = lut[grayPixels[i]];
+                byte val = grayPixels[i];
+                // Apply window/level scaling
+                double scaled = (val - wMin) / (wMax - wMin) * 255.0;
+                int clamped = Math.Clamp((int)Math.Round(scaled), 0, 255);
+
+                if (palette == ColorPalette.Grayscale)
+                {
+                    byte g = (byte)clamped;
+                    coloredPixels[i] = (uint)((255 << 24) | (g << 16) | (g << 8) | g);
+                }
+                else
+                {
+                    coloredPixels[i] = lut[clamped];
+                }
             }
 
             var coloredBitmap = new WriteableBitmap(width, height, 96, 96, PixelFormats.Bgra32, null);
@@ -126,7 +146,7 @@ namespace Ignite.Desktop.Services
             return coloredBitmap;
         }
 
-        public static BitmapSource LoadAndColorize(string imagePath, ColorPalette palette)
+        public static BitmapSource LoadAndColorize(string imagePath, ColorPalette palette, double windowWidth = 255.0, double windowCenter = 127.5)
         {
             var bi = new BitmapImage();
             bi.BeginInit();
@@ -135,23 +155,22 @@ namespace Ignite.Desktop.Services
             bi.EndInit();
             bi.Freeze();
 
-            return ApplyPalette(bi, palette);
+            return ApplyPalette(bi, palette, windowWidth, windowCenter);
         }
 
-        // Blends a detected vascular/vein mask (in glowing cyan #00E5FF) on top of the base image
-        public static BitmapSource BlendVeinOverlay(BitmapSource baseSource, string veinMaskPath)
+        // Fast in-memory cache of vein mask bytes for instant real-time slider updates
+        public static byte[]? LoadVeinMaskBytes(string veinMaskPath, int targetWidth, int targetHeight)
         {
-            if (baseSource == null || string.IsNullOrEmpty(veinMaskPath) || !File.Exists(veinMaskPath))
-                return baseSource!;
+            if (string.IsNullOrEmpty(veinMaskPath) || !File.Exists(veinMaskPath))
+                return null;
 
             try
             {
-                byte[] maskBytes = File.ReadAllBytes(veinMaskPath);
-                if (maskBytes.Length == 0)
-                    return baseSource;
+                byte[] raw = File.ReadAllBytes(veinMaskPath);
+                if (raw.Length == 0) return null;
 
                 var veinImg = new BitmapImage();
-                using (var ms = new MemoryStream(maskBytes))
+                using (var ms = new MemoryStream(raw))
                 {
                     veinImg.BeginInit();
                     veinImg.CacheOption = BitmapCacheOption.OnLoad;
@@ -160,41 +179,96 @@ namespace Ignite.Desktop.Services
                     veinImg.Freeze();
                 }
 
-                int w = baseSource.PixelWidth;
-                int h = baseSource.PixelHeight;
-
                 BitmapSource processedVein = veinImg;
-                if (veinImg.PixelWidth != w || veinImg.PixelHeight != h)
+                if (veinImg.PixelWidth != targetWidth || veinImg.PixelHeight != targetHeight)
                 {
-                    var scaleTransform = new ScaleTransform((double)w / veinImg.PixelWidth, (double)h / veinImg.PixelHeight);
+                    var scaleTransform = new ScaleTransform((double)targetWidth / veinImg.PixelWidth, (double)targetHeight / veinImg.PixelHeight);
                     processedVein = new TransformedBitmap(veinImg, scaleTransform);
                 }
 
-                var baseBgra = new FormatConvertedBitmap(baseSource, PixelFormats.Bgra32, null, 0);
                 var veinGray = new FormatConvertedBitmap(processedVein, PixelFormats.Gray8, null, 0);
+                byte[] pixels = new byte[targetWidth * targetHeight];
+                veinGray.CopyPixels(pixels, targetWidth, 0);
+                return pixels;
+            }
+            catch
+            {
+                return null;
+            }
+        }
 
+        // Blends a detected vascular/vein mask with customizable opacity, sensitivity threshold and clinical color modes
+        public static BitmapSource BlendVeinOverlay(
+            BitmapSource baseSource, 
+            byte[] veinPixels, 
+            double opacity = 0.85, 
+            byte threshold = 20, 
+            VeinRenderMode renderMode = VeinRenderMode.FluorescentCyan)
+        {
+            if (baseSource == null || veinPixels == null)
+                return baseSource!;
+
+            try
+            {
+                int w = baseSource.PixelWidth;
+                int h = baseSource.PixelHeight;
+
+                if (veinPixels.Length != w * h)
+                    return baseSource;
+
+                var baseBgra = new FormatConvertedBitmap(baseSource, PixelFormats.Bgra32, null, 0);
                 uint[] basePixels = new uint[w * h];
-                byte[] veinPixels = new byte[w * h];
-
                 baseBgra.CopyPixels(basePixels, w * 4, 0);
-                veinGray.CopyPixels(veinPixels, w, 0);
 
                 uint[] output = new uint[w * h];
+
+                // Target tint color based on mode
+                byte targetR = 0, targetG = 229, targetB = 255; // Fluorescent Cyan default
+                if (renderMode == VeinRenderMode.RoyalCobalt)
+                {
+                    targetR = 30; targetG = 136; targetB = 229; // Medical Blue
+                }
+                else if (renderMode == VeinRenderMode.SurgicalGreen)
+                {
+                    targetR = 0; targetG = 230; targetB = 118; // ICG Green
+                }
+
+                bool isDSA = (renderMode == VeinRenderMode.PureAngiography);
+
                 for (int i = 0; i < basePixels.Length; i++)
                 {
                     byte v = veinPixels[i];
-                    if (v > 25) // Vessel pixel
+
+                    if (isDSA)
                     {
-                        double alpha = Math.Min(1.0, (v / 255.0) * 1.3);
+                        // Digital Subtraction Angiography: black background with luminous vessels
+                        if (v >= threshold)
+                        {
+                            double norm = (v - threshold) / (double)(255 - threshold);
+                            byte lum = (byte)Math.Clamp((int)(norm * 255), 0, 255);
+                            output[i] = (uint)((255 << 24) | (lum << 16) | (lum << 8) | 255); // Ice-white vascular lum
+                        }
+                        else
+                        {
+                            output[i] = 0xFF080B10; // Dark background
+                        }
+                        continue;
+                    }
+
+                    if (v >= threshold)
+                    {
+                        double strength = (v - threshold) / (double)(255 - threshold);
+                        double alpha = Math.Clamp(strength * opacity * 1.4, 0.0, 1.0);
+
                         uint orig = basePixels[i];
                         byte ob = (byte)(orig & 0xFF);
                         byte og = (byte)((orig >> 8) & 0xFF);
                         byte or = (byte)((orig >> 16) & 0xFF);
 
-                        // Blend with glowing Cyan (R=0, G=229, B=255)
-                        byte nb = (byte)(ob * (1 - alpha) + 255 * alpha);
-                        byte ng = (byte)(og * (1 - alpha) + 229 * alpha);
-                        byte nr = (byte)(or * (1 - alpha) + 0 * alpha);
+                        // High-contrast additive & alpha blend
+                        byte nb = (byte)Math.Clamp(ob * (1.0 - alpha) + targetB * alpha, 0, 255);
+                        byte ng = (byte)Math.Clamp(og * (1.0 - alpha) + targetG * alpha, 0, 255);
+                        byte nr = (byte)Math.Clamp(or * (1.0 - alpha) + targetR * alpha, 0, 255);
 
                         output[i] = (uint)((255 << 24) | (nr << 16) | (ng << 8) | nb);
                     }
@@ -214,5 +288,18 @@ namespace Ignite.Desktop.Services
                 return baseSource;
             }
         }
+
+        // Backward compatibility overload
+        public static BitmapSource BlendVeinOverlay(BitmapSource baseSource, string veinMaskPath)
+        {
+            if (baseSource == null || string.IsNullOrEmpty(veinMaskPath) || !File.Exists(veinMaskPath))
+                return baseSource!;
+
+            var bytes = LoadVeinMaskBytes(veinMaskPath, baseSource.PixelWidth, baseSource.PixelHeight);
+            if (bytes == null) return baseSource;
+
+            return BlendVeinOverlay(baseSource, bytes, 0.85, 20, VeinRenderMode.FluorescentCyan);
+        }
     }
+
 }

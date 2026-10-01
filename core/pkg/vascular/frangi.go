@@ -18,11 +18,12 @@ type FrangiOptions struct {
 // DefaultFrangiOptions returns standard parameters for thermal vascular mapping.
 func DefaultFrangiOptions() FrangiOptions {
 	return FrangiOptions{
-		Scales: []float32{1.5, 3.0},
+		Scales: []float32{1.2, 2.0, 3.2, 4.8},
 		Beta:   0.5,
-		C:      15.0,
+		C:      3.2,
 	}
 }
+
 
 // Separable 1D Gaussian kernel
 func gaussianKernel1D(sigma float32) ([]float32, int) {
@@ -135,7 +136,7 @@ func gaussianBlurSeparable(src *imageutil.FloatMatrix, sigma float32) *imageutil
 	return convolve1DVertical(tmp, kernel, radius)
 }
 
-// MultiscaleFrangiVesselness calculates fast Frangi vesselness filter using separable derivatives.
+// MultiscaleFrangiVesselness calculates fast Frangi vesselness filter using separable derivatives and parallelized Hessian eigenvalue extraction.
 func MultiscaleFrangiVesselness(src *imageutil.GrayMatrix, mask *imageutil.GrayMatrix, opts FrangiOptions) *imageutil.GrayMatrix {
 	w, h := src.Width, src.Height
 	maxResponse := imageutil.NewFloatMatrix(w, h)
@@ -145,58 +146,78 @@ func MultiscaleFrangiVesselness(src *imageutil.GrayMatrix, mask *imageutil.GrayM
 	twoC2 := 2.0 * opts.C * opts.C
 
 	for _, sigma := range opts.Scales {
-		// 1. Separable Gaussian smoothing
+		// 1. Separable Gaussian smoothing (AVX2 FMA accelerated)
 		smoothed := gaussianBlurSeparable(srcFloat, sigma)
 
-		// 2. Compute 2nd derivatives using Sobel / finite differences
+		// 2. Compute 2nd derivatives using Sobel / finite differences in parallel
 		sig2 := sigma * sigma
 
-		for y := 1; y < h-1; y++ {
-			rowPrev := (y - 1) * w
-			rowCurr := y * w
-			rowNext := (y + 1) * w
+		var wg sync.WaitGroup
+		workers := 8
+		chunk := (h - 2 + workers - 1) / workers
 
-			for x := 1; x < w-1; x++ {
-				idx := rowCurr + x
-				if mask != nil && mask.Data[idx] == 0 {
-					continue
-				}
-
-				// 2nd derivatives scaled by sigma^2
-				dxx := (smoothed.Data[idx-1] - 2.0*smoothed.Data[idx] + smoothed.Data[idx+1]) * sig2
-				dyy := (smoothed.Data[rowPrev+x] - 2.0*smoothed.Data[idx] + smoothed.Data[rowNext+x]) * sig2
-				dxy := (smoothed.Data[rowNext+x+1] - smoothed.Data[rowNext+x-1] - smoothed.Data[rowPrev+x+1] + smoothed.Data[rowPrev+x-1]) * 0.25 * sig2
-
-				// Hessian eigenvalues:
-				trace := dxx + dyy
-				diff := dxx - dyy
-				disc := float32(math.Sqrt(float64(diff*diff + 4.0*dxy*dxy)))
-
-				lam1 := (trace - disc) * 0.5
-				lam2 := (trace + disc) * 0.5
-
-				if math.Abs(float64(lam1)) > math.Abs(float64(lam2)) {
-					lam1, lam2 = lam2, lam1
-				}
-
-				// Warm superficial veins: principal cross-curvature lam2 must be negative
-				if lam2 >= 0 {
-					continue
-				}
-
-				rb := float32(math.Abs(float64(lam1))) / float32(math.Abs(float64(lam2)))
-				s2 := lam1*lam1 + lam2*lam2
-
-				blobnessExp := float32(math.Exp(float64(-rb * rb / twoBeta2)))
-				structureExp := 1.0 - float32(math.Exp(float64(-s2/twoC2)))
-
-				v := blobnessExp * structureExp
-				if v > maxResponse.Data[idx] {
-					maxResponse.Data[idx] = v
-				}
+		for wid := 0; wid < workers; wid++ {
+			r0 := 1 + wid*chunk
+			r1 := r0 + chunk
+			if r1 > h-1 {
+				r1 = h - 1
 			}
+			if r0 >= r1 {
+				continue
+			}
+			wg.Add(1)
+			go func(start, end int) {
+				defer wg.Done()
+				for y := start; y < end; y++ {
+					rowPrev := (y - 1) * w
+					rowCurr := y * w
+					rowNext := (y + 1) * w
+
+					for x := 1; x < w-1; x++ {
+						idx := rowCurr + x
+						if mask != nil && mask.Data[idx] == 0 {
+							continue
+						}
+
+						// 2nd derivatives scaled by sigma^2
+						dxx := (smoothed.Data[idx-1] - 2.0*smoothed.Data[idx] + smoothed.Data[idx+1]) * sig2
+						dyy := (smoothed.Data[rowPrev+x] - 2.0*smoothed.Data[idx] + smoothed.Data[rowNext+x]) * sig2
+						dxy := (smoothed.Data[rowNext+x+1] - smoothed.Data[rowNext+x-1] - smoothed.Data[rowPrev+x+1] + smoothed.Data[rowPrev+x-1]) * 0.25 * sig2
+
+						// Hessian eigenvalues:
+						trace := dxx + dyy
+						diff := dxx - dyy
+						disc := float32(math.Sqrt(float64(diff*diff + 4.0*dxy*dxy)))
+
+						lam1 := (trace - disc) * 0.5
+						lam2 := (trace + disc) * 0.5
+
+						if math.Abs(float64(lam1)) > math.Abs(float64(lam2)) {
+							lam1, lam2 = lam2, lam1
+						}
+
+						// Warm superficial veins: principal cross-curvature lam2 must be negative
+						if lam2 >= 0 {
+							continue
+						}
+
+						rb := float32(math.Abs(float64(lam1))) / float32(math.Abs(float64(lam2)))
+						s2 := lam1*lam1 + lam2*lam2
+
+						blobnessExp := float32(math.Exp(float64(-rb * rb / twoBeta2)))
+						structureExp := 1.0 - float32(math.Exp(float64(-s2/twoC2)))
+
+						v := blobnessExp * structureExp
+						if v > maxResponse.Data[idx] {
+							maxResponse.Data[idx] = v
+						}
+					}
+				}
+			}(r0, r1)
 		}
+		wg.Wait()
 	}
 
-	return maxResponse.ToGray()
+	return maxResponse.ToGrayMasked(mask)
 }
+

@@ -143,14 +143,30 @@ func (m *FloatMatrix) MinMax() (float32, float32) {
 
 // ToGray converts float32 matrix to uint8 matrix with min-max stretching.
 func (m *FloatMatrix) ToGray() *GrayMatrix {
+	return m.ToGrayMasked(nil)
+}
+
+// ToGrayMasked converts float32 matrix to uint8 matrix, restricting min-max stretching to masked pixels
+func (m *FloatMatrix) ToGrayMasked(mask *GrayMatrix) *GrayMatrix {
 	gm := NewGrayMatrix(m.Width, m.Height)
-	minVal, maxVal := m.MinMax()
-	diff := maxVal - minVal
-	if diff <= 1e-6 {
+	var maxVal float32 = 0
+	for i, v := range m.Data {
+		if mask != nil && mask.Data[i] == 0 {
+			continue
+		}
+		if v > maxVal {
+			maxVal = v
+		}
+	}
+	if maxVal <= 1e-6 {
 		return gm
 	}
 	for i, v := range m.Data {
-		norm := (v - minVal) / diff
+		if mask != nil && mask.Data[i] == 0 {
+			gm.Data[i] = 0
+			continue
+		}
+		norm := v / maxVal
 		if norm < 0 {
 			norm = 0
 		} else if norm > 1 {
@@ -160,6 +176,7 @@ func (m *FloatMatrix) ToGray() *GrayMatrix {
 	}
 	return gm
 }
+
 
 // LoadImageAsGray loads any JPEG/PNG image and converts it into a grayscale GrayMatrix.
 func LoadImageAsGray(filePath string) (*GrayMatrix, error) {

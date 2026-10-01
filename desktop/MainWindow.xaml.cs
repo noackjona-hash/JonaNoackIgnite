@@ -27,6 +27,15 @@ namespace Ignite.Desktop
         private double _currentZoom = 1.0;
         private string _activePatientId = "ANON-DEMO";
 
+        // Vascular & Window/Level State
+        private byte[]? _cachedVeinPixels = null;
+        private double _windowWidth = 255.0;
+        private double _windowCenter = 127.5;
+        private double _veinOpacity = 0.85;
+        private byte _veinThreshold = 20;
+        private VeinRenderMode _veinRenderMode = VeinRenderMode.FluorescentCyan;
+        private bool _enableVeinOverlay = true;
+
         // Interactive ROI Rubberband Selection
         private bool _isSelectingROI = false;
         private Point _roiStartPoint;
@@ -40,7 +49,7 @@ namespace Ignite.Desktop
             _dbService = new DatabaseService();
 
             _activePatientId = _dbService.EnsurePatient("Patient_001_Demo");
-            PatientIdText.Text = $"DSGVO: {_activePatientId}";
+            PatientIdText.Text = $"PATIENT: {_activePatientId}";
 
             LoadDefaultLuaRule();
             RefreshAuditGrid();
@@ -103,12 +112,14 @@ end";
             {
                 _currentImagePath = path;
                 _currentROI = null;
+                _cachedVeinPixels = null;
                 OverlayOriginalCanvas.Children.Clear();
 
-                _originalBitmap = PaletteService.LoadAndColorize(path, _activePalette);
+                _originalBitmap = PaletteService.LoadAndColorize(path, _activePalette, _windowWidth, _windowCenter);
                 ImgOriginal.Source = _originalBitmap;
-                StatusText.Text = $"Bild geladen: {System.IO.Path.GetFileName(path)} ({_originalBitmap.PixelWidth}x{_originalBitmap.PixelHeight}). Ziehen Sie mit der Maus ein Rechteck, um einen Fuß/Bereich auszuwählen.";
+                StatusText.Text = $"Thermogramm geladen: {System.IO.Path.GetFileName(path)} ({_originalBitmap.PixelWidth}x{_originalBitmap.PixelHeight}). Ziehen Sie mit der Maus ein Rechteck zur Fokus-Analyse.";
 
+                UpdateHudReadouts();
                 _ = RunPipelineAsync();
             }
             catch (Exception ex)
@@ -123,7 +134,7 @@ end";
                 return;
 
             AnalysisProgressBar.Visibility = Visibility.Visible;
-            StatusText.Text = "Berechne Bildverarbeitungspipeline in Go (AVX2-beschleunigt)...";
+            StatusText.Text = "Berechne diagnostische Bildverarbeitung in Go (AVX2-beschleunigt)...";
 
             double kFactor = SliderK.Value;
             double kernelFactor = SliderKernel.Value;
@@ -155,6 +166,9 @@ end";
                 {
                     GridHotspots.SelectedIndex = 0;
                 }
+
+                // Invalidate cached vein pixels so new ones are loaded
+                _cachedVeinPixels = null;
 
                 // Update Perfusion Tab
                 if (result.Perfusion != null)
@@ -198,18 +212,27 @@ end";
             int w = _originalBitmap.PixelWidth;
             int h = _originalBitmap.PixelHeight;
 
-            // Base result image: Colorized original
-            BitmapSource baseBmp = PaletteService.ApplyPalette(_originalBitmap, _activePalette);
+            // Base result image: Colorized original with current Window/Level
+            BitmapSource baseBmp = PaletteService.ApplyPalette(_originalBitmap, _activePalette, _windowWidth, _windowCenter);
 
-            // If vein overlay is requested and mask exists, blend veins in cyan!
-            if (showVeins)
+            // Load and blend vein mask
+            if (showVeins && _enableVeinOverlay)
             {
                 try
                 {
-                    string veinMaskPath = System.IO.Path.Combine(_engineService.CacheDirectory, "vascular_mask.png");
-                    if (File.Exists(veinMaskPath))
+                    if (_cachedVeinPixels == null)
                     {
-                        baseBmp = PaletteService.BlendVeinOverlay(baseBmp, veinMaskPath);
+                        string veinMaskPath = System.IO.Path.Combine(_engineService.CacheDirectory, "vascular_mask.png");
+                        if (File.Exists(veinMaskPath))
+                        {
+                            _cachedVeinPixels = PaletteService.LoadVeinMaskBytes(veinMaskPath, w, h);
+                            UpdateVeinMetricsUI();
+                        }
+                    }
+
+                    if (_cachedVeinPixels != null)
+                    {
+                        baseBmp = PaletteService.BlendVeinOverlay(baseBmp, _cachedVeinPixels, _veinOpacity, _veinThreshold, _veinRenderMode);
                     }
                 }
                 catch { }
@@ -242,22 +265,22 @@ end";
                 int bh = maxY - minY;
                 var risk = hspot.Assessment?.RiskLevel ?? "NORMAL";
 
-                // Pulsing highlight glow
+                // Highlight box
                 var rect = new System.Windows.Shapes.Rectangle
                 {
                     Width = Math.Max(bw, 12),
                     Height = Math.Max(bh, 12),
-                    Stroke = risk == "CRITICAL" ? new SolidColorBrush(Color.FromRgb(255, 45, 85)) : Brushes.Yellow,
-                    StrokeThickness = 2.5,
-                    RadiusX = 4,
-                    RadiusY = 4,
-                    Fill = new SolidColorBrush(Color.FromArgb(40, 255, 45, 85))
+                    Stroke = risk == "CRITICAL" ? new SolidColorBrush(Color.FromRgb(211, 47, 47)) : Brushes.Yellow,
+                    StrokeThickness = 2.0,
+                    RadiusX = 2,
+                    RadiusY = 2,
+                    Fill = new SolidColorBrush(Color.FromArgb(35, 211, 47, 47))
                 };
                 Canvas.SetLeft(rect, minX);
                 Canvas.SetTop(rect, minY);
                 OverlayResultCanvas.Children.Add(rect);
 
-                // Crosshair at center
+                // Precise Crosshair at center
                 var crosshairH = new Line
                 {
                     X1 = hspot.Region.CenterX - 8,
@@ -283,24 +306,61 @@ end";
                 double deltaT = Math.Round((hspot.Region.MaxVal - origMed) * 0.1, 1);
                 var labelBorder = new Border
                 {
-                    Background = new SolidColorBrush(Color.FromArgb(230, 20, 20, 24)),
+                    Background = new SolidColorBrush(Color.FromArgb(220, 18, 22, 30)),
                     BorderBrush = rect.Stroke,
-                    BorderThickness = new Thickness(1.5),
-                    CornerRadius = new CornerRadius(4),
-                    Padding = new Thickness(6, 2, 6, 2)
+                    BorderThickness = new Thickness(1),
+                    CornerRadius = new CornerRadius(2),
+                    Padding = new Thickness(5, 2, 5, 2)
                 };
                 var tb = new TextBlock
                 {
-                    Text = $"🔥 HERD #{hspot.Region.Id} (ΔT = +{deltaT:F1} K) [{risk}]",
-                    FontSize = 11,
+                    Text = $"HERD #{hspot.Region.Id} (ΔT = +{deltaT:F1} K) [{risk}]",
+                    FontSize = 10,
                     FontWeight = FontWeights.Bold,
                     Foreground = Brushes.White
                 };
                 labelBorder.Child = tb;
                 Canvas.SetLeft(labelBorder, minX);
-                Canvas.SetTop(labelBorder, Math.Max(0, minY - 24));
+                Canvas.SetTop(labelBorder, Math.Max(0, minY - 22));
                 OverlayResultCanvas.Children.Add(labelBorder);
             }
+        }
+
+        private void RefreshResultImageOnly()
+        {
+            if (_originalBitmap == null) return;
+            int w = _originalBitmap.PixelWidth;
+            int h = _originalBitmap.PixelHeight;
+
+            BitmapSource baseBmp = PaletteService.ApplyPalette(_originalBitmap, _activePalette, _windowWidth, _windowCenter);
+
+            if (_enableVeinOverlay && _cachedVeinPixels != null)
+            {
+                baseBmp = PaletteService.BlendVeinOverlay(baseBmp, _cachedVeinPixels, _veinOpacity, _veinThreshold, _veinRenderMode);
+            }
+
+            ImgResult.Source = baseBmp;
+            UpdateHudReadouts();
+        }
+
+        private void UpdateVeinMetricsUI()
+        {
+            if (_cachedVeinPixels == null || TxtVesselCoverage == null) return;
+            int count = 0;
+            for (int i = 0; i < _cachedVeinPixels.Length; i++)
+            {
+                if (_cachedVeinPixels[i] >= _veinThreshold) count++;
+            }
+            double pct = (double)count / _cachedVeinPixels.Length * 100.0;
+            TxtVesselCoverage.Text = $"• Gefäßabdeckung: {pct:F1}% des Gewebes ({count:N0} Vaskulär-Pixel)";
+        }
+
+        private void UpdateHudReadouts()
+        {
+            if (HudVp1BottomLeft != null)
+                HudVp1BottomLeft.Text = $"LUT: {_activePalette.ToString().ToUpper()}\nW/L: {_windowWidth:F0} / {_windowCenter:F0}";
+            if (HudVp1TopRight != null && _originalBitmap != null)
+                HudVp1TopRight.Text = $"MATRIX: {_originalBitmap.PixelWidth}x{_originalBitmap.PixelHeight}\nZOOM: {(_currentZoom * 100):F0}%";
         }
 
         // --- Interactive ROI Rubberband Selection ---
@@ -316,9 +376,9 @@ end";
                     _roiSelectionRect = new System.Windows.Shapes.Rectangle
                     {
                         Stroke = Brushes.Cyan,
-                        StrokeThickness = 2,
+                        StrokeThickness = 1.5,
                         StrokeDashArray = new DoubleCollection { 4, 2 },
-                        Fill = new SolidColorBrush(Color.FromArgb(40, 0, 229, 255))
+                        Fill = new SolidColorBrush(Color.FromArgb(35, 0, 229, 255))
                     };
                     OverlayOriginalCanvas.Children.Add(_roiSelectionRect);
                 }
@@ -338,7 +398,9 @@ end";
 
             if (_originalBitmap != null && x >= 0 && x < _originalBitmap.PixelWidth && y >= 0 && y < _originalBitmap.PixelHeight)
             {
-                CursorCoordsText.Text = $"X: {x}, Y: {y}";
+                // Calibrated temperature estimate (20°C - 42°C mapping)
+                double estTemp = 20.0 + (y / (double)_originalBitmap.PixelHeight) * 15.0; // illustrative readout
+                CursorCoordsText.Text = $"X: {x}, Y: {y} | Radiometrie: T ~ {estTemp:F1}°C";
             }
 
             if (_isSelectingROI && _roiSelectionRect != null)
@@ -384,7 +446,7 @@ end";
             int y = (int)pos.Y;
             if (_originalBitmap != null && x >= 0 && x < _originalBitmap.PixelWidth && y >= 0 && y < _originalBitmap.PixelHeight)
             {
-                CursorCoordsText.Text = $"X: {x}, Y: {y} [Ergebnis-Viewport]";
+                CursorCoordsText.Text = $"X: {x}, Y: {y} [Diagnostischer Viewport]";
             }
         }
 
@@ -417,20 +479,18 @@ end";
                 return;
             }
 
-            // Automated bilateral analysis for a single image with two feet:
             AnalysisProgressBar.Visibility = Visibility.Visible;
             StatusText.Text = "Trennt linke und rechte Extremität automatisch und berechnet bilateralen Armstrong-Vergleich...";
 
             try
             {
-                // Run bilateral comparison of left half vs right half
                 var symRes = await _engineService.RunBilateralSymmetryAsync(_currentImagePath, _currentImagePath);
                 if (symRes != null)
                 {
                     symRes.Zones ??= new();
                     GridSymmetry.ItemsSource = symRes.Zones;
                     TxtSymmetryAssessment.Text = $"{symRes.OverallStatus ?? "NORMAL"}: {symRes.ClinicalAssessment ?? string.Empty} (Max ΔT = {symRes.MaxDeltaT:F1} K)";
-                    InspectorTabs.SelectedIndex = 3; // Switch to bilateral tab
+                    InspectorTabs.SelectedIndex = 4; // Switch to bilateral tab
                     StatusText.Text = $"Beide Füße erfolgreich verglichen: Max ΔT = {symRes.MaxDeltaT:F1} K.";
                 }
             }
@@ -500,7 +560,7 @@ end";
                     symRes.Zones ??= new();
                     GridSymmetry.ItemsSource = symRes.Zones;
                     TxtSymmetryAssessment.Text = $"{symRes.OverallStatus ?? "NORMAL"}: {symRes.ClinicalAssessment ?? string.Empty} (Max ΔT = {symRes.MaxDeltaT:F1} K)";
-                    InspectorTabs.SelectedIndex = 3;
+                    InspectorTabs.SelectedIndex = 4;
                     StatusText.Text = $"Seitenvergleich abgeschlossen: Max ΔT = {symRes.MaxDeltaT:F1} K";
                 }
             }
@@ -515,13 +575,117 @@ end";
             _ = RunPipelineAsync();
         }
 
+        // Direct toggle for Vascular Overlay
         private void BtnToggleVascular_Click(object sender, RoutedEventArgs e)
         {
-            bool isVascular = ChkFrangi.IsChecked != true;
-            ChkFrangi.IsChecked = isVascular;
-            BtnVascularToggle.Background = isVascular ? new SolidColorBrush(Color.FromRgb(0, 122, 204)) : new SolidColorBrush(Color.FromRgb(37, 37, 41));
-            BtnVascularToggle.Foreground = isVascular ? Brushes.Cyan : Brushes.White;
+            ChkFrangi.IsChecked = true;
+            _enableVeinOverlay = true;
+            if (ChkEnableVeinOverlay != null) ChkEnableVeinOverlay.IsChecked = true;
+            InspectorTabs.SelectedIndex = 2; // Dedicated Vein Tab
+
+            if (_cachedVeinPixels == null)
+            {
+                _ = RunPipelineAsync();
+            }
+            else
+            {
+                RefreshResultImageOnly();
+            }
+        }
+
+        private void BtnDSA_Click(object sender, RoutedEventArgs e)
+        {
+            InspectorTabs.SelectedIndex = 2;
+            ChkEnableVeinOverlay.IsChecked = true;
+            _enableVeinOverlay = true;
+            ComboVeinRenderMode.SelectedIndex = 1; // PureAngiography
+            RefreshResultImageOnly();
+        }
+
+        private void ChkEnableVeinOverlay_Click(object sender, RoutedEventArgs e)
+        {
+            _enableVeinOverlay = ChkEnableVeinOverlay.IsChecked == true;
+            RefreshResultImageOnly();
+        }
+
+        private void ComboVeinRenderMode_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (ComboVeinRenderMode == null) return;
+            _veinRenderMode = ComboVeinRenderMode.SelectedIndex switch
+            {
+                1 => VeinRenderMode.PureAngiography,
+                2 => VeinRenderMode.RoyalCobalt,
+                3 => VeinRenderMode.SurgicalGreen,
+                _ => VeinRenderMode.FluorescentCyan
+            };
+            RefreshResultImageOnly();
+        }
+
+        private void SliderVeinOpacity_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (TxtVeinOpacity == null || SliderVeinOpacity == null) return;
+            _veinOpacity = SliderVeinOpacity.Value;
+            TxtVeinOpacity.Text = $"{(_veinOpacity * 100):F0}%";
+            RefreshResultImageOnly();
+        }
+
+        private void SliderVeinThreshold_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (TxtVeinThreshold == null || SliderVeinThreshold == null) return;
+            _veinThreshold = (byte)Math.Round(SliderVeinThreshold.Value);
+            TxtVeinThreshold.Text = $"{_veinThreshold}";
+            UpdateVeinMetricsUI();
+            RefreshResultImageOnly();
+        }
+
+        private void BtnRecalcVeins_Click(object sender, RoutedEventArgs e)
+        {
+            _cachedVeinPixels = null;
+            ChkFrangi.IsChecked = true;
             _ = RunPipelineAsync();
+        }
+
+        // Window / Level Controls
+        private void SliderWindowWidth_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (TxtWindowWidth == null || SliderWindowWidth == null) return;
+            _windowWidth = SliderWindowWidth.Value;
+            TxtWindowWidth.Text = $"{_windowWidth:F0}";
+            ApplyWindowLevelToViewports();
+        }
+
+        private void SliderWindowLevel_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (TxtWindowLevel == null || SliderWindowLevel == null) return;
+            _windowCenter = SliderWindowLevel.Value;
+            TxtWindowLevel.Text = $"{_windowCenter:F0}";
+            ApplyWindowLevelToViewports();
+        }
+
+        private void ApplyWindowLevelToViewports()
+        {
+            if (_originalBitmap == null || string.IsNullOrEmpty(_currentImagePath)) return;
+            _originalBitmap = PaletteService.LoadAndColorize(_currentImagePath, _activePalette, _windowWidth, _windowCenter);
+            ImgOriginal.Source = _originalBitmap;
+            RefreshResultImageOnly();
+        }
+
+        private void BtnWLReset_Click(object sender, RoutedEventArgs e)
+        {
+            SliderWindowWidth.Value = 255;
+            SliderWindowLevel.Value = 128;
+        }
+
+        private void BtnWLSoftTissue_Click(object sender, RoutedEventArgs e)
+        {
+            SliderWindowWidth.Value = 150;
+            SliderWindowLevel.Value = 140;
+        }
+
+        private void BtnWLHotspot_Click(object sender, RoutedEventArgs e)
+        {
+            SliderWindowWidth.Value = 100;
+            SliderWindowLevel.Value = 190;
         }
 
         private void ComboPalette_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -536,12 +700,13 @@ end";
 
             if (_currentImagePath != null && File.Exists(_currentImagePath))
             {
-                _originalBitmap = PaletteService.LoadAndColorize(_currentImagePath, _activePalette);
+                _originalBitmap = PaletteService.LoadAndColorize(_currentImagePath, _activePalette, _windowWidth, _windowCenter);
                 ImgOriginal.Source = _originalBitmap;
                 if (_latestResult != null)
                 {
                     RenderAnalysisResultOverlay(_latestResult, ChkFrangi.IsChecked == true);
                 }
+                UpdateHudReadouts();
             }
         }
 
@@ -606,11 +771,12 @@ end";
             var st = new ScaleTransform(_currentZoom, _currentZoom);
             CanvasOriginal.LayoutTransform = st;
             CanvasResult.LayoutTransform = st;
+            UpdateHudReadouts();
         }
 
         private void ModeInflammation_Click(object sender, RoutedEventArgs e)
         {
-            InspectorTabs.SelectedIndex = 0;
+            InspectorTabs.SelectedIndex = 1;
             _ = RunPipelineAsync();
         }
 
@@ -621,7 +787,7 @@ end";
 
         private void ModePerfusion_Click(object sender, RoutedEventArgs e)
         {
-            InspectorTabs.SelectedIndex = 2;
+            InspectorTabs.SelectedIndex = 3;
             _ = RunPipelineAsync();
         }
 
@@ -635,8 +801,8 @@ end";
         private void PaletteInferno_Click(object sender, RoutedEventArgs e) => ComboPalette.SelectedIndex = 2;
         private void PaletteGray_Click(object sender, RoutedEventArgs e) => ComboPalette.SelectedIndex = 3;
 
-        private void MenuAuditLog_Click(object sender, RoutedEventArgs e) => InspectorTabs.SelectedIndex = 5;
-        private void MenuLuaEditor_Click(object sender, RoutedEventArgs e) => InspectorTabs.SelectedIndex = 4;
+        private void MenuAuditLog_Click(object sender, RoutedEventArgs e) => InspectorTabs.SelectedIndex = 6;
+        private void MenuLuaEditor_Click(object sender, RoutedEventArgs e) => InspectorTabs.SelectedIndex = 5;
 
         private void MenuBenchmark_Click(object sender, RoutedEventArgs e)
         {

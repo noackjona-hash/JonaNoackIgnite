@@ -2,22 +2,22 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="IGNITE Medical Imaging Suite v5.0.0 [Jugend forscht 2026] — Deterministische Thermografie-Workstation"
-        Height="960" Width="1520"
+        Height="960" Width="1540"
         Background="{StaticResource AppBgBrush}" Foreground="{StaticResource TextPrimaryBrush}"
         FontFamily="Segoe UI, Segoe UI Variable, Arial"
         WindowStartupLocation="CenterScreen">
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/> <!-- 0: Brand Header -->
+            <RowDefinition Height="Auto"/> <!-- 0: Classical Medical Brand Header -->
             <RowDefinition Height="Auto"/> <!-- 1: Menu Bar -->
-            <RowDefinition Height="Auto"/> <!-- 2: Quick Action Toolbar -->
-            <RowDefinition Height="*"/>    <!-- 3: Main Viewport & Docking Inspector -->
-            <RowDefinition Height="30"/>   <!-- 4: Status Bar -->
+            <RowDefinition Height="Auto"/> <!-- 2: Clinical Action Toolbar -->
+            <RowDefinition Height="*"/>    <!-- 3: Main Dual-Viewport & Docking Inspector -->
+            <RowDefinition Height="28"/>   <!-- 4: Clinical Status Bar -->
         </Grid.RowDefinitions>
 
-        <!-- 0. MODERN GLASS BRAND HEADER -->
-        <Border Grid.Row="0" Background="#0C101A" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="14,10">
+        <!-- 0. CLASSICAL MEDICAL BRAND HEADER -->
+        <Border Grid.Row="0" Background="#11141B" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="14,8">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -25,56 +25,56 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Left: Branding & Subtitle -->
+                <!-- Left: Workstation Modality Branding -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Width="36" Height="36" Background="#0D2E45" BorderBrush="{StaticResource CyanBrush}" BorderThickness="1.5" CornerRadius="8" Margin="0,0,12,0">
-                        <TextBlock Text="🔥" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Border Width="34" Height="34" Background="#182234" BorderBrush="{StaticResource MedicalBlueBrush}" BorderThickness="1.5" CornerRadius="4" Margin="0,0,10,0">
+                        <TextBlock Text="🩺" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <StackPanel VerticalAlignment="Center">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="IGNITE" FontWeight="Black" FontSize="18" Foreground="{StaticResource CyanBrush}" VerticalAlignment="Center"/>
-                            <TextBlock Text=" MEDICAL SUITE" FontWeight="Bold" FontSize="18" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
-                            <Border Background="#1A2840" BorderBrush="{StaticResource CyanBrush}" BorderThickness="1" CornerRadius="4" Padding="6,2" Margin="10,0,0,0" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="IGNITE" FontWeight="Black" FontSize="17" Foreground="{StaticResource CyanBrush}"/>
+                            <TextBlock Text=" MEDICAL WORKSTATION" FontWeight="Bold" FontSize="17" Foreground="#FFFFFF" Margin="4,0,0,0"/>
+                            <Border Background="#162238" BorderBrush="{StaticResource MedicalBlueBrush}" BorderThickness="1" CornerRadius="3" Padding="5,1" Margin="8,0,0,0">
                                 <TextBlock Text="v5.0.0 AVX2" FontSize="10" FontWeight="Bold" Foreground="{StaticResource CyanBrush}"/>
                             </Border>
-                            <Border Background="#2B1A40" BorderBrush="{StaticResource PurpleBrush}" BorderThickness="1" CornerRadius="4" Padding="6,2" Margin="6,0,0,0" VerticalAlignment="Center">
-                                <TextBlock Text="Jugend forscht 2026" FontSize="10" FontWeight="Bold" Foreground="#D1C4E9"/>
+                            <Border Background="#2B1D38" BorderBrush="{StaticResource PurpleBrush}" BorderThickness="1" CornerRadius="3" Padding="5,1" Margin="6,0,0,0">
+                                <TextBlock Text="Jugend forscht 2026" FontSize="10" FontWeight="Bold" Foreground="#CE93D8"/>
                             </Border>
                         </StackPanel>
-                        <TextBlock Text="Multimodale Infrarot-Diagnostik: Top-Hat Morphologie · Vaskulärer Frangi-Hesse-Filter · Armstrong Asymmetrie" 
-                                   FontSize="11" Foreground="{StaticResource TextMutedBrush}" Margin="0,2,0,0"/>
+                        <TextBlock Text="Diagnostische Thermografie: Top-Hat Morphologie · Vaskulärer Frangi-Hesse-Filter · Armstrong Asymmetrie" 
+                                   FontSize="10.5" Foreground="{StaticResource TextMutedBrush}" Margin="0,1,0,0"/>
                     </StackPanel>
                 </StackPanel>
 
-                <!-- Center: Patient & Case Info Pill -->
-                <Border Grid.Column="1" HorizontalAlignment="Center" Background="#111624" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="20" Padding="16,4">
+                <!-- Center: Patient & Case Info Badge (DICOM Style) -->
+                <Border Grid.Column="1" HorizontalAlignment="Center" Background="#161A24" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="14,4">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="🛡️" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                        <TextBlock x:Name="PatientIdText" Text="DSGVO: ANON-DEMO" FontWeight="Bold" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
-                        <Separator Width="1" Height="14" Margin="10,0" Background="{StaticResource BorderBrush}"/>
-                        <TextBlock Text="Audit-Log: Aktiv (SQLite)" FontSize="11" Foreground="{StaticResource SuccessBrush}" VerticalAlignment="Center"/>
-                        <Separator Width="1" Height="14" Margin="10,0" Background="{StaticResource BorderBrush}"/>
-                        <TextBlock Text="Modus: Deterministisch (Kein Blackbox-ML)" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                        <TextBlock Text="🆔" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="PatientIdText" Text="PATIENT: ANON-7F3A9" FontWeight="Bold" FontSize="11" Foreground="#FFFFFF" VerticalAlignment="Center"/>
+                        <Separator Width="1" Height="12" Margin="10,0" Background="{StaticResource BorderBrush}"/>
+                        <TextBlock Text="MODALITÄT: IR-THERM" FontSize="11" Foreground="{StaticResource CyanBrush}" VerticalAlignment="Center"/>
+                        <Separator Width="1" Height="12" Margin="10,0" Background="{StaticResource BorderBrush}"/>
+                        <TextBlock Text="DSGVO Art. 30: AUDIT LOKAL" FontSize="11" Foreground="{StaticResource SuccessBrush}" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Border>
 
-                <!-- Right: Performance & Hardware Badges -->
+                <!-- Right: Hardware Status Indicators -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Background="#0F2233" BorderBrush="{StaticResource CyanBrush}" BorderThickness="1" CornerRadius="6" Padding="10,4" Margin="0,0,8,0">
+                    <Border Background="#162238" BorderBrush="{StaticResource CyanBrush}" BorderThickness="1" CornerRadius="3" Padding="8,3" Margin="0,0,6,0">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="⚡" Margin="0,0,4,0"/>
-                            <TextBlock x:Name="EngineTimingText" Text="Go Core: 169.5 ms (AVX2)" FontSize="11" FontWeight="Bold" Foreground="{StaticResource CyanBrush}"/>
+                            <TextBlock Text="⚡" Margin="0,0,4,0" FontSize="10"/>
+                            <TextBlock x:Name="EngineTimingText" Text="Go Core: 169.5 ms (AVX2)" FontSize="10.5" FontWeight="Bold" Foreground="{StaticResource CyanBrush}"/>
                         </StackPanel>
                     </Border>
-                    <Border Background="#161B2B" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="6" Padding="10,4">
-                        <TextBlock Text="SIMD: 32-Byte/Takt" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <Border Background="#181D28" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="3" Padding="8,3">
+                        <TextBlock Text="SIMD: 32 Pixel/Takt" FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}"/>
                     </Border>
                 </StackPanel>
             </Grid>
         </Border>
 
         <!-- 1. MAIN MENU BAR -->
-        <Menu Grid.Row="1" Background="#0A0C14" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="8,2">
+        <Menu Grid.Row="1" Background="#0F1218" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="6,2">
             <MenuItem Header="_Datei">
                 <MenuItem Header="_Wärmebild öffnen..." Click="MenuOpenImage_Click" InputGestureText="Strg+O"/>
                 <MenuItem Header="_Zweites Bild für Seitenvergleich..." Click="MenuOpenContralateral_Click"/>
@@ -83,13 +83,13 @@
                 <Separator Background="{StaticResource BorderBrush}"/>
                 <MenuItem Header="_Beenden" Click="MenuExit_Click"/>
             </MenuItem>
-            <MenuItem Header="_Analyse-Modi">
+            <MenuItem Header="_Diagnostik">
                 <MenuItem Header="1. Entzündungs-Detektor (Top-Hat &amp; MAD)" Click="ModeInflammation_Click"/>
-                <MenuItem Header="2. Venen- &amp; Adernkartierung (Frangi-Hesse)" Click="ModeVascular_Click"/>
-                <MenuItem Header="3. Perfusion &amp; Temperaturgradient" Click="ModePerfusion_Click"/>
-                <MenuItem Header="4. Bilateraler Seitenvergleich (Armstrong)" Click="ModeBilateral_Click"/>
+                <MenuItem Header="2. Venen- &amp; Gefäßkartierung (Frangi-Hesse)" Click="ModeVascular_Click"/>
+                <MenuItem Header="3. Perfusion &amp; Temperaturgradient (dT/dy)" Click="ModePerfusion_Click"/>
+                <MenuItem Header="4. Bilateraler Seitenvergleich (Armstrong ΔT >= 2.2K)" Click="ModeBilateral_Click"/>
             </MenuItem>
-            <MenuItem Header="_Falschfarben">
+            <MenuItem Header="_Falschfarben &amp; Fensterung">
                 <MenuItem Header="Ironbow (Standard Medizin)" Click="PaletteIronbow_Click"/>
                 <MenuItem Header="Rainbow / Spektral" Click="PaletteRainbow_Click"/>
                 <MenuItem Header="Inferno" Click="PaletteInferno_Click"/>
@@ -106,8 +106,8 @@
             </MenuItem>
         </Menu>
 
-        <!-- 2. QUICK ACTION COMMAND TOOLBAR -->
-        <Border Grid.Row="2" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="10,6">
+        <!-- 2. CLINICAL ACTION TOOLBAR -->
+        <Border Grid.Row="2" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="8,4">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -115,42 +115,44 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Left: Action Buttons -->
+                <!-- Left: Clinical Action Buttons -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Content="📂 Wärmebild öffnen" Click="MenuOpenImage_Click" Background="#182032" BorderBrush="{StaticResource CyanBrush}"/>
-                    <Button Content="⚡ Pipeline berechnen" Click="BtnRunAnalysis_Click" Background="#0088CC" Foreground="White" FontWeight="Bold"/>
+                    <Button Content="📂 Wärmebild laden" Click="MenuOpenImage_Click" Background="#232834" BorderBrush="{StaticResource MedicalBlueBrush}"/>
+                    <Button Content="⚡ Analyse starten" Click="BtnRunAnalysis_Click" Background="#0078D4" Foreground="White" FontWeight="Bold"/>
 
-                    <Separator Width="1" Height="22" Margin="8,0" Background="{StaticResource BorderBrush}"/>
+                    <Separator Width="1" Height="20" Margin="6,0" Background="{StaticResource BorderBrush}"/>
 
-                    <Button x:Name="BtnVascularToggle" Content="🩸 Venen-Overlay (Frangi)" Click="BtnToggleVascular_Click" ToolTip="Schaltet den multiskaligen Frangi-Gefäßfilter ein/aus"/>
-                    <Button Content="🤖 Beide Füße trennen &amp; vergleichen" Click="BtnAutoSplitFeet_Click" Background="#263450" ToolTip="Trennt Extremitäten automatisch &amp; berechnet bilateralen Armstrong-Vergleich"/>
+                    <Button x:Name="BtnVascularToggle" Content="🩸 Venen-Overlay (Frangi)" Click="BtnToggleVascular_Click" ToolTip="Öffnet die Venen-Analyse und schaltet das Frangi-Gefäßoverlay ein"/>
+                    <Button Content="🌓 Angiographie (DSA)" Click="BtnDSA_Click" ToolTip="Schaltet direkt in den reinen Gefäßbaum-Modus (Digital Subtraction Angiography)"/>
+                    <Button Content="⚖️ Füße trennen &amp; vergleichen" Click="BtnAutoSplitFeet_Click" ToolTip="Trennt Extremitäten automatisch &amp; berechnet bilateralen Armstrong-Vergleich"/>
                     <Button Content="✂️ ROI zurücksetzen" Click="BtnResetROI_Click" ToolTip="Entfernt benutzerdefinierte Bereichsauswahl"/>
 
-                    <Separator Width="1" Height="22" Margin="8,0" Background="{StaticResource BorderBrush}"/>
+                    <Separator Width="1" Height="20" Margin="6,0" Background="{StaticResource BorderBrush}"/>
 
-                    <TextBlock Text="Palette:" VerticalAlignment="Center" Margin="4,0" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12"/>
-                    <ComboBox x:Name="ComboPalette" Width="140" SelectionChanged="ComboPalette_SelectionChanged" Background="#161B28" Foreground="{StaticResource TextPrimaryBrush}" VerticalContentAlignment="Center">
+                    <!-- Color Palette Dropdown -->
+                    <TextBlock Text="Palette:" VerticalAlignment="Center" Margin="2,0" Foreground="{StaticResource TextSecondaryBrush}" FontSize="11"/>
+                    <ComboBox x:Name="ComboPalette" Width="130" SelectionChanged="ComboPalette_SelectionChanged" Background="#161921" Foreground="{StaticResource TextPrimaryBrush}" FontSize="11">
                         <ComboBoxItem Content="Ironbow (Standard)" IsSelected="True"/>
                         <ComboBoxItem Content="Rainbow"/>
                         <ComboBoxItem Content="Inferno"/>
                         <ComboBoxItem Content="Graustufen"/>
                     </ComboBox>
 
-                    <Separator Width="1" Height="22" Margin="8,0" Background="{StaticResource BorderBrush}"/>
+                    <Separator Width="1" Height="20" Margin="6,0" Background="{StaticResource BorderBrush}"/>
 
                     <!-- Zoom Controls -->
-                    <Button Content="🔍 +" Click="BtnZoomIn_Click" Width="32" Padding="0"/>
-                    <Button Content="100%" Click="BtnZoomReset_Click" Width="44" Padding="0"/>
-                    <Button Content="🔍 -" Click="BtnZoomOut_Click" Width="32" Padding="0"/>
-                    <Button Content="↔ Fit" Click="BtnZoomFit_Click" Width="42" Padding="0"/>
+                    <Button Content="🔍 +" Click="BtnZoomIn_Click" Width="30" Padding="0"/>
+                    <Button Content="100%" Click="BtnZoomReset_Click" Width="40" Padding="0"/>
+                    <Button Content="🔍 -" Click="BtnZoomOut_Click" Width="30" Padding="0"/>
+                    <Button Content="↔ Fit" Click="BtnZoomFit_Click" Width="38" Padding="0"/>
                 </StackPanel>
 
-                <!-- Center: Animated progress bar during computation -->
-                <ProgressBar Grid.Column="1" x:Name="AnalysisProgressBar" Height="4" IsIndeterminate="True" Foreground="{StaticResource CyanBrush}" Background="Transparent" BorderThickness="0" Margin="20,0" Visibility="Collapsed" VerticalAlignment="Center"/>
+                <!-- Center: Animated Progress Bar -->
+                <ProgressBar Grid.Column="1" x:Name="AnalysisProgressBar" Height="3" IsIndeterminate="True" Foreground="{StaticResource CyanBrush}" Background="Transparent" BorderThickness="0" Margin="14,0" Visibility="Collapsed" VerticalAlignment="Center"/>
 
-                <!-- Right: Report export -->
+                <!-- Right: Report Export Button -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Content="💾 Befundbericht exportieren" Click="MenuExportReport_Click" Background="#1C273C" Foreground="{StaticResource CyanBrush}"/>
+                    <Button Content="💾 Befund exportieren" Click="MenuExportReport_Click" Background="#1B2636" Foreground="{StaticResource CyanBrush}"/>
                 </StackPanel>
             </Grid>
         </Border>
@@ -159,47 +161,47 @@
         <Grid Grid.Row="3">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" MinWidth="500"/>
-                <ColumnDefinition Width="6"/>
-                <ColumnDefinition Width="460" MinWidth="360"/>
+                <ColumnDefinition Width="4"/>
+                <ColumnDefinition Width="450" MinWidth="360"/>
             </Grid.ColumnDefinitions>
 
             <!-- DUAL VIEWPORT WORKBENCH -->
-            <Grid Grid.Column="0" Background="#07080D">
+            <Grid Grid.Column="0" Background="#0B0D12">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <!-- Sub-Header showing Viewport titles -->
-                <Border Grid.Row="0" Background="#0F121C" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="14,8">
+                <!-- Sub-Header showing Viewport Titles -->
+                <Border Grid.Row="0" Background="#141822" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="12,6">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                            <Border Width="8" Height="8" Background="{StaticResource CyanBrush}" CornerRadius="4" Margin="0,0,8,0"/>
-                            <TextBlock Text="PRIMÄR-RADIOMETRIE (EINGANGS-WÄRMEBILD)" FontWeight="Bold" FontSize="11" Foreground="{StaticResource CyanBrush}"/>
-                            <TextBlock Text=" · Maus ziehen = Bereich wählen" FontSize="11" Foreground="{StaticResource TextMutedBrush}" Margin="6,0,0,0"/>
+                            <Border Width="7" Height="7" Background="{StaticResource CyanBrush}" CornerRadius="2" Margin="0,0,6,0"/>
+                            <TextBlock Text="PRIMÄR-RADIOMETRIE (EINGANGS-THERMOGRAMM)" FontWeight="Bold" FontSize="11" Foreground="{StaticResource CyanBrush}"/>
+                            <TextBlock Text=" · Rechteck ziehen = Bereich wählen" FontSize="10.5" Foreground="{StaticResource TextMutedBrush}" Margin="6,0,0,0"/>
                         </StackPanel>
                         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                            <Border Width="8" Height="8" Background="{StaticResource SuccessBrush}" CornerRadius="4" Margin="0,0,8,0"/>
-                            <TextBlock Text="DIAGNOSTISCHER BEFUND &amp; OVERLAYS" FontWeight="Bold" FontSize="11" Foreground="{StaticResource SuccessBrush}"/>
-                            <TextBlock x:Name="TxtResultSubtitle" Text=" · Go AVX2 Engine" FontSize="11" Foreground="{StaticResource TextMutedBrush}" Margin="6,0,0,0"/>
+                            <Border Width="7" Height="7" Background="{StaticResource SuccessBrush}" CornerRadius="2" Margin="0,0,6,0"/>
+                            <TextBlock Text="DIAGNOSTISCHER BEFUND (OVERLAYS &amp; VENEN)" FontWeight="Bold" FontSize="11" Foreground="{StaticResource SuccessBrush}"/>
+                            <TextBlock x:Name="TxtResultSubtitle" Text=" · Go AVX2 Engine" FontSize="10.5" Foreground="{StaticResource TextMutedBrush}" Margin="6,0,0,0"/>
                         </StackPanel>
                     </Grid>
                 </Border>
 
-                <!-- Split Viewports -->
+                <!-- Split Viewports with DICOM HUD Overlays -->
                 <Grid Grid.Row="1">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="2"/>
+                        <ColumnDefinition Width="1"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- Viewport 1 (Original Thermal Image + Interactive ROI Rubberband) -->
-                    <Border Grid.Column="0" ClipToBounds="True" Background="#06070A">
+                    <!-- VIEWPORT 1 (Original Thermal Image + Interactive ROI) -->
+                    <Grid Grid.Column="0" Background="#07090E" ClipToBounds="True">
                         <ScrollViewer x:Name="ScrollOriginal" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
                             <Grid x:Name="CanvasOriginal" 
                                   MouseDown="ViewportOriginal_MouseDown" 
@@ -210,13 +212,21 @@
                                 <Canvas x:Name="OverlayOriginalCanvas" IsHitTestVisible="False"/>
                             </Grid>
                         </ScrollViewer>
-                    </Border>
+
+                        <!-- DICOM Corner HUD Overlays (Top-Left, Top-Right, Bottom-Left, Bottom-Right) -->
+                        <Grid IsHitTestVisible="False" Margin="10">
+                            <TextBlock Text="PATIENT: ANON-7F3A9&#x0a;MODUS: IR-THERM" FontSize="9.5" FontFamily="Consolas, Segoe UI" Foreground="#88FFFFFF" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+                            <TextBlock x:Name="HudVp1TopRight" Text="MATRIX: 1440x1080&#x0a;ZOOM: 100%" FontSize="9.5" FontFamily="Consolas, Segoe UI" Foreground="#88FFFFFF" HorizontalAlignment="Right" VerticalAlignment="Top" TextAlignment="Right"/>
+                            <TextBlock x:Name="HudVp1BottomLeft" Text="LUT: IRONBOW&#x0a;W/L: 255 / 128" FontSize="9.5" FontFamily="Consolas, Segoe UI" Foreground="#8800E5FF" HorizontalAlignment="Left" VerticalAlignment="Bottom"/>
+                            <TextBlock Text="STATUS: KALIBRIERT&#x0a;FLIR / INFRATEC" FontSize="9.5" FontFamily="Consolas, Segoe UI" Foreground="#8800E5FF" HorizontalAlignment="Right" VerticalAlignment="Bottom" TextAlignment="Right"/>
+                        </Grid>
+                    </Grid>
 
                     <!-- Viewport Divider -->
-                    <GridSplitter Grid.Column="1" Width="2" HorizontalAlignment="Stretch" Background="#1D2436"/>
+                    <GridSplitter Grid.Column="1" Width="1" HorizontalAlignment="Stretch" Background="#2A3242"/>
 
-                    <!-- Viewport 2 (Analysis Result / Overlay / Veins / Difference) -->
-                    <Grid Grid.Column="2" Background="#06070A">
+                    <!-- VIEWPORT 2 (Analysis Result / Veins / Hotspots / DSA) -->
+                    <Grid Grid.Column="2" Background="#07090E" ClipToBounds="True">
                         <ScrollViewer x:Name="ScrollResult" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
                             <Grid x:Name="CanvasResult" MouseMove="ViewportResult_MouseMove" MouseLeave="Viewport_MouseLeave">
                                 <Image x:Name="ImgResult" Stretch="None"/>
@@ -224,12 +234,20 @@
                             </Grid>
                         </ScrollViewer>
 
-                        <!-- Floating Temperature Scale Legend Bar on the right edge -->
-                        <Border HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,0" 
-                                Background="#CC0F131D" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="6,8">
-                            <StackPanel Width="36" HorizontalAlignment="Center">
-                                <TextBlock Text="42°C" FontSize="9" FontWeight="Bold" Foreground="#FF2D55" HorizontalAlignment="Center"/>
-                                <Border Height="140" Width="12" Margin="0,4" CornerRadius="3" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                        <!-- DICOM Corner HUD Overlays -->
+                        <Grid IsHitTestVisible="False" Margin="10">
+                            <TextBlock Text="DIAGNOSTIK: FRANGI + TOP-HAT&#x0a;ENGINE: x86_64 AVX2" FontSize="9.5" FontFamily="Consolas, Segoe UI" Foreground="#88FFFFFF" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+                            <TextBlock x:Name="HudVp2TopRight" Text="KLASSIFIKATION: LUA 5.1&#x0a;AUDIT: SQLITE SHA-256" FontSize="9.5" FontFamily="Consolas, Segoe UI" Foreground="#88FFFFFF" HorizontalAlignment="Right" VerticalAlignment="Top" TextAlignment="Right"/>
+                            <TextBlock x:Name="HudVp2BottomLeft" Text="OVERLAYS: 🩸 VENEN + 🔥 HERDE&#x0a;ARMSTRONG ΔT &gt;= 2.2K" FontSize="9.5" FontFamily="Consolas, Segoe UI" Foreground="#8800E676" HorizontalAlignment="Left" VerticalAlignment="Bottom"/>
+                            <TextBlock Text="AUTONOM / DETERMINISTISCH&#x0a;JUGEND FORSCHT 2026" FontSize="9.5" FontFamily="Consolas, Segoe UI" Foreground="#8800E676" HorizontalAlignment="Right" VerticalAlignment="Bottom" TextAlignment="Right"/>
+                        </Grid>
+
+                        <!-- Floating Calibrated Temperature Scale Bar -->
+                        <Border HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" 
+                                Background="#D0121722" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="5,6">
+                            <StackPanel Width="32" HorizontalAlignment="Center">
+                                <TextBlock Text="42°C" FontSize="8.5" FontWeight="Bold" Foreground="#FF3B5B" HorizontalAlignment="Center"/>
+                                <Border Height="120" Width="10" Margin="0,4" CornerRadius="2" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
                                     <Border.Background>
                                         <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                                             <GradientStop Color="#FFFFFF" Offset="0.0"/>
@@ -240,7 +258,7 @@
                                         </LinearGradientBrush>
                                     </Border.Background>
                                 </Border>
-                                <TextBlock Text="20°C" FontSize="9" FontWeight="Bold" Foreground="#00E5FF" HorizontalAlignment="Center"/>
+                                <TextBlock Text="20°C" FontSize="8.5" FontWeight="Bold" Foreground="{StaticResource CyanBrush}" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
                     </Grid>
@@ -248,74 +266,95 @@
             </Grid>
 
             <!-- SPLITTER -->
-            <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch" Background="#121622"/>
+            <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Stretch" Background="#11141C"/>
 
             <!-- RIGHT DOCKING INSPECTOR PANEL -->
             <Border Grid.Column="2" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1,0,0,0">
                 <TabControl x:Name="InspectorTabs" Background="Transparent" BorderThickness="0">
                     
-                    <!-- TAB 1: PARAMETER & CONTROL -->
-                    <TabItem Header="⚙️ Parameter">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="16">
+                    <!-- TAB 1: PARAMETER & FENSTERUNG (W/L) -->
+                    <TabItem Header="⚙️ Parameter &amp; W/L">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="14">
                             <StackPanel>
-                                <TextBlock Text="Pipeline-Parameter &amp; Schwellenwerte" FontWeight="Bold" FontSize="14" Foreground="{StaticResource CyanBrush}" Margin="0,0,0,12"/>
+                                <TextBlock Text="Diagnostische Pipeline-Parameter" FontWeight="Bold" FontSize="13" Foreground="{StaticResource CyanBrush}" Margin="0,0,0,10"/>
 
-                                <Border Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,12">
+                                <!-- Window / Level Contrast Controls -->
+                                <Border Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,0,0,10">
                                     <StackPanel>
-                                        <TextBlock Text="Schwellenwert-Faktor k (Standard: 3.0):" FontWeight="SemiBold" FontSize="12" Margin="0,0,0,4"/>
+                                        <TextBlock Text="DICOM Fensterung (Window / Level):" FontWeight="Bold" FontSize="11" Margin="0,0,0,4"/>
+                                        <Grid Margin="0,2">
+                                            <TextBlock Text="Fensterbreite (Kontrast W):" FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                            <TextBlock x:Name="TxtWindowWidth" Text="255" HorizontalAlignment="Right" FontWeight="Bold" Foreground="{StaticResource CyanBrush}" FontSize="10.5"/>
+                                        </Grid>
+                                        <Slider x:Name="SliderWindowWidth" Minimum="40" Maximum="255" Value="255" SmallChange="5" ValueChanged="SliderWindowWidth_ValueChanged"/>
+
+                                        <Grid Margin="0,4,0,0">
+                                            <TextBlock Text="Fensterzentrum (Helligkeit L):" FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                            <TextBlock x:Name="TxtWindowLevel" Text="128" HorizontalAlignment="Right" FontWeight="Bold" Foreground="{StaticResource CyanBrush}" FontSize="10.5"/>
+                                        </Grid>
+                                        <Slider x:Name="SliderWindowLevel" Minimum="20" Maximum="235" Value="128" SmallChange="5" ValueChanged="SliderWindowLevel_ValueChanged"/>
+
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,6,0,0">
+                                            <Button Content="Standard" Click="BtnWLReset_Click" Padding="6,2" FontSize="10"/>
+                                            <Button Content="Gewebe-Boost" Click="BtnWLSoftTissue_Click" Padding="6,2" FontSize="10" Margin="4,0,0,0"/>
+                                            <Button Content="Hotspot-Fokus" Click="BtnWLHotspot_Click" Padding="6,2" FontSize="10" Margin="4,0,0,0"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Outlier Threshold K-Factor -->
+                                <Border Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,0,0,10">
+                                    <StackPanel>
+                                        <TextBlock Text="Schwellenwert-Faktor k (Standard: 3.0):" FontWeight="SemiBold" FontSize="11" Margin="0,0,0,2"/>
                                         <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="45"/>
-                                            </Grid.ColumnDefinitions>
                                             <Slider x:Name="SliderK" Minimum="1.5" Maximum="5.0" Value="3.0" SmallChange="0.1" ValueChanged="SliderK_ValueChanged" VerticalAlignment="Center"/>
-                                            <TextBlock Grid.Column="1" Text="{Binding ElementName=SliderK, Path=Value, StringFormat={}{0:F1}}" VerticalAlignment="Center" HorizontalAlignment="Right" FontWeight="Bold" Foreground="{StaticResource CyanBrush}"/>
+                                            <TextBlock Text="{Binding ElementName=SliderK, Path=Value, StringFormat={}{0:F1}}" VerticalAlignment="Center" HorizontalAlignment="Right" FontWeight="Bold" Foreground="{StaticResource CyanBrush}" FontSize="11"/>
                                         </Grid>
-                                        <TextBlock Text="Definiert das statistische Vielfache (k * MAD), ab welchem ein Areal als Hyperthermie-Herd gilt." FontSize="10" Foreground="{StaticResource TextMutedBrush}" Margin="0,4,0,0"/>
+                                        <TextBlock Text="Vielfaches (k * MAD), ab dem ein Areal als Entzündung gilt." FontSize="10" Foreground="{StaticResource TextMutedBrush}" Margin="0,2,0,0"/>
                                     </StackPanel>
                                 </Border>
 
-                                <Border Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,12">
+                                <!-- Top-Hat Morphological Radius -->
+                                <Border Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,0,0,10">
                                     <StackPanel>
-                                        <TextBlock Text="Morphologie Kernel-Radius (Skalierung):" FontWeight="SemiBold" FontSize="12" Margin="0,0,0,4"/>
+                                        <TextBlock Text="Morphologie Kernel-Radius (AVX2 Top-Hat):" FontWeight="SemiBold" FontSize="11" Margin="0,0,0,2"/>
                                         <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="45"/>
-                                            </Grid.ColumnDefinitions>
                                             <Slider x:Name="SliderKernel" Minimum="0.01" Maximum="0.12" Value="0.05" SmallChange="0.01" ValueChanged="SliderKernel_ValueChanged" VerticalAlignment="Center"/>
-                                            <TextBlock Grid.Column="1" Text="{Binding ElementName=SliderKernel, Path=Value, StringFormat={}{0:P0}}" VerticalAlignment="Center" HorizontalAlignment="Right" FontWeight="Bold" Foreground="{StaticResource CyanBrush}"/>
+                                            <TextBlock Text="{Binding ElementName=SliderKernel, Path=Value, StringFormat={}{0:P0}}" VerticalAlignment="Center" HorizontalAlignment="Right" FontWeight="Bold" Foreground="{StaticResource CyanBrush}" FontSize="11"/>
                                         </Grid>
-                                        <TextBlock Text="Größe des morphologischen Strukturelements relativ zur Bildauflösung (Top-Hat Filter)." FontSize="10" Foreground="{StaticResource TextMutedBrush}" Margin="0,4,0,0"/>
+                                        <TextBlock Text="Größe des Strukturelements relativ zur Bildauflösung." FontSize="10" Foreground="{StaticResource TextMutedBrush}" Margin="0,2,0,0"/>
                                     </StackPanel>
                                 </Border>
 
-                                <Border Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,12">
+                                <!-- Threshold Mode Selector -->
+                                <Border Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,0,0,10">
                                     <StackPanel>
-                                        <TextBlock Text="Statistisches Ausreißer-Modell:" FontWeight="SemiBold" FontSize="12" Margin="0,0,0,6"/>
-                                        <ComboBox x:Name="ComboThresholdMode" SelectedIndex="0" Background="#161B28" Foreground="{StaticResource TextPrimaryBrush}">
+                                        <TextBlock Text="Statistisches Ausreißer-Modell:" FontWeight="SemiBold" FontSize="11" Margin="0,0,0,4"/>
+                                        <ComboBox x:Name="ComboThresholdMode" SelectedIndex="0" Background="#161921" Foreground="{StaticResource TextPrimaryBrush}" FontSize="11">
                                             <ComboBoxItem Content="Robustes MAD (Median Absolute Deviation) — Empfohlen"/>
                                             <ComboBoxItem Content="Gauß-Verteilung (Mittelwert ± k*Sigma)"/>
                                         </ComboBox>
                                     </StackPanel>
                                 </Border>
 
-                                <Border Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,14">
+                                <!-- Feature Checkboxes -->
+                                <Border Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,0,0,12">
                                     <StackPanel>
-                                        <TextBlock Text="Filter &amp; Anatomische Maskierung:" FontWeight="SemiBold" FontSize="12" Margin="0,0,0,8"/>
-                                        <CheckBox x:Name="ChkFrangi" Content="Venen- &amp; Adernkartierung (Frangi-Filter)" IsChecked="False" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,4"/>
-                                        <CheckBox x:Name="ChkPerfusion" Content="Longitudinaler Temperaturgradient" IsChecked="True" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,4"/>
-                                        <CheckBox x:Name="ChkAnatomicalCutoff" Content="Anatomischer Cutoff (Waden/Beine oberhalb 65% filtern)" IsChecked="True" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,4"/>
-                                        <CheckBox x:Name="ChkErodeMargin" Content="Gewebekanten-Erosion (Chamfer-Distanz gegen Luftlecks)" IsChecked="True" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,4"/>
+                                        <TextBlock Text="Klinische Module:" FontWeight="SemiBold" FontSize="11" Margin="0,0,0,6"/>
+                                        <CheckBox x:Name="ChkFrangi" Content="Venenkartierung aktivieren (Frangi-Hesse Filter)" IsChecked="True" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,3" FontSize="11"/>
+                                        <CheckBox x:Name="ChkPerfusion" Content="Longitudinaler Temperaturgradient (dT/dy)" IsChecked="True" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,3" FontSize="11"/>
+                                        <CheckBox x:Name="ChkAnatomicalCutoff" Content="Anatomischer Cutoff (Waden oberhalb 65% filtern)" IsChecked="True" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,3" FontSize="11"/>
+                                        <CheckBox x:Name="ChkErodeMargin" Content="Gewebekanten-Erosion (Chamfer-Distanz)" IsChecked="True" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,3" FontSize="11"/>
                                     </StackPanel>
                                 </Border>
 
-                                <Button Content="🚀 Neu berechnen (Go Core + AVX2)" Click="BtnRunAnalysis_Click" Background="#0088CC" Height="40" FontSize="13" Foreground="White" FontWeight="Bold"/>
+                                <Button Content="⚡ Gesamte Pipeline neu berechnen (Go Core + AVX2)" Click="BtnRunAnalysis_Click" Background="#0078D4" Height="36" FontSize="12" Foreground="White" FontWeight="Bold"/>
 
-                                <Border Background="#101420" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,14,0,0">
+                                <!-- Live Metrics Card -->
+                                <Border Background="#161A24" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,12,0,0">
                                     <StackPanel>
-                                        <TextBlock Text="PIPELINE-METRIKEN (ECHTZEIT)" FontWeight="Bold" FontSize="11" Foreground="{StaticResource TextMutedBrush}"/>
-                                        <TextBlock x:Name="TxtTissuePixels" Text="Gewebe-Pixel: --" Margin="0,6,0,2" FontSize="11"/>
+                                        <TextBlock Text="HARDWARE-LATENZ (AVX2 GEMESSEN)" FontWeight="Bold" FontSize="10.5" Foreground="{StaticResource TextMutedBrush}"/>
+                                        <TextBlock x:Name="TxtTissuePixels" Text="Gewebe-Pixel: --" Margin="0,4,0,2" FontSize="11"/>
                                         <TextBlock x:Name="TxtHotspotCount" Text="Gefundene Herde: --" Margin="0,2" FontSize="11"/>
                                         <TextBlock x:Name="TxtLatency" Text="Rechenzeit: -- ms" Margin="0,2" FontSize="11" Foreground="{StaticResource CyanBrush}" FontWeight="Bold"/>
                                     </StackPanel>
@@ -326,140 +365,211 @@
 
                     <!-- TAB 2: DETECTED HOTSPOTS TABLE -->
                     <TabItem Header="🔬 Herde &amp; Befunde">
-                        <Grid Margin="12">
+                        <Grid Margin="10">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
-                            <TextBlock Grid.Row="0" Text="Klinisch auffällige Entzündungsareale (Hyperthermie):" FontWeight="Bold" Margin="0,0,0,10" Foreground="{StaticResource CyanBrush}"/>
+                            <TextBlock Grid.Row="0" Text="Klinisch auffällige Entzündungsareale (Hyperthermie):" FontWeight="Bold" Margin="0,0,0,8" Foreground="{StaticResource CyanBrush}" FontSize="12"/>
 
                             <DataGrid Grid.Row="1" x:Name="GridHotspots" SelectionChanged="GridHotspots_SelectionChanged">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="ID" Binding="{Binding Region.Id}" Width="35"/>
-                                    <DataGridTextColumn Header="Fläche" Binding="{Binding Region.AreaPixels}" Width="60"/>
-                                    <DataGridTextColumn Header="Anteil %" Binding="{Binding Region.AreaPercent, StringFormat={}{0:F2}%}" Width="65"/>
-                                    <DataGridTextColumn Header="Max T" Binding="{Binding Region.MaxVal}" Width="50"/>
-                                    <DataGridTextColumn Header="Zirkularität" Binding="{Binding Region.Circularity, StringFormat={}{0:F2}}" Width="75"/>
-                                    <DataGridTextColumn Header="Risiko" Binding="{Binding Assessment.RiskLevel}" Width="85"/>
+                                    <DataGridTextColumn Header="Fläche" Binding="{Binding Region.AreaPixels}" Width="55"/>
+                                    <DataGridTextColumn Header="Anteil %" Binding="{Binding Region.AreaPercent, StringFormat={}{0:F2}%}" Width="60"/>
+                                    <DataGridTextColumn Header="Max T" Binding="{Binding Region.MaxVal}" Width="45"/>
+                                    <DataGridTextColumn Header="Zirkul." Binding="{Binding Region.Circularity, StringFormat={}{0:F2}}" Width="50"/>
+                                    <DataGridTextColumn Header="Risiko" Binding="{Binding Assessment.RiskLevel}" Width="75"/>
                                 </DataGrid.Columns>
                             </DataGrid>
 
                             <!-- Detail Card -->
-                            <Border Grid.Row="2" Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,10,0,0">
+                            <Border Grid.Row="2" Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,8,0,0">
                                 <StackPanel>
-                                    <TextBlock Text="Klinische Lua-Bewertung des ausgewählten Herds:" FontWeight="Bold" FontSize="11" Foreground="{StaticResource TextMutedBrush}"/>
-                                    <TextBlock x:Name="TxtLuaRecommendation" Text="Wählen Sie einen Herd aus der Tabelle..." TextWrapping="Wrap" Margin="0,4,0,0" FontSize="12" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                    <TextBlock Text="Klinische Lua-Bewertung des ausgewählten Herds:" FontWeight="Bold" FontSize="10.5" Foreground="{StaticResource TextMutedBrush}"/>
+                                    <TextBlock x:Name="TxtLuaRecommendation" Text="Wählen Sie einen Herd aus der Tabelle..." TextWrapping="Wrap" Margin="0,4,0,0" FontSize="11.5" Foreground="{StaticResource TextPrimaryBrush}"/>
                                 </StackPanel>
                             </Border>
                         </Grid>
                     </TabItem>
 
-                    <!-- TAB 3: PERFUSION ANALYSIS -->
-                    <TabItem Header="📈 Perfusion">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="16">
+                    <!-- TAB 3: DEDICATED VASCULAR & VEIN ANGIOGRAPHY TAB -->
+                    <TabItem x:Name="TabVascular" Header="🩸 Venen &amp; Gefäße">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="12">
                             <StackPanel>
-                                <TextBlock Text="Longitudinale Perfusionsanalyse" FontWeight="Bold" FontSize="14" Foreground="{StaticResource CyanBrush}" Margin="0,0,0,6"/>
-                                <TextBlock Text="Berechnet den Temperaturabfall entlang der anatomischen Längsachse (dT/dy) zur Erkennung von arteriellen Durchblutungsstörungen (pAVK)." 
-                                           TextWrapping="Wrap" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,14"/>
+                                <TextBlock Text="Vaskuläre Gefäßkartierung (Frangi-Hesse)" FontWeight="Bold" FontSize="13" Foreground="{StaticResource CyanBrush}" Margin="0,0,0,4"/>
+                                <TextBlock Text="Isoliert tubuläre Gefäßbäume über multiskalige Hesse-Eigenwerte (λ1, λ2) zur Unterscheidung von Entzündungsherden." 
+                                           TextWrapping="Wrap" FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,10"/>
 
-                                <Border Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,12">
+                                <!-- Vein Overlay Toggle Card -->
+                                <Border Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,0,0,8">
                                     <StackPanel>
-                                        <TextBlock x:Name="TxtPerfusionStatus" Text="STATUS: --" FontWeight="Bold" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}"/>
-                                        <TextBlock x:Name="TxtPerfusionDrop" Text="Maximaler Gradientenabfall: -- K/Zeile" FontSize="12" Margin="0,6,0,0" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                        <Separator Margin="0,8" Background="{StaticResource BorderBrush}"/>
-                                        <TextBlock x:Name="TxtPerfusionDesc" Text="Keine Daten. Bitte zuerst Pipeline ausführen." TextWrapping="Wrap" FontSize="11" Foreground="{StaticResource TextMutedBrush}"/>
+                                        <CheckBox x:Name="ChkEnableVeinOverlay" Content="Venen-Overlay in Befundansicht einblenden" IsChecked="True" 
+                                                  FontWeight="Bold" FontSize="11.5" Foreground="{StaticResource TextPrimaryBrush}" Click="ChkEnableVeinOverlay_Click"/>
+                                        <TextBlock Text="Überlagert das Gefäßnetz direkt auf das kalibrierte Wärmebild." FontSize="10" Foreground="{StaticResource TextMutedBrush}" Margin="20,2,0,0"/>
                                     </StackPanel>
                                 </Border>
 
-                                <Border Background="#101420" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12">
+                                <!-- Render Mode Selector -->
+                                <Border Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,0,0,8">
                                     <StackPanel>
-                                        <TextBlock Text="Klinische Interpretation:" FontWeight="Bold" FontSize="11" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,4"/>
-                                        <TextBlock Text="• Ein kontinuierlicher, moderater Gradient von proximal nach distal ist physiologisch normal." FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,2"/>
-                                        <TextBlock Text="• Ein sprunghafter Abfall (> 2.5 K) deutet auf eine fokal verminderte Mikrozirkulation oder Ischämie hin." FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,2"/>
+                                        <TextBlock Text="Visualisierungs- &amp; Farbmodus:" FontWeight="SemiBold" FontSize="11" Margin="0,0,0,4"/>
+                                        <ComboBox x:Name="ComboVeinRenderMode" SelectionChanged="ComboVeinRenderMode_SelectionChanged" Background="#161921" Foreground="{StaticResource TextPrimaryBrush}" FontSize="11">
+                                            <ComboBoxItem Content="1. Fluoreszierendes Cyan (Standard-Überlagerung)" IsSelected="True"/>
+                                            <ComboBoxItem Content="2. Digitale Subtraktions-Angiographie (DSA / Reiner Gefäßbaum)"/>
+                                            <ComboBoxItem Content="3. Königliches Kobaltblau (Klassischer Venenfarbton)"/>
+                                            <ComboBoxItem Content="4. ICG Chirurgisches Grün (Fluoreszenz)"/>
+                                        </ComboBox>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Real-Time Opacity Slider -->
+                                <Border Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,0,0,8">
+                                    <StackPanel>
+                                        <Grid>
+                                            <TextBlock Text="Deckkraft / Transparenz:" FontWeight="SemiBold" FontSize="11"/>
+                                            <TextBlock x:Name="TxtVeinOpacity" Text="85%" HorizontalAlignment="Right" FontWeight="Bold" Foreground="{StaticResource CyanBrush}" FontSize="11"/>
+                                        </Grid>
+                                        <Slider x:Name="SliderVeinOpacity" Minimum="0.1" Maximum="1.0" Value="0.85" SmallChange="0.05" Margin="0,4,0,0" ValueChanged="SliderVeinOpacity_ValueChanged"/>
+                                        <TextBlock Text="Echtzeit-Transparenz ohne Neuberechnung des Go-Kerns." FontSize="9.5" Foreground="{StaticResource TextMutedBrush}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Sensitivity / Threshold Slider -->
+                                <Border Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,0,0,8">
+                                    <StackPanel>
+                                        <Grid>
+                                            <TextBlock Text="Gefäß-Empfindlichkeit (Schwellenwert):" FontWeight="SemiBold" FontSize="11"/>
+                                            <TextBlock x:Name="TxtVeinThreshold" Text="20" HorizontalAlignment="Right" FontWeight="Bold" Foreground="{StaticResource CyanBrush}" FontSize="11"/>
+                                        </Grid>
+                                        <Slider x:Name="SliderVeinThreshold" Minimum="5" Maximum="120" Value="20" SmallChange="5" Margin="0,4,0,0" ValueChanged="SliderVeinThreshold_ValueChanged"/>
+                                        <TextBlock Text="Niedriger = erfasst Mikrokapillaren | Höher = nur Hauptgefäße." FontSize="9.5" Foreground="{StaticResource TextMutedBrush}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Recompute Button -->
+                                <Button Content="⚡ Frangi-Venenfilter neu berechnen" Click="BtnRecalcVeins_Click" Background="#0078D4" Height="32" FontWeight="Bold" Foreground="White" Margin="0,2,0,8"/>
+
+                                <!-- Anatomical Vessel Info Card -->
+                                <Border Background="#161A24" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="10">
+                                    <StackPanel>
+                                        <TextBlock Text="VASKULÄRE METRIKEN &amp; PARAMETER:" FontWeight="Bold" FontSize="10" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,4"/>
+                                        <TextBlock x:Name="TxtVesselCoverage" Text="• Gefäßabdeckung: 4.8% des Gewebes" FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,1"/>
+                                        <TextBlock Text="• Frangi-Skalen: σ ∈ {1.2, 2.0, 3.2, 4.8} mm" FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,1"/>
+                                        <TextBlock Text="• Blobness β = 0.5 | Sensitivität C = 3.2" FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,1"/>
+                                        <TextBlock Text="• Differenzierung: Röhrenförmige Gefäße werden vor Hotspot-Klassifikation separiert." FontSize="10" Foreground="{StaticResource SuccessBrush}" TextWrapping="Wrap" Margin="0,3,0,0"/>
                                     </StackPanel>
                                 </Border>
                             </StackPanel>
                         </ScrollViewer>
                     </TabItem>
 
-                    <!-- TAB 4: BILATERAL SYMMETRY (ARMSTRONG CRITERIA) -->
+                    <!-- TAB 4: PERFUSION ANALYSIS -->
+                    <TabItem Header="📈 Perfusion">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="14">
+                            <StackPanel>
+                                <TextBlock Text="Longitudinale Perfusionsanalyse (dT/dy)" FontWeight="Bold" FontSize="13" Foreground="{StaticResource CyanBrush}" Margin="0,0,0,4"/>
+                                <TextBlock Text="Berechnet den Temperaturgradienten entlang der anatomischen Achse zur Erkennung distaler Durchblutungsabbrüche (pAVK)." 
+                                           TextWrapping="Wrap" FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,12"/>
+
+                                <Border Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="12" Margin="0,0,0,10">
+                                    <StackPanel>
+                                        <TextBlock x:Name="TxtPerfusionStatus" Text="STATUS: --" FontWeight="Bold" FontSize="12.5" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                        <TextBlock x:Name="TxtPerfusionDrop" Text="Maximaler Gradientenabfall: -- K/Zeile" FontSize="11.5" Margin="0,4,0,0" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                        <Separator Margin="0,6" Background="{StaticResource BorderBrush}"/>
+                                        <TextBlock x:Name="TxtPerfusionDesc" Text="Keine Daten. Bitte zuerst Pipeline ausführen." TextWrapping="Wrap" FontSize="10.5" Foreground="{StaticResource TextMutedBrush}"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Background="#161A24" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="10">
+                                    <StackPanel>
+                                        <TextBlock Text="Klinische Interpretation:" FontWeight="Bold" FontSize="10.5" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,3"/>
+                                        <TextBlock Text="• Ein kontinuierlicher, moderater Gradient von proximal nach distal ist physiologisch normal." FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,1"/>
+                                        <TextBlock Text="• Ein sprunghafter Abfall (> 2.5 K) deutet auf eine fokal verminderte Mikrozirkulation oder Ischämie hin." FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,1"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </TabItem>
+
+                    <!-- TAB 5: BILATERAL SYMMETRY (ARMSTRONG CRITERIA) -->
                     <TabItem Header="⚖️ Seitenvergleich">
-                        <Grid Margin="12">
+                        <Grid Margin="10">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
-                            <StackPanel Grid.Row="0" Margin="0,0,0,10">
-                                <TextBlock Text="Bilateraler Armstrong-Seitenvergleich (ΔT >= 2.2 K)" FontWeight="Bold" FontSize="13" Foreground="{StaticResource CyanBrush}"/>
-                                <TextBlock Text="Vergleicht anatomische Zonen der linken und rechten Extremität zur Frühwarnung diabetischer Fußulzera." FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                            <StackPanel Grid.Row="0" Margin="0,0,0,8">
+                                <TextBlock Text="Bilateraler Armstrong-Seitenvergleich (ΔT >= 2.2 K)" FontWeight="Bold" FontSize="12.5" Foreground="{StaticResource CyanBrush}"/>
+                                <TextBlock Text="Vergleicht anatomische Zonen der linken und rechten Extremität zur Frühwarnung diabetischer Fußulzera." FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,1,0,0"/>
                             </StackPanel>
 
                             <DataGrid Grid.Row="1" x:Name="GridSymmetry">
                                 <DataGrid.Columns>
-                                    <DataGridTextColumn Header="Anatomische Zone" Binding="{Binding Name}" Width="150"/>
-                                    <DataGridTextColumn Header="Links Mean" Binding="{Binding LeftMean, StringFormat={}{0:F1}}" Width="75"/>
-                                    <DataGridTextColumn Header="Rechts Mean" Binding="{Binding RightMean, StringFormat={}{0:F1}}" Width="75"/>
-                                    <DataGridTextColumn Header="ΔT (K)" Binding="{Binding DeltaT, StringFormat={}{0:F1}}" Width="55"/>
+                                    <DataGridTextColumn Header="Anatomische Zone" Binding="{Binding Name}" Width="140"/>
+                                    <DataGridTextColumn Header="Links Mean" Binding="{Binding LeftMean, StringFormat={}{0:F1}}" Width="70"/>
+                                    <DataGridTextColumn Header="Rechts Mean" Binding="{Binding RightMean, StringFormat={}{0:F1}}" Width="70"/>
+                                    <DataGridTextColumn Header="ΔT (K)" Binding="{Binding DeltaT, StringFormat={}{0:F1}}" Width="50"/>
                                     <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="*"/>
                                 </DataGrid.Columns>
                             </DataGrid>
 
-                            <Border Grid.Row="2" Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,10,0,0">
+                            <Border Grid.Row="2" Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,8,0,0">
                                 <StackPanel>
-                                    <TextBlock Text="Armstrong-Gesamtbeurteilung:" FontWeight="Bold" FontSize="11" Foreground="{StaticResource TextMutedBrush}"/>
-                                    <TextBlock x:Name="TxtSymmetryAssessment" Text="Laden Sie zwei Bilder oder klicken Sie auf 'Beide Füße trennen'..." TextWrapping="Wrap" Margin="0,4,0,0" FontSize="12" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                    <TextBlock Text="Armstrong-Gesamtbeurteilung:" FontWeight="Bold" FontSize="10.5" Foreground="{StaticResource TextMutedBrush}"/>
+                                    <TextBlock x:Name="TxtSymmetryAssessment" Text="Klicken Sie auf 'Füße trennen &amp; vergleichen' oder laden Sie zwei Bilder..." TextWrapping="Wrap" Margin="0,3,0,0" FontSize="11.5" Foreground="{StaticResource TextPrimaryBrush}"/>
                                 </StackPanel>
                             </Border>
                         </Grid>
                     </TabItem>
 
-                    <!-- TAB 5: LUA CLINICAL RULE ENGINE -->
-                    <TabItem Header="📜 Lua-Regelwerk">
-                        <Grid Margin="12">
+                    <!-- TAB 6: LUA CLINICAL RULE ENGINE -->
+                    <TabItem Header="📜 Lua-Regeln">
+                        <Grid Margin="10">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
-                            <TextBlock Grid.Row="0" Text="Klinische Entscheidungslogik (Eingebettetes Lua 5.1):" FontWeight="Bold" Margin="0,0,0,8" Foreground="{StaticResource CyanBrush}"/>
+                            <TextBlock Grid.Row="0" Text="Klinische Entscheidungslogik (Eingebettetes Lua 5.1):" FontWeight="Bold" Margin="0,0,0,6" Foreground="{StaticResource CyanBrush}" FontSize="12"/>
 
                             <TextBox Grid.Row="1" x:Name="TxtLuaCode" 
-                                     FontFamily="Consolas, Cascadia Code, Courier New" FontSize="12" 
+                                     FontFamily="Consolas, Cascadia Code, Courier New" FontSize="11.5" 
                                      Background="#0B0D14" Foreground="#A9B7C6" BorderBrush="{StaticResource BorderBrush}"
                                      AcceptsReturn="True" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"/>
 
-                            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
+                            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,6,0,0">
                                 <Button Content="Standard wiederherstellen" Click="BtnResetLua_Click"/>
-                                <Button Content="▶ Regel anwenden &amp; neu bewerten" Click="BtnApplyLua_Click" Background="#263450" Foreground="{StaticResource CyanBrush}"/>
+                                <Button Content="▶ Regel speichern &amp; neu bewerten" Click="BtnApplyLua_Click" Background="#1D2A3D" Foreground="{StaticResource CyanBrush}"/>
                             </StackPanel>
                         </Grid>
                     </TabItem>
 
-                    <!-- TAB 6: AUDIT TRAIL (SQLITE) -->
+                    <!-- TAB 7: AUDIT TRAIL (SQLITE) -->
                     <TabItem Header="🗄️ Audit-Trail">
-                        <Grid Margin="12">
+                        <Grid Margin="10">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
                             </Grid.RowDefinitions>
 
-                            <TextBlock Grid.Row="0" Text="DSGVO-konformes Evaluationsprotokoll (SQLite):" FontWeight="Bold" Margin="0,0,0,8" Foreground="{StaticResource CyanBrush}"/>
+                            <TextBlock Grid.Row="0" Text="DSGVO Art. 30 Evaluationsprotokoll (SQLite):" FontWeight="Bold" Margin="0,0,0,6" Foreground="{StaticResource CyanBrush}" FontSize="12"/>
 
                             <DataGrid Grid.Row="1" x:Name="GridAudit">
                                 <DataGrid.Columns>
-                                    <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="35"/>
-                                    <DataGridTextColumn Header="Zeitstempel" Binding="{Binding Timestamp}" Width="135"/>
-                                    <DataGridTextColumn Header="Patient" Binding="{Binding PatientId}" Width="100"/>
-                                    <DataGridTextColumn Header="Modus" Binding="{Binding AnalysisType}" Width="120"/>
-                                    <DataGridTextColumn Header="Herde" Binding="{Binding HotspotsFound}" Width="50"/>
-                                    <DataGridTextColumn Header="Max ΔT" Binding="{Binding MaxDeltaT, StringFormat={}{0:F1} K}" Width="65"/>
-                                    <DataGridTextColumn Header="Risiko" Binding="{Binding RiskLevel}" Width="80"/>
-                                    <DataGridTextColumn Header="Laufzeit" Binding="{Binding ExecutionTimeMs, StringFormat={}{0:F1} ms}" Width="75"/>
+                                    <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="30"/>
+                                    <DataGridTextColumn Header="Zeitstempel" Binding="{Binding Timestamp}" Width="125"/>
+                                    <DataGridTextColumn Header="Patient" Binding="{Binding PatientId}" Width="90"/>
+                                    <DataGridTextColumn Header="Modus" Binding="{Binding AnalysisType}" Width="110"/>
+                                    <DataGridTextColumn Header="Herde" Binding="{Binding HotspotsFound}" Width="45"/>
+                                    <DataGridTextColumn Header="Max ΔT" Binding="{Binding MaxDeltaT, StringFormat={}{0:F1} K}" Width="60"/>
+                                    <DataGridTextColumn Header="Risiko" Binding="{Binding RiskLevel}" Width="75"/>
+                                    <DataGridTextColumn Header="Laufzeit" Binding="{Binding ExecutionTimeMs, StringFormat={}{0:F1} ms}" Width="65"/>
                                 </DataGrid.Columns>
                             </DataGrid>
                         </Grid>
@@ -469,8 +579,8 @@
             </Border>
         </Grid>
 
-        <!-- 4. STATUS BAR -->
-        <Border Grid.Row="4" Background="#0A0C14" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" Padding="12,0">
+        <!-- 4. CLINICAL STATUS BAR -->
+        <Border Grid.Row="4" Background="#0C0E14" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" Padding="10,0">
             <Grid VerticalAlignment="Center">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -478,17 +588,17 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Left: Status message -->
+                <!-- Left: Status Message -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="●" Foreground="{StaticResource SuccessBrush}" FontSize="10" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                    <TextBlock x:Name="StatusText" Text="Bereit für Analyse. Laden Sie ein Wärmebild (Strg+O)." FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                    <TextBlock Text="●" Foreground="{StaticResource SuccessBrush}" FontSize="9" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="StatusText" Text="Bereit für Diagnose. Laden Sie ein Wärmebild (Strg+O)." FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
                 </StackPanel>
 
-                <!-- Center: Hardware SIMD info -->
-                <TextBlock Grid.Column="1" Text="Intel/AMD x86_64 AVX2 256-Bit Engine (32 Bytes/Takt)" FontSize="11" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" Margin="16,0"/>
+                <!-- Center: Hardware Telemetry -->
+                <TextBlock Grid.Column="1" Text="Intel/AMD x86_64 AVX2 256-Bit Engine (32 Pixel/Takt)" FontSize="10" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" Margin="14,0"/>
 
-                <!-- Right: Cursor coordinates -->
-                <TextBlock Grid.Column="2" x:Name="CursorCoordsText" Text="X: --, Y: -- | Temp: --" FontSize="11" Foreground="{StaticResource CyanBrush}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                <!-- Right: Real-time Cursor Coordinates & Temperature -->
+                <TextBlock Grid.Column="2" x:Name="CursorCoordsText" Text="X: --, Y: -- | Temp: --" FontSize="10.5" Foreground="{StaticResource CyanBrush}" FontWeight="SemiBold" VerticalAlignment="Center"/>
             </Grid>
         </Border>
     </Grid>
