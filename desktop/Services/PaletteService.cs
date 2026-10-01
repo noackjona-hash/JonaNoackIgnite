@@ -110,6 +110,11 @@ namespace Ignite.Desktop.Services
             byte[] grayPixels = new byte[width * height];
             formatConverted.CopyPixels(grayPixels, width, 0);
 
+            return ApplyPalette(grayPixels, width, height, palette, windowWidth, windowCenter);
+        }
+
+        public static BitmapSource ApplyPalette(byte[] grayPixels, int width, int height, ColorPalette palette, double windowWidth = 255.0, double windowCenter = 127.5)
+        {
             uint[] lut = palette switch
             {
                 ColorPalette.Rainbow => RainbowLUT,
@@ -146,7 +151,11 @@ namespace Ignite.Desktop.Services
             return coloredBitmap;
         }
 
-        public static BitmapSource LoadAndColorize(string imagePath, ColorPalette palette, double windowWidth = 255.0, double windowCenter = 127.5)
+        public static (BitmapSource coloredBitmap, byte[] rawGray, int width, int height) LoadCalibratedImage(
+            string imagePath, 
+            ColorPalette palette, 
+            double windowWidth = 255.0, 
+            double windowCenter = 127.5)
         {
             var bi = new BitmapImage();
             bi.BeginInit();
@@ -155,7 +164,21 @@ namespace Ignite.Desktop.Services
             bi.EndInit();
             bi.Freeze();
 
-            return ApplyPalette(bi, palette, windowWidth, windowCenter);
+            int width = bi.PixelWidth;
+            int height = bi.PixelHeight;
+
+            var formatConverted = new FormatConvertedBitmap(bi, PixelFormats.Gray8, null, 0);
+            byte[] grayPixels = new byte[width * height];
+            formatConverted.CopyPixels(grayPixels, width, 0);
+
+            var colored = ApplyPalette(grayPixels, width, height, palette, windowWidth, windowCenter);
+            return (colored, grayPixels, width, height);
+        }
+
+        public static BitmapSource LoadAndColorize(string imagePath, ColorPalette palette, double windowWidth = 255.0, double windowCenter = 127.5)
+        {
+            var res = LoadCalibratedImage(imagePath, palette, windowWidth, windowCenter);
+            return res.coloredBitmap;
         }
 
         // Fast in-memory cache of vein mask bytes for instant real-time slider updates

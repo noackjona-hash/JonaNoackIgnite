@@ -27,11 +27,15 @@ Um maximale Rechenleistung, Plattformunabhängigkeit, klinische Flexibilität un
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ 1. C# (.NET 10 / WPF)                                                        │
-│    OBSIDIAN MEDICAL WORKSTATION GUI                                         │
+│    KLINISCHE HIGH-POWER MEDICAL WORKSTATION                                 │
 │    - Echtes Desktop-Feeling wie Siemens syngo / GE Healthcare Diagnostik   │
-│    - Dual-Viewport mit synchronem Zoom/Pan und Sub-Pixel-Fadenkreuz         │
-│    - Kalibrierte Farbskala (20°C bis 42°C), DSGVO-Pseudonymisierung-Chip    │
-│    - Tabbed Docking Inspector (Hotspots, Venenkarte, Perfusion)             │
+│    - Segmentierte Werkzeugleiste: Pan/Zoom, ROI-Fokus, Profil, Sonden, W/L  │
+│    - Interaktiver 2D-Schnittprofilgraph T(s) mit Temperaturgradient dT/ds   │
+│    - Punkt-Messstifte (P1-P2) mit Armstrong ΔT-Ulkus-Sofortbewertung        │
+│    - Integrierte Fall-Bibliothek / Filmstrip (21 Patientenfälle)            │
+│    - Drag & Drop Direkt-Laden, synchroner Dual-Viewport Zoom/Pan           │
+│    - Automatischer Min/Max Gewebe-Tracker (Target-Fadenkreuze)              │
+│    - Tabbed Docking Inspector (Hotspots, Venen, Perfusion, Sonden, Lua)     │
 └──────────────────────────────────────┬──────────────────────────────────────┘
                                        │ Lokaler IPC-Aufruf (CLI / JSON)
                                        ▼
