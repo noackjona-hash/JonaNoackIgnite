@@ -9,12 +9,16 @@ namespace Ignite.Desktop
         {
             base.OnStartup(e);
 
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
             var splash = new SplashWindow();
             splash.Show();
 
             await splash.AnimateAndCloseAsync();
 
             var mainWin = new MainWindow();
+            MainWindow = mainWin;
+            ShutdownMode = ShutdownMode.OnMainWindowClose;
             mainWin.Show();
         }
     }
