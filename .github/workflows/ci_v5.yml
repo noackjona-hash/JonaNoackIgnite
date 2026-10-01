@@ -18,7 +18,7 @@ jobs:
 
       # 1. Setup Go & Build AVX2 Core
       - name: Setup Go 1.27
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           go-version: '1.27.x'
           cache-dependency-path: core/go.sum
