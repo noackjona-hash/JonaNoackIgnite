@@ -5,31 +5,32 @@
              StartupUri="MainWindow.xaml">
     <Application.Resources>
         <!-- ============================================================ -->
-        <!-- IGNITE VOICEMOD-INSPIRED ULTRA-MODERN DARK THEME             -->
-        <!-- Sleek Charcoal Black, Electric Mint/Cyan, Neon Lime CTA      -->
-        <!-- Squircles, Rounded Floating Docks, Glassmorphic Highlights   -->
+        <!-- IGNITE CLINICAL MEDICAL WORKSTATION LIGHT THEME              -->
+        <!-- Crisp Clinical White Canvas, Medical Blue (#0284C7), Slate   -->
+        <!-- Clean Pills, Radiance Accents, Floating Dock, High Ergonomics -->
         <!-- ============================================================ -->
 
-        <!-- Base Dark Canvas Colors -->
-        <Color x:Key="ColorAppBg">#0B0E14</Color>
-        <Color x:Key="ColorSidebar">#0F121A</Color>
-        <Color x:Key="ColorSurface">#131722</Color>
-        <Color x:Key="ColorSurfaceCard">#181D2A</Color>
-        <Color x:Key="ColorSurfaceHover">#21283B</Color>
-        <Color x:Key="ColorInputBg">#121622</Color>
-        <Color x:Key="ColorBorder">#222838</Color>
-        <Color x:Key="ColorBorderBright">#323B52</Color>
+        <!-- Base Medical Light Theme Colors (Matching Screenshot) -->
+        <Color x:Key="ColorAppBg">#F1F5F9</Color>
+        <Color x:Key="ColorSidebar">#FFFFFF</Color>
+        <Color x:Key="ColorSurface">#FFFFFF</Color>
+        <Color x:Key="ColorSurfaceCard">#FFFFFF</Color>
+        <Color x:Key="ColorSurfaceHover">#F8FAFC</Color>
+        <Color x:Key="ColorInputBg">#F8FAFC</Color>
+        <Color x:Key="ColorBorder">#E2E8F0</Color>
+        <Color x:Key="ColorBorderBright">#CBD5E1</Color>
 
         <!-- Clinical Medical Precision Accents -->
-        <Color x:Key="ColorCyan">#00F5C4</Color>          <!-- Radiometric Cyan Caliper / Primary Focus -->
-        <Color x:Key="ColorCyanHover">#33FFD4</Color>
-        <Color x:Key="ColorProLime">#00E5A3</Color>        <!-- Clinical Precision Emerald CTA -->
-        <Color x:Key="ColorMedicalTeal">#00D2B4</Color>
-        <Color x:Key="ColorMedicalBlue">#0099FF</Color>
-        <Color x:Key="ColorPurple">#8B5CF6</Color>        <!-- Diagnostic Accent Purple -->
-        <Color x:Key="ColorCritical">#FF4757</Color>      <!-- Alert / Triage Red (ΔT ≥ 2.2 K) -->
-        <Color x:Key="ColorWarning">#FFA502</Color>       <!-- Warning Amber (ΔT ≥ 1.0 K) -->
-        <Color x:Key="ColorSuccess">#00F5C4</Color>       <!-- Health / Normothermie Mint -->
+        <Color x:Key="ColorCyan">#0284C7</Color>          <!-- Primary Medical Blue (from screenshot) -->
+        <Color x:Key="ColorCyanHover">#0369A1</Color>
+        <Color x:Key="ColorProLime">#0284C7</Color>        <!-- Primary Action Blue CTA -->
+        <Color x:Key="ColorMedicalTeal">#0D9488</Color>
+        <Color x:Key="ColorMedicalBlue">#0284C7</Color>
+        <Color x:Key="ColorPurple">#7C3AED</Color>
+        <Color x:Key="ColorCritical">#DC2626</Color>      <!-- Alert / Triage Red -->
+        <Color x:Key="ColorWarning">#D97706</Color>       <!-- Warning Amber -->
+        <Color x:Key="ColorSuccess">#16A34A</Color>       <!-- Health Green -->
+        <Color x:Key="ColorSuccessBg">#DCFCE7</Color>     <!-- Health Green Badge Bg -->
 
         <!-- Solid Color Brushes -->
         <SolidColorBrush x:Key="AppBgBrush" Color="{StaticResource ColorAppBg}"/>
@@ -49,14 +50,15 @@
         <SolidColorBrush x:Key="CriticalBrush" Color="{StaticResource ColorCritical}"/>
         <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource ColorWarning}"/>
         <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource ColorSuccess}"/>
+        <SolidColorBrush x:Key="SuccessBgBrush" Color="{StaticResource ColorSuccessBg}"/>
 
         <!-- Modern Typography Brushes -->
-        <SolidColorBrush x:Key="TextPrimaryBrush" Color="#FFFFFF"/>
-        <SolidColorBrush x:Key="TextSecondaryBrush" Color="#94A3B8"/>
-        <SolidColorBrush x:Key="TextMutedBrush" Color="#5A6679"/>
+        <SolidColorBrush x:Key="TextPrimaryBrush" Color="#0F172A"/>
+        <SolidColorBrush x:Key="TextSecondaryBrush" Color="#475569"/>
+        <SolidColorBrush x:Key="TextMutedBrush" Color="#94A3B8"/>
 
         <!-- ============================================================ -->
-        <!-- VOICEMOD SLEEK MINIMAL SCROLLBAR SYSTEM                      -->
+        <!-- CLEAN MINIMAL SCROLLBAR SYSTEM                               -->
         <!-- ============================================================ -->
         <Style x:Key="VoicemodScrollThumb" TargetType="{x:Type Thumb}">
             <Setter Property="SnapsToDevicePixels" Value="True"/>
@@ -66,10 +68,10 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type Thumb}">
-                        <Border CornerRadius="3" Background="#282E3E" Margin="1"/>
+                        <Border CornerRadius="3" Background="#CBD5E1" Margin="1"/>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#3F4860"/>
+                                <Setter Property="Background" Value="#94A3B8"/>
                             </Trigger>
                             <Trigger Property="IsDragging" Value="True">
                                 <Setter Property="Background" Value="{StaticResource CyanBrush}"/>
@@ -85,7 +87,7 @@
             <Setter Property="OverridesDefaultStyle" Value="true"/>
             <Style.Triggers>
                 <Trigger Property="Orientation" Value="Vertical">
-                    <Setter Property="Width" Value="8"/>
+                    <Setter Property="Width" Value="7"/>
                     <Setter Property="Height" Value="Auto"/>
                     <Setter Property="Template">
                         <Setter.Value>
@@ -103,7 +105,7 @@
                 </Trigger>
                 <Trigger Property="Orientation" Value="Horizontal">
                     <Setter Property="Width" Value="Auto"/>
-                    <Setter Property="Height" Value="8"/>
+                    <Setter Property="Height" Value="7"/>
                     <Setter Property="Template">
                         <Setter.Value>
                             <ControlTemplate TargetType="{x:Type ScrollBar}">
@@ -122,15 +124,15 @@
         </Style>
 
         <!-- ============================================================ -->
-        <!-- VOICEMOD BUTTON STYLES                                       -->
+        <!-- MEDICAL CLINICAL BUTTON STYLES                               -->
         <!-- ============================================================ -->
-        <!-- Standard Dark Pill Button -->
+        <!-- Standard Light Card Button -->
         <Style TargetType="Button">
-            <Setter Property="Background" Value="{StaticResource SurfaceCardBrush}"/>
+            <Setter Property="Background" Value="#FFFFFF"/>
             <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrightBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="14,6"/>
+            <Setter Property="Padding" Value="12,5"/>
             <Setter Property="Margin" Value="2,2"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="FontSize" Value="11"/>
@@ -150,15 +152,15 @@
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="bd" Property="Background" Value="{StaticResource SurfaceHoverBrush}"/>
-                                <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource BorderBrightBrush}"/>
-                                <Setter Property="Foreground" Value="#FFFFFF"/>
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource CyanBrush}"/>
+                                <Setter Property="Foreground" Value="{StaticResource CyanBrush}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#10141E"/>
+                                <Setter TargetName="bd" Property="Background" Value="#E0F2FE"/>
                                 <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource CyanBrush}"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="bd" Property="Opacity" Value="0.4"/>
+                                <Setter TargetName="bd" Property="Opacity" Value="0.45"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -166,10 +168,10 @@
             </Setter>
         </Style>
 
-        <!-- Voicemod Glowing Primary Cyan Pill Button -->
+        <!-- Primary Clinical Blue Pill Button (Solid #0284C7, white text) -->
         <Style x:Key="VoicemodPrimaryButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="{StaticResource CyanBrush}"/>
-            <Setter Property="Foreground" Value="#090C12"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="16,7"/>
             <Setter Property="Margin" Value="3,2"/>
@@ -199,48 +201,16 @@
             </Setter>
         </Style>
 
-        <!-- Clinical Medical Precision Hero Action Button -->
-        <Style x:Key="VoicemodLimeHeroButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="{StaticResource ProLimeBrush}"/>
-            <Setter Property="Foreground" Value="#051016"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="18,7"/>
-            <Setter Property="Margin" Value="3,2"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="FontSize" Value="11.5"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="bd"
-                                Background="{TemplateBinding Background}"
-                                CornerRadius="16"
-                                Padding="{TemplateBinding Padding}"
-                                SnapsToDevicePixels="True">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#33FFBE"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="bd" Property="Opacity" Value="0.85"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+        <Style x:Key="VoicemodLimeHeroButtonStyle" TargetType="Button" BasedOn="{StaticResource VoicemodPrimaryButtonStyle}"/>
 
         <!-- ============================================================ -->
-        <!-- VOICEMOD CATEGORY FILTER PILL (RADIOBUTTON)                  -->
-        <!-- In Voicemod: [ Alle ] [ Rollenspiel ] [ Memes ] [ FPS ]      -->
-        <!-- Active: Cyan bg, dark bold text. Inactive: Dark slate pill.  -->
+        <!-- CATEGORY FILTER PILL (RADIOBUTTON)                           -->
+        <!-- Inactive: White, border #CBD5E1. Active: Solid #0284C7 blue  -->
         <!-- ============================================================ -->
         <Style x:Key="VoicemodPillStyle" TargetType="RadioButton">
-            <Setter Property="Background" Value="{StaticResource SurfaceCardBrush}"/>
+            <Setter Property="Background" Value="#FFFFFF"/>
             <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrightBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="14,5"/>
             <Setter Property="Margin" Value="3,0"/>
@@ -262,13 +232,13 @@
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="pillBorder" Property="Background" Value="{StaticResource SurfaceHoverBrush}"/>
-                                <Setter TargetName="pillBorder" Property="BorderBrush" Value="{StaticResource BorderBrightBrush}"/>
-                                <Setter Property="Foreground" Value="#FFFFFF"/>
+                                <Setter TargetName="pillBorder" Property="BorderBrush" Value="{StaticResource CyanBrush}"/>
+                                <Setter Property="Foreground" Value="{StaticResource CyanBrush}"/>
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter TargetName="pillBorder" Property="Background" Value="{StaticResource CyanBrush}"/>
                                 <Setter TargetName="pillBorder" Property="BorderBrush" Value="{StaticResource CyanBrush}"/>
-                                <Setter Property="Foreground" Value="#090C12"/>
+                                <Setter Property="Foreground" Value="#FFFFFF"/>
                                 <Setter Property="FontWeight" Value="Bold"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -277,16 +247,15 @@
             </Setter>
         </Style>
 
-        <!-- Alias for legacy MedicalToolRadioStyle to inherit the beautiful Voicemod pill look -->
+        <!-- Alias for legacy MedicalToolRadioStyle -->
         <Style x:Key="MedicalToolRadioStyle" TargetType="RadioButton" BasedOn="{StaticResource VoicemodPillStyle}"/>
 
         <!-- ============================================================ -->
-        <!-- VOICEMOD LEFT NAVIGATION RAIL SQUIRCLE BUTTON                -->
-        <!-- Squircle 44x44, dark inactive, bright cyan when active       -->
+        <!-- LEFT NAVIGATION RAIL SQUIRCLE BUTTON                         -->
         <!-- ============================================================ -->
         <Style x:Key="VoicemodRailRadioStyle" TargetType="RadioButton">
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#6B778D"/>
+            <Setter Property="Foreground" Value="#64748B"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Width" Value="42"/>
             <Setter Property="Height" Value="42"/>
@@ -306,11 +275,11 @@
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="railBd" Property="Background" Value="{StaticResource SurfaceHoverBrush}"/>
-                                <Setter Property="Foreground" Value="#FFFFFF"/>
+                                <Setter Property="Foreground" Value="{StaticResource CyanBrush}"/>
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter TargetName="railBd" Property="Background" Value="{StaticResource CyanBrush}"/>
-                                <Setter Property="Foreground" Value="#090C12"/>
+                                <Setter Property="Foreground" Value="#FFFFFF"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -318,10 +287,10 @@
             </Setter>
         </Style>
 
-        <!-- Left Rail Standard Squircle Push Button (For non-toggle actions) -->
+        <!-- Left Rail Standard Squircle Push Button -->
         <Style x:Key="VoicemodRailButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#6B778D"/>
+            <Setter Property="Foreground" Value="#64748B"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Width" Value="42"/>
             <Setter Property="Height" Value="42"/>
@@ -339,11 +308,11 @@
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="railBd" Property="Background" Value="{StaticResource SurfaceHoverBrush}"/>
-                                <Setter Property="Foreground" Value="#FFFFFF"/>
+                                <Setter Property="Foreground" Value="{StaticResource CyanBrush}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="railBd" Property="Background" Value="{StaticResource CyanBrush}"/>
-                                <Setter Property="Foreground" Value="#090C12"/>
+                                <Setter TargetName="railBd" Property="Background" Value="#E0F2FE"/>
+                                <Setter Property="Foreground" Value="{StaticResource CyanBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -352,12 +321,11 @@
         </Style>
 
         <!-- ============================================================ -->
-        <!-- VOICEMOD FLOATING DOCK TOOL RADIO BUTTON                     -->
-        <!-- Sleek compact tool selector inside bottom floating capsule    -->
+        <!-- FLOATING DOCK TOOL RADIO BUTTON                              -->
         <!-- ============================================================ -->
         <Style x:Key="VoicemodDockRadioStyle" TargetType="RadioButton">
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#8A96A8"/>
+            <Setter Property="Foreground" Value="#475569"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="9,6"/>
             <Setter Property="Margin" Value="2,0"/>
@@ -375,11 +343,11 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="dockBd" Property="Background" Value="#222A3C"/>
-                                <Setter Property="Foreground" Value="#FFFFFF"/>
+                                <Setter TargetName="dockBd" Property="Background" Value="#F1F5F9"/>
+                                <Setter Property="Foreground" Value="{StaticResource CyanBrush}"/>
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="dockBd" Property="Background" Value="#172C38"/>
+                                <Setter TargetName="dockBd" Property="Background" Value="#E0F2FE"/>
                                 <Setter Property="Foreground" Value="{StaticResource CyanBrush}"/>
                                 <Setter Property="FontWeight" Value="Bold"/>
                             </Trigger>
@@ -390,8 +358,7 @@
         </Style>
 
         <!-- ============================================================ -->
-        <!-- VOICEMOD SLIDER WITH CYAN GLOW & ROUNDED THUMB               -->
-        <!-- In Voicemod: Sliders have a dark channel and cyan fill       -->
+        <!-- SLIDER WITH BLUE TRACK & LIGHT ROUNDED THUMB                 -->
         <!-- ============================================================ -->
         <Style x:Key="VoicemodSliderThumb" TargetType="{x:Type Thumb}">
             <Setter Property="SnapsToDevicePixels" Value="True"/>
@@ -400,7 +367,11 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type Thumb}">
                         <Grid Width="16" Height="16">
-                            <Ellipse Fill="#FFFFFF" Stroke="{StaticResource CyanBrush}" StrokeThickness="3"/>
+                            <Ellipse Fill="#FFFFFF" Stroke="{StaticResource CyanBrush}" StrokeThickness="2.5">
+                                <Ellipse.Effect>
+                                    <DropShadowEffect BlurRadius="4" ShadowDepth="1" Opacity="0.25" Color="#000000"/>
+                                </Ellipse.Effect>
+                            </Ellipse>
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -419,7 +390,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Slider">
                         <Grid VerticalAlignment="Center">
-                            <Border Height="6" Background="#1B2130" CornerRadius="3" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"/>
+                            <Border Height="6" Background="#E2E8F0" CornerRadius="3" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0.5"/>
                             <Track x:Name="PART_Track">
                                 <Track.Thumb>
                                     <Thumb Style="{StaticResource VoicemodSliderThumb}"/>
@@ -432,8 +403,8 @@
         </Style>
 
         <!-- ============================================================ -->
-        <!-- VOICEMOD TABCONTROL & MODERN TABITEMS                        -->
-        <!-- Clean, horizontal pill/indicator tabs                        -->
+        <!-- TABCONTROL & PILL TABITEMS (Matching Screenshot)             -->
+        <!-- Active: Blue pill. Inactive: Light pill.                     -->
         <!-- ============================================================ -->
         <Style TargetType="TabControl">
             <Setter Property="Background" Value="Transparent"/>
@@ -442,31 +413,31 @@
 
         <Style TargetType="TabItem">
             <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
-            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontSize" Value="10.5"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Padding" Value="12,7"/>
-            <Setter Property="Margin" Value="2,0"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="Margin" Value="2,2"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="TabItem">
                         <Border x:Name="tabBorder"
-                                Background="Transparent"
-                                BorderBrush="Transparent"
-                                BorderThickness="0,0,0,2"
-                                CornerRadius="6,6,0,0"
+                                Background="#F1F5F9"
+                                BorderBrush="{StaticResource BorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8"
                                 Padding="{TemplateBinding Padding}">
                             <ContentPresenter ContentSource="Header" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="tabBorder" Property="Background" Value="{StaticResource SurfaceHoverBrush}"/>
-                                <Setter Property="Foreground" Value="#FFFFFF"/>
+                                <Setter TargetName="tabBorder" Property="Background" Value="#E2E8F0"/>
+                                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
                                 <Setter TargetName="tabBorder" Property="BorderBrush" Value="{StaticResource CyanBrush}"/>
-                                <Setter TargetName="tabBorder" Property="Background" Value="#172230"/>
-                                <Setter Property="Foreground" Value="{StaticResource CyanBrush}"/>
+                                <Setter TargetName="tabBorder" Property="Background" Value="{StaticResource CyanBrush}"/>
+                                <Setter Property="Foreground" Value="#FFFFFF"/>
                                 <Setter Property="FontWeight" Value="Bold"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -476,12 +447,12 @@
         </Style>
 
         <!-- ============================================================ -->
-        <!-- VOICEMOD MODERN DARK COMBOBOX                                -->
+        <!-- LIGHT CLINICAL COMBOBOX                                      -->
         <!-- ============================================================ -->
         <Style TargetType="ComboBox">
-            <Setter Property="Background" Value="{StaticResource InputBgBrush}"/>
+            <Setter Property="Background" Value="#FFFFFF"/>
             <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrightBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="8,4"/>
             <Setter Property="FontSize" Value="11"/>
@@ -489,7 +460,7 @@
         </Style>
 
         <!-- ============================================================ -->
-        <!-- VOICEMOD MODERN CHECKBOX                                     -->
+        <!-- LIGHT CHECKBOX                                               -->
         <!-- ============================================================ -->
         <Style TargetType="CheckBox">
             <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
@@ -499,14 +470,13 @@
         </Style>
 
         <!-- ============================================================ -->
-        <!-- VOICEMOD DARK TABLE / DATAGRID                               -->
-        <!-- Clean dark background, subtle row hover, cyan selection      -->
+        <!-- LIGHT TABLE / DATAGRID (Matching Screenshot)                 -->
         <!-- ============================================================ -->
         <Style TargetType="DataGrid">
-            <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+            <Setter Property="Background" Value="#FFFFFF"/>
             <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-            <Setter Property="RowBackground" Value="{StaticResource SurfaceBrush}"/>
-            <Setter Property="AlternatingRowBackground" Value="#10141E"/>
+            <Setter Property="RowBackground" Value="#FFFFFF"/>
+            <Setter Property="AlternatingRowBackground" Value="#F8FAFC"/>
             <Setter Property="GridLinesVisibility" Value="Horizontal"/>
             <Setter Property="HorizontalGridLinesBrush" Value="{StaticResource BorderBrush}"/>
             <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
@@ -514,29 +484,29 @@
             <Setter Property="HeadersVisibility" Value="Column"/>
             <Setter Property="AutoGenerateColumns" Value="False"/>
             <Setter Property="CanUserAddRows" Value="False"/>
-            <Setter Property="RowHeight" Value="28"/>
+            <Setter Property="RowHeight" Value="26"/>
             <Setter Property="FontSize" Value="11"/>
         </Style>
 
         <Style TargetType="DataGridColumnHeader">
-            <Setter Property="Background" Value="#161B26"/>
+            <Setter Property="Background" Value="#F1F5F9"/>
             <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
             <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="FontSize" Value="10.5"/>
-            <Setter Property="Padding" Value="9,6"/>
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="Padding" Value="8,5"/>
             <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="0,0,1,1"/>
         </Style>
 
         <!-- Menu Bar Styling -->
         <Style TargetType="Menu">
-            <Setter Property="Background" Value="#0A0D14"/>
+            <Setter Property="Background" Value="#FFFFFF"/>
             <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
             <Setter Property="FontSize" Value="11.5"/>
         </Style>
 
         <Style TargetType="MenuItem">
-            <Setter Property="Background" Value="#0A0D14"/>
+            <Setter Property="Background" Value="#FFFFFF"/>
             <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
             <Setter Property="Padding" Value="8,4"/>
             <Setter Property="FontSize" Value="11.5"/>
@@ -544,9 +514,9 @@
 
         <!-- Text Box Styling -->
         <Style TargetType="TextBox">
-            <Setter Property="Background" Value="{StaticResource InputBgBrush}"/>
+            <Setter Property="Background" Value="#FFFFFF"/>
             <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrightBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="8,4"/>
             <Setter Property="FontSize" Value="11"/>

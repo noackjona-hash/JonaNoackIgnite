@@ -323,6 +323,58 @@ namespace Ignite.Desktop.Services
 
             return BlendVeinOverlay(baseSource, bytes, 0.85, 20, VeinRenderMode.FluorescentCyan);
         }
+
+        // Generates clinical finding image with pure white background, isolating inflammatory hotspots and vascular tree
+        public static BitmapSource CreateIsolatedFindingBitmap(
+            byte[] grayPixels, 
+            int width, 
+            int height, 
+            ColorPalette palette, 
+            byte threshold = 180, 
+            byte[]? veinPixels = null, 
+            bool showVeins = true,
+            double windowWidth = 255.0,
+            double windowCenter = 127.5)
+        {
+            uint[] lut = palette switch
+            {
+                ColorPalette.Rainbow => RainbowLUT,
+                ColorPalette.Inferno => InfernoLUT,
+                _ => IronbowLUT
+            };
+
+            double wMin = windowCenter - (windowWidth / 2.0);
+            double wMax = windowCenter + (windowWidth / 2.0);
+            if (wMax <= wMin) wMax = wMin + 1.0;
+
+            uint[] output = new uint[width * height];
+            Array.Fill(output, 0xFFFFFFFF); // Pure white background matching screenshot
+
+            for (int i = 0; i < grayPixels.Length; i++)
+            {
+                byte val = grayPixels[i];
+                if (val >= threshold)
+                {
+                    double scaled = (val - wMin) / (wMax - wMin) * 255.0;
+                    int clamped = Math.Clamp((int)Math.Round(scaled), 0, 255);
+                    output[i] = lut[clamped];
+                }
+                else if (showVeins && veinPixels != null && i < veinPixels.Length && veinPixels[i] > 25)
+                {
+                    byte v = veinPixels[i];
+                    double strength = (v - 25) / 230.0;
+                    byte r = (byte)Math.Clamp(255 - strength * 235, 0, 255);
+                    byte g = (byte)Math.Clamp(255 - strength * 115, 0, 255);
+                    byte b = (byte)Math.Clamp(255 - strength * 15, 0, 255);
+                    output[i] = (uint)((255 << 24) | (r << 16) | (g << 8) | b);
+                }
+            }
+
+            var bmp = new WriteableBitmap(width, height, 96, 96, PixelFormats.Bgra32, null);
+            bmp.WritePixels(new System.Windows.Int32Rect(0, 0, width, height), output, width * 4, 0);
+            bmp.Freeze();
+            return bmp;
+        }
     }
 
 }

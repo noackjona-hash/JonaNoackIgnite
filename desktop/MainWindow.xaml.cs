@@ -33,7 +33,17 @@ namespace Ignite.Desktop
         RoiSelection,
         ThermalProfile,
         PointProbe,
-        WindowLevelDrag
+        WindowLevelDrag,
+        BoneDrawing
+    }
+
+    public class DrawnBone
+    {
+        public string Id { get; set; } = Guid.NewGuid().ToString("N")[..6];
+        public string Name { get; set; } = "Knochen";
+        public List<Point> Points { get; set; } = new();
+        public double Thickness { get; set; } = 2.0;
+        public Brush StrokeBrush { get; set; } = new SolidColorBrush(Color.FromRgb(30, 41, 59));
     }
 
     public partial class MainWindow : Window
@@ -88,6 +98,17 @@ namespace Ignite.Desktop
         private Point _profileStartPoint;
         private Point _profileEndPoint;
         private ThermalProfileStats? _activeProfileStats;
+
+        // Interactive Bone Drawing & Anatomical Foot Skeleton State
+        private bool _isDrawingBone = false;
+        private readonly List<DrawnBone> _drawnBones = new();
+        private DrawnBone? _currentBoneDrawing = null;
+        private bool _showAnatomicalBones = true;
+        private bool _showDrawnBones = true;
+        private double _boneScale = 1.0;
+        private double _boneOffX = 0.0;
+        private double _boneOffY = 0.0;
+        private bool _boneIsLeftFoot = false;
 
         // Clinical Point Probes (P1, P2, ...)
         private readonly List<ThermalProbePoint> _probePoints = new();
@@ -384,10 +405,26 @@ end";
 
                 ImgOriginal.Source = _originalBitmap;
                 ImgCurtainRaw.Source = _originalBitmap;
+
+                CanvasOriginal.Width = _rawWidth;
+                CanvasOriginal.Height = _rawHeight;
+                CanvasResult.Width = _rawWidth;
+                CanvasResult.Height = _rawHeight;
+                ImgOriginal.Width = _rawWidth;
+                ImgOriginal.Height = _rawHeight;
+                ImgResult.Width = _rawWidth;
+                ImgResult.Height = _rawHeight;
+                ImgCurtainRaw.Width = _rawWidth;
+                ImgCurtainRaw.Height = _rawHeight;
                 OverlayOriginalCanvas.Width = _rawWidth;
                 OverlayOriginalCanvas.Height = _rawHeight;
                 OverlayResultCanvas.Width = _rawWidth;
                 OverlayResultCanvas.Height = _rawHeight;
+                CanvasCurtain.Width = _rawWidth;
+                CanvasCurtain.Height = _rawHeight;
+
+                // Auto-fit anatomical foot skeleton to tissue bounds
+                AutoFitBonesToImage();
 
                 // Compute real-time histogram & anatomical zones
                 UpdateHistogramData();
@@ -573,31 +610,45 @@ end";
                 return;
             }
 
-            BitmapSource baseBmp = _rawGrayPixels != null
-                ? PaletteService.ApplyPalette(_rawGrayPixels, w, h, _activePalette, _windowWidth, _windowCenter)
-                : PaletteService.ApplyPalette(_originalBitmap, _activePalette, _windowWidth, _windowCenter);
-
-            // Blend vein mask if active
-            if (showVeins && _enableVeinOverlay)
+            BitmapSource baseBmp;
+            if ((_activeViewMode == ActiveViewMode.CurtainWipe || _activeViewMode == ActiveViewMode.DualView) && _rawGrayPixels != null)
             {
-                try
+                byte thresh = 160;
+                if (result.Stats != null && result.Stats.OrigMedian > 0)
                 {
-                    if (_cachedVeinPixels == null)
+                    thresh = (byte)Math.Clamp(result.Stats.OrigMedian + 10, 100, 230);
+                }
+                baseBmp = PaletteService.CreateIsolatedFindingBitmap(
+                    _rawGrayPixels, w, h, _activePalette, thresh, _cachedVeinPixels, showVeins && _enableVeinOverlay, _windowWidth, _windowCenter);
+            }
+            else
+            {
+                baseBmp = _rawGrayPixels != null
+                    ? PaletteService.ApplyPalette(_rawGrayPixels, w, h, _activePalette, _windowWidth, _windowCenter)
+                    : PaletteService.ApplyPalette(_originalBitmap, _activePalette, _windowWidth, _windowCenter);
+
+                // Blend vein mask if active
+                if (showVeins && _enableVeinOverlay)
+                {
+                    try
                     {
-                        string veinMaskPath = System.IO.Path.Combine(_engineService.CacheDirectory, "vascular_mask.png");
-                        if (File.Exists(veinMaskPath))
+                        if (_cachedVeinPixels == null)
                         {
-                            _cachedVeinPixels = PaletteService.LoadVeinMaskBytes(veinMaskPath, w, h);
-                            UpdateVeinMetricsUI();
+                            string veinMaskPath = System.IO.Path.Combine(_engineService.CacheDirectory, "vascular_mask.png");
+                            if (File.Exists(veinMaskPath))
+                            {
+                                _cachedVeinPixels = PaletteService.LoadVeinMaskBytes(veinMaskPath, w, h);
+                                UpdateVeinMetricsUI();
+                            }
+                        }
+
+                        if (_cachedVeinPixels != null)
+                        {
+                            baseBmp = PaletteService.BlendVeinOverlay(baseBmp, _cachedVeinPixels, _veinOpacity, _veinThreshold, _veinRenderMode);
                         }
                     }
-
-                    if (_cachedVeinPixels != null)
-                    {
-                        baseBmp = PaletteService.BlendVeinOverlay(baseBmp, _cachedVeinPixels, _veinOpacity, _veinThreshold, _veinRenderMode);
-                    }
+                    catch { }
                 }
-                catch { }
             }
 
             ImgResult.Source = baseBmp;
@@ -633,20 +684,34 @@ end";
                 return;
             }
 
-            BitmapSource baseBmp = _rawGrayPixels != null
-                ? PaletteService.ApplyPalette(_rawGrayPixels, w, h, _activePalette, _windowWidth, _windowCenter)
-                : PaletteService.ApplyPalette(_originalBitmap, _activePalette, _windowWidth, _windowCenter);
-
-            if (_enableVeinOverlay && _cachedVeinPixels != null)
+            BitmapSource baseBmp;
+            if ((_activeViewMode == ActiveViewMode.CurtainWipe || _activeViewMode == ActiveViewMode.DualView) && _rawGrayPixels != null)
             {
-                baseBmp = PaletteService.BlendVeinOverlay(baseBmp, _cachedVeinPixels, _veinOpacity, _veinThreshold, _veinRenderMode);
+                byte thresh = (byte)Math.Clamp(_windowCenter + 15, 120, 230);
+                if (_latestResult?.Stats != null && _latestResult.Stats.OrigMedian > 0)
+                {
+                    thresh = (byte)Math.Clamp(_latestResult.Stats.OrigMedian + 10, 100, 230);
+                }
+                baseBmp = PaletteService.CreateIsolatedFindingBitmap(
+                    _rawGrayPixels, w, h, _activePalette, thresh, _cachedVeinPixels, _enableVeinOverlay, _windowWidth, _windowCenter);
+            }
+            else
+            {
+                baseBmp = _rawGrayPixels != null
+                    ? PaletteService.ApplyPalette(_rawGrayPixels, w, h, _activePalette, _windowWidth, _windowCenter)
+                    : PaletteService.ApplyPalette(_originalBitmap, _activePalette, _windowWidth, _windowCenter);
+
+                if (_enableVeinOverlay && _cachedVeinPixels != null)
+                {
+                    baseBmp = PaletteService.BlendVeinOverlay(baseBmp, _cachedVeinPixels, _veinOpacity, _veinThreshold, _veinRenderMode);
+                }
             }
 
             ImgResult.Source = baseBmp;
             UpdateHudReadouts();
         }
 
-        // --- View Mode Selector (Dual, Curtain Wipe, 3D Relief, Pure DSA, Isotherm, Subtraction DST) ---
+        // --- View Mode Selector (Dual, Curtain Wipe, 3D Relief, Pure DSA, Isotherm, Bones) ---
         private void ViewMode_Checked(object sender, RoutedEventArgs e)
         {
             if (!_isInitialized || RbViewDual == null || ColViewport1 == null || ColViewport2 == null || ColDivider == null) return;
@@ -670,6 +735,7 @@ end";
                 ColViewport2.Width = new GridLength(1, GridUnitType.Star);
                 ImgCurtainRaw.Visibility = Visibility.Visible;
                 CanvasCurtain.Visibility = Visibility.Visible;
+                _showAnatomicalBones = true;
                 TxtVp2Title.Text = "SCHIEBE-VORHANG: ROHBILD (LINKS) vs BEFUND & GEFÄSSE (RECHTS)";
                 UpdateCurtainGeometry();
             }
@@ -705,15 +771,22 @@ end";
                 CanvasCurtain.Visibility = Visibility.Collapsed;
                 TxtVp2Title.Text = $"ISOTHERMEN-BAND: [{_isothermLow:F1}°C bis {_isothermHigh:F1}°C]";
             }
-            else if (RbViewDST != null && RbViewDST.IsChecked == true)
+            else if (RbViewBones != null && RbViewBones.IsChecked == true)
             {
-                _activeViewMode = ActiveViewMode.DigitalSubtraction;
-                ColViewport1.Width = new GridLength(1, GridUnitType.Star);
-                ColDivider.Width = new GridLength(1);
+                _activeViewMode = ActiveViewMode.CurtainWipe;
+                ColViewport1.Width = new GridLength(0);
+                ColDivider.Width = new GridLength(0);
                 ColViewport2.Width = new GridLength(1, GridUnitType.Star);
-                ImgCurtainRaw.Visibility = Visibility.Collapsed;
-                CanvasCurtain.Visibility = Visibility.Collapsed;
-                TxtVp2Title.Text = $"DIGITAL SUBTRACTION THERMOGRAPHY (DST ΔΔT = {_dstOffset:+0.0;-0.0} K)";
+                ImgCurtainRaw.Visibility = Visibility.Visible;
+                CanvasCurtain.Visibility = Visibility.Visible;
+                _showAnatomicalBones = true;
+                if (ChkShowBones != null) ChkShowBones.IsChecked = true;
+                if (ChkEnableSkeletonTemplate != null) ChkEnableSkeletonTemplate.IsChecked = true;
+                if (InspectorTabs != null && TabBones != null) InspectorTabs.SelectedItem = TabBones;
+                if (RbToolBone != null) RbToolBone.IsChecked = true;
+                _activeTool = ActiveCanvasTool.BoneDrawing;
+                TxtVp2Title.Text = "OSTEOLOGIE & ANATOMISCHES SKELETT: Knochen einzeichnen & Befundvergleich";
+                UpdateCurtainGeometry();
             }
 
             RefreshResultImageOnly();
@@ -836,18 +909,8 @@ end";
             // 3. Draw Active ROI Selection Rectangle (if set)
             if (_currentROI != null && _currentROI.Length >= 4)
             {
-                var roiRect = new System.Windows.Shapes.Rectangle
-                {
-                    Width = Math.Max(0, _currentROI[2] - _currentROI[0]),
-                    Height = Math.Max(0, _currentROI[3] - _currentROI[1]),
-                    Stroke = (Brush)FindResource("CyanBrush"),
-                    StrokeThickness = 1.5,
-                    StrokeDashArray = new DoubleCollection { 4, 2 },
-                    Fill = new SolidColorBrush(Color.FromArgb(25, 0, 240, 255))
-                };
-                Canvas.SetLeft(roiRect, _currentROI[0]);
-                Canvas.SetTop(roiRect, _currentROI[1]);
-                OverlayOriginalCanvas.Children.Add(roiRect);
+                DrawRoiRectVector(OverlayOriginalCanvas);
+                DrawRoiRectVector(OverlayResultCanvas);
             }
 
             // 4. Draw Thermal Profile Caliper Line
@@ -862,6 +925,37 @@ end";
             {
                 DrawProbePinsVector(OverlayOriginalCanvas);
                 DrawProbePinsVector(OverlayResultCanvas);
+            }
+
+            // 6. Draw Anatomical Foot Skeleton (Osteology Template)
+            if (_showAnatomicalBones)
+            {
+                DrawAnatomicalFootSkeleton(OverlayOriginalCanvas);
+                DrawAnatomicalFootSkeleton(OverlayResultCanvas);
+            }
+
+            // 7. Draw Physician Freehand Drawn Bones
+            if (_showDrawnBones)
+            {
+                DrawPhysicianBones(OverlayOriginalCanvas);
+                DrawPhysicianBones(OverlayResultCanvas);
+            }
+
+            // 8. Screenshot-matching Fokaler Hotspot Callout Box
+            if (_latestResult?.Hotspots != null && _latestResult.Hotspots.Count > 0)
+            {
+                var mainHotspot = _latestResult.Hotspots.OrderByDescending(h => h.Region?.MaxVal ?? 0).FirstOrDefault();
+                if (mainHotspot?.Region != null)
+                {
+                    double hx = mainHotspot.Region.CenterX;
+                    double hy = mainHotspot.Region.CenterY;
+                    double origMed = _latestResult.Stats?.OrigMedian ?? 128.0;
+                    double deltaT = Math.Round((mainHotspot.Region.MaxVal - origMed) * 0.1, 1);
+                    string riskText = mainHotspot.Assessment?.RiskLevel == "CRITICAL" ? "Kritisch" : "Auffällig";
+
+                    DrawHotspotCalloutCard(OverlayOriginalCanvas, hx, hy, deltaT, riskText);
+                    DrawHotspotCalloutCard(OverlayResultCanvas, hx, hy, deltaT, riskText);
+                }
             }
         }
 
@@ -1046,6 +1140,7 @@ end";
             else if (RbToolRoi.IsChecked == true) _activeTool = ActiveCanvasTool.RoiSelection;
             else if (RbToolProfile.IsChecked == true) _activeTool = ActiveCanvasTool.ThermalProfile;
             else if (RbToolProbe.IsChecked == true) _activeTool = ActiveCanvasTool.PointProbe;
+            else if (RbToolBone != null && RbToolBone.IsChecked == true) _activeTool = ActiveCanvasTool.BoneDrawing;
             else if (RbToolWL.IsChecked == true) _activeTool = ActiveCanvasTool.WindowLevelDrag;
 
             UpdateToolInstructions();
@@ -1131,13 +1226,13 @@ end";
                     break;
                 case ActiveCanvasTool.RoiSelection:
                     StatusText.Text = "Werkzeug: ROI Fokus | Ziehen Sie ein Rechteck über ein interessierendes Gewebeareal (z. B. Großzehe).";
-                    if (TxtToolHintVp1 != null) TxtToolHintVp1.Text = " · Rechteck ziehen = Bereich wählen";
+                    if (TxtToolHintVp1 != null) TxtToolHintVp1.Text = " · Rechteck ziehen = Bereich wählen (Pixelgenau)";
                     CanvasOriginal.Cursor = Cursors.Cross;
                     CanvasResult.Cursor = Cursors.Cross;
                     break;
                 case ActiveCanvasTool.ThermalProfile:
                     StatusText.Text = "Werkzeug: Schnittprofil T(s) | Ziehen Sie eine Linie über das Gewebe zur Erzeugung des Temperaturdiagramms.";
-                    if (TxtToolHintVp1 != null) TxtToolHintVp1.Text = " · Linie ziehen = Schnittprofil analysieren";
+                    if (TxtToolHintVp1 != null) TxtToolHintVp1.Text = " · Linie ziehen = Schnittprofil analysieren (Pixelgenau)";
                     CanvasOriginal.Cursor = Cursors.Pen;
                     CanvasResult.Cursor = Cursors.Pen;
                     break;
@@ -1146,6 +1241,12 @@ end";
                     if (TxtToolHintVp1 != null) TxtToolHintVp1.Text = " · Klick = Messpunkt setzen (Armstrong ΔT)";
                     CanvasOriginal.Cursor = Cursors.Cross;
                     CanvasResult.Cursor = Cursors.Cross;
+                    break;
+                case ActiveCanvasTool.BoneDrawing:
+                    StatusText.Text = "Werkzeug: Knochen einzeichnen | Zeichnen Sie Knochenstrukturen frei mit der Maus auf das Gewebe.";
+                    if (TxtToolHintVp1 != null) TxtToolHintVp1.Text = " · Maus ziehen = Knochenkontur einzeichnen";
+                    CanvasOriginal.Cursor = Cursors.Pen;
+                    CanvasResult.Cursor = Cursors.Pen;
                     break;
                 case ActiveCanvasTool.WindowLevelDrag:
                     StatusText.Text = "Werkzeug: W/L Ziehen | Linke Maustaste gedrückt halten und ziehen (horizontal = Kontrast, vertikal = Helligkeit).";
@@ -1156,19 +1257,21 @@ end";
             }
         }
 
-        // --- Mouse Events for Viewports (Pan, ROI, Profile, Probes, W/L, Curtain) ---
+        // --- Mouse Events for Viewports (Pan, ROI, Profile, Probes, Bones, W/L, Curtain) ---
         private void ViewportOriginal_MouseDown(object sender, MouseButtonEventArgs e) => HandleViewportMouseDown(CanvasOriginal, ScrollOriginal, e);
         private void ViewportResult_MouseDown(object sender, MouseButtonEventArgs e) => HandleViewportMouseDown(CanvasResult, ScrollResult, e);
 
         private void HandleViewportMouseDown(Grid canvas, ScrollViewer scroller, MouseButtonEventArgs e)
         {
             if (_originalBitmap == null) return;
-            Point pos = e.GetPosition(canvas);
+            Canvas activeOverlay = (canvas == CanvasResult) ? OverlayResultCanvas : OverlayOriginalCanvas;
+            Point pos = e.GetPosition(activeOverlay);
+            pos = new Point(Math.Clamp(pos.X, 0, _rawWidth), Math.Clamp(pos.Y, 0, _rawHeight));
 
             // Right or Middle button ALWAYS initiates Panning
             if (e.RightButton == MouseButtonState.Pressed || e.MiddleButton == MouseButtonState.Pressed)
             {
-                StartPanning(pos, scroller, canvas);
+                StartPanning(e.GetPosition(scroller), scroller, canvas);
                 return;
             }
 
@@ -1177,7 +1280,7 @@ end";
                 switch (_activeTool)
                 {
                     case ActiveCanvasTool.PanZoom:
-                        StartPanning(pos, scroller, canvas);
+                        StartPanning(e.GetPosition(scroller), scroller, canvas);
                         break;
 
                     case ActiveCanvasTool.RoiSelection:
@@ -1188,12 +1291,16 @@ end";
                             _roiSelectionRect = new System.Windows.Shapes.Rectangle
                             {
                                 Stroke = (Brush)FindResource("CyanBrush"),
-                                StrokeThickness = 1.5,
+                                StrokeThickness = 1.8,
                                 StrokeDashArray = new DoubleCollection { 4, 2 },
                                 Fill = new SolidColorBrush(Color.FromArgb(30, 0, 240, 255))
                             };
-                            OverlayOriginalCanvas.Children.Add(_roiSelectionRect);
                         }
+                        if (_roiSelectionRect.Parent is Canvas prevParent)
+                        {
+                            prevParent.Children.Remove(_roiSelectionRect);
+                        }
+                        activeOverlay.Children.Add(_roiSelectionRect);
                         _roiSelectionRect.Visibility = Visibility.Visible;
                         Canvas.SetLeft(_roiSelectionRect, pos.X);
                         Canvas.SetTop(_roiSelectionRect, pos.Y);
@@ -1213,6 +1320,19 @@ end";
                         PlaceProbePoint(pos);
                         break;
 
+                    case ActiveCanvasTool.BoneDrawing:
+                        _isDrawingBone = true;
+                        _currentBoneDrawing = new DrawnBone
+                        {
+                            Name = $"Knochen #{_drawnBones.Count + 1}",
+                            Thickness = 2.2,
+                            StrokeBrush = new SolidColorBrush(Color.FromRgb(30, 41, 59))
+                        };
+                        _currentBoneDrawing.Points.Add(pos);
+                        canvas.CaptureMouse();
+                        RedrawInteractiveOverlays();
+                        break;
+
                     case ActiveCanvasTool.WindowLevelDrag:
                         _isDraggingWL = true;
                         _wlStartPoint = e.GetPosition(this);
@@ -1224,10 +1344,10 @@ end";
             }
         }
 
-        private void StartPanning(Point pos, ScrollViewer scroller, Grid canvas)
+        private void StartPanning(Point scrollerPos, ScrollViewer scroller, Grid canvas)
         {
             _isPanning = true;
-            _panStartMouse = pos;
+            _panStartMouse = scrollerPos;
             _panStartHScroll = scroller.HorizontalOffset;
             _panStartVScroll = scroller.VerticalOffset;
             canvas.CaptureMouse();
@@ -1238,7 +1358,9 @@ end";
 
         private void HandleViewportMouseMove(Grid canvas, ScrollViewer scroller, MouseEventArgs e)
         {
-            Point pos = e.GetPosition(canvas);
+            Canvas activeOverlay = (canvas == CanvasResult) ? OverlayResultCanvas : OverlayOriginalCanvas;
+            Point pos = e.GetPosition(activeOverlay);
+            pos = new Point(Math.Clamp(pos.X, 0, _rawWidth), Math.Clamp(pos.Y, 0, _rawHeight));
             int x = (int)pos.X;
             int y = (int)pos.Y;
 
@@ -1261,8 +1383,9 @@ end";
             // Panning
             if (_isPanning)
             {
-                double dx = (pos.X - _panStartMouse.X) * _currentZoom;
-                double dy = (pos.Y - _panStartMouse.Y) * _currentZoom;
+                Point curMouse = e.GetPosition(scroller);
+                double dx = (curMouse.X - _panStartMouse.X);
+                double dy = (curMouse.Y - _panStartMouse.Y);
                 scroller.ScrollToHorizontalOffset(_panStartHScroll - dx);
                 scroller.ScrollToVerticalOffset(_panStartVScroll - dy);
                 return;
@@ -1283,16 +1406,13 @@ end";
                 return;
             }
 
-            // ROI Rubberband
+            // ROI Rubberband (Zero Offset)
             if (_isSelectingROI && _roiSelectionRect != null)
             {
-                double curX = Math.Max(0, Math.Min(_rawWidth, pos.X));
-                double curY = Math.Max(0, Math.Min(_rawHeight, pos.Y));
-
-                double minX = Math.Min(_roiStartPoint.X, curX);
-                double minY = Math.Min(_roiStartPoint.Y, curY);
-                double rw = Math.Abs(curX - _roiStartPoint.X);
-                double rh = Math.Abs(curY - _roiStartPoint.Y);
+                double minX = Math.Min(_roiStartPoint.X, pos.X);
+                double minY = Math.Min(_roiStartPoint.Y, pos.Y);
+                double rw = Math.Abs(pos.X - _roiStartPoint.X);
+                double rh = Math.Abs(pos.Y - _roiStartPoint.Y);
 
                 Canvas.SetLeft(_roiSelectionRect, minX);
                 Canvas.SetTop(_roiSelectionRect, minY);
@@ -1301,13 +1421,25 @@ end";
                 return;
             }
 
-            // Thermal Profile Line Rubberband
+            // Thermal Profile Line Rubberband (Zero Offset)
             if (_isDrawingProfile && _rawGrayPixels != null)
             {
-                _profileEndPoint = new Point(Math.Clamp(pos.X, 0, _rawWidth - 1), Math.Clamp(pos.Y, 0, _rawHeight - 1));
+                _profileEndPoint = pos;
                 _activeProfileStats = ThermalAnalysisHelper.SampleProfileLine(_rawGrayPixels, _rawWidth, _rawHeight, _profileStartPoint, _profileEndPoint);
                 RedrawInteractiveOverlays();
                 UpdateProfileUI();
+                return;
+            }
+
+            // Bone Drawing Live Trace (Zero Offset)
+            if (_isDrawingBone && _currentBoneDrawing != null)
+            {
+                var pts = _currentBoneDrawing.Points;
+                if (pts.Count == 0 || (pos - pts[^1]).Length >= 2.0)
+                {
+                    pts.Add(pos);
+                    RedrawInteractiveOverlays();
+                }
             }
         }
 
@@ -1342,13 +1474,17 @@ end";
                 double w = _roiSelectionRect.Width;
                 double h = _roiSelectionRect.Height;
 
-                if (w > 20 && h > 20)
+                if (w > 15 && h > 15)
                 {
                     double minX = Canvas.GetLeft(_roiSelectionRect);
                     double minY = Canvas.GetTop(_roiSelectionRect);
                     _currentROI = new int[] { (int)minX, (int)minY, (int)(minX + w), (int)(minY + h) };
                     StatusText.Text = $"ROI gewählt: [{_currentROI[0]}, {_currentROI[1]} bis {_currentROI[2]}, {_currentROI[3]}]. Berechne...";
                     _ = RunPipelineAsync();
+                }
+                else
+                {
+                    _roiSelectionRect.Visibility = Visibility.Collapsed;
                 }
             }
 
@@ -1359,10 +1495,24 @@ end";
 
                 if (_activeProfileStats != null && _activeProfileStats.Samples.Count >= 2)
                 {
-                    InspectorTabs.SelectedItem = TabProfile;
+                    if (InspectorTabs != null && TabProfile != null) InspectorTabs.SelectedItem = TabProfile;
                     RenderProfileGraph(_activeProfileStats);
                     StatusText.Text = $"Schnittprofil erstellt: Pfadlänge {_activeProfileStats.TotalLengthPx:F0} px | T={_activeProfileStats.MinTemp:F1}°C bis {_activeProfileStats.MaxTemp:F1}°C.";
                 }
+            }
+
+            if (_isDrawingBone)
+            {
+                _isDrawingBone = false;
+                canvas.ReleaseMouseCapture();
+
+                if (_currentBoneDrawing != null && _currentBoneDrawing.Points.Count >= 2)
+                {
+                    _drawnBones.Add(_currentBoneDrawing);
+                    StatusText.Text = $"Knochen eingezeichnet: {_currentBoneDrawing.Name} ({_currentBoneDrawing.Points.Count} Punkte). Gesamt: {_drawnBones.Count} Knochen.";
+                }
+                _currentBoneDrawing = null;
+                RedrawInteractiveOverlays();
             }
         }
 
@@ -2307,6 +2457,313 @@ end";
             {
                 MessageBox.Show("Die Dokumentationsdatei ALGORITHM.md befindet sich im Ordner docs/.", "Dokumentation", MessageBoxButton.OK, MessageBoxImage.Information);
             }
+        }
+
+        private void DrawRoiRectVector(Canvas canvas)
+        {
+            if (_currentROI == null || _currentROI.Length < 4) return;
+            var roiRect = new System.Windows.Shapes.Rectangle
+            {
+                Width = Math.Max(0, _currentROI[2] - _currentROI[0]),
+                Height = Math.Max(0, _currentROI[3] - _currentROI[1]),
+                Stroke = (Brush)FindResource("CyanBrush"),
+                StrokeThickness = 1.8,
+                StrokeDashArray = new DoubleCollection { 4, 2 },
+                Fill = new SolidColorBrush(Color.FromArgb(25, 0, 240, 255))
+            };
+            Canvas.SetLeft(roiRect, _currentROI[0]);
+            Canvas.SetTop(roiRect, _currentROI[1]);
+            canvas.Children.Add(roiRect);
+        }
+
+        private void DrawAnatomicalFootSkeleton(Canvas canvas)
+        {
+            if (_rawWidth <= 0 || _rawHeight <= 0) return;
+
+            double cx = (_rawWidth / 2.0) + _boneOffX;
+            double cy = (_rawHeight / 2.0) + _boneOffY;
+            double sc = _boneScale;
+            double sign = _boneIsLeftFoot ? -1.0 : 1.0;
+
+            Point FPt(double rx, double ry) => new Point(cx + (rx * sc * sign), cy + (ry * sc));
+
+            var boneStroke = new SolidColorBrush(Color.FromRgb(30, 41, 59));
+            var boneFill = new SolidColorBrush(Color.FromArgb(14, 30, 41, 59));
+
+            void AddBonePoly(params Point[] pts)
+            {
+                if (pts.Length < 3) return;
+                var poly = new Polygon
+                {
+                    Stroke = boneStroke,
+                    StrokeThickness = 1.8,
+                    Fill = boneFill,
+                    StrokeLineJoin = PenLineJoin.Round
+                };
+                foreach (var p in pts) poly.Points.Add(p);
+                canvas.Children.Add(poly);
+            }
+
+            // --- 1. DIGITUS I (HALLUX / GROSSZEHE) ---
+            AddBonePoly(FPt(37, -190), FPt(48, -172), FPt(46, -154), FPt(27, -154), FPt(25, -172));
+            AddBonePoly(FPt(44, -147), FPt(40, -125), FPt(45, -104), FPt(26, -104), FPt(30, -125), FPt(26, -147));
+            AddBonePoly(FPt(46, -97), FPt(48, -85), FPt(39, -70), FPt(37, -35), FPt(40, -18), FPt(20, -18), FPt(22, -35), FPt(22, -70), FPt(19, -85), FPt(21, -97));
+
+            // --- 2. DIGITUS II ---
+            AddBonePoly(FPt(14, -180), FPt(17, -168), FPt(17, -158), FPt(9, -158), FPt(9, -168));
+            AddBonePoly(FPt(16, -152), FPt(17, -140), FPt(9, -140), FPt(9, -152));
+            AddBonePoly(FPt(17, -135), FPt(15, -120), FPt(17, -108), FPt(8, -108), FPt(9, -120), FPt(8, -135));
+            AddBonePoly(FPt(17, -102), FPt(15, -60), FPt(15, -18), FPt(7, -18), FPt(7, -60), FPt(7, -102));
+
+            // --- 3. DIGITUS III ---
+            AddBonePoly(FPt(-6, -172), FPt(-3, -160), FPt(-3, -150), FPt(-11, -150), FPt(-11, -160));
+            AddBonePoly(FPt(-4, -145), FPt(-3, -134), FPt(-11, -134), FPt(-11, -145));
+            AddBonePoly(FPt(-3, -129), FPt(-5, -116), FPt(-3, -104), FPt(-12, -104), FPt(-11, -116), FPt(-12, -129));
+            AddBonePoly(FPt(-3, -98), FPt(-4, -58), FPt(-4, -16), FPt(-13, -16), FPt(-12, -58), FPt(-13, -98));
+
+            // --- 4. DIGITUS IV ---
+            AddBonePoly(FPt(-26, -160), FPt(-23, -150), FPt(-23, -142), FPt(-31, -142), FPt(-31, -150));
+            AddBonePoly(FPt(-23, -137), FPt(-23, -126), FPt(-31, -126), FPt(-31, -137));
+            AddBonePoly(FPt(-23, -121), FPt(-24, -110), FPt(-22, -100), FPt(-32, -100), FPt(-31, -110), FPt(-32, -121));
+            AddBonePoly(FPt(-22, -94), FPt(-24, -54), FPt(-24, -14), FPt(-34, -14), FPt(-34, -54), FPt(-33, -94));
+
+            // --- 5. DIGITUS V (KLEINZEHE) ---
+            AddBonePoly(FPt(-46, -145), FPt(-43, -136), FPt(-44, -130), FPt(-51, -130), FPt(-51, -136));
+            AddBonePoly(FPt(-43, -126), FPt(-43, -117), FPt(-51, -117), FPt(-51, -126));
+            AddBonePoly(FPt(-43, -113), FPt(-44, -104), FPt(-42, -94), FPt(-52, -94), FPt(-51, -104), FPt(-52, -113));
+            AddBonePoly(FPt(-42, -88), FPt(-46, -50), FPt(-47, -10), FPt(-64, -20), FPt(-65, -35), FPt(-56, -55), FPt(-53, -88));
+
+            // --- 6. TARSUS (FUSSWURZEL) ---
+            AddBonePoly(FPt(37, -14), FPt(39, +12), FPt(19, +12), FPt(18, -14));
+            AddBonePoly(FPt(15, -14), FPt(15, +10), FPt(4, +10), FPt(5, -14));
+            AddBonePoly(FPt(2, -12), FPt(2, +12), FPt(-14, +12), FPt(-13, -12));
+            AddBonePoly(FPt(-18, -10), FPt(-15, +32), FPt(-45, +32), FPt(-50, -10));
+            AddBonePoly(FPt(35, +16), FPt(34, +44), FPt(-9, +44), FPt(-11, +16));
+            AddBonePoly(FPt(25, +48), FPt(24, +85), FPt(-18, +85), FPt(-14, +48));
+            AddBonePoly(FPt(18, +88), FPt(14, +160), FPt(-32, +160), FPt(-34, +88));
+        }
+
+        private void DrawPhysicianBones(Canvas canvas)
+        {
+            if (_drawnBones.Count > 0)
+            {
+                foreach (var bone in _drawnBones)
+                {
+                    if (bone.Points.Count >= 2)
+                    {
+                        var polyline = new Polyline
+                        {
+                            Stroke = bone.StrokeBrush,
+                            StrokeThickness = bone.Thickness,
+                            StrokeLineJoin = PenLineJoin.Round,
+                            StrokeStartLineCap = PenLineCap.Round,
+                            StrokeEndLineCap = PenLineCap.Round
+                        };
+                        foreach (var pt in bone.Points)
+                        {
+                            polyline.Points.Add(pt);
+                        }
+                        canvas.Children.Add(polyline);
+                    }
+                }
+            }
+
+            // Active live drawing trace
+            if (_currentBoneDrawing != null && _currentBoneDrawing.Points.Count >= 2)
+            {
+                var livePolyline = new Polyline
+                {
+                    Stroke = new SolidColorBrush(Color.FromRgb(2, 132, 199)),
+                    StrokeThickness = 2.5,
+                    StrokeDashArray = new DoubleCollection { 3, 2 },
+                    StrokeLineJoin = PenLineJoin.Round,
+                    StrokeStartLineCap = PenLineCap.Round,
+                    StrokeEndLineCap = PenLineCap.Round
+                };
+                foreach (var pt in _currentBoneDrawing.Points)
+                {
+                    livePolyline.Points.Add(pt);
+                }
+                canvas.Children.Add(livePolyline);
+            }
+        }
+
+        private void DrawHotspotCalloutCard(Canvas canvas, double hx, double hy, double deltaT, string riskText)
+        {
+            double calloutX = hx + 14;
+            double calloutY = Math.Max(8, hy - 42);
+
+            var pointer = new Line
+            {
+                X1 = hx,
+                Y1 = hy,
+                X2 = calloutX,
+                Y2 = calloutY + 16,
+                Stroke = new SolidColorBrush(Color.FromRgb(30, 41, 59)),
+                StrokeThickness = 1.2
+            };
+            canvas.Children.Add(pointer);
+
+            var card = new Border
+            {
+                Background = Brushes.White,
+                BorderBrush = new SolidColorBrush(Color.FromRgb(203, 213, 225)),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(6),
+                Padding = new Thickness(8, 4, 8, 4),
+                Effect = new System.Windows.Media.Effects.DropShadowEffect
+                {
+                    BlurRadius = 8,
+                    ShadowDepth = 2,
+                    Opacity = 0.18,
+                    Color = Colors.Black
+                }
+            };
+
+            var sp = new StackPanel { Orientation = Orientation.Vertical };
+            sp.Children.Add(new TextBlock
+            {
+                Text = "Fokaler Hotspot:",
+                FontSize = 9.5,
+                FontWeight = FontWeights.SemiBold,
+                Foreground = new SolidColorBrush(Color.FromRgb(51, 65, 85))
+            });
+            sp.Children.Add(new TextBlock
+            {
+                Text = $"ΔT = +{deltaT:F1} K ({riskText})",
+                FontSize = 10,
+                FontWeight = FontWeights.Bold,
+                Foreground = new SolidColorBrush(Color.FromRgb(220, 38, 38))
+            });
+
+            card.Child = sp;
+            Canvas.SetLeft(card, calloutX);
+            Canvas.SetTop(card, calloutY);
+            canvas.Children.Add(card);
+        }
+
+        private void MenuOpenOptions_Click(object sender, RoutedEventArgs e)
+        {
+            if (InspectorTabs != null) InspectorTabs.SelectedIndex = 1;
+        }
+
+        private void ChkShowBones_Click(object sender, RoutedEventArgs e)
+        {
+            _showAnatomicalBones = (sender as CheckBox)?.IsChecked == true;
+            if (ChkShowBones != null) ChkShowBones.IsChecked = _showAnatomicalBones;
+            if (ChkEnableSkeletonTemplate != null) ChkEnableSkeletonTemplate.IsChecked = _showAnatomicalBones;
+            if (ChkShowBonesInspector != null) ChkShowBonesInspector.IsChecked = _showAnatomicalBones;
+            RedrawInteractiveOverlays();
+        }
+
+        private void ChkEnableSkeletonTemplate_Click(object sender, RoutedEventArgs e)
+        {
+            _showAnatomicalBones = ChkEnableSkeletonTemplate.IsChecked == true;
+            if (ChkShowBones != null) ChkShowBones.IsChecked = _showAnatomicalBones;
+            if (ChkShowBonesInspector != null) ChkShowBonesInspector.IsChecked = _showAnatomicalBones;
+            RedrawInteractiveOverlays();
+        }
+
+        private void BtnActivateBoneTool_Click(object sender, RoutedEventArgs e)
+        {
+            _activeTool = ActiveCanvasTool.BoneDrawing;
+            if (RbToolBone != null) RbToolBone.IsChecked = true;
+            UpdateToolInstructions();
+        }
+
+        private void BtnUndoBone_Click(object sender, RoutedEventArgs e)
+        {
+            if (_drawnBones.Count > 0)
+            {
+                _drawnBones.RemoveAt(_drawnBones.Count - 1);
+                StatusText.Text = $"Letzter Knochen entfernt. Verbleibend: {_drawnBones.Count}.";
+                RedrawInteractiveOverlays();
+            }
+        }
+
+        private void BtnClearBones_Click(object sender, RoutedEventArgs e)
+        {
+            _drawnBones.Clear();
+            StatusText.Text = "Alle eingezeichneten Knochen gelöscht.";
+            RedrawInteractiveOverlays();
+        }
+
+        private void ComboBoneSide_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (!_isInitialized || ComboBoneSide == null) return;
+            _boneIsLeftFoot = (ComboBoneSide.SelectedIndex == 1);
+            RedrawInteractiveOverlays();
+        }
+
+        private void SliderBoneAdjust_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (!_isInitialized) return;
+            if (SliderBoneScale != null) _boneScale = SliderBoneScale.Value;
+            if (SliderBoneOffX != null) _boneOffX = SliderBoneOffX.Value;
+            if (SliderBoneOffY != null) _boneOffY = SliderBoneOffY.Value;
+
+            if (TxtBoneScale != null) TxtBoneScale.Text = $"{(_boneScale * 100):F0}%";
+            if (TxtBoneOffX != null) TxtBoneOffX.Text = $"{_boneOffX:+0;-0;0} px";
+            if (TxtBoneOffY != null) TxtBoneOffY.Text = $"{_boneOffY:+0;-0;0} px";
+
+            RedrawInteractiveOverlays();
+        }
+
+        private void BtnAutoFitBones_Click(object sender, RoutedEventArgs e)
+        {
+            AutoFitBonesToImage();
+        }
+
+        private void AutoFitBonesToImage()
+        {
+            if (_rawGrayPixels == null || _rawWidth <= 0 || _rawHeight <= 0) return;
+
+            int minX = _rawWidth, maxX = 0, minY = _rawHeight, maxY = 0;
+            long sumX = 0, sumY = 0, count = 0;
+
+            for (int y = 0; y < _rawHeight; y++)
+            {
+                int row = y * _rawWidth;
+                for (int x = 0; x < _rawWidth; x++)
+                {
+                    byte v = _rawGrayPixels[row + x];
+                    if (v > 50)
+                    {
+                        if (x < minX) minX = x;
+                        if (x > maxX) maxX = x;
+                        if (y < minY) minY = y;
+                        if (y > maxY) maxY = y;
+                        sumX += x;
+                        sumY += y;
+                        count++;
+                    }
+                }
+            }
+
+            if (count > 500 && maxX > minX && maxY > minY)
+            {
+                double footH = maxY - minY;
+                double cx = sumX / (double)count;
+                double cy = sumY / (double)count;
+
+                _boneScale = Math.Clamp(footH / 320.0, 0.65, 1.45);
+                _boneOffX = Math.Clamp(cx - (_rawWidth / 2.0), -100, 100);
+                _boneOffY = Math.Clamp(cy - (_rawHeight / 2.0), -100, 100);
+
+                if (SliderBoneScale != null) SliderBoneScale.Value = _boneScale;
+                if (SliderBoneOffX != null) SliderBoneOffX.Value = _boneOffX;
+                if (SliderBoneOffY != null) SliderBoneOffY.Value = _boneOffY;
+
+                StatusText.Text = $"Knochenskelett automatisch eingepasst (Skalierung {(_boneScale * 100):F0}%, ΔX={_boneOffX:F0}px, ΔY={_boneOffY:F0}px).";
+            }
+            else
+            {
+                _boneScale = 1.0;
+                _boneOffX = 0;
+                _boneOffY = 0;
+            }
+
+            RedrawInteractiveOverlays();
         }
 
         private void MenuExit_Click(object sender, RoutedEventArgs e)
