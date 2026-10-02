@@ -475,6 +475,7 @@
                                     <RadioButton x:Name="RbToolProfile" Style="{StaticResource VoicemodDockRadioStyle}" GroupName="CanvasTools" Content="📈 PROFIL" Checked="ToolRadio_Checked" ToolTip="Linie für Temperatur-Schnittprofil ziehen (Pixelgenau)"/>
                                     <RadioButton x:Name="RbToolProbe" Style="{StaticResource VoicemodDockRadioStyle}" GroupName="CanvasTools" Content="📍 SONDEN" Checked="ToolRadio_Checked" ToolTip="Punkt-Messsonden P1, P2 setzen"/>
                                     <RadioButton x:Name="RbToolBone" Style="{StaticResource VoicemodDockRadioStyle}" GroupName="CanvasTools" Content="🦴 KNOCHEN" Checked="ToolRadio_Checked" ToolTip="Knochen &amp; Skelettstrukturen mit der Maus einzeichnen"/>
+                                    <RadioButton x:Name="RbToolGoniometer" Style="{StaticResource VoicemodDockRadioStyle}" GroupName="CanvasTools" Content="📐 WINKEL" Checked="ToolRadio_Checked" ToolTip="Orthopädisches 3-Punkt Goniometer (Hallux Valgus Winkel HVA &amp; IMA)"/>
                                     <RadioButton x:Name="RbToolWL" Style="{StaticResource VoicemodDockRadioStyle}" GroupName="CanvasTools" Content="◐ W/L" Checked="ToolRadio_Checked" ToolTip="Interaktive Kontrast- &amp; Helligkeitsfensterung"/>
 
                                     <Separator Width="1" Height="22" Margin="8,0" Background="{StaticResource BorderBrush}"/>
@@ -706,17 +707,89 @@
                                                 </Grid>
                                                 <Slider x:Name="SliderBoneOffY" Minimum="-120" Maximum="120" Value="0" SmallChange="2" ValueChanged="SliderBoneAdjust_ValueChanged" Margin="0,0,0,8"/>
 
+                                                <CheckBox x:Name="ChkColorBonesByTemp" Content="🎨 Knochen nach lokaler Temperatur einfärben (Thermo-Osteologie)" IsChecked="False" Click="ChkColorBonesByTemp_Click" Margin="0,0,0,8" ToolTip="Färbt das Skelett dynamisch nach lokaler Entzündungs- und Druckbelastung ein"/>
+
                                                 <Button Content="📐 An Gewebekontur anpassen (Auto-Fit)" Click="BtnAutoFitBones_Click" Margin="0,4,0,0"/>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <!-- Osteo-Thermal Bone Matrix Card (NEW CAD FEATURE!) -->
+                                        <Border Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="12" Margin="0,0,0,10">
+                                            <StackPanel>
+                                                <Grid Margin="0,0,0,8">
+                                                    <TextBlock Text="Osteo-Thermische Gelenkmatrix (CAD):" FontWeight="Bold" FontSize="11" VerticalAlignment="Center"/>
+                                                    <Button HorizontalAlignment="Right" Content="⚡ Knochen abtasten" Click="BtnSampleBoneTemps_Click" Padding="8,3" FontSize="10" Style="{StaticResource VoicemodPrimaryButtonStyle}"/>
+                                                </Grid>
+
+                                                <DataGrid x:Name="GridBoneTemps" MaxHeight="220" AutoGenerateColumns="False" IsReadOnly="True">
+                                                    <DataGrid.Columns>
+                                                        <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="45"/>
+                                                        <DataGridTextColumn Header="Knochen / Struktur" Binding="{Binding LatinName}" Width="145"/>
+                                                        <DataGridTextColumn Header="T Max" Binding="{Binding MaxTemp, StringFormat={}{0:F1} °C}" Width="52"/>
+                                                        <DataGridTextColumn Header="T Mittel" Binding="{Binding MeanTemp, StringFormat={}{0:F1} °C}" Width="52"/>
+                                                        <DataGridTextColumn Header="ΔT" Binding="{Binding DeltaT, StringFormat={}{0:F1} K}" Width="45"/>
+                                                        <DataGridTextColumn Header="Risiko / Status" Binding="{Binding RiskLevel}" Width="*"/>
+                                                    </DataGrid.Columns>
+                                                </DataGrid>
+
+                                                <!-- Charcot Inflammatory Index (CII) Callout -->
+                                                <Border Background="#F8FAFC" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="10,6" Margin="0,8,0,0">
+                                                    <StackPanel>
+                                                        <Grid>
+                                                            <TextBlock Text="CHARCOT-INFLAMMATIONS-INDEX (CII):" FontSize="9.5" FontWeight="Bold" Foreground="{StaticResource CyanBrush}"/>
+                                                            <TextBlock x:Name="TxtCharcotIndex" Text="CII = -- K" FontSize="11" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Right"/>
+                                                        </Grid>
+                                                        <TextBlock x:Name="TxtCharcotStatus" Text="Charcot-Status: Unauffällig" FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,0,0"/>
+                                                    </StackPanel>
+                                                </Border>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <!-- Digital Orthopedic Goniometer Card (NEW FEATURE!) -->
+                                        <Border Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="12" Margin="0,0,0,10">
+                                            <StackPanel>
+                                                <Grid Margin="0,0,0,6">
+                                                    <TextBlock Text="Orthopädisches Goniometer (HVA / IMA):" FontWeight="Bold" FontSize="11" VerticalAlignment="Center"/>
+                                                    <Button HorizontalAlignment="Right" Content="Winkel zurücksetzen" Click="BtnResetGoniometer_Click" Padding="6,2" FontSize="9.5"/>
+                                                </Grid>
+                                                <TextBlock Text="Messen Sie den Hallux-Valgus-Winkel (HVA) durch 3-Punkt-Klick (1. Schaft MT-I, 2. Gelenk MTP-I Scheitelpunkt, 3. Hallux)." FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+
+                                                <Button Content="📐 Goniometer-Werkzeug aktivieren" Click="BtnActivateGoniometerTool_Click" Style="{StaticResource VoicemodPrimaryButtonStyle}" Margin="0,0,0,8"/>
+
+                                                <!-- Angle Value Display Grid -->
+                                                <Grid Margin="0,0,0,6">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <Border Grid.Column="0" Background="#F1F5F9" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="8,5" Margin="0,0,3,0">
+                                                        <StackPanel>
+                                                            <TextBlock Text="HALLUX VALGUS WINKEL" FontSize="8.5" FontWeight="Bold" Foreground="{StaticResource CyanBrush}"/>
+                                                            <TextBlock x:Name="TxtGoniometerAngle" Text="-- °" FontSize="16" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                                        </StackPanel>
+                                                    </Border>
+                                                    <Border Grid.Column="1" Background="#F1F5F9" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="8,5" Margin="3,0,0,0">
+                                                        <StackPanel>
+                                                            <TextBlock Text="SCHWEREGRAD" FontSize="8.5" FontWeight="Bold" Foreground="{StaticResource WarningBrush}"/>
+                                                            <TextBlock x:Name="TxtGoniometerGrade" Text="Grad 0" FontSize="13" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,2,0,0"/>
+                                                        </StackPanel>
+                                                    </Border>
+                                                </Grid>
+
+                                                <Border Background="#F8FAFC" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="6" Padding="8,4">
+                                                    <TextBlock x:Name="TxtGoniometerIndication" Text="Klicken Sie im Bild auf 3 Punkte zur Achsenmessung..." TextWrapping="Wrap" FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                </Border>
                                             </StackPanel>
                                         </Border>
 
                                         <!-- Osteology Findings Table -->
                                         <Border Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="12">
                                             <StackPanel>
-                                                <TextBlock Text="Osteologische Referenzen:" FontWeight="Bold" FontSize="10.5" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,6"/>
+                                                <TextBlock Text="Osteologische Referenzen &amp; Leitlinien:" FontWeight="Bold" FontSize="10.5" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,6"/>
                                                 <TextBlock Text="• Ossa metatarsalia I–V: Hauptlast- und Ulkusprädilektionsstellen" FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2"/>
                                                 <TextBlock Text="• Tarsus: Os naviculare, Cuneiformia, Cuboideum (Charcot-Frühwarnung)" FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2"/>
-                                                <TextBlock Text="• Calcaneus: Fersenbein-Perfusion" FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2"/>
+                                                <TextBlock Text="• Calcaneus: Fersenbein-Perfusion &amp; Druckulzera" FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2"/>
+                                                <TextBlock Text="• Hallux Valgus: HVA > 20° erfordert Druckentlastung unter MTP-I" FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2"/>
                                             </StackPanel>
                                         </Border>
                                     </StackPanel>

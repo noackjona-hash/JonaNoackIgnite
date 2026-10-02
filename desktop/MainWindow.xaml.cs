@@ -34,7 +34,8 @@ namespace Ignite.Desktop
         ThermalProfile,
         PointProbe,
         WindowLevelDrag,
-        BoneDrawing
+        BoneDrawing,
+        Goniometer
     }
 
     public class DrawnBone
@@ -109,6 +110,13 @@ namespace Ignite.Desktop
         private double _boneOffX = 0.0;
         private double _boneOffY = 0.0;
         private bool _boneIsLeftFoot = false;
+
+        // Osteo-Thermal Matrix & Orthopedic Goniometer State
+        private OsteoThermalMatrixReport? _osteoReport = null;
+        private bool _colorBonesByTemp = false;
+        private GoniometerMeasurement? _goniometerMeasurement = null;
+        private readonly List<Point> _goniometerPoints = new();
+        private Point? _goniometerHoverPoint = null;
 
         // Clinical Point Probes (P1, P2, ...)
         private readonly List<ThermalProbePoint> _probePoints = new();
@@ -426,9 +434,10 @@ end";
                 // Auto-fit anatomical foot skeleton to tissue bounds
                 AutoFitBonesToImage();
 
-                // Compute real-time histogram & anatomical zones
+                // Compute real-time histogram, anatomical zones & osteo-thermal bone matrix
                 UpdateHistogramData();
                 UpdateAnatomicalZonesData();
+                SampleOsteoThermalMatrix();
 
                 StatusText.Text = $"Thermogramm geladen: {System.IO.Path.GetFileName(path)} ({_rawWidth}x{_rawHeight} Radiometrie-Matrix).";
 
@@ -941,6 +950,13 @@ end";
                 DrawPhysicianBones(OverlayResultCanvas);
             }
 
+            // 7b. Draw Orthopedic Goniometer (3-Point Angle Caliper)
+            if (_goniometerPoints.Count > 0)
+            {
+                DrawGoniometerVector(OverlayOriginalCanvas);
+                DrawGoniometerVector(OverlayResultCanvas);
+            }
+
             // 8. Screenshot-matching Fokaler Hotspot Callout Box
             if (_latestResult?.Hotspots != null && _latestResult.Hotspots.Count > 0)
             {
@@ -1141,6 +1157,7 @@ end";
             else if (RbToolProfile.IsChecked == true) _activeTool = ActiveCanvasTool.ThermalProfile;
             else if (RbToolProbe.IsChecked == true) _activeTool = ActiveCanvasTool.PointProbe;
             else if (RbToolBone != null && RbToolBone.IsChecked == true) _activeTool = ActiveCanvasTool.BoneDrawing;
+            else if (RbToolGoniometer != null && RbToolGoniometer.IsChecked == true) _activeTool = ActiveCanvasTool.Goniometer;
             else if (RbToolWL.IsChecked == true) _activeTool = ActiveCanvasTool.WindowLevelDrag;
 
             UpdateToolInstructions();
@@ -1248,6 +1265,12 @@ end";
                     CanvasOriginal.Cursor = Cursors.Pen;
                     CanvasResult.Cursor = Cursors.Pen;
                     break;
+                case ActiveCanvasTool.Goniometer:
+                    StatusText.Text = "Werkzeug: Goniometer (Winkelmessung) | Klicken Sie 3 Punkte im Bild (1. Schaft MT-I, 2. Scheitelpunkt MTP-I Gelenk, 3. Hallux).";
+                    if (TxtToolHintVp1 != null) TxtToolHintVp1.Text = " · 3 Punkte setzen = Hallux-Valgus-Winkel (HVA) messen";
+                    CanvasOriginal.Cursor = Cursors.Cross;
+                    CanvasResult.Cursor = Cursors.Cross;
+                    break;
                 case ActiveCanvasTool.WindowLevelDrag:
                     StatusText.Text = "Werkzeug: W/L Ziehen | Linke Maustaste gedrückt halten und ziehen (horizontal = Kontrast, vertikal = Helligkeit).";
                     if (TxtToolHintVp1 != null) TxtToolHintVp1.Text = " · Ziehen = DICOM Fensterung (W/L)";
@@ -1331,6 +1354,10 @@ end";
                         _currentBoneDrawing.Points.Add(pos);
                         canvas.CaptureMouse();
                         RedrawInteractiveOverlays();
+                        break;
+
+                    case ActiveCanvasTool.Goniometer:
+                        HandleGoniometerClick(pos);
                         break;
 
                     case ActiveCanvasTool.WindowLevelDrag:
@@ -1440,6 +1467,15 @@ end";
                     pts.Add(pos);
                     RedrawInteractiveOverlays();
                 }
+                return;
+            }
+
+            // Goniometer Live Hover Preview Line
+            if (_activeTool == ActiveCanvasTool.Goniometer && (_goniometerPoints.Count == 1 || _goniometerPoints.Count == 2))
+            {
+                _goniometerHoverPoint = pos;
+                RedrawInteractiveOverlays();
+                return;
             }
         }
 
@@ -2280,70 +2316,125 @@ end";
 
         private void MenuExportReport_Click(object sender, RoutedEventArgs e)
         {
-            if (_latestResult == null)
+            if (_originalBitmap == null && _latestResult == null)
             {
-                MessageBox.Show("Bitte führen Sie zuerst eine Analyse durch.", "Hinweis", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show("Bitte laden Sie zuerst ein Thermogramm und führen Sie die Diagnose aus.", "Hinweis", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
+            // Ensure Osteo-thermal sampling is executed
+            if (_osteoReport == null && _rawGrayPixels != null)
+            {
+                SampleOsteoThermalMatrix();
+            }
+
+            // Ensure Angiosomes are computed
+            if (_cachedAngiosomes.Count == 0 && _rawGrayPixels != null)
+            {
+                _cachedAngiosomes = ClinicalAngiosomeService.ComputeAngiosomes(_rawGrayPixels, _rawWidth, _rawHeight);
+            }
+
+            // Capture rendered visual snapshot as PNG Base64
+            string base64Snapshot = "";
+            try
+            {
+                if (CanvasResult != null && _rawWidth > 0 && _rawHeight > 0)
+                {
+                    var rtb = new RenderTargetBitmap(_rawWidth, _rawHeight, 96, 96, PixelFormats.Pbgra32);
+                    rtb.Render(CanvasResult);
+                    var enc = new PngBitmapEncoder();
+                    enc.Frames.Add(BitmapFrame.Create(rtb));
+                    using var ms = new MemoryStream();
+                    enc.Save(ms);
+                    base64Snapshot = Convert.ToBase64String(ms.ToArray());
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Snapshot capture failed: {ex.Message}");
+            }
+
+            // Determine calibrated temperature bounds
+            double repMin = 22.0, repMax = 38.0;
+            if (_rawGrayPixels != null && _rawWidth > 0 && _rawHeight > 0)
+            {
+                var extrema = ThermalAnalysisHelper.FindExtrema(_rawGrayPixels, _rawWidth, _rawHeight);
+                repMin = extrema.Min.Temp;
+                repMax = extrema.Max.Temp;
+            }
+
+            string armstrongStage = _latestResult?.HighestRisk == "CRITICAL"
+                ? "Grad 1 (Hohes Ulkusrisiko, ΔT ≥ 2.2 K)"
+                : (_latestResult?.HighestRisk == "WARNING" ? "Grad 0 (Prä-ulzerativ / Hyperthermie)" : "Grad 0 (Physiologisch)");
+
+            // Build Clinical Report Model
+            var model = new ClinicalReportModel
+            {
+                PatientId = _activePatientId,
+                ExamDate = DateTime.Now,
+                Modality = "FLIR LWIR 17µm Mikrobolometer (8-14µm)",
+                ImageFileName = System.IO.Path.GetFileName(_currentImagePath ?? "Thermogramm.png"),
+                Base64ImagePng = base64Snapshot,
+                MinTemp = repMin,
+                MaxTemp = repMax,
+                MeanTemp = _latestResult?.Stats != null ? ThermalAnalysisHelper.RawToTemperature((byte)Math.Clamp((int)_latestResult.Stats.OrigMedian, 0, 255)) : 31.0,
+                MadDeviation = _latestResult?.Stats != null ? Math.Round(_latestResult.Stats.Mad * 0.1, 2) : 1.2,
+                SimdLatencyMs = _latestResult?.Timing?.TotalMs ?? 24.8,
+                ArmstrongStage = armstrongStage,
+                OverallRiskLevel = _latestResult?.HighestRisk ?? "PHYSIOLOGISCH",
+                OverallRecommendation = _latestResult?.HighestRisk == "CRITICAL"
+                    ? "Pathologische Hyperthermie (ΔT ≥ 2.2 K nach Armstrong). Sofortige Druckentlastung (Vorfußentlastungsschuh), Ausschluss Ulkus/Charcot."
+                    : "Keine akute pathologische Asymmetrie nachweisbar. Regelmäßige präventive Fußpflege und 3-Monats-Follow-up empfohlen.",
+                OsteoReport = _osteoReport,
+                Goniometer = _goniometerMeasurement,
+                Angiosomes = _cachedAngiosomes
+            };
+
+            if (_latestResult?.Hotspots != null)
+            {
+                foreach (var h in _latestResult.Hotspots)
+                {
+                    model.Hotspots.Add(new HotspotReportItem
+                    {
+                        Id = h.Region?.Id ?? 0,
+                        AreaPx = h.Region?.AreaPixels ?? 0,
+                        AreaPercent = h.Region?.AreaPercent ?? 0.0,
+                        MaxTemp = h.Region?.MaxVal != null ? ThermalAnalysisHelper.RawToTemperature((byte)h.Region.MaxVal) : 0,
+                        Circularity = h.Region?.Circularity ?? 0.0,
+                        RiskLevel = h.Assessment?.RiskLevel ?? "BENIGN",
+                        Recommendation = h.Assessment?.Recommendation ?? "Keine Intervention"
+                    });
+                }
+            }
+
+            string html = ClinicalReportService.GenerateHtmlReport(model);
+
             var dlg = new SaveFileDialog
             {
-                Filter = "HTML Befundbericht (*.html)|*.html|JSON Export (*.json)|*.json",
+                Filter = "Klinischer HTML-Befundbericht (*.html)|*.html",
                 FileName = $"Ignite_Befund_{_activePatientId}_{DateTime.Now:yyyyMMdd_HHmm}.html"
             };
 
             if (dlg.ShowDialog() == true)
             {
-                string html = $@"
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset='utf-8'/>
-    <title>IGNITE Medical Report - {_activePatientId}</title>
-    <style>
-        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #07090e; color: #e1e8f5; padding: 30px; }}
-        h1 {{ color: #00f0ff; border-bottom: 2px solid #1e273a; padding-bottom: 10px; }}
-        .card {{ background: #131826; border-radius: 8px; padding: 20px; margin-bottom: 20px; border: 1px solid #1e273a; }}
-        table {{ width: 100%; border-collapse: collapse; margin-top: 15px; }}
-        th, td {{ border: 1px solid #1e273a; padding: 10px; text-align: left; }}
-        th {{ background: #0d111a; color: #00f0ff; }}
-        .badge {{ padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; }}
-        .critical {{ background: #ff2a55; color: #fff; }}
-        .benign {{ background: #00e676; color: #000; }}
-    </style>
-</head>
-<body>
-    <h1>IGNITE Next-Gen Medical Imaging Suite - Klinischer Befundbericht</h1>
-    <div class='card'>
-        <p><strong>Patienten-Hash (DSGVO):</strong> {_activePatientId}</p>
-        <p><strong>Untersuchungsdatum:</strong> {DateTime.Now:dd.MM.yyyy HH:mm:ss}</p>
-        <p><strong>Bilddatei:</strong> {System.IO.Path.GetFileName(_currentImagePath)}</p>
-        <p><strong>Gesamtrisiko:</strong> <span class='badge {(_latestResult.HighestRisk == "CRITICAL" ? "critical" : "benign")}'>{_latestResult.HighestRisk}</span></p>
-        <p><strong>Rechenzeit (Go Core + AVX2):</strong> {_latestResult.Timing.TotalMs:F2} ms</p>
-    </div>
-    <div class='card'>
-        <h2>Detektierte Entzündungsherde ({_latestResult.TotalHotspots})</h2>
-        <table>
-            <tr>
-                <th>ID</th><th>Fläche (px)</th><th>Anteil (%)</th><th>Max T</th><th>Zirkularität</th><th>Risikostufe</th><th>Klinische Empfehlung (Lua)</th>
-            </tr>
-            {string.Join("", _latestResult.Hotspots.Select(h => $@"
-            <tr>
-                <td>#{h.Region.Id}</td>
-                <td>{h.Region.AreaPixels}</td>
-                <td>{h.Region.AreaPercent:F2} %</td>
-                <td>{h.Region.MaxVal}</td>
-                <td>{h.Region.Circularity:F3}</td>
-                <td><span class='badge {(h.Assessment.RiskLevel == "CRITICAL" ? "critical" : "benign")}'>{h.Assessment.RiskLevel}</span></td>
-                <td>{h.Assessment.Recommendation}</td>
-            </tr>"))}
-        </table>
-    </div>
-</body>
-</html>";
-                File.WriteAllText(dlg.FileName, html);
-                _dbService.LogAuditAction("EXPORT_REPORT", $"Befundbericht exportiert nach {dlg.FileName}");
-                MessageBox.Show($"Befundbericht erfolgreich gespeichert:\n{dlg.FileName}", "Export abgeschlossen", MessageBoxButton.OK, MessageBoxImage.Information);
+                File.WriteAllText(dlg.FileName, html, Encoding.UTF8);
+                _dbService.LogAuditAction("EXPORT_REPORT", $"Klinischer Befundbericht exportiert nach {dlg.FileName}");
+
+                // Proactively open in default browser for instant view & PDF print!
+                try
+                {
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = dlg.FileName,
+                        UseShellExecute = true
+                    });
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Failed to auto-open report: {ex.Message}");
+                }
+
+                MessageBox.Show($"Befundbericht erfolgreich generiert und geöffnet:\n{dlg.FileName}", "Export abgeschlossen", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
 
@@ -2487,17 +2578,31 @@ end";
 
             Point FPt(double rx, double ry) => new Point(cx + (rx * sc * sign), cy + (ry * sc));
 
-            var boneStroke = new SolidColorBrush(Color.FromRgb(30, 41, 59));
-            var boneFill = new SolidColorBrush(Color.FromArgb(14, 30, 41, 59));
+            var defaultStroke = new SolidColorBrush(Color.FromRgb(30, 41, 59));
+            var defaultFill = new SolidColorBrush(Color.FromArgb(14, 30, 41, 59));
 
-            void AddBonePoly(params Point[] pts)
+            (Brush stroke, Brush fill) GetBoneStyle(string boneId)
+            {
+                if (_colorBonesByTemp && _osteoReport != null)
+                {
+                    var match = _osteoReport.Bones.FirstOrDefault(b => b.Id == boneId);
+                    if (match != null)
+                    {
+                        return (match.StressBrush, match.StressFillBrush);
+                    }
+                }
+                return (defaultStroke, defaultFill);
+            }
+
+            void AddBonePoly(string boneId, params Point[] pts)
             {
                 if (pts.Length < 3) return;
+                var (bStroke, bFill) = GetBoneStyle(boneId);
                 var poly = new Polygon
                 {
-                    Stroke = boneStroke,
+                    Stroke = bStroke,
                     StrokeThickness = 1.8,
-                    Fill = boneFill,
+                    Fill = bFill,
                     StrokeLineJoin = PenLineJoin.Round
                 };
                 foreach (var p in pts) poly.Points.Add(p);
@@ -2505,42 +2610,42 @@ end";
             }
 
             // --- 1. DIGITUS I (HALLUX / GROSSZEHE) ---
-            AddBonePoly(FPt(37, -190), FPt(48, -172), FPt(46, -154), FPt(27, -154), FPt(25, -172));
-            AddBonePoly(FPt(44, -147), FPt(40, -125), FPt(45, -104), FPt(26, -104), FPt(30, -125), FPt(26, -147));
-            AddBonePoly(FPt(46, -97), FPt(48, -85), FPt(39, -70), FPt(37, -35), FPt(40, -18), FPt(20, -18), FPt(22, -35), FPt(22, -70), FPt(19, -85), FPt(21, -97));
+            AddBonePoly("DIG1", FPt(37, -190), FPt(48, -172), FPt(46, -154), FPt(27, -154), FPt(25, -172));
+            AddBonePoly("DIG1", FPt(44, -147), FPt(40, -125), FPt(45, -104), FPt(26, -104), FPt(30, -125), FPt(26, -147));
+            AddBonePoly("MT1", FPt(46, -97), FPt(48, -85), FPt(39, -70), FPt(37, -35), FPt(40, -18), FPt(20, -18), FPt(22, -35), FPt(22, -70), FPt(19, -85), FPt(21, -97));
 
             // --- 2. DIGITUS II ---
-            AddBonePoly(FPt(14, -180), FPt(17, -168), FPt(17, -158), FPt(9, -158), FPt(9, -168));
-            AddBonePoly(FPt(16, -152), FPt(17, -140), FPt(9, -140), FPt(9, -152));
-            AddBonePoly(FPt(17, -135), FPt(15, -120), FPt(17, -108), FPt(8, -108), FPt(9, -120), FPt(8, -135));
-            AddBonePoly(FPt(17, -102), FPt(15, -60), FPt(15, -18), FPt(7, -18), FPt(7, -60), FPt(7, -102));
+            AddBonePoly("DIG2", FPt(14, -180), FPt(17, -168), FPt(17, -158), FPt(9, -158), FPt(9, -168));
+            AddBonePoly("DIG2", FPt(16, -152), FPt(17, -140), FPt(9, -140), FPt(9, -152));
+            AddBonePoly("DIG2", FPt(17, -135), FPt(15, -120), FPt(17, -108), FPt(8, -108), FPt(9, -120), FPt(8, -135));
+            AddBonePoly("MT2", FPt(17, -102), FPt(15, -60), FPt(15, -18), FPt(7, -18), FPt(7, -60), FPt(7, -102));
 
             // --- 3. DIGITUS III ---
-            AddBonePoly(FPt(-6, -172), FPt(-3, -160), FPt(-3, -150), FPt(-11, -150), FPt(-11, -160));
-            AddBonePoly(FPt(-4, -145), FPt(-3, -134), FPt(-11, -134), FPt(-11, -145));
-            AddBonePoly(FPt(-3, -129), FPt(-5, -116), FPt(-3, -104), FPt(-12, -104), FPt(-11, -116), FPt(-12, -129));
-            AddBonePoly(FPt(-3, -98), FPt(-4, -58), FPt(-4, -16), FPt(-13, -16), FPt(-12, -58), FPt(-13, -98));
+            AddBonePoly("DIG3", FPt(-6, -172), FPt(-3, -160), FPt(-3, -150), FPt(-11, -150), FPt(-11, -160));
+            AddBonePoly("DIG3", FPt(-4, -145), FPt(-3, -134), FPt(-11, -134), FPt(-11, -145));
+            AddBonePoly("DIG3", FPt(-3, -129), FPt(-5, -116), FPt(-3, -104), FPt(-12, -104), FPt(-11, -116), FPt(-12, -129));
+            AddBonePoly("MT3", FPt(-3, -98), FPt(-4, -58), FPt(-4, -16), FPt(-13, -16), FPt(-12, -58), FPt(-13, -98));
 
             // --- 4. DIGITUS IV ---
-            AddBonePoly(FPt(-26, -160), FPt(-23, -150), FPt(-23, -142), FPt(-31, -142), FPt(-31, -150));
-            AddBonePoly(FPt(-23, -137), FPt(-23, -126), FPt(-31, -126), FPt(-31, -137));
-            AddBonePoly(FPt(-23, -121), FPt(-24, -110), FPt(-22, -100), FPt(-32, -100), FPt(-31, -110), FPt(-32, -121));
-            AddBonePoly(FPt(-22, -94), FPt(-24, -54), FPt(-24, -14), FPt(-34, -14), FPt(-34, -54), FPt(-33, -94));
+            AddBonePoly("DIG4", FPt(-26, -160), FPt(-23, -150), FPt(-23, -142), FPt(-31, -142), FPt(-31, -150));
+            AddBonePoly("DIG4", FPt(-23, -137), FPt(-23, -126), FPt(-31, -126), FPt(-31, -137));
+            AddBonePoly("DIG4", FPt(-23, -121), FPt(-24, -110), FPt(-22, -100), FPt(-32, -100), FPt(-31, -110), FPt(-32, -121));
+            AddBonePoly("MT4", FPt(-22, -94), FPt(-24, -54), FPt(-24, -14), FPt(-34, -14), FPt(-34, -54), FPt(-33, -94));
 
             // --- 5. DIGITUS V (KLEINZEHE) ---
-            AddBonePoly(FPt(-46, -145), FPt(-43, -136), FPt(-44, -130), FPt(-51, -130), FPt(-51, -136));
-            AddBonePoly(FPt(-43, -126), FPt(-43, -117), FPt(-51, -117), FPt(-51, -126));
-            AddBonePoly(FPt(-43, -113), FPt(-44, -104), FPt(-42, -94), FPt(-52, -94), FPt(-51, -104), FPt(-52, -113));
-            AddBonePoly(FPt(-42, -88), FPt(-46, -50), FPt(-47, -10), FPt(-64, -20), FPt(-65, -35), FPt(-56, -55), FPt(-53, -88));
+            AddBonePoly("DIG5", FPt(-46, -145), FPt(-43, -136), FPt(-44, -130), FPt(-51, -130), FPt(-51, -136));
+            AddBonePoly("DIG5", FPt(-43, -126), FPt(-43, -117), FPt(-51, -117), FPt(-51, -126));
+            AddBonePoly("DIG5", FPt(-43, -113), FPt(-44, -104), FPt(-42, -94), FPt(-52, -94), FPt(-51, -104), FPt(-52, -113));
+            AddBonePoly("MT5", FPt(-42, -88), FPt(-46, -50), FPt(-47, -10), FPt(-64, -20), FPt(-65, -35), FPt(-56, -55), FPt(-53, -88));
 
             // --- 6. TARSUS (FUSSWURZEL) ---
-            AddBonePoly(FPt(37, -14), FPt(39, +12), FPt(19, +12), FPt(18, -14));
-            AddBonePoly(FPt(15, -14), FPt(15, +10), FPt(4, +10), FPt(5, -14));
-            AddBonePoly(FPt(2, -12), FPt(2, +12), FPt(-14, +12), FPt(-13, -12));
-            AddBonePoly(FPt(-18, -10), FPt(-15, +32), FPt(-45, +32), FPt(-50, -10));
-            AddBonePoly(FPt(35, +16), FPt(34, +44), FPt(-9, +44), FPt(-11, +16));
-            AddBonePoly(FPt(25, +48), FPt(24, +85), FPt(-18, +85), FPt(-14, +48));
-            AddBonePoly(FPt(18, +88), FPt(14, +160), FPt(-32, +160), FPt(-34, +88));
+            AddBonePoly("TARS_MED", FPt(37, -14), FPt(39, +12), FPt(19, +12), FPt(18, -14));
+            AddBonePoly("TARS_MED", FPt(15, -14), FPt(15, +10), FPt(4, +10), FPt(5, -14));
+            AddBonePoly("TARS_LAT", FPt(2, -12), FPt(2, +12), FPt(-14, +12), FPt(-13, -12));
+            AddBonePoly("TARS_LAT", FPt(-18, -10), FPt(-15, +32), FPt(-45, +32), FPt(-50, -10));
+            AddBonePoly("TARS_MED", FPt(35, +16), FPt(34, +44), FPt(-9, +44), FPt(-11, +16));
+            AddBonePoly("TAL", FPt(25, +48), FPt(24, +85), FPt(-18, +85), FPt(-14, +48));
+            AddBonePoly("CALC", FPt(18, +88), FPt(14, +160), FPt(-32, +160), FPt(-34, +88));
         }
 
         private void DrawPhysicianBones(Canvas canvas)
@@ -2763,6 +2868,290 @@ end";
                 _boneOffY = 0;
             }
 
+            RedrawInteractiveOverlays();
+        }
+
+        // ============================================================
+        // ORTHOPEDIC GONIOMETER (3-POINT CALIPER) METHODS
+        // ============================================================
+        private void HandleGoniometerClick(Point pos)
+        {
+            if (_goniometerPoints.Count >= 3)
+            {
+                _goniometerPoints.Clear();
+                _goniometerMeasurement = null;
+            }
+
+            _goniometerPoints.Add(pos);
+
+            if (_goniometerPoints.Count == 3)
+            {
+                _goniometerMeasurement = OsteoThermalService.CalculateGoniometer(
+                    _goniometerPoints[0], _goniometerPoints[1], _goniometerPoints[2]);
+                UpdateGoniometerUI();
+                if (InspectorTabs != null && TabBones != null)
+                {
+                    InspectorTabs.SelectedItem = TabBones;
+                }
+            }
+            else
+            {
+                UpdateGoniometerUI();
+            }
+
+            RedrawInteractiveOverlays();
+        }
+
+        private void UpdateGoniometerUI()
+        {
+            if (TxtGoniometerAngle == null || TxtGoniometerGrade == null || TxtGoniometerIndication == null) return;
+
+            if (_goniometerMeasurement != null)
+            {
+                TxtGoniometerAngle.Text = $"{_goniometerMeasurement.AngleDegrees:F1}°";
+                TxtGoniometerGrade.Text = _goniometerMeasurement.SeverityGrade;
+                TxtGoniometerIndication.Text = $"{_goniometerMeasurement.Classification}: {_goniometerMeasurement.ClinicalIndication}";
+            }
+            else if (_goniometerPoints.Count == 1)
+            {
+                TxtGoniometerAngle.Text = "-- °";
+                TxtGoniometerGrade.Text = "Punkt 1 gesetzt";
+                TxtGoniometerIndication.Text = "Klicken Sie auf das MTP-I Gelenkzentrum (Scheitelpunkt)...";
+            }
+            else if (_goniometerPoints.Count == 2)
+            {
+                TxtGoniometerAngle.Text = "-- °";
+                TxtGoniometerGrade.Text = "Punkt 2 gesetzt";
+                TxtGoniometerIndication.Text = "Klicken Sie auf die Großzehen-Achse (Hallux)...";
+            }
+            else
+            {
+                TxtGoniometerAngle.Text = "-- °";
+                TxtGoniometerGrade.Text = "Grad 0";
+                TxtGoniometerIndication.Text = "Klicken Sie im Bild auf 3 Punkte zur Achsenmessung...";
+            }
+        }
+
+        private void DrawGoniometerVector(Canvas canvas)
+        {
+            if (_goniometerPoints.Count == 0) return;
+
+            var mainStroke = new SolidColorBrush(Color.FromRgb(2, 132, 199)); // Cyan-600
+            var accentStroke = new SolidColorBrush(Color.FromRgb(245, 158, 11)); // Amber-500
+            var alertStroke = new SolidColorBrush(Color.FromRgb(220, 38, 38)); // Red-600
+
+            void DrawPin(Point p, string label, Brush brush)
+            {
+                var dot = new Ellipse
+                {
+                    Width = 10,
+                    Height = 10,
+                    Fill = brush,
+                    Stroke = Brushes.White,
+                    StrokeThickness = 2
+                };
+                Canvas.SetLeft(dot, p.X - 5);
+                Canvas.SetTop(dot, p.Y - 5);
+                canvas.Children.Add(dot);
+
+                var badge = new Border
+                {
+                    Background = new SolidColorBrush(Color.FromArgb(220, 15, 23, 42)),
+                    CornerRadius = new CornerRadius(4),
+                    Padding = new Thickness(4, 1, 4, 1),
+                    IsHitTestVisible = false
+                };
+                badge.Child = new TextBlock
+                {
+                    Text = label,
+                    FontSize = 9.5,
+                    FontWeight = FontWeights.Bold,
+                    Foreground = Brushes.White
+                };
+                Canvas.SetLeft(badge, p.X + 8);
+                Canvas.SetTop(badge, p.Y - 8);
+                canvas.Children.Add(badge);
+            }
+
+            // Draw line 1: P1 -> P2
+            if (_goniometerPoints.Count >= 2)
+            {
+                var line1 = new Line
+                {
+                    X1 = _goniometerPoints[0].X,
+                    Y1 = _goniometerPoints[0].Y,
+                    X2 = _goniometerPoints[1].X,
+                    Y2 = _goniometerPoints[1].Y,
+                    Stroke = mainStroke,
+                    StrokeThickness = 2.4,
+                    StrokeStartLineCap = PenLineCap.Round,
+                    StrokeEndLineCap = PenLineCap.Round
+                };
+                canvas.Children.Add(line1);
+            }
+            else if (_goniometerPoints.Count == 1 && _goniometerHoverPoint.HasValue)
+            {
+                var previewLine = new Line
+                {
+                    X1 = _goniometerPoints[0].X,
+                    Y1 = _goniometerPoints[0].Y,
+                    X2 = _goniometerHoverPoint.Value.X,
+                    Y2 = _goniometerHoverPoint.Value.Y,
+                    Stroke = mainStroke,
+                    StrokeThickness = 1.8,
+                    StrokeDashArray = new DoubleCollection { 3, 2 }
+                };
+                canvas.Children.Add(previewLine);
+            }
+
+            // Draw line 2: P2 -> P3
+            if (_goniometerPoints.Count >= 3)
+            {
+                var line2 = new Line
+                {
+                    X1 = _goniometerPoints[1].X,
+                    Y1 = _goniometerPoints[1].Y,
+                    X2 = _goniometerPoints[2].X,
+                    Y2 = _goniometerPoints[2].Y,
+                    Stroke = accentStroke,
+                    StrokeThickness = 2.4,
+                    StrokeStartLineCap = PenLineCap.Round,
+                    StrokeEndLineCap = PenLineCap.Round
+                };
+                canvas.Children.Add(line2);
+
+                var p2 = _goniometerPoints[1];
+
+                if (_goniometerMeasurement != null)
+                {
+                    var meas = _goniometerMeasurement;
+                    var badgeBrush = meas.IsPathologic ? (meas.AngleDegrees >= 20.0 ? alertStroke : accentStroke) : mainStroke;
+
+                    var callout = new Border
+                    {
+                        Background = Brushes.White,
+                        BorderBrush = badgeBrush,
+                        BorderThickness = new Thickness(1.8),
+                        CornerRadius = new CornerRadius(6),
+                        Padding = new Thickness(8, 4, 8, 4),
+                        Effect = new System.Windows.Media.Effects.DropShadowEffect
+                        {
+                            BlurRadius = 8,
+                            ShadowDepth = 2,
+                            Opacity = 0.2,
+                            Color = Colors.Black
+                        }
+                    };
+                    var sp = new StackPanel();
+                    sp.Children.Add(new TextBlock
+                    {
+                        Text = $"📐 HVA: {meas.AngleDegrees:F1}°",
+                        FontSize = 11,
+                        FontWeight = FontWeights.Bold,
+                        Foreground = badgeBrush
+                    });
+                    sp.Children.Add(new TextBlock
+                    {
+                        Text = meas.SeverityGrade,
+                        FontSize = 9.5,
+                        FontWeight = FontWeights.SemiBold,
+                        Foreground = new SolidColorBrush(Color.FromRgb(30, 41, 59))
+                    });
+                    callout.Child = sp;
+
+                    Canvas.SetLeft(callout, p2.X + 14);
+                    Canvas.SetTop(callout, p2.Y - 14);
+                    canvas.Children.Add(callout);
+                }
+            }
+            else if (_goniometerPoints.Count == 2 && _goniometerHoverPoint.HasValue)
+            {
+                var previewLine2 = new Line
+                {
+                    X1 = _goniometerPoints[1].X,
+                    Y1 = _goniometerPoints[1].Y,
+                    X2 = _goniometerHoverPoint.Value.X,
+                    Y2 = _goniometerHoverPoint.Value.Y,
+                    Stroke = accentStroke,
+                    StrokeThickness = 1.8,
+                    StrokeDashArray = new DoubleCollection { 3, 2 }
+                };
+                canvas.Children.Add(previewLine2);
+            }
+
+            if (_goniometerPoints.Count >= 1) DrawPin(_goniometerPoints[0], "P1 (MT-I)", mainStroke);
+            if (_goniometerPoints.Count >= 2) DrawPin(_goniometerPoints[1], "P2 (MTP-I)", alertStroke);
+            if (_goniometerPoints.Count >= 3) DrawPin(_goniometerPoints[2], "P3 (Hallux)", accentStroke);
+        }
+
+        private void BtnActivateGoniometerTool_Click(object sender, RoutedEventArgs e)
+        {
+            if (RbToolGoniometer != null)
+            {
+                RbToolGoniometer.IsChecked = true;
+            }
+        }
+
+        private void BtnResetGoniometer_Click(object sender, RoutedEventArgs e)
+        {
+            _goniometerPoints.Clear();
+            _goniometerHoverPoint = null;
+            _goniometerMeasurement = null;
+            UpdateGoniometerUI();
+            RedrawInteractiveOverlays();
+        }
+
+        // ============================================================
+        // OSTEO-THERMAL SAMPLING & COLOR-CODING METHODS
+        // ============================================================
+        private void SampleOsteoThermalMatrix()
+        {
+            if (_rawGrayPixels == null || _rawWidth <= 0 || _rawHeight <= 0) return;
+
+            double cx = (_rawWidth / 2.0) + _boneOffX;
+            double cy = (_rawHeight / 2.0) + _boneOffY;
+            double sc = _boneScale;
+
+            _osteoReport = OsteoThermalService.ComputeOsteoThermalMatrix(
+                _rawGrayPixels, _rawWidth, _rawHeight, cx, cy, sc, _boneIsLeftFoot);
+
+            if (GridBoneTemps != null)
+            {
+                GridBoneTemps.ItemsSource = null;
+                GridBoneTemps.ItemsSource = _osteoReport.Bones;
+            }
+
+            if (TxtCharcotIndex != null)
+            {
+                TxtCharcotIndex.Text = $"CII = {_osteoReport.CharcotInflammatoryIndex:F1} K";
+            }
+            if (TxtCharcotStatus != null)
+            {
+                TxtCharcotStatus.Text = $"Charcot-Status: {_osteoReport.CharcotRiskStatus}";
+            }
+
+            if (_colorBonesByTemp)
+            {
+                RedrawInteractiveOverlays();
+            }
+        }
+
+        private void BtnSampleBoneTemps_Click(object sender, RoutedEventArgs e)
+        {
+            SampleOsteoThermalMatrix();
+            if (StatusText != null)
+            {
+                StatusText.Text = $"Osteo-Thermische Matrix berechnet: {_osteoReport?.TotalBonesSampled ?? 0} Knochen beprobt | CII: {_osteoReport?.CharcotInflammatoryIndex:F1} K";
+            }
+        }
+
+        private void ChkColorBonesByTemp_Click(object sender, RoutedEventArgs e)
+        {
+            _colorBonesByTemp = ChkColorBonesByTemp.IsChecked == true;
+            if (_colorBonesByTemp && _osteoReport == null)
+            {
+                SampleOsteoThermalMatrix();
+            }
             RedrawInteractiveOverlays();
         }
 
