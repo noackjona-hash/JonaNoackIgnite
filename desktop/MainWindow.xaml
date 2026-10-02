@@ -223,6 +223,8 @@
                             <RadioButton x:Name="RbViewBones" Style="{StaticResource VoicemodPillStyle}" GroupName="PillViewFilter" Content="🦴 Knochen" Checked="ViewMode_Checked" ToolTip="Anatomisches Skelett &amp; Knochen einzeichnen"/>
                             <RadioButton x:Name="RbView3DRelief" Style="{StaticResource VoicemodPillStyle}" GroupName="PillViewFilter" Content="⛰️ 3D-Relief" Checked="ViewMode_Checked" ToolTip="2.5D Topografisches Höhenmodell"/>
                             <RadioButton x:Name="RbViewIsotherm" Style="{StaticResource VoicemodPillStyle}" GroupName="PillViewFilter" Content="🌐 Isothermen" Checked="ViewMode_Checked" ToolTip="Isothermen-Bandfilterung"/>
+                            <RadioButton x:Name="RbViewPressureProxy" Style="{StaticResource VoicemodPillStyle}" GroupName="PillViewFilter" Content="⚡ Druck-Proxy" Checked="ViewMode_Checked" ToolTip="Biomechanische Plantardruck- &amp; Scherspannungsschätzung (Pennes-Bioheat in kPa)"/>
+                            <RadioButton x:Name="RbViewLaplace" Style="{StaticResource VoicemodPillStyle}" GroupName="PillViewFilter" Content="♨️ Wärmestau (∇²T)" Checked="ViewMode_Checked" ToolTip="Laplace Tiefengewebe-Abszess &amp; Wärmestau-Filterung"/>
                             
                             <Separator Width="1" Height="20" Margin="10,0" Background="{StaticResource BorderBrush}"/>
 
@@ -254,7 +256,8 @@
                         <CheckBox x:Name="ChkSyncViewports" Content="Sync" IsChecked="True" VerticalAlignment="Center" Margin="0,0,8,0" ToolTip="Synchroner Zoom beider Viewports"/>
                         <CheckBox x:Name="ChkMinMaxTracker" Content="Min/Max" IsChecked="True" VerticalAlignment="Center" Margin="0,0,8,0" Click="ChkMinMaxTracker_Click" ToolTip="Markiert kälteste und heißeste Stelle"/>
                         <CheckBox x:Name="ChkEnableVeinOverlay" Content="Venen" IsChecked="True" VerticalAlignment="Center" Margin="0,0,8,0" Click="ChkEnableVeinOverlay_Click" ToolTip="Frangi-Gefäßfilter Überlagerung"/>
-                        <CheckBox x:Name="ChkShowBones" Content="Knochen" IsChecked="True" VerticalAlignment="Center" Margin="0,0,4,0" Click="ChkShowBones_Click" ToolTip="Anatomisches Fuß-Skelett einblenden"/>
+                        <CheckBox x:Name="ChkShowBones" Content="Knochen" IsChecked="True" VerticalAlignment="Center" Margin="0,0,8,0" Click="ChkShowBones_Click" ToolTip="Anatomisches Fuß-Skelett einblenden"/>
+                        <CheckBox x:Name="ChkShowZonesOverlay" Content="Zonen" IsChecked="False" VerticalAlignment="Center" Margin="0,0,4,0" Click="ChkShowZonesOverlay_Click" ToolTip="Anatomische 5-Zonen Konturen &amp; Belastungsmarker auf Canvas einblenden"/>
                     </StackPanel>
                 </Grid>
             </Border>
@@ -540,8 +543,12 @@
                                     </Border>
                                 </StackPanel>
 
-                                <!-- Quick Report Export -->
-                                <Button Grid.Column="2" Content="📄 Export" Click="MenuExportReport_Click" Padding="10,5" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrightBrush}" Foreground="{StaticResource CyanBrush}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                <!-- Quick Action Buttons -->
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Button Content="📋 Befund" Click="BtnCopyDoctorText_Click" Padding="7,4" Margin="0,0,4,0" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrightBrush}" Foreground="{StaticResource CyanBrush}" FontWeight="SemiBold" ToolTip="Kopiert strukturierten Arztbrief-Befundtext in die Zwischenablage für Praxis-EDV"/>
+                                    <Button Content="📊 CSV" Click="BtnExportCsv_Click" Padding="7,4" Margin="0,0,4,0" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrightBrush}" Foreground="{StaticResource CyanBrush}" FontWeight="SemiBold" ToolTip="Exportiert die 2D-Temperaturmatrix als wissenschaftliche CSV-Tabelle"/>
+                                    <Button Content="📄 Export" Click="MenuExportReport_Click" Padding="8,4" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrightBrush}" Foreground="{StaticResource CyanBrush}" FontWeight="SemiBold" ToolTip="Vollständigen Befundbericht generieren &amp; drucken"/>
+                                </StackPanel>
                             </Grid>
                         </Border>
 
@@ -1066,6 +1073,69 @@
                                                 <TextBlock x:Name="TxtPredCharcot" Text="Unauffällig" FontWeight="SemiBold" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,2,0,6"/>
                                                 <TextBlock Text="Klinische Intervention:" FontWeight="Bold" FontSize="10.5" Foreground="{StaticResource TextMutedBrush}"/>
                                                 <TextBlock x:Name="TxtPredIntervention" Text="Pipeline ausführen für prädiktive Risikoeinschätzung..." TextWrapping="Wrap" FontSize="11" Foreground="{StaticResource CyanBrush}" Margin="0,2,0,0"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
+                                </ScrollViewer>
+                            </TabItem>
+
+                            <!-- TAB: BIOMECHANICS & PENNES BIOHEAT PRESSURE PROXY -->
+                            <TabItem x:Name="TabBiomechanics" Header="⚡ Biomechanik">
+                                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="14">
+                                    <StackPanel>
+                                        <TextBlock Text="Biomechanische Plantardruck- &amp; Scherspannungsschätzung" FontWeight="Bold" FontSize="13.5" Foreground="{StaticResource CyanBrush}" Margin="0,0,0,2"/>
+                                        <TextBlock Text="Thermodynamische Druck- und Scherspannungsschätzung (Pennes-Bioheat-Modell, kPa) zur Lokalisierung ulzerationsgefährdeter Druckspitzen." FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,10"/>
+
+                                        <!-- Peak Pressure KPI Banner -->
+                                        <Border Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="12" Margin="0,0,0,10">
+                                            <StackPanel>
+                                                <Grid Margin="0,0,0,6">
+                                                    <TextBlock Text="SPITZENDRUCK (P_peak):" FontSize="9" FontWeight="Bold" Foreground="{StaticResource TextMutedBrush}"/>
+                                                    <Border x:Name="BadgeBiomechRisk" HorizontalAlignment="Right" Background="#E0F2FE" BorderBrush="{StaticResource CyanBrush}" BorderThickness="1" CornerRadius="4" Padding="6,1">
+                                                        <TextBlock x:Name="TxtBiomechRiskCategory" Text="PHYSIOLOGISCH NORMAL" FontSize="9.5" FontWeight="Bold" Foreground="{StaticResource CyanBrush}"/>
+                                                    </Border>
+                                                </Grid>
+                                                <TextBlock x:Name="TxtBiomechPeakPressure" Text="-- kPa" FontSize="26" FontWeight="Black" Foreground="{StaticResource CriticalBrush}" Margin="0,2,0,2"/>
+                                                <TextBlock x:Name="TxtBiomechPeakLoc" Text="Peak-Lokalisation: X = --, Y = --" FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <!-- Pressure Metrics Grid -->
+                                        <Grid Margin="0,0,0,10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="10" Margin="0,0,4,0">
+                                                <StackPanel>
+                                                    <TextBlock Text="MITTLERER SOHLENDRUCK" FontSize="9" FontWeight="Bold" Foreground="{StaticResource CyanBrush}"/>
+                                                    <TextBlock x:Name="TxtBiomechMeanPressure" Text="-- kPa" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,2,0,0"/>
+                                                </StackPanel>
+                                            </Border>
+                                            <Border Grid.Column="1" Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="10" Margin="4,0,0,0">
+                                                <StackPanel>
+                                                    <TextBlock Text="GEFÄHRDETE FLÄCHE (≥450 kPa)" FontSize="9" FontWeight="Bold" Foreground="{StaticResource WarningBrush}"/>
+                                                    <TextBlock x:Name="TxtBiomechHighRiskArea" Text="-- px" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,2,0,0"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </Grid>
+
+                                        <!-- Quick Action Filters -->
+                                        <Border Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="12" Margin="0,0,0,10">
+                                            <StackPanel>
+                                                <TextBlock Text="Spezial-Projektionen im Viewport:" FontWeight="Bold" FontSize="11" Margin="0,0,0,8"/>
+                                                <Button Content="⚡ Biomechanische Druck-Map anzeigen" Click="BtnViewPressureProxy_Click" Style="{StaticResource VoicemodPrimaryButtonStyle}" Margin="0,0,0,6"/>
+                                                <Button Content="♨️ 2D-Laplace Wärmestau-Filter (∇²T) anzeigen" Click="BtnViewLaplace_Click" Padding="10,6" Margin="0,0,0,4"/>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <!-- Directives Card -->
+                                        <Border Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="12">
+                                            <StackPanel>
+                                                <TextBlock Text="Klinische Entlastungs-Direktiven (IWGDF 2023):" FontWeight="Bold" FontSize="10.5" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,6"/>
+                                                <TextBlock x:Name="TxtBiomechDirectives" Text="• Regelmäßige Druckmessung und radiometrische Kontrolle empfohlen." TextWrapping="Wrap" FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2"/>
+                                                <TextBlock Text="• Ab 320 kPa: Diabetesschutzschuhwerk mit retrokapitaler Entlastungsrolle" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2"/>
+                                                <TextBlock Text="• Ab 450 kPa: Akutes Ulkus-Breakdown-Risiko. Vollentlastung oder Walker erforderlich" FontSize="10" Foreground="{StaticResource CriticalBrush}" Margin="0,2"/>
                                             </StackPanel>
                                         </Border>
                                     </StackPanel>

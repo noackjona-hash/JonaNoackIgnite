@@ -24,7 +24,9 @@ namespace Ignite.Desktop
         Relief3D,
         PureDSA,
         IsothermSlice,
-        DigitalSubtraction
+        DigitalSubtraction,
+        PressureProxy,
+        LaplacianHeatFlux
     }
 
     public enum ActiveCanvasTool
@@ -140,6 +142,12 @@ namespace Ignite.Desktop
 
         // Histogram & Topography Cache
         private ThermalHistogramData? _cachedHistogram;
+
+        // Advanced Biomechanics & Pressure Proxy State
+        private bool _showZonesOverlay = false;
+        private PressureProxyStats? _pressureStats = null;
+        private WriteableBitmap? _cachedPressureBitmap = null;
+        private WriteableBitmap? _cachedLaplaceBitmap = null;
 
         // Filmstrip Gallery
         private readonly List<string> _filmstripFiles = new();
@@ -393,6 +401,9 @@ end";
                 _currentROI = null;
                 _cachedVeinPixels = null;
                 _activeProfileStats = null;
+                _cachedPressureBitmap = null;
+                _cachedLaplaceBitmap = null;
+                _pressureStats = null;
                 OverlayOriginalCanvas.Children.Clear();
                 OverlayResultCanvas.Children.Clear();
 
@@ -438,6 +449,7 @@ end";
                 UpdateHistogramData();
                 UpdateAnatomicalZonesData();
                 SampleOsteoThermalMatrix();
+                UpdateBiomechanicsUI();
 
                 StatusText.Text = $"Thermogramm geladen: {System.IO.Path.GetFileName(path)} ({_rawWidth}x{_rawHeight} Radiometrie-Matrix).";
 
@@ -582,6 +594,9 @@ end";
                 // Update Angiosome territories & Predictive 7-Day Ulceration Risk
                 UpdateAngiosomesAndPrediction();
 
+                // Update Biomechanics & Pennes-Bioheat Pressure Proxy
+                UpdateBiomechanicsUI();
+
                 // Log into SQLite database safely
                 if (_dbService != null && !string.IsNullOrEmpty(_activePatientId) && !string.IsNullOrEmpty(_currentImagePath))
                 {
@@ -616,6 +631,33 @@ end";
                 var reliefBmp = ThermalTopographyService.Generate3DReliefMap(_rawGrayPixels, w, h, _activePalette);
                 ImgResult.Source = reliefBmp;
                 OverlayResultCanvas.Children.Clear();
+                return;
+            }
+
+            // Handle Biomechanical Pressure Proxy mode
+            if (_activeViewMode == ActiveViewMode.PressureProxy && _rawGrayPixels != null)
+            {
+                if (_cachedPressureBitmap == null || _pressureStats == null)
+                {
+                    var (pBmp, stats) = AdvancedDiagnosticService.GeneratePressureProxyMap(_rawGrayPixels, w, h);
+                    _cachedPressureBitmap = pBmp;
+                    _pressureStats = stats;
+                    UpdateBiomechanicsUI();
+                }
+                ImgResult.Source = _cachedPressureBitmap;
+                RedrawInteractiveOverlays();
+                return;
+            }
+
+            // Handle Discrete 2D-Laplacian Heat Flux mode
+            if (_activeViewMode == ActiveViewMode.LaplacianHeatFlux && _rawGrayPixels != null)
+            {
+                if (_cachedLaplaceBitmap == null)
+                {
+                    _cachedLaplaceBitmap = AdvancedDiagnosticService.GenerateLaplacianHeatFluxMap(_rawGrayPixels, w, h);
+                }
+                ImgResult.Source = _cachedLaplaceBitmap;
+                RedrawInteractiveOverlays();
                 return;
             }
 
@@ -690,6 +732,33 @@ end";
             {
                 ImgResult.Source = ClinicalAngiosomeService.RenderDigitalSubtraction(_rawGrayPixels, w, h, _dstOffset);
                 OverlayResultCanvas.Children.Clear();
+                return;
+            }
+
+            if (_activeViewMode == ActiveViewMode.PressureProxy && _rawGrayPixels != null)
+            {
+                if (_cachedPressureBitmap == null || _pressureStats == null)
+                {
+                    var (pBmp, stats) = AdvancedDiagnosticService.GeneratePressureProxyMap(_rawGrayPixels, w, h);
+                    _cachedPressureBitmap = pBmp;
+                    _pressureStats = stats;
+                    UpdateBiomechanicsUI();
+                }
+                ImgResult.Source = _cachedPressureBitmap;
+                OverlayResultCanvas.Children.Clear();
+                RedrawInteractiveOverlays();
+                return;
+            }
+
+            if (_activeViewMode == ActiveViewMode.LaplacianHeatFlux && _rawGrayPixels != null)
+            {
+                if (_cachedLaplaceBitmap == null)
+                {
+                    _cachedLaplaceBitmap = AdvancedDiagnosticService.GenerateLaplacianHeatFluxMap(_rawGrayPixels, w, h);
+                }
+                ImgResult.Source = _cachedLaplaceBitmap;
+                OverlayResultCanvas.Children.Clear();
+                RedrawInteractiveOverlays();
                 return;
             }
 
@@ -796,6 +865,28 @@ end";
                 _activeTool = ActiveCanvasTool.BoneDrawing;
                 TxtVp2Title.Text = "OSTEOLOGIE & ANATOMISCHES SKELETT: Knochen einzeichnen & Befundvergleich";
                 UpdateCurtainGeometry();
+            }
+            else if (RbViewPressureProxy != null && RbViewPressureProxy.IsChecked == true)
+            {
+                _activeViewMode = ActiveViewMode.PressureProxy;
+                ColViewport1.Width = new GridLength(1, GridUnitType.Star);
+                ColDivider.Width = new GridLength(1);
+                ColViewport2.Width = new GridLength(1, GridUnitType.Star);
+                ImgCurtainRaw.Visibility = Visibility.Collapsed;
+                CanvasCurtain.Visibility = Visibility.Collapsed;
+                if (InspectorTabs != null && TabBiomechanics != null) InspectorTabs.SelectedItem = TabBiomechanics;
+                TxtVp2Title.Text = "BIOMECHANISCHER PLANTARDRUCK- & SCHERSPANNUNGS-PROXY (PENNES BIOHEAT in kPa)";
+            }
+            else if (RbViewLaplace != null && RbViewLaplace.IsChecked == true)
+            {
+                _activeViewMode = ActiveViewMode.LaplacianHeatFlux;
+                ColViewport1.Width = new GridLength(1, GridUnitType.Star);
+                ColDivider.Width = new GridLength(1);
+                ColViewport2.Width = new GridLength(1, GridUnitType.Star);
+                ImgCurtainRaw.Visibility = Visibility.Collapsed;
+                CanvasCurtain.Visibility = Visibility.Collapsed;
+                if (InspectorTabs != null && TabBiomechanics != null) InspectorTabs.SelectedItem = TabBiomechanics;
+                TxtVp2Title.Text = "DISCRETE 2D-LAPLACE (∇²T) WÄRMESTAU- & TIEFENGEWEBE-ABSZESSFILTER";
             }
 
             RefreshResultImageOnly();
@@ -972,6 +1063,13 @@ end";
                     DrawHotspotCalloutCard(OverlayOriginalCanvas, hx, hy, deltaT, riskText);
                     DrawHotspotCalloutCard(OverlayResultCanvas, hx, hy, deltaT, riskText);
                 }
+            }
+
+            // 9. Draw Anatomical 5-Zone Overlay
+            if (_showZonesOverlay && _rawGrayPixels != null)
+            {
+                DrawAnatomicalZonesVector(OverlayOriginalCanvas);
+                DrawAnatomicalZonesVector(OverlayResultCanvas);
             }
         }
 
@@ -2769,6 +2867,12 @@ end";
             RedrawInteractiveOverlays();
         }
 
+        private void ChkShowZonesOverlay_Click(object sender, RoutedEventArgs e)
+        {
+            _showZonesOverlay = (sender as CheckBox)?.IsChecked == true;
+            RedrawInteractiveOverlays();
+        }
+
         private void BtnActivateBoneTool_Click(object sender, RoutedEventArgs e)
         {
             _activeTool = ActiveCanvasTool.BoneDrawing;
@@ -3153,6 +3257,279 @@ end";
                 SampleOsteoThermalMatrix();
             }
             RedrawInteractiveOverlays();
+        }
+
+        // ============================================================
+        // BIOMECHANICS & PENNES BIOHEAT PRESSURE PROXY METHODS
+        // ============================================================
+        private void UpdateBiomechanicsUI()
+        {
+            if (_rawGrayPixels == null || _rawWidth <= 0 || _rawHeight <= 0) return;
+            if (_pressureStats == null)
+            {
+                var (pBmp, stats) = AdvancedDiagnosticService.GeneratePressureProxyMap(_rawGrayPixels, _rawWidth, _rawHeight);
+                _cachedPressureBitmap = pBmp;
+                _pressureStats = stats;
+            }
+
+            if (_pressureStats != null)
+            {
+                if (TxtBiomechPeakPressure != null) TxtBiomechPeakPressure.Text = $"{_pressureStats.PeakPressureKpa:F0} kPa";
+                if (TxtBiomechPeakLoc != null) TxtBiomechPeakLoc.Text = $"Peak-Lokalisation: X = {_pressureStats.PeakLocation.X:F0}, Y = {_pressureStats.PeakLocation.Y:F0}";
+                if (TxtBiomechMeanPressure != null) TxtBiomechMeanPressure.Text = $"{_pressureStats.MeanPressureKpa:F0} kPa";
+                if (TxtBiomechHighRiskArea != null) TxtBiomechHighRiskArea.Text = $"{_pressureStats.HighRiskAreaPx:N0} px";
+                if (TxtBiomechRiskCategory != null) TxtBiomechRiskCategory.Text = _pressureStats.RiskCategory;
+
+                if (BadgeBiomechRisk != null)
+                {
+                    if (_pressureStats.PeakPressureKpa >= 450.0)
+                    {
+                        BadgeBiomechRisk.Background = new SolidColorBrush(Color.FromRgb(254, 226, 226));
+                        BadgeBiomechRisk.BorderBrush = (Brush)FindResource("CriticalBrush");
+                        if (TxtBiomechRiskCategory != null) TxtBiomechRiskCategory.Foreground = (Brush)FindResource("CriticalBrush");
+                    }
+                    else if (_pressureStats.PeakPressureKpa >= 320.0)
+                    {
+                        BadgeBiomechRisk.Background = new SolidColorBrush(Color.FromRgb(254, 243, 199));
+                        BadgeBiomechRisk.BorderBrush = (Brush)FindResource("WarningBrush");
+                        if (TxtBiomechRiskCategory != null) TxtBiomechRiskCategory.Foreground = (Brush)FindResource("WarningBrush");
+                    }
+                    else
+                    {
+                        BadgeBiomechRisk.Background = new SolidColorBrush(Color.FromRgb(224, 242, 254));
+                        BadgeBiomechRisk.BorderBrush = (Brush)FindResource("CyanBrush");
+                        if (TxtBiomechRiskCategory != null) TxtBiomechRiskCategory.Foreground = (Brush)FindResource("CyanBrush");
+                    }
+                }
+
+                if (TxtBiomechDirectives != null)
+                {
+                    if (_pressureStats.PeakPressureKpa >= 450.0)
+                    {
+                        TxtBiomechDirectives.Text = "🚨 ALARM: Kritischer Spitzendruck (≥ 450 kPa). Sofortige Druckentlastung (Vorfußentlastungsschuh/Cast) zwingend erforderlich zur Ulkusprävention.";
+                    }
+                    else if (_pressureStats.PeakPressureKpa >= 320.0)
+                    {
+                        TxtBiomechDirectives.Text = "⚠️ WARNUNG: Erhöhter Scherspannungsdruck. Verordnung von diabetesadaptierten Weichbettungseinlagen empfohlen.";
+                    }
+                    else
+                    {
+                        TxtBiomechDirectives.Text = "✅ NORMAL: Keine pathologische Scherspannungskonzentration nachweisbar.";
+                    }
+                }
+            }
+        }
+
+        private void DrawAnatomicalZonesVector(Canvas canvas)
+        {
+            if (_rawGrayPixels == null || _rawWidth <= 0 || _rawHeight <= 0) return;
+
+            var zones = ThermalTopographyService.ComputeAnatomicalZones(_rawGrayPixels, _rawWidth, _rawHeight);
+            int midX = _rawWidth / 2;
+
+            var zoneDefs = new (string Name, double y0, double y1, double xRel0, double xRel1)[]
+            {
+                ("Z1: Hallux/Digiti", 0.05, 0.25, 0.1, 0.9),
+                ("Z2: MT I-II", 0.25, 0.45, 0.4, 0.9),
+                ("Z3: MT III-V", 0.25, 0.45, 0.1, 0.45),
+                ("Z4: Gewölbe", 0.45, 0.72, 0.15, 0.85),
+                ("Z5: Calcaneus", 0.72, 0.95, 0.2, 0.8)
+            };
+
+            for (int i = 0; i < zoneDefs.Length && i < zones.Count; i++)
+            {
+                var zd = zoneDefs[i];
+                var zm = zones[i];
+
+                double y = zd.y0 * _rawHeight;
+                double h = (zd.y1 - zd.y0) * _rawHeight;
+
+                Brush strokeBrush = zm.IsCritical
+                    ? new SolidColorBrush(Color.FromRgb(255, 42, 85))
+                    : new SolidColorBrush(Color.FromArgb(200, 0, 180, 240));
+
+                Brush fillBrush = zm.IsCritical
+                    ? new SolidColorBrush(Color.FromArgb(35, 255, 42, 85))
+                    : new SolidColorBrush(Color.FromArgb(20, 0, 180, 240));
+
+                // Left Foot Zone Rect
+                double leftX = zd.xRel0 * midX;
+                double leftW = (zd.xRel1 - zd.xRel0) * midX;
+
+                var rectL = new System.Windows.Shapes.Rectangle
+                {
+                    Width = Math.Max(10, leftW),
+                    Height = Math.Max(10, h),
+                    Stroke = strokeBrush,
+                    StrokeThickness = zm.IsCritical ? 1.8 : 1.2,
+                    StrokeDashArray = new DoubleCollection { 3, 2 },
+                    Fill = fillBrush,
+                    RadiusX = 4,
+                    RadiusY = 4,
+                    IsHitTestVisible = false
+                };
+                Canvas.SetLeft(rectL, leftX);
+                Canvas.SetTop(rectL, y);
+                canvas.Children.Add(rectL);
+
+                // Right Foot Zone Rect
+                double rightX = midX + zd.xRel0 * (_rawWidth - midX);
+                double rightW = (zd.xRel1 - zd.xRel0) * (_rawWidth - midX);
+
+                var rectR = new System.Windows.Shapes.Rectangle
+                {
+                    Width = Math.Max(10, rightW),
+                    Height = Math.Max(10, h),
+                    Stroke = strokeBrush,
+                    StrokeThickness = zm.IsCritical ? 1.8 : 1.2,
+                    StrokeDashArray = new DoubleCollection { 3, 2 },
+                    Fill = fillBrush,
+                    RadiusX = 4,
+                    RadiusY = 4,
+                    IsHitTestVisible = false
+                };
+                Canvas.SetLeft(rectR, rightX);
+                Canvas.SetTop(rectR, y);
+                canvas.Children.Add(rectR);
+
+                // Zone Tag Badge on Right limb
+                var badge = new Border
+                {
+                    Background = new SolidColorBrush(Color.FromArgb(220, 15, 23, 42)),
+                    BorderBrush = strokeBrush,
+                    BorderThickness = new Thickness(1),
+                    CornerRadius = new CornerRadius(3),
+                    Padding = new Thickness(4, 1, 4, 1),
+                    IsHitTestVisible = false
+                };
+                badge.Child = new TextBlock
+                {
+                    Text = $"{zd.Name} (ΔT={zm.DeltaT:F1}K)",
+                    FontSize = 8.5,
+                    FontWeight = FontWeights.Bold,
+                    Foreground = Brushes.White
+                };
+                Canvas.SetLeft(badge, Math.Max(4, rightX + 4));
+                Canvas.SetTop(badge, Math.Max(4, y + 2));
+                canvas.Children.Add(badge);
+            }
+        }
+
+        private void BtnCopyDoctorText_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (_rawGrayPixels == null || _rawWidth <= 0 || _rawHeight <= 0)
+                {
+                    MessageBox.Show("Kein Bilddatensatz geladen.", "Hinweis", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+
+                if (_pressureStats == null)
+                {
+                    var (_, stats) = AdvancedDiagnosticService.GeneratePressureProxyMap(_rawGrayPixels, _rawWidth, _rawHeight);
+                    _pressureStats = stats;
+                }
+
+                var extrema = ThermalAnalysisHelper.FindExtrema(_rawGrayPixels, _rawWidth, _rawHeight);
+                double meanT = _latestResult?.Stats != null
+                    ? ThermalAnalysisHelper.RawToTemperature((byte)Math.Clamp((int)_latestResult.Stats.OrigMedian, 0, 255))
+                    : 31.0;
+                double mad = _latestResult?.Stats != null
+                    ? Math.Round(_latestResult.Stats.Mad * 0.1, 2)
+                    : 1.2;
+
+                string armstrongStage = _latestResult?.HighestRisk == "CRITICAL"
+                    ? "Grad 1 (Hohes Ulkusrisiko, ΔT ≥ 2.2 K)"
+                    : (_latestResult?.HighestRisk == "WARNING" ? "Grad 0 (Prä-ulzerativ / Hyperthermie)" : "Grad 0 (Physiologisch)");
+
+                string text = AdvancedDiagnosticService.SynthesizeDoctorReportText(
+                    _activePatientId,
+                    System.IO.Path.GetFileName(_currentImagePath ?? "Thermogramm.png"),
+                    extrema.Min.Temp,
+                    extrema.Max.Temp,
+                    meanT,
+                    mad,
+                    armstrongStage,
+                    _latestResult?.HighestRisk ?? "PHYSIOLOGISCH",
+                    _osteoReport,
+                    _goniometerMeasurement,
+                    _pressureStats);
+
+                Clipboard.SetText(text);
+                _dbService.LogAuditAction("COPY_DOCTOR_FINDINGS", $"Arztbrief-Befundtext für Patient {_activePatientId} kopiert.");
+
+                if (StatusText != null)
+                {
+                    StatusText.Text = "📋 Strukturierter Arztbrief-Befundtext in die Zwischenablage kopiert!";
+                }
+
+                MessageBox.Show("Der strukturierte Befundtext wurde in die Zwischenablage kopiert und kann direkt in Ihre Praxissoftware (z. B. Turbomed, Medistar, EPA) eingefügt werden.", "Befund kopiert", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Fehler beim Kopieren des Befundes: {ex.Message}", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void BtnExportCsv_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (_rawGrayPixels == null || _rawWidth <= 0 || _rawHeight <= 0)
+                {
+                    MessageBox.Show("Kein Bild geladen zum Exportieren.", "Hinweis", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+
+                var dlg = new SaveFileDialog
+                {
+                    Filter = "CSV Tabelle (*.csv)|*.csv",
+                    FileName = $"Ignite_Matrix_{_activePatientId}_{DateTime.Now:yyyyMMdd_HHmm}.csv",
+                    Title = "2D Radiometrische Temperaturmatrix exportieren"
+                };
+
+                if (dlg.ShowDialog() == true)
+                {
+                    AdvancedDiagnosticService.ExportRadiometricMatrixCsv(
+                        dlg.FileName,
+                        _rawGrayPixels,
+                        _rawWidth,
+                        _rawHeight,
+                        20.0,
+                        42.0,
+                        _activePatientId);
+
+                    _dbService.LogAuditAction("EXPORT_CSV_MATRIX", $"Radiometrische Matrix exportiert nach {dlg.FileName}");
+
+                    if (StatusText != null)
+                    {
+                        StatusText.Text = $"📊 Radiometrische Matrix exportiert nach {System.IO.Path.GetFileName(dlg.FileName)}";
+                    }
+
+                    MessageBox.Show($"Wissenschaftliche Temperaturmatrix erfolgreich exportiert:\n{dlg.FileName}", "CSV Export", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Fehler beim CSV-Export: {ex.Message}", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void BtnViewPressureProxy_Click(object sender, RoutedEventArgs e)
+        {
+            if (RbViewPressureProxy != null)
+            {
+                RbViewPressureProxy.IsChecked = true;
+            }
+        }
+
+        private void BtnViewLaplace_Click(object sender, RoutedEventArgs e)
+        {
+            if (RbViewLaplace != null)
+            {
+                RbViewLaplace.IsChecked = true;
+            }
         }
 
         private void MenuExit_Click(object sender, RoutedEventArgs e)
