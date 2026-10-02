@@ -20,15 +20,15 @@
         <Color x:Key="ColorBorder">#222838</Color>
         <Color x:Key="ColorBorderBright">#323B52</Color>
 
-        <!-- Voicemod Electric Accents -->
-        <Color x:Key="ColorCyan">#00F5C4</Color>          <!-- Signature Voicemod Electric Mint/Cyan -->
+        <!-- Clinical Medical Precision Accents -->
+        <Color x:Key="ColorCyan">#00F5C4</Color>          <!-- Radiometric Cyan Caliper / Primary Focus -->
         <Color x:Key="ColorCyanHover">#33FFD4</Color>
-        <Color x:Key="ColorProLime">#B4FF00</Color>        <!-- Voicemod Pro Badge / Hero CTA Lime -->
+        <Color x:Key="ColorProLime">#00E5A3</Color>        <!-- Clinical Precision Emerald CTA -->
         <Color x:Key="ColorMedicalTeal">#00D2B4</Color>
         <Color x:Key="ColorMedicalBlue">#0099FF</Color>
-        <Color x:Key="ColorPurple">#8B5CF6</Color>        <!-- Voice Lab / AI Purple -->
-        <Color x:Key="ColorCritical">#FF4757</Color>      <!-- Alert / Triage Red -->
-        <Color x:Key="ColorWarning">#FFA502</Color>       <!-- Warning Amber -->
+        <Color x:Key="ColorPurple">#8B5CF6</Color>        <!-- Diagnostic Accent Purple -->
+        <Color x:Key="ColorCritical">#FF4757</Color>      <!-- Alert / Triage Red (ΔT ≥ 2.2 K) -->
+        <Color x:Key="ColorWarning">#FFA502</Color>       <!-- Warning Amber (ΔT ≥ 1.0 K) -->
         <Color x:Key="ColorSuccess">#00F5C4</Color>       <!-- Health / Normothermie Mint -->
 
         <!-- Solid Color Brushes -->
@@ -199,15 +199,15 @@
             </Setter>
         </Style>
 
-        <!-- Voicemod Lime "HOL DIR PRO" Hero Style Button -->
+        <!-- Clinical Medical Precision Hero Action Button -->
         <Style x:Key="VoicemodLimeHeroButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="{StaticResource ProLimeBrush}"/>
-            <Setter Property="Foreground" Value="#090C12"/>
+            <Setter Property="Foreground" Value="#051016"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="18,7"/>
             <Setter Property="Margin" Value="3,2"/>
-            <Setter Property="FontWeight" Value="Black"/>
-            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="11.5"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -221,7 +221,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#C8FF20"/>
+                                <Setter TargetName="bd" Property="Background" Value="#33FFBE"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="bd" Property="Opacity" Value="0.85"/>

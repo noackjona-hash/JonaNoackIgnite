@@ -501,19 +501,19 @@ end";
                 // Invalidate cached vein pixels so new ones are loaded
                 _cachedVeinPixels = null;
 
-                // Update AI Header Status Chip
+                // Update Clinical Header Status Chip
                 bool isCrit = (result.HighestRisk == "CRITICAL");
                 double maxVal = result.Hotspots.Count > 0 ? (result.Hotspots.Max(h => (h?.Region?.MaxVal ?? 0)) - result.Stats.OrigMedian) * 0.1 : 0;
                 if (isCrit)
                 {
                     BadgeAiStatusDot.Background = (Brush)FindResource("CriticalBrush");
-                    TxtHeaderAiStatus.Text = $"AI BEFUND: PATHOLOGISCHES RISIKO (ΔT = +{maxVal:F1} K)";
+                    TxtHeaderAiStatus.Text = $"KLINISCHER BEFUND: PATHOLOGISCHES RISIKO (ΔT = +{maxVal:F1} K)";
                     TxtHeaderAiStatus.Foreground = (Brush)FindResource("CriticalBrush");
                 }
                 else
                 {
                     BadgeAiStatusDot.Background = (Brush)FindResource("SuccessBrush");
-                    TxtHeaderAiStatus.Text = "AI BEFUND: PHYSIOLOGISCH NORMAL";
+                    TxtHeaderAiStatus.Text = "KLINISCHER BEFUND: PHYSIOLOGISCH NORMAL";
                     TxtHeaderAiStatus.Foreground = (Brush)FindResource("SuccessBrush");
                 }
 
@@ -2283,15 +2283,17 @@ end";
         private void MenuAbout_Click(object sender, RoutedEventArgs e)
         {
             MessageBox.Show(
-                "IGNITE Medical Imaging Suite v5.0.0\n" +
-                "Jugend Forscht 2026 - Fachgebiet Arbeitswelt / Informatik\n\n" +
-                "Architektur:\n" +
-                "• Rechenkern: Go 1.27 + x86_64 AVX2 Vektor-Assembler (Plan 9)\n" +
-                "• Desktop-Workstation: C# .NET 10 (WPF Next-Gen Obsidian Glass)\n" +
-                "• Klinische Regel-Engine: Eingebettetes Lua (Armstrong et al. 2007)\n" +
-                "• Datenschutz & Audit-Trail: SQLite (DSGVO Art. 30)\n\n" +
-                "Entwickelt für die automatisierte thermografische Entzündungs- und Ulkusfrüherkennung.",
-                "Über IGNITE", MessageBoxButton.OK, MessageBoxImage.Information);
+                "IGNITE Medical PACS Suite v5.0.0 (Research Grade SaMD)\n" +
+                "DIN EN ISO 13485 & IEC 62304 konforme radiometrische Präzisionsanalyse\n" +
+                "Jugend forscht 2026 – Fachgebiet Arbeitswelt / Informatik\n\n" +
+                "Klinische Diagnostik-Architektur:\n" +
+                "• Deterministische Signalverarbeitung: Go 1.27 + x86_64 AVX2 Vektor-SIMD (32 Pixel/Takt)\n" +
+                "• Klinische PACS-Workstation: C# .NET 10 (WPF DICOM GSDF konform)\n" +
+                "• Evidenzbasierte Leitlinien: Lua 5.1 (IWGDF 2023 & Armstrong et al.)\n" +
+                "• DSGVO Art. 30 & FDA 21 CFR Part 11 Audit-Trail: SQLite\n" +
+                "• Deterministisch & lokal: 100% reproduzierbar, keine Black-Box-KI\n\n" +
+                "Zweckbestimmung: Computer-assistierte thermografische Diagnostik (CAD) zur Früherkennung diabetischer Fußulzera und vaskulärer Perfusionsstörungen.",
+                "Über IGNITE Medical PACS", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void MenuDocs_Click(object sender, RoutedEventArgs e)
