@@ -187,10 +187,10 @@
                         </Menu>
 
                         <!-- Optionen Button (Matching Screenshot) -->
-                        <Button Content="⚙ Optionen" Click="MenuOpenOptions_Click" Style="{StaticResource VoicemodPillStyle}" Margin="0,0,6,0"/>
+                        <Button Content="⚙ Optionen" Click="MenuOpenOptions_Click" Style="{StaticResource VoicemodButtonPillStyle}" Margin="0,0,6,0"/>
 
                         <!-- Berichte Button (Matching Screenshot) -->
-                        <Button Content="📄 Berichte" Click="MenuExportReport_Click" Style="{StaticResource VoicemodPillStyle}" Margin="0,0,8,0"/>
+                        <Button Content="📄 Berichte" Click="MenuExportReport_Click" Style="{StaticResource VoicemodButtonPillStyle}" Margin="0,0,8,0"/>
 
                         <!-- PRIMARY BLUE CTA BUTTON (Matching Screenshot: "Diagnose Starten") -->
                         <Button Content="▶ Diagnose Starten" Click="BtnRunAnalysis_Click" Style="{StaticResource VoicemodLimeHeroButtonStyle}" ToolTip="Führt die vollständige radiometrische AVX2-Befundung aus"/>
