@@ -51,6 +51,7 @@ namespace Ignite.Desktop
         private ColorPalette _activePalette = ColorPalette.Ironbow;
         private double _currentZoom = 1.0;
         private string _activePatientId = "ANON-DEMO";
+        private bool _isInitialized = false;
 
         // Active Modes
         private ActiveCanvasTool _activeTool = ActiveCanvasTool.PanZoom;
@@ -118,6 +119,9 @@ namespace Ignite.Desktop
         public MainWindow()
         {
             InitializeComponent();
+            _isInitialized = true;
+            ViewMode_Checked(this, new RoutedEventArgs());
+
             _engineService = new EngineService();
             _dbService = new DatabaseService();
 
@@ -450,6 +454,10 @@ end";
             }
         }
 
+        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+        }
+
         // --- Analysis Pipeline Execution ---
         private async Task RunPipelineAsync()
         {
@@ -641,7 +649,7 @@ end";
         // --- View Mode Selector (Dual, Curtain Wipe, 3D Relief, Pure DSA, Isotherm, Subtraction DST) ---
         private void ViewMode_Checked(object sender, RoutedEventArgs e)
         {
-            if (RbViewDual == null) return;
+            if (!_isInitialized || RbViewDual == null || ColViewport1 == null || ColViewport2 == null || ColDivider == null) return;
 
             if (RbViewDual.IsChecked == true)
             {
@@ -1032,7 +1040,7 @@ end";
         // --- Interactive Segmented Tool Switching ---
         private void ToolRadio_Checked(object sender, RoutedEventArgs e)
         {
-            if (RbToolPan == null) return;
+            if (!_isInitialized || RbToolPan == null) return;
 
             if (RbToolPan.IsChecked == true) _activeTool = ActiveCanvasTool.PanZoom;
             else if (RbToolRoi.IsChecked == true) _activeTool = ActiveCanvasTool.RoiSelection;
@@ -1041,6 +1049,72 @@ end";
             else if (RbToolWL.IsChecked == true) _activeTool = ActiveCanvasTool.WindowLevelDrag;
 
             UpdateToolInstructions();
+        }
+
+        // --- Voicemod Style Search Box Filter ---
+        private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (PanelFilmstrip == null || _filmstripFiles == null) return;
+            string query = SearchBox.Text?.Trim().ToLowerInvariant() ?? "";
+            for (int i = 0; i < PanelFilmstrip.Children.Count; i++)
+            {
+                if (PanelFilmstrip.Children[i] is FrameworkElement elem && elem.Tag is int idx && idx < _filmstripFiles.Count)
+                {
+                    string fn = System.IO.Path.GetFileName(_filmstripFiles[idx]).ToLowerInvariant();
+                    elem.Visibility = string.IsNullOrEmpty(query) || fn.Contains(query) ? Visibility.Visible : Visibility.Collapsed;
+                }
+            }
+        }
+
+        // --- Voicemod Left Navigation Rail Handler ---
+        private void NavRail_Checked(object sender, RoutedEventArgs e)
+        {
+            if (!_isInitialized || InspectorTabs == null) return;
+            if (sender == RailBtnWorkstation)
+            {
+                if (RbViewDual != null) RbViewDual.IsChecked = true;
+            }
+            else if (sender == RailBtnVascular)
+            {
+                if (TabVascular != null) InspectorTabs.SelectedItem = TabVascular;
+            }
+            else if (sender == RailBtnHotspots)
+            {
+                InspectorTabs.SelectedIndex = 2; // Herde
+            }
+            else if (sender == RailBtnAnatomy)
+            {
+                if (TabAnatomy != null) InspectorTabs.SelectedItem = TabAnatomy;
+            }
+            else if (sender == RailBtnRadiometry)
+            {
+                if (TabHistogram != null) InspectorTabs.SelectedItem = TabHistogram;
+            }
+            else if (sender == RailBtnReport)
+            {
+                InspectorTabs.SelectedIndex = 0; // Arztbericht
+            }
+            else if (sender == RailBtnParams)
+            {
+                InspectorTabs.SelectedIndex = 1; // Parameter
+            }
+            else if (sender == RailBtnAudit)
+            {
+                InspectorTabs.SelectedIndex = 11; // Audit
+            }
+        }
+
+        // --- Voicemod Floating Dock Center Action Trigger ---
+        private void BtnCentralRun_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            BtnRunAnalysis_Click(sender, e);
+        }
+
+        // --- Voicemod Filter Pill Category All ---
+        private void RbFilterAll_Checked(object sender, RoutedEventArgs e)
+        {
+            if (!_isInitialized || RbViewDual == null) return;
+            RbViewDual.IsChecked = true;
         }
 
         private void UpdateToolInstructions()
@@ -1837,7 +1911,10 @@ end";
             {
                 if (_cachedVeinPixels[i] >= _veinThreshold) count++;
             }
-            double pct = (double)count / _cachedVeinPixels.Length * 100.0;
+            int denom = (_latestResult != null && _latestResult.TissuePixelCount > 0)
+                ? _latestResult.TissuePixelCount
+                : _cachedVeinPixels.Length;
+            double pct = (double)count / denom * 100.0;
             TxtVesselCoverage.Text = $"• Gefäßabdeckung: {pct:F1}% des Gewebes ({count:N0} Vaskulär-Pixel)";
         }
 

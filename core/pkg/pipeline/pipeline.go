@@ -141,7 +141,8 @@ func Run(src *imageutil.GrayMatrix, cfg PipelineConfig) AnalysisResult {
 	var vascularMask *imageutil.GrayMatrix
 	if cfg.RunVascularMap {
 		t0 = time.Now()
-		vascularMask = vascular.MultiscaleFrangiVesselness(src, bodyMask, vascular.DefaultFrangiOptions())
+		bodyDist := segmentation.ChamferDistanceTransform(bodyMask)
+		vascularMask = vascular.MultiscaleFrangiVesselness(src, bodyMask, bodyDist, vascular.DefaultFrangiOptions())
 		timing.VascularMs = float64(time.Since(t0).Microseconds()) / 1000.0
 	}
 

@@ -912,14 +912,34 @@ def compute_frangi_vesselness_filter(
 ) -> np.ndarray:
     """
     Frangi Vesselness Filter basierend auf Eigenwerten der Hesse-Matrix.
-    Identifiziert tubuläre oberflächliche Venenstrukturen zur Vermeidung von False Positives.
+    Identifiziert tubuläre Gefäßbäume und unterdrückt Grenzflächen- und Randartefakte.
     """
     img_f = img.astype(np.float32)
+
+    # 1. Gewebe-Randextrapolation zur Vermeidung von Faltungsstufen am Bild-/Körperrand
+    if mask is not None:
+        dilated_skin = img_f.copy()
+        dilated_mask = (mask > 0).astype(np.uint8)
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+        for _ in range(16):
+            dil_skin = cv2.dilate(dilated_skin, kernel)
+            new_m = cv2.dilate(dilated_mask, kernel)
+            fill_idx = (dilated_mask == 0) & (new_m > 0)
+            if not np.any(fill_idx):
+                break
+            dilated_skin[fill_idx] = dil_skin[fill_idx]
+            dilated_mask = new_m
+        input_f = dilated_skin
+        dist_map = cv2.distanceTransform((mask > 0).astype(np.uint8), cv2.DIST_L2, 5)
+    else:
+        input_f = img_f
+        dist_map = None
+
     max_vesselness = np.zeros_like(img_f)
 
     for sigma in sigmas:
-        ksize = int(2 * np.ceil(2 * sigma) + 1)
-        smoothed = cv2.GaussianBlur(img_f, (ksize, ksize), sigma)
+        ksize = int(2 * np.ceil(2.5 * sigma) + 1)
+        smoothed = cv2.GaussianBlur(input_f, (ksize, ksize), sigma)
 
         hxx = cv2.Sobel(smoothed, cv2.CV_32F, 2, 0, ksize=3)
         hyy = cv2.Sobel(smoothed, cv2.CV_32F, 0, 2, ksize=3)
@@ -941,19 +961,29 @@ def compute_frangi_vesselness_filter(
         s = np.sqrt(l1**2 + l2**2)
 
         vesselness = np.exp(- (rb**2) / (2 * (beta**2))) * (1.0 - np.exp(- (s**2) / (2 * (c**2))))
-        vesselness[l2 >= 0] = 0.0
+        # Sowohl warme (l2 < 0) als auch kühle (l2 > 0) Gefäßstrukturen unterstützen
+        v_warm = np.where(l2 < 0, vesselness, 0.0)
+        v_cool = np.where(l2 > 0, vesselness * 0.85, 0.0)
+        v_total = np.maximum(v_warm, v_cool)
 
-        max_vesselness = np.maximum(max_vesselness, vesselness)
+        max_vesselness = np.maximum(max_vesselness, v_total)
 
-    if mask is not None:
+    if mask is not None and dist_map is not None:
+        # Randdämpfung: Schließt Geweberänder (< 14px) konsequent aus
+        edge_weight = np.clip((dist_map - 14.0) / 8.0, 0.0, 1.0)
+        max_vesselness *= edge_weight
         max_vesselness[mask == 0] = 0.0
 
-    v_min, v_max = max_vesselness.min(), max_vesselness.max()
-    if v_max - v_min > 1e-6:
-        v_norm = ((max_vesselness - v_min) / (v_max - v_min) * 255.0).astype(np.uint8)
+    # Robuste 99.5-Perzentil-Normalisierung für exzellenten Kontrast
+    valid_vals = max_vesselness[mask > 0] if mask is not None else max_vesselness
+    nonzeros = valid_vals[valid_vals > 0]
+    if len(nonzeros) > 100:
+        norm_ceil = float(np.percentile(nonzeros, 99.5))
     else:
-        v_norm = np.zeros_like(img, dtype=np.uint8)
+        norm_ceil = float(max_vesselness.max()) if max_vesselness.max() > 0 else 1.0
+    norm_ceil = max(norm_ceil, 0.15)
 
+    v_norm = np.clip(max_vesselness / norm_ceil * 255.0, 0, 255).astype(np.uint8)
     return v_norm
 
 # ─────────────────────────────────────────────────────────────────────────────

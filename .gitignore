@@ -51,6 +51,7 @@ ignite_steps_output/
 **/obj/
 *.user
 *.suo
+*_wpftmp*
 
 # Go
 core/ignite-core.exe
