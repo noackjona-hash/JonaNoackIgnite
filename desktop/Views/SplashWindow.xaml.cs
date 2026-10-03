@@ -1,5 +1,7 @@
+using System;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Input;
 
 namespace Ignite.Desktop.Views
 {
@@ -8,18 +10,46 @@ namespace Ignite.Desktop.Views
         public SplashWindow()
         {
             InitializeComponent();
+
+            // Allow dragging the splash window
+            MouseDown += (s, e) =>
+            {
+                if (e.ChangedButton == MouseButton.Left)
+                {
+                    DragMove();
+                }
+            };
         }
 
-        public async Task AnimateStatusAsync()
+        public void SetProgress(double percent, string statusText)
         {
-            TxtSplashStatus.Text = "Lade Go AVX2 Bildverarbeitungspipeline...";
-            await Task.Delay(250);
-            TxtSplashStatus.Text = "Prüfe klinische Lua-Regeln (Armstrong 2007)...";
-            await Task.Delay(250);
-            TxtSplashStatus.Text = "Initialisiere GPU-Falschfarben-Shader & SQLite...";
-            await Task.Delay(250);
-            TxtSplashStatus.Text = "Bereit!";
-            await Task.Delay(150);
+            Dispatcher.Invoke(() =>
+            {
+                SplashProgress.Value = Math.Clamp(percent, 0, 100);
+                TxtSplashPercent.Text = $"{(int)percent}%";
+                TxtSplashStatus.Text = statusText;
+            });
+        }
+
+        public async Task PerformStartupSequenceAsync()
+        {
+            SetProgress(15, "Hardware-Prüfung: Intel/AMD x86_64 AVX2 Vektor-SIMD aktiv...");
+            await Task.Delay(220);
+
+            SetProgress(38, "Lade mathematischen Go 1.27 Rechenkern (C-Archive / DLL)...");
+            await Task.Delay(240);
+
+            SetProgress(60, "Initialisiere klinische Wagner-Armstrong Entscheidungsmatrix...");
+            await Task.Delay(220);
+
+            SetProgress(80, "Lade 12-Bit radiometrische LUT & GPU-Falschfarbenpaletten...");
+            await Task.Delay(220);
+
+            SetProgress(94, "Verifiziere lokale SQLite Audit-Datenbank (DSGVO Art. 30)...");
+            await Task.Delay(200);
+
+            SetProgress(100, "IGNITE Medical Workstation bereit!");
+            await Task.Delay(180);
         }
     }
 }

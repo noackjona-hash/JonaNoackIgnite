@@ -1,12 +1,14 @@
 using System;
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows;
+using Ignite.Desktop.Views;
 
 namespace Ignite.Desktop
 {
     public partial class App : Application
     {
-        protected override void OnStartup(StartupEventArgs e)
+        protected override async void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
 
@@ -27,6 +29,32 @@ namespace Ignite.Desktop
                 MessageBox.Show($"Dispatcher-Fehler: {args.Exception.Message}\n\nInner: {args.Exception.InnerException?.Message}", "IGNITE Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
                 args.Handled = true;
             };
+
+            try
+            {
+                // Prevent application from shutting down when the splash window closes
+                ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
+                var splash = new SplashWindow();
+                splash.Show();
+
+                // Run animated hardware/clinical startup sequence
+                await splash.PerformStartupSequenceAsync();
+
+                // Initialize main workstation
+                var mainWindow = new MainWindow();
+                MainWindow = mainWindow;
+                ShutdownMode = ShutdownMode.OnMainWindowClose;
+                mainWindow.Show();
+
+                // Close splash screen
+                splash.Close();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Initialisierungsfehler: {ex.Message}", "IGNITE Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+                Shutdown();
+            }
         }
     }
 }
