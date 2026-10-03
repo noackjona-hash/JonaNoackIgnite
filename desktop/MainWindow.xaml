@@ -29,61 +29,62 @@
                     <RowDefinition Height="Auto"/> <!-- User Avatar & Settings -->
                 </Grid.RowDefinitions>
 
-                <!-- Brand App Icon (Blue Circle / Squircle with Lightning Bolt) -->
+                <!-- Brand App Icon (Modern Clinical Rounded Squircle with Lightning Bolt) -->
                 <Border Grid.Row="0" Margin="0,14,0,16" HorizontalAlignment="Center">
-                    <Border Width="44" Height="44" CornerRadius="22" Background="{StaticResource CyanBrush}" Cursor="Hand" ToolTip="IGNITE Klinische Diagnose-Workstation">
-                        <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <TextBlock Text="⚡" FontSize="20" FontWeight="Black" Foreground="#FFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Grid>
+                    <Border Width="44" Height="44" CornerRadius="14" Background="{StaticResource CyanBrush}" Cursor="Hand" ToolTip="IGNITE Klinische Diagnose-Workstation">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="12" Direction="270" ShadowDepth="2" Opacity="0.35" Color="#0284C7"/>
+                        </Border.Effect>
+                        <Path Data="{StaticResource IconIgniteBolt}" Fill="#FFFFFF" Width="20" Height="20" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                 </Border>
 
                 <!-- Navigation Rail Squircles Stack -->
                 <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Top">
                     <RadioButton x:Name="RailBtnWorkstation" Style="{StaticResource VoicemodRailRadioStyle}" GroupName="NavRail" IsChecked="True" Checked="NavRail_Checked" ToolTip="Workstation / Dual-View (Strg+1)">
-                        <TextBlock Text="◫" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Path Data="{StaticResource IconWorkstation}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=Control}}" Width="18" Height="18" Stretch="Uniform"/>
                     </RadioButton>
                     
                     <RadioButton x:Name="RailBtnVascular" Style="{StaticResource VoicemodRailRadioStyle}" GroupName="NavRail" Checked="NavRail_Checked" ToolTip="Vaskuläre Gefäßkartierung / Venenfinder (Strg+2)">
-                        <TextBlock Text="🩸" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Path Data="{StaticResource IconVascular}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=Control}}" Width="18" Height="18" Stretch="Uniform"/>
                     </RadioButton>
 
                     <RadioButton x:Name="RailBtnHotspots" Style="{StaticResource VoicemodRailRadioStyle}" GroupName="NavRail" Checked="NavRail_Checked" ToolTip="Entzündungsherde &amp; Top-Hat Morphologie (Strg+3)">
-                        <TextBlock Text="🔥" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Path Data="{StaticResource IconThermal}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=Control}}" Width="18" Height="18" Stretch="Uniform"/>
                     </RadioButton>
 
                     <RadioButton x:Name="RailBtnBones" Style="{StaticResource VoicemodRailRadioStyle}" GroupName="NavRail" Checked="NavRail_Checked" ToolTip="Anatomisches Skelett &amp; Knochen einzeichnen (Strg+4)">
-                        <TextBlock Text="🦴" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Path Data="{StaticResource IconBones}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=Control}}" Width="18" Height="18" Stretch="Uniform"/>
                     </RadioButton>
 
                     <RadioButton x:Name="RailBtnAnatomy" Style="{StaticResource VoicemodRailRadioStyle}" GroupName="NavRail" Checked="NavRail_Checked" ToolTip="Armstrong 5-Zonen &amp; Angiosome (Strg+5)">
-                        <TextBlock Text="🦶" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Path Data="{StaticResource IconAnatomy}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=Control}}" Width="18" Height="18" Stretch="Uniform"/>
                     </RadioButton>
 
                     <RadioButton x:Name="RailBtnRadiometry" Style="{StaticResource VoicemodRailRadioStyle}" GroupName="NavRail" Checked="NavRail_Checked" ToolTip="Radiometrisches Spektrum &amp; Profil T(s) (Strg+6)">
-                        <TextBlock Text="📊" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Path Data="{StaticResource IconRadiometry}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=Control}}" Width="18" Height="18" Stretch="Uniform"/>
                     </RadioButton>
 
                     <RadioButton x:Name="RailBtnReport" Style="{StaticResource VoicemodRailRadioStyle}" GroupName="NavRail" Checked="NavRail_Checked" ToolTip="Strukturierter Arztbericht IWGDF (Strg+7)">
-                        <TextBlock Text="📋" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Path Data="{StaticResource IconReport}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=Control}}" Width="18" Height="18" Stretch="Uniform"/>
                     </RadioButton>
 
                     <RadioButton x:Name="RailBtnParams" Style="{StaticResource VoicemodRailRadioStyle}" GroupName="NavRail" Checked="NavRail_Checked" ToolTip="Pipeline-Parameter &amp; W/L (Strg+8)">
-                        <TextBlock Text="⚙️" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Path Data="{StaticResource IconParams}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=Control}}" Width="18" Height="18" Stretch="Uniform"/>
                     </RadioButton>
 
                     <RadioButton x:Name="RailBtnAudit" Style="{StaticResource VoicemodRailRadioStyle}" GroupName="NavRail" Checked="NavRail_Checked" ToolTip="DSGVO Art. 30 Audit-Log &amp; SQLite (Strg+9)">
-                        <TextBlock Text="🗄️" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Path Data="{StaticResource IconAudit}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=Control}}" Width="18" Height="18" Stretch="Uniform"/>
                     </RadioButton>
                 </StackPanel>
 
                 <!-- Bottom User Avatar & System Info -->
                 <StackPanel Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,14">
                     <Button Style="{StaticResource VoicemodRailButtonStyle}" Click="MenuAbout_Click" ToolTip="Info &amp; Jugend forscht 2026">
-                        <TextBlock Text="ℹ️" FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Path Data="{StaticResource IconInfo}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=Control}}" Width="16" Height="16" Stretch="Uniform"/>
                     </Button>
                     <Border Width="40" Height="40" CornerRadius="20" Background="#F1F5F9" BorderBrush="{StaticResource BorderBrightBrush}" BorderThickness="1.5" Margin="0,6,0,0" ToolTip="Angemeldeter Facharzt: Dr. Jona Noack">
-                        <TextBlock Text="👨‍⚕️" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Path Data="{StaticResource IconDoctor}" Fill="{StaticResource TextSecondaryBrush}" Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                 </StackPanel>
             </Grid>
@@ -126,7 +127,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="🔍" FontSize="12" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <Path Grid.Column="0" Data="{StaticResource IconSearch}" Fill="{StaticResource TextMutedBrush}" Width="13" Height="13" Stretch="Uniform" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                 <TextBox Grid.Column="1" x:Name="SearchBox" 
                                          Background="Transparent" BorderThickness="0" 
                                          Foreground="{StaticResource TextPrimaryBrush}" 
@@ -172,7 +173,13 @@
                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                         <!-- Menu Dropdown -->
                         <Menu Background="Transparent" VerticalAlignment="Center" Margin="0,0,6,0">
-                            <MenuItem Header="☰ Menü" Foreground="{StaticResource TextSecondaryBrush}" FontWeight="SemiBold" FontSize="11">
+                            <MenuItem Foreground="{StaticResource TextSecondaryBrush}" FontWeight="SemiBold" FontSize="11">
+                                <MenuItem.Header>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Data="{StaticResource IconMenu}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=MenuItem}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0" SnapsToDevicePixels="True"/>
+                                        <TextBlock Text="Menü" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </MenuItem.Header>
                                 <MenuItem Header="_Neues Wärmebild öffnen..." Click="MenuOpenImage_Click" InputGestureText="Strg+O"/>
                                 <MenuItem Header="_Kontralaterales Bild laden..." Click="MenuOpenContralateral_Click"/>
                                 <Separator Background="{StaticResource BorderBrush}"/>
@@ -187,17 +194,54 @@
                         </Menu>
 
                         <!-- Optionen Button (Matching Screenshot) -->
-                        <Button Content="⚙ Optionen" Click="MenuOpenOptions_Click" Style="{StaticResource VoicemodButtonPillStyle}" Margin="0,0,6,0"/>
+                        <Button Click="MenuOpenOptions_Click" Style="{StaticResource VoicemodButtonPillStyle}" Margin="0,0,6,0">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Path Data="{StaticResource IconParams}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=Control}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0"/>
+                                <TextBlock Text="Optionen" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
 
                         <!-- Berichte Button (Matching Screenshot) -->
-                        <Button Content="📄 Berichte" Click="MenuExportReport_Click" Style="{StaticResource VoicemodButtonPillStyle}" Margin="0,0,8,0"/>
+                        <Button Click="MenuExportReport_Click" Style="{StaticResource VoicemodButtonPillStyle}" Margin="0,0,8,0">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Path Data="{StaticResource IconReport}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=Control}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0"/>
+                                <TextBlock Text="Berichte" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
 
                         <!-- PRIMARY BLUE CTA BUTTON (Matching Screenshot: "Diagnose Starten") -->
-                        <Button Content="▶ Diagnose Starten" Click="BtnRunAnalysis_Click" Style="{StaticResource VoicemodLimeHeroButtonStyle}" ToolTip="Führt die vollständige radiometrische AVX2-Befundung aus"/>
+                        <Button Click="BtnRunAnalysis_Click" Style="{StaticResource VoicemodLimeHeroButtonStyle}" ToolTip="Führt die vollständige radiometrische AVX2-Befundung aus">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Path Data="{StaticResource IconPlay}" Fill="#FFFFFF" Width="10" Height="10" Stretch="Uniform" Margin="0,0,6,0"/>
+                                <TextBlock Text="Diagnose Starten" FontWeight="Bold" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
 
                         <!-- Notifications & Help -->
-                        <TextBlock Text="🔔" FontSize="15" Foreground="{StaticResource TextSecondaryBrush}" Margin="12,0,6,0" VerticalAlignment="Center" Cursor="Hand" ToolTip="Benachrichtigungen"/>
-                        <TextBlock Text="❓" FontSize="15" Foreground="{StaticResource TextSecondaryBrush}" Margin="4,0,4,0" VerticalAlignment="Center" Cursor="Hand" MouseDown="MenuAbout_Click" ToolTip="Hilfe"/>
+                        <Border Margin="12,0,4,0" VerticalAlignment="Center" Cursor="Hand" ToolTip="Benachrichtigungen" Width="28" Height="28" CornerRadius="14" Background="Transparent">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Style.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="{StaticResource SurfaceHoverBrush}"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <Path Data="{StaticResource IconBell}" Fill="{StaticResource TextSecondaryBrush}" Width="14" Height="14" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <Border Margin="2,0,4,0" VerticalAlignment="Center" Cursor="Hand" MouseDown="MenuAbout_Click" ToolTip="Hilfe" Width="28" Height="28" CornerRadius="14" Background="Transparent">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Style.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="{StaticResource SurfaceHoverBrush}"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <Path Data="{StaticResource IconHelp}" Fill="{StaticResource TextSecondaryBrush}" Width="14" Height="14" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
                     </StackPanel>
                 </Grid>
             </Border>
@@ -217,14 +261,54 @@
                     <ScrollViewer Grid.Column="0" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                             <RadioButton x:Name="RbFilterAll" Style="{StaticResource VoicemodPillStyle}" GroupName="PillViewFilter" Content="+ Alle" Checked="RbFilterAll_Checked" ToolTip="Vollständige Übersicht"/>
-                            <RadioButton x:Name="RbViewDual" Style="{StaticResource VoicemodPillStyle}" GroupName="PillViewFilter" Content="2D Dual-View" Checked="ViewMode_Checked" ToolTip="Doppelansicht: Rohbild und Befund"/>
-                            <RadioButton x:Name="RbViewCurtain" Style="{StaticResource VoicemodPillStyle}" GroupName="PillViewFilter" Content="◐ Vorhang-Split" IsChecked="True" Checked="ViewMode_Checked" ToolTip="Interaktiver Schiebe-Vorhang"/>
-                            <RadioButton x:Name="RbViewDSA" Style="{StaticResource VoicemodPillStyle}" GroupName="PillViewFilter" Content="8.3 Radiometrie (DSA)" Checked="ViewMode_Checked" ToolTip="Digitale Subtraktions-Angiographie (Venen)"/>
-                            <RadioButton x:Name="RbViewBones" Style="{StaticResource VoicemodPillStyle}" GroupName="PillViewFilter" Content="🦴 Knochen" Checked="ViewMode_Checked" ToolTip="Anatomisches Skelett &amp; Knochen einzeichnen"/>
-                            <RadioButton x:Name="RbView3DRelief" Style="{StaticResource VoicemodPillStyle}" GroupName="PillViewFilter" Content="⛰️ 3D-Relief" Checked="ViewMode_Checked" ToolTip="2.5D Topografisches Höhenmodell"/>
-                            <RadioButton x:Name="RbViewIsotherm" Style="{StaticResource VoicemodPillStyle}" GroupName="PillViewFilter" Content="🌐 Isothermen" Checked="ViewMode_Checked" ToolTip="Isothermen-Bandfilterung"/>
-                            <RadioButton x:Name="RbViewPressureProxy" Style="{StaticResource VoicemodPillStyle}" GroupName="PillViewFilter" Content="⚡ Druck-Proxy" Checked="ViewMode_Checked" ToolTip="Biomechanische Plantardruck- &amp; Scherspannungsschätzung (Pennes-Bioheat in kPa)"/>
-                            <RadioButton x:Name="RbViewLaplace" Style="{StaticResource VoicemodPillStyle}" GroupName="PillViewFilter" Content="♨️ Wärmestau (∇²T)" Checked="ViewMode_Checked" ToolTip="Laplace Tiefengewebe-Abszess &amp; Wärmestau-Filterung"/>
+                            <RadioButton x:Name="RbViewDual" Style="{StaticResource VoicemodPillStyle}" GroupName="PillViewFilter" Checked="ViewMode_Checked" ToolTip="Doppelansicht: Rohbild und Befund">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Path Data="{StaticResource IconWorkstation}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=Control}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0"/>
+                                    <TextBlock Text="2D Dual-View" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </RadioButton>
+                            <RadioButton x:Name="RbViewCurtain" Style="{StaticResource VoicemodPillStyle}" GroupName="PillViewFilter" IsChecked="True" Checked="ViewMode_Checked" ToolTip="Interaktiver Schiebe-Vorhang">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Path Data="{StaticResource IconCurtain}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=Control}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0"/>
+                                    <TextBlock Text="Vorhang-Split" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </RadioButton>
+                            <RadioButton x:Name="RbViewDSA" Style="{StaticResource VoicemodPillStyle}" GroupName="PillViewFilter" Checked="ViewMode_Checked" ToolTip="Digitale Subtraktions-Angiographie (Venen)">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Path Data="{StaticResource IconVascular}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=Control}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0"/>
+                                    <TextBlock Text="8.3 Radiometrie (DSA)" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </RadioButton>
+                            <RadioButton x:Name="RbViewBones" Style="{StaticResource VoicemodPillStyle}" GroupName="PillViewFilter" Checked="ViewMode_Checked" ToolTip="Anatomisches Skelett &amp; Knochen einzeichnen">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Path Data="{StaticResource IconBones}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=Control}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0"/>
+                                    <TextBlock Text="Knochen" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </RadioButton>
+                            <RadioButton x:Name="RbView3DRelief" Style="{StaticResource VoicemodPillStyle}" GroupName="PillViewFilter" Checked="ViewMode_Checked" ToolTip="2.5D Topografisches Höhenmodell">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Path Data="{StaticResource IconRelief}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=Control}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0"/>
+                                    <TextBlock Text="3D-Relief" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </RadioButton>
+                            <RadioButton x:Name="RbViewIsotherm" Style="{StaticResource VoicemodPillStyle}" GroupName="PillViewFilter" Checked="ViewMode_Checked" ToolTip="Isothermen-Bandfilterung">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Path Data="{StaticResource IconIsotherm}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=Control}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0"/>
+                                    <TextBlock Text="Isothermen" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </RadioButton>
+                            <RadioButton x:Name="RbViewPressureProxy" Style="{StaticResource VoicemodPillStyle}" GroupName="PillViewFilter" Checked="ViewMode_Checked" ToolTip="Biomechanische Plantardruck- &amp; Scherspannungsschätzung (Pennes-Bioheat in kPa)">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Path Data="{StaticResource IconPressure}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=Control}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0"/>
+                                    <TextBlock Text="Druck-Proxy" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </RadioButton>
+                            <RadioButton x:Name="RbViewLaplace" Style="{StaticResource VoicemodPillStyle}" GroupName="PillViewFilter" Checked="ViewMode_Checked" ToolTip="Laplace Tiefengewebe-Abszess &amp; Wärmestau-Filterung">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Path Data="{StaticResource IconLaplace}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=Control}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0"/>
+                                    <TextBlock Text="Wärmestau (∇²T)" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </RadioButton>
                             
                             <Separator Width="1" Height="20" Margin="10,0" Background="{StaticResource BorderBrush}"/>
 
@@ -410,7 +494,7 @@
                                     <Border x:Name="FloatingArmstrongBanner" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,12,0,0" 
                                             Background="#FEE2E2" BorderBrush="#DC2626" BorderThickness="1.5" CornerRadius="8" Padding="14,6" IsHitTestVisible="False">
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                            <TextBlock Text="⚠️ " FontSize="14" VerticalAlignment="Center"/>
+                                            <Path Data="{StaticResource IconWarning}" Fill="#DC2626" Width="14" Height="14" Stretch="Uniform" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                             <TextBlock x:Name="TxtFloatingArmstrong" Text="ARMSTRONG-WARNUNG: ΔT = 2.8 K (≥ 2.2 K) — Hohes Ulkusrisiko!" FontWeight="Bold" FontSize="11.5" Foreground="#DC2626" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Border>
@@ -469,24 +553,62 @@
                             <Border Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,20" 
                                     Background="#FFFFFF" BorderBrush="{StaticResource BorderBrightBrush}" BorderThickness="1" CornerRadius="26" Padding="10,5">
                                 <Border.Effect>
-                                    <DropShadowEffect BlurRadius="12" ShadowDepth="2" Opacity="0.12" Color="#000000"/>
+                                    <DropShadowEffect BlurRadius="16" Direction="270" ShadowDepth="3" Opacity="0.12" Color="#0F172A"/>
                                 </Border.Effect>
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                     <!-- Interactive Tool Radio Buttons -->
-                                    <RadioButton x:Name="RbToolPan" Style="{StaticResource VoicemodDockRadioStyle}" GroupName="CanvasTools" Content="✋ PAN" IsChecked="True" Checked="ToolRadio_Checked" ToolTip="Pan &amp; Zoom"/>
-                                    <RadioButton x:Name="RbToolRoi" Style="{StaticResource VoicemodDockRadioStyle}" GroupName="CanvasTools" Content="⬚ ROI" Checked="ToolRadio_Checked" ToolTip="Rechteck zur fokussierten Analyse aufziehen (Pixelgenau, ohne Offset)"/>
-                                    <RadioButton x:Name="RbToolProfile" Style="{StaticResource VoicemodDockRadioStyle}" GroupName="CanvasTools" Content="📈 PROFIL" Checked="ToolRadio_Checked" ToolTip="Linie für Temperatur-Schnittprofil ziehen (Pixelgenau)"/>
-                                    <RadioButton x:Name="RbToolProbe" Style="{StaticResource VoicemodDockRadioStyle}" GroupName="CanvasTools" Content="📍 SONDEN" Checked="ToolRadio_Checked" ToolTip="Punkt-Messsonden P1, P2 setzen"/>
-                                    <RadioButton x:Name="RbToolBone" Style="{StaticResource VoicemodDockRadioStyle}" GroupName="CanvasTools" Content="🦴 KNOCHEN" Checked="ToolRadio_Checked" ToolTip="Knochen &amp; Skelettstrukturen mit der Maus einzeichnen"/>
-                                    <RadioButton x:Name="RbToolGoniometer" Style="{StaticResource VoicemodDockRadioStyle}" GroupName="CanvasTools" Content="📐 WINKEL" Checked="ToolRadio_Checked" ToolTip="Orthopädisches 3-Punkt Goniometer (Hallux Valgus Winkel HVA &amp; IMA)"/>
-                                    <RadioButton x:Name="RbToolWL" Style="{StaticResource VoicemodDockRadioStyle}" GroupName="CanvasTools" Content="◐ W/L" Checked="ToolRadio_Checked" ToolTip="Interaktive Kontrast- &amp; Helligkeitsfensterung"/>
+                                    <RadioButton x:Name="RbToolPan" Style="{StaticResource VoicemodDockRadioStyle}" GroupName="CanvasTools" IsChecked="True" Checked="ToolRadio_Checked" ToolTip="Pan &amp; Zoom">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Path Data="{StaticResource IconPan}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=Control}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0"/>
+                                            <TextBlock Text="PAN" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </RadioButton>
+                                    <RadioButton x:Name="RbToolRoi" Style="{StaticResource VoicemodDockRadioStyle}" GroupName="CanvasTools" Checked="ToolRadio_Checked" ToolTip="Rechteck zur fokussierten Analyse aufziehen (Pixelgenau, ohne Offset)">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Path Data="{StaticResource IconRoi}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=Control}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0"/>
+                                            <TextBlock Text="ROI" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </RadioButton>
+                                    <RadioButton x:Name="RbToolProfile" Style="{StaticResource VoicemodDockRadioStyle}" GroupName="CanvasTools" Checked="ToolRadio_Checked" ToolTip="Linie für Temperatur-Schnittprofil ziehen (Pixelgenau)">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Path Data="{StaticResource IconProfile}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=Control}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0"/>
+                                            <TextBlock Text="PROFIL" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </RadioButton>
+                                    <RadioButton x:Name="RbToolProbe" Style="{StaticResource VoicemodDockRadioStyle}" GroupName="CanvasTools" Checked="ToolRadio_Checked" ToolTip="Punkt-Messsonden P1, P2 setzen">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Path Data="{StaticResource IconProbe}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=Control}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0"/>
+                                            <TextBlock Text="SONDEN" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </RadioButton>
+                                    <RadioButton x:Name="RbToolBone" Style="{StaticResource VoicemodDockRadioStyle}" GroupName="CanvasTools" Checked="ToolRadio_Checked" ToolTip="Knochen &amp; Skelettstrukturen mit der Maus einzeichnen">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Path Data="{StaticResource IconBones}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=Control}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0"/>
+                                            <TextBlock Text="KNOCHEN" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </RadioButton>
+                                    <RadioButton x:Name="RbToolGoniometer" Style="{StaticResource VoicemodDockRadioStyle}" GroupName="CanvasTools" Checked="ToolRadio_Checked" ToolTip="Orthopädisches 3-Punkt Goniometer (Hallux Valgus Winkel HVA &amp; IMA)">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Path Data="{StaticResource IconGoniometer}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=Control}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0"/>
+                                            <TextBlock Text="WINKEL" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </RadioButton>
+                                    <RadioButton x:Name="RbToolWL" Style="{StaticResource VoicemodDockRadioStyle}" GroupName="CanvasTools" Checked="ToolRadio_Checked" ToolTip="Interaktive Kontrast- &amp; Helligkeitsfensterung">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Path Data="{StaticResource IconWindowLevel}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=Control}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0"/>
+                                            <TextBlock Text="W/L" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </RadioButton>
 
                                     <Separator Width="1" Height="22" Margin="8,0" Background="{StaticResource BorderBrush}"/>
 
                                     <!-- Blue Circular Central Action Button (Matching Screenshot) -->
-                                    <Border Width="40" Height="40" CornerRadius="20" Background="{StaticResource CyanBrush}" Cursor="Hand" Margin="2,0" 
+                                    <Border Width="42" Height="42" CornerRadius="21" Background="{StaticResource CyanBrush}" Cursor="Hand" Margin="2,0" 
                                             MouseDown="BtnCentralRun_MouseDown" ToolTip="Diagnose sofort ausführen">
-                                        <TextBlock Text="⚡" FontSize="18" FontWeight="Black" Foreground="#FFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        <Border.Effect>
+                                            <DropShadowEffect BlurRadius="12" Direction="270" ShadowDepth="2" Opacity="0.4" Color="#0284C7"/>
+                                        </Border.Effect>
+                                        <Path Data="{StaticResource IconIgniteBolt}" Fill="#FFFFFF" Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
 
                                     <Separator Width="1" Height="22" Margin="8,0" Background="{StaticResource BorderBrush}"/>
@@ -495,7 +617,12 @@
                                     <Button Content="-" Click="BtnZoomOut_Click" Width="28" Height="28" Padding="0" Margin="2,0" ToolTip="Zoom verkleinern"/>
                                     <Button Content="100%" Click="BtnZoomReset_Click" Height="28" Padding="8,0" Margin="2,0" FontSize="10.5" ToolTip="Originalgröße"/>
                                     <Button Content="+" Click="BtnZoomIn_Click" Width="28" Height="28" Padding="0" Margin="2,0" ToolTip="Zoom vergrößern"/>
-                                    <Button Content="⛶ FIT" Click="BtnZoomFit_Click" Height="28" Padding="8,0" Margin="2,0" FontSize="10.5" ToolTip="Ganzes Bild einpassen"/>
+                                    <Button Click="BtnZoomFit_Click" Height="28" Padding="8,0" Margin="2,0" FontSize="10.5" ToolTip="Ganzes Bild einpassen">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Path Data="{StaticResource IconZoomFit}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=Control}}" Width="11" Height="11" Stretch="Uniform" Margin="0,0,4,0"/>
+                                            <TextBlock Text="FIT" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
                                 </StackPanel>
                             </Border>
 
@@ -530,7 +657,7 @@
 
                                 <!-- Case Thumbnail Squircle -->
                                 <Border Grid.Column="0" Width="46" Height="46" CornerRadius="12" Background="#F1F5F9" BorderBrush="{StaticResource BorderBrightBrush}" BorderThickness="1" Margin="0,0,12,0">
-                                    <TextBlock Text="🩻" FontSize="22" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    <Path Data="{StaticResource IconDicom}" Fill="{StaticResource CyanBrush}" Width="22" Height="22" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
 
                                 <!-- Demographics & Subtitle -->
@@ -545,9 +672,24 @@
 
                                 <!-- Quick Action Buttons -->
                                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Button Content="📋 Befund" Click="BtnCopyDoctorText_Click" Padding="7,4" Margin="0,0,4,0" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrightBrush}" Foreground="{StaticResource CyanBrush}" FontWeight="SemiBold" ToolTip="Kopiert strukturierten Arztbrief-Befundtext in die Zwischenablage für Praxis-EDV"/>
-                                    <Button Content="📊 CSV" Click="BtnExportCsv_Click" Padding="7,4" Margin="0,0,4,0" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrightBrush}" Foreground="{StaticResource CyanBrush}" FontWeight="SemiBold" ToolTip="Exportiert die 2D-Temperaturmatrix als wissenschaftliche CSV-Tabelle"/>
-                                    <Button Content="📄 Export" Click="MenuExportReport_Click" Padding="8,4" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrightBrush}" Foreground="{StaticResource CyanBrush}" FontWeight="SemiBold" ToolTip="Vollständigen Befundbericht generieren &amp; drucken"/>
+                                    <Button Click="BtnCopyDoctorText_Click" Padding="8,4" Margin="0,0,4,0" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrightBrush}" Foreground="{StaticResource CyanBrush}" FontWeight="SemiBold" ToolTip="Kopiert strukturierten Arztbrief-Befundtext in die Zwischenablage für Praxis-EDV">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Path Data="{StaticResource IconCopy}" Fill="{StaticResource CyanBrush}" Width="11" Height="11" Stretch="Uniform" Margin="0,0,5,0"/>
+                                            <TextBlock Text="Befund" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Click="BtnExportCsv_Click" Padding="8,4" Margin="0,0,4,0" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrightBrush}" Foreground="{StaticResource CyanBrush}" FontWeight="SemiBold" ToolTip="Exportiert die 2D-Temperaturmatrix als wissenschaftliche CSV-Tabelle">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Path Data="{StaticResource IconRadiometry}" Fill="{StaticResource CyanBrush}" Width="11" Height="11" Stretch="Uniform" Margin="0,0,5,0"/>
+                                            <TextBlock Text="CSV" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Click="MenuExportReport_Click" Padding="8,4" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrightBrush}" Foreground="{StaticResource CyanBrush}" FontWeight="SemiBold" ToolTip="Vollständigen Befundbericht generieren &amp; drucken">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Path Data="{StaticResource IconDownload}" Fill="{StaticResource CyanBrush}" Width="11" Height="11" Stretch="Uniform" Margin="0,0,5,0"/>
+                                            <TextBlock Text="Export" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
                                 </StackPanel>
                             </Grid>
                         </Border>
@@ -556,7 +698,13 @@
                         <TabControl Grid.Row="1" x:Name="InspectorTabs" Background="Transparent" BorderThickness="0">
 
                             <!-- TAB 0: PARAMETERS & WINDOW/LEVEL (Matching Screenshot) -->
-                            <TabItem x:Name="TabParams" Header="⚙️ Parameter" IsSelected="True">
+                            <TabItem x:Name="TabParams" IsSelected="True">
+                                <TabItem.Header>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Path Data="{StaticResource IconParams}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=TabItem}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0"/>
+                                        <TextBlock Text="Parameter" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </TabItem.Header>
                                 <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="14">
                                     <StackPanel>
                                         <TextBlock Text="Diagnostische Pipeline-Parameter" FontWeight="Bold" FontSize="13.5" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,10"/>
@@ -637,12 +785,17 @@
                                                 <CheckBox x:Name="ChkPerfusion" Content="Longitudinaler Temperaturgradient (dT/dy)" IsChecked="True" Margin="0,3"/>
                                                 <CheckBox x:Name="ChkAnatomicalCutoff" Content="Anatomischer Cutoff (Waden oberhalb 65%)" IsChecked="True" Margin="0,3"/>
                                                 <CheckBox x:Name="ChkErodeMargin" Content="Gewebekanten-Erosion (Chamfer-Distanz)" IsChecked="True" Margin="0,3"/>
-                                                <CheckBox x:Name="ChkShowBonesInspector" Content="🦴 Anatomisches Skelett (Knochen) anzeigen" IsChecked="True" Click="ChkShowBones_Click" Margin="0,3"/>
+                                                <CheckBox x:Name="ChkShowBonesInspector" Content="Anatomisches Skelett (Knochen) anzeigen" IsChecked="True" Click="ChkShowBones_Click" Margin="0,3"/>
                                             </StackPanel>
                                         </Border>
 
                                         <!-- BIG BLUE RECALCULATE BUTTON (Matching Screenshot) -->
-                                        <Button Content="GESAMTE PIPELINE NEU BERECHNEN" Click="BtnRunAnalysis_Click" Style="{StaticResource VoicemodPrimaryButtonStyle}" Margin="0,0,0,10"/>
+                                        <Button Click="BtnRunAnalysis_Click" Style="{StaticResource VoicemodPrimaryButtonStyle}" Margin="0,0,0,10">
+                                            <StackPanel Orientation="Horizontal">
+                                                <Path Data="{StaticResource IconPlay}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,7,0" SnapsToDevicePixels="True"/>
+                                                <TextBlock Text="GESAMTE PIPELINE NEU BERECHNEN" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Button>
 
                                         <!-- Hardware SIMD Latency Card (Matching Screenshot) -->
                                         <Border Background="#F8FAFC" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="12">
@@ -658,7 +811,13 @@
                             </TabItem>
 
                             <!-- TAB 1: BONES & SKELETON OSTEOLOGY (NEW FEATURE!) -->
-                            <TabItem x:Name="TabBones" Header="🦴 Knochen">
+                            <TabItem x:Name="TabBones">
+                                <TabItem.Header>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Path Data="{StaticResource IconBones}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=TabItem}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0"/>
+                                        <TextBlock Text="Knochen" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </TabItem.Header>
                                 <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="14">
                                     <StackPanel>
                                         <TextBlock Text="Anatomische Knochen &amp; Skelett-Werkzeuge" FontWeight="Bold" FontSize="13.5" Foreground="{StaticResource CyanBrush}" Margin="0,0,0,4"/>
@@ -669,9 +828,14 @@
                                         <Border Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="12" Margin="0,0,0,10">
                                             <StackPanel>
                                                 <TextBlock Text="Interaktives Knochen-Zeichnen:" FontWeight="Bold" FontSize="11" Margin="0,0,0,6"/>
-                                                <TextBlock Text="Wählen Sie '🦴 KNOCHEN' im unteren Dock oder klicken Sie hier, um Knochensegmente mit der Maus auf das Bild zu zeichnen." FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                                                <TextBlock Text="Wählen Sie 'KNOCHEN' im unteren Dock oder klicken Sie hier, um Knochensegmente mit der Maus auf das Bild zu zeichnen." FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,8"/>
                                                 
-                                                <Button Content="✏️ Knochen-Zeichenmodus aktivieren" Click="BtnActivateBoneTool_Click" Style="{StaticResource VoicemodPrimaryButtonStyle}" Margin="0,0,0,6"/>
+                                                <Button Click="BtnActivateBoneTool_Click" Style="{StaticResource VoicemodPrimaryButtonStyle}" Margin="0,0,0,6">
+                                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                        <Path Data="{StaticResource IconEdit}" Fill="#FFFFFF" Width="11" Height="11" Stretch="Uniform" Margin="0,0,6,0"/>
+                                                        <TextBlock Text="Knochen-Zeichenmodus aktivieren" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Button>
 
                                                 <Grid Margin="0,4,0,0">
                                                     <Grid.ColumnDefinitions>
@@ -679,7 +843,12 @@
                                                         <ColumnDefinition Width="*"/>
                                                     </Grid.ColumnDefinitions>
                                                     <Button Grid.Column="0" Content="↩ Rückgängig" Click="BtnUndoBone_Click" Margin="0,0,3,0"/>
-                                                    <Button Grid.Column="1" Content="🗑️ Alle löschen" Click="BtnClearBones_Click" Margin="3,0,0,0"/>
+                                                    <Button Grid.Column="1" Click="BtnClearBones_Click" Margin="3,0,0,0">
+                                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                            <Path Data="{StaticResource IconTrash}" Fill="{StaticResource TextSecondaryBrush}" Width="10" Height="10" Stretch="Uniform" Margin="0,0,4,0"/>
+                                                            <TextBlock Text="Alle löschen" VerticalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </Button>
                                                 </Grid>
                                             </StackPanel>
                                         </Border>
@@ -714,9 +883,14 @@
                                                 </Grid>
                                                 <Slider x:Name="SliderBoneOffY" Minimum="-120" Maximum="120" Value="0" SmallChange="2" ValueChanged="SliderBoneAdjust_ValueChanged" Margin="0,0,0,8"/>
 
-                                                <CheckBox x:Name="ChkColorBonesByTemp" Content="🎨 Knochen nach lokaler Temperatur einfärben (Thermo-Osteologie)" IsChecked="False" Click="ChkColorBonesByTemp_Click" Margin="0,0,0,8" ToolTip="Färbt das Skelett dynamisch nach lokaler Entzündungs- und Druckbelastung ein"/>
+                                                <CheckBox x:Name="ChkColorBonesByTemp" Content="Knochen nach lokaler Temperatur einfärben (Thermo-Osteologie)" IsChecked="False" Click="ChkColorBonesByTemp_Click" Margin="0,0,0,8" ToolTip="Färbt das Skelett dynamisch nach lokaler Entzündungs- und Druckbelastung ein"/>
 
-                                                <Button Content="📐 An Gewebekontur anpassen (Auto-Fit)" Click="BtnAutoFitBones_Click" Margin="0,4,0,0"/>
+                                                <Button Click="BtnAutoFitBones_Click" Margin="0,4,0,0">
+                                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                        <Path Data="{StaticResource IconAutoFit}" Fill="{StaticResource TextSecondaryBrush}" Width="11" Height="11" Stretch="Uniform" Margin="0,0,5,0"/>
+                                                        <TextBlock Text="An Gewebekontur anpassen (Auto-Fit)" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Button>
                                             </StackPanel>
                                         </Border>
 
@@ -725,7 +899,12 @@
                                             <StackPanel>
                                                 <Grid Margin="0,0,0,8">
                                                     <TextBlock Text="Osteo-Thermische Gelenkmatrix (CAD):" FontWeight="Bold" FontSize="11" VerticalAlignment="Center"/>
-                                                    <Button HorizontalAlignment="Right" Content="⚡ Knochen abtasten" Click="BtnSampleBoneTemps_Click" Padding="8,3" FontSize="10" Style="{StaticResource VoicemodPrimaryButtonStyle}"/>
+                                                    <Button HorizontalAlignment="Right" Click="BtnSampleBoneTemps_Click" Padding="8,3" FontSize="10" Style="{StaticResource VoicemodPrimaryButtonStyle}">
+                                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                            <Path Data="{StaticResource IconIgniteBolt}" Fill="#FFFFFF" Width="10" Height="10" Stretch="Uniform" Margin="0,0,5,0"/>
+                                                            <TextBlock Text="Knochen abtasten" VerticalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </Button>
                                                 </Grid>
 
                                                 <DataGrid x:Name="GridBoneTemps" MaxHeight="220" AutoGenerateColumns="False" IsReadOnly="True">
@@ -761,7 +940,12 @@
                                                 </Grid>
                                                 <TextBlock Text="Messen Sie den Hallux-Valgus-Winkel (HVA) durch 3-Punkt-Klick (1. Schaft MT-I, 2. Gelenk MTP-I Scheitelpunkt, 3. Hallux)." FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,8"/>
 
-                                                <Button Content="📐 Goniometer-Werkzeug aktivieren" Click="BtnActivateGoniometerTool_Click" Style="{StaticResource VoicemodPrimaryButtonStyle}" Margin="0,0,0,8"/>
+                                                <Button Click="BtnActivateGoniometerTool_Click" Style="{StaticResource VoicemodPrimaryButtonStyle}" Margin="0,0,0,8">
+                                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                        <Path Data="{StaticResource IconGoniometer}" Fill="#FFFFFF" Width="11" Height="11" Stretch="Uniform" Margin="0,0,6,0"/>
+                                                        <TextBlock Text="Goniometer-Werkzeug aktivieren" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Button>
 
                                                 <!-- Angle Value Display Grid -->
                                                 <Grid Margin="0,0,0,6">
@@ -804,7 +988,13 @@
                             </TabItem>
 
                             <!-- TAB 2: DETECTED HOTSPOTS TABLE -->
-                            <TabItem Header="🔬 Herde">
+                            <TabItem>
+                                <TabItem.Header>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Data="{StaticResource IconMicroscope}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=TabItem}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0" SnapsToDevicePixels="True"/>
+                                        <TextBlock Text="Herde" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </TabItem.Header>
                                 <Grid Margin="12">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"/>
@@ -835,7 +1025,13 @@
                             </TabItem>
 
                             <!-- TAB 3: 256-BIN RADIOMETRIC HISTOGRAM -->
-                            <TabItem x:Name="TabHistogram" Header="📊 Spektrum">
+                            <TabItem x:Name="TabHistogram">
+                                <TabItem.Header>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Data="{StaticResource IconRadiometry}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=TabItem}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0" SnapsToDevicePixels="True"/>
+                                        <TextBlock Text="Spektrum" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </TabItem.Header>
                                 <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="14">
                                     <StackPanel>
                                         <TextBlock Text="Radiometrisches Dichtespektrum (256-Kanal)" FontWeight="Bold" FontSize="13.5" Foreground="{StaticResource CyanBrush}" Margin="0,0,0,2"/>
@@ -877,7 +1073,13 @@
                             </TabItem>
 
                             <!-- TAB 4: THERMAL LINE PROFILE T(s) -->
-                            <TabItem x:Name="TabProfile" Header="📈 Profil (%)">
+                            <TabItem x:Name="TabProfile">
+                                <TabItem.Header>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Data="{StaticResource IconProfile}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=TabItem}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0" SnapsToDevicePixels="True"/>
+                                        <TextBlock Text="Profil (%)" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </TabItem.Header>
                                 <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="14">
                                     <StackPanel>
                                         <TextBlock Text="Thermisches Schnittprofil T(s)" FontWeight="Bold" FontSize="13.5" Foreground="{StaticResource CyanBrush}" Margin="0,0,0,2"/>
@@ -916,7 +1118,12 @@
                                                     <TextBlock x:Name="TxtProfileLength" Text="Pfadlänge: -- px" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}"/>
                                                     <TextBlock x:Name="TxtProfileMaxGrad" Text="Maximaler Gradient: -- K/px" FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,0,0"/>
                                                 </StackPanel>
-                                                <Button HorizontalAlignment="Right" Content="CSV KOPIEREN" Click="BtnCopyProfileCsv_Click" Padding="8,3" FontSize="10"/>
+                                                <Button HorizontalAlignment="Right" Click="BtnCopyProfileCsv_Click" Padding="8,3">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <Path Data="{StaticResource IconCopy}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Width="10" Height="10" Stretch="Uniform" Margin="0,0,5,0" SnapsToDevicePixels="True"/>
+                                                        <TextBlock Text="CSV KOPIEREN" FontSize="10" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Button>
                                             </Grid>
                                         </Border>
 
@@ -929,7 +1136,13 @@
                             </TabItem>
 
                             <!-- TAB 5: POINT TEMPERATURE PROBES -->
-                            <TabItem x:Name="TabProbes" Header="📍 Sonden">
+                            <TabItem x:Name="TabProbes">
+                                <TabItem.Header>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Data="{StaticResource IconProbe}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=TabItem}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0" SnapsToDevicePixels="True"/>
+                                        <TextBlock Text="Sonden" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </TabItem.Header>
                                 <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="14">
                                     <StackPanel>
                                         <TextBlock Text="Klinische Punkt-Temperatursonden (P₁ ... Pn)" FontWeight="Bold" FontSize="13.5" Foreground="{StaticResource CyanBrush}" Margin="0,0,0,2"/>
@@ -961,13 +1174,24 @@
                                             </DataGrid.Columns>
                                         </DataGrid>
 
-                                        <Button Content="SONDEN ZURÜCKSETZEN" Click="BtnResetProbes_Click" HorizontalAlignment="Right" Margin="0,10,0,0"/>
+                                        <Button Click="BtnResetProbes_Click" HorizontalAlignment="Right" Margin="0,10,0,0" Padding="10,4">
+                                            <StackPanel Orientation="Horizontal">
+                                                <Path Data="{StaticResource IconTrash}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Width="11" Height="11" Stretch="Uniform" Margin="0,0,5,0" SnapsToDevicePixels="True"/>
+                                                <TextBlock Text="SONDEN ZURÜCKSETZEN" FontSize="10" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Button>
                                     </StackPanel>
                                 </ScrollViewer>
                             </TabItem>
 
                             <!-- TAB 6: ANATOMISCHE FUSS-ZONEN MATRIX -->
-                            <TabItem x:Name="TabAnatomy" Header="🦶 5-Zonen">
+                            <TabItem x:Name="TabAnatomy">
+                                <TabItem.Header>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Data="{StaticResource IconAnatomy}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=TabItem}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0" SnapsToDevicePixels="True"/>
+                                        <TextBlock Text="5-Zonen" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </TabItem.Header>
                                 <Grid Margin="12">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"/>
@@ -997,7 +1221,13 @@
                             </TabItem>
 
                             <!-- TAB 7: 6 TAYLOR-PALMER ANGIOSOMES -->
-                            <TabItem x:Name="TabAngiosomes" Header="🩺 Angiosome">
+                            <TabItem x:Name="TabAngiosomes">
+                                <TabItem.Header>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Data="{StaticResource IconStethoscope}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=TabItem}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0" SnapsToDevicePixels="True"/>
+                                        <TextBlock Text="Angiosome" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </TabItem.Header>
                                 <Grid Margin="12">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"/>
@@ -1020,7 +1250,13 @@
                             </TabItem>
 
                             <!-- TAB 8: PREDICTIVE 7-DAY ULCER RISK FORECASTER -->
-                            <TabItem x:Name="TabPrediction" Header="🛡️ Prädiktion">
+                            <TabItem x:Name="TabPrediction">
+                                <TabItem.Header>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Data="{StaticResource IconShield}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=TabItem}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0" SnapsToDevicePixels="True"/>
+                                        <TextBlock Text="Prädiktion" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </TabItem.Header>
                                 <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="14">
                                     <StackPanel>
                                         <TextBlock Text="Multivariates 7-Tage Ulzerations-Risikomodell" FontWeight="Bold" FontSize="13.5" Foreground="{StaticResource CyanBrush}" Margin="0,0,0,2"/>
@@ -1080,7 +1316,13 @@
                             </TabItem>
 
                             <!-- TAB: BIOMECHANICS & PENNES BIOHEAT PRESSURE PROXY -->
-                            <TabItem x:Name="TabBiomechanics" Header="⚡ Biomechanik">
+                            <TabItem x:Name="TabBiomechanics">
+                                <TabItem.Header>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Data="{StaticResource IconPressure}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=TabItem}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0" SnapsToDevicePixels="True"/>
+                                        <TextBlock Text="Biomechanik" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </TabItem.Header>
                                 <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="14">
                                     <StackPanel>
                                         <TextBlock Text="Biomechanische Plantardruck- &amp; Scherspannungsschätzung" FontWeight="Bold" FontSize="13.5" Foreground="{StaticResource CyanBrush}" Margin="0,0,0,2"/>
@@ -1124,8 +1366,18 @@
                                         <Border Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="12" Margin="0,0,0,10">
                                             <StackPanel>
                                                 <TextBlock Text="Spezial-Projektionen im Viewport:" FontWeight="Bold" FontSize="11" Margin="0,0,0,8"/>
-                                                <Button Content="⚡ Biomechanische Druck-Map anzeigen" Click="BtnViewPressureProxy_Click" Style="{StaticResource VoicemodPrimaryButtonStyle}" Margin="0,0,0,6"/>
-                                                <Button Content="♨️ 2D-Laplace Wärmestau-Filter (∇²T) anzeigen" Click="BtnViewLaplace_Click" Padding="10,6" Margin="0,0,0,4"/>
+                                                <Button Click="BtnViewPressureProxy_Click" Style="{StaticResource VoicemodPrimaryButtonStyle}" Margin="0,0,0,6">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <Path Data="{StaticResource IconPressure}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,6,0" SnapsToDevicePixels="True"/>
+                                                        <TextBlock Text="Biomechanische Druck-Map anzeigen" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Button>
+                                                <Button Click="BtnViewLaplace_Click" Padding="10,6" Margin="0,0,0,4">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <Path Data="{StaticResource IconLaplace}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,6,0" SnapsToDevicePixels="True"/>
+                                                        <TextBlock Text="2D-Laplace Wärmestau-Filter (∇²T) anzeigen" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Button>
                                             </StackPanel>
                                         </Border>
 
@@ -1143,7 +1395,13 @@
                             </TabItem>
 
                             <!-- TAB 9: ISOTHERMEN & DIGITAL SUBTRACTION (DST) -->
-                            <TabItem x:Name="TabIsotherms" Header="🌐 Isothermen">
+                            <TabItem x:Name="TabIsotherms">
+                                <TabItem.Header>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Data="{StaticResource IconIsotherm}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=TabItem}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0" SnapsToDevicePixels="True"/>
+                                        <TextBlock Text="Isothermen" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </TabItem.Header>
                                 <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="14">
                                     <StackPanel>
                                         <TextBlock Text="Isothermen-Band &amp; Digital Subtraction (DST)" FontWeight="Bold" FontSize="13.5" Foreground="{StaticResource CyanBrush}" Margin="0,0,0,2"/>
@@ -1182,7 +1440,13 @@
                             </TabItem>
 
                             <!-- TAB 10: BILATERAL SYMMETRY (ARMSTRONG) -->
-                            <TabItem Header="⚖️ Bilateral">
+                            <TabItem>
+                                <TabItem.Header>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Data="{StaticResource IconScale}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=TabItem}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0" SnapsToDevicePixels="True"/>
+                                        <TextBlock Text="Bilateral" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </TabItem.Header>
                                 <Grid Margin="12">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"/>
@@ -1212,7 +1476,13 @@
                             </TabItem>
 
                             <!-- TAB 11: PERFUSION ANALYSIS -->
-                            <TabItem Header="📉 Perfusion">
+                            <TabItem>
+                                <TabItem.Header>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Data="{StaticResource IconPerfusion}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=TabItem}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0" SnapsToDevicePixels="True"/>
+                                        <TextBlock Text="Perfusion" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </TabItem.Header>
                                 <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="14">
                                     <StackPanel>
                                         <TextBlock Text="Longitudinale Perfusionsanalyse (dT/dy)" FontWeight="Bold" FontSize="13.5" Foreground="{StaticResource CyanBrush}" Margin="0,0,0,4"/>
@@ -1232,7 +1502,13 @@
                             </TabItem>
 
                             <!-- TAB 12: LUA CLINICAL RULE ENGINE -->
-                            <TabItem Header="📜 Leitlinien (Lua)">
+                            <TabItem>
+                                <TabItem.Header>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Data="{StaticResource IconCode}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=TabItem}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0" SnapsToDevicePixels="True"/>
+                                        <TextBlock Text="Leitlinien (Lua)" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </TabItem.Header>
                                 <Grid Margin="12">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"/>
@@ -1255,7 +1531,13 @@
                             </TabItem>
 
                             <!-- TAB 13: AUDIT TRAIL (SQLITE) -->
-                            <TabItem Header="🗄️ DSGVO Audit">
+                            <TabItem>
+                                <TabItem.Header>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Data="{StaticResource IconAudit}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=TabItem}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0" SnapsToDevicePixels="True"/>
+                                        <TextBlock Text="DSGVO Audit" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </TabItem.Header>
                                 <Grid Margin="12">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"/>
@@ -1280,7 +1562,13 @@
                             </TabItem>
 
                             <!-- TAB 14: VASCULAR & VEIN ANGIOGRAPHY -->
-                            <TabItem x:Name="TabVascular" Header="🩸 Vaskulär">
+                            <TabItem x:Name="TabVascular">
+                                <TabItem.Header>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Data="{StaticResource IconVascular}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=TabItem}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0" SnapsToDevicePixels="True"/>
+                                        <TextBlock Text="Vaskulär" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </TabItem.Header>
                                 <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="14">
                                     <StackPanel>
                                         <TextBlock Text="Vaskuläre Gefäßkartierung (Frangi-Hesse)" FontWeight="Bold" FontSize="13.5" Foreground="{StaticResource CyanBrush}" Margin="0,0,0,3"/>
@@ -1323,7 +1611,12 @@
                                             </StackPanel>
                                         </Border>
 
-                                        <Button Content="FRANGI-FILTER NEU BERECHNEN" Click="BtnRecalcVeins_Click" Style="{StaticResource VoicemodPrimaryButtonStyle}" Margin="0,2,0,10"/>
+                                        <Button Click="BtnRecalcVeins_Click" Style="{StaticResource VoicemodPrimaryButtonStyle}" Margin="0,2,0,10">
+                                            <StackPanel Orientation="Horizontal">
+                                                <Path Data="{StaticResource IconVascular}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,7,0" SnapsToDevicePixels="True"/>
+                                                <TextBlock Text="FRANGI-FILTER NEU BERECHNEN" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Button>
 
                                         <Border Background="#F8FAFC" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="12">
                                             <StackPanel>
@@ -1338,7 +1631,13 @@
                             </TabItem>
 
                             <!-- TAB 15: STRUCTURED CLINICAL FINDINGS (ARZTBERICHT) -->
-                            <TabItem Header="📋 Arztbericht">
+                            <TabItem>
+                                <TabItem.Header>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Data="{StaticResource IconReport}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=TabItem}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0" SnapsToDevicePixels="True"/>
+                                        <TextBlock Text="Arztbericht" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </TabItem.Header>
                                 <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="14">
                                     <StackPanel>
                                         <TextBlock Text="Strukturierter Ärztlicher Befundbericht" FontWeight="Bold" FontSize="13.5" Foreground="{StaticResource CyanBrush}" Margin="0,0,0,2"/>
@@ -1396,7 +1695,12 @@
                                             </StackPanel>
                                         </Border>
 
-                                        <Button Content="📄 PDF-Befundbericht generieren" Click="MenuExportReport_Click" Style="{StaticResource VoicemodPrimaryButtonStyle}" HorizontalAlignment="Right"/>
+                                        <Button Click="MenuExportReport_Click" Style="{StaticResource VoicemodPrimaryButtonStyle}" HorizontalAlignment="Right">
+                                            <StackPanel Orientation="Horizontal">
+                                                <Path Data="{StaticResource IconDownload}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,6,0" SnapsToDevicePixels="True"/>
+                                                <TextBlock Text="PDF-Befundbericht generieren" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Button>
                                     </StackPanel>
                                 </ScrollViewer>
                             </TabItem>

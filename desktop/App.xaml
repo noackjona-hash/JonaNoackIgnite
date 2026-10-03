@@ -58,6 +58,146 @@
         <SolidColorBrush x:Key="TextMutedBrush" Color="#94A3B8"/>
 
         <!-- ============================================================ -->
+        <!-- MEDICAL SHADOW & ELEVATION SYSTEM                            -->
+        <!-- ============================================================ -->
+        <DropShadowEffect x:Key="ShadowCard" BlurRadius="10" Direction="270" ShadowDepth="2" Opacity="0.06" Color="#0F172A"/>
+        <DropShadowEffect x:Key="ShadowFloating" BlurRadius="20" Direction="270" ShadowDepth="4" Opacity="0.10" Color="#0F172A"/>
+        <DropShadowEffect x:Key="ShadowGlowCyan" BlurRadius="12" Direction="270" ShadowDepth="0" Opacity="0.45" Color="#0284C7"/>
+
+        <!-- ============================================================ -->
+        <!-- RESEARCH-GRADE CLINICAL VECTOR STREAM GEOMETRIES (SVG PATHS) -->
+        <!-- DIN EN ISO 13485 Medical Workstation Iconography            -->
+        <!-- ============================================================ -->
+        <!-- Brand Lightning Bolt -->
+        <StreamGeometry x:Key="IconIgniteBolt">M13 2L3 14H12L11 22L21 10H12L13 2Z</StreamGeometry>
+
+        <!-- Workstation / Dual-View Screen Setup -->
+        <StreamGeometry x:Key="IconWorkstation">M3 4C2.45 4 2 4.45 2 5V17C2 17.55 2.45 18 3 18H10V20H7C6.45 20 6 20.45 6 21C6 21.55 6.45 22 7 22H17C17.55 22 18 21.55 18 21C18 20.45 17.55 20 17 20H14V18H21C21.55 18 22 17.55 22 17V5C22 4.45 21.55 4 21 4H3ZM4 6H11V16H4V6ZM13 6H20V16H13V6Z</StreamGeometry>
+
+        <!-- Vascular / Blood Vessel Tree -->
+        <StreamGeometry x:Key="IconVascular">M12 2C11.45 2 11 2.45 11 3V7.2L8.2 4.4C7.8 4 7.2 4 6.8 4.4C6.4 4.8 6.4 5.4 6.8 5.8L10 9V13.17C8.83 13.58 8 14.69 8 16C8 17.66 9.34 19 11 19V21C11 21.55 11.45 22 12 22C12.55 22 13 21.55 13 21V19C14.66 19 16 17.66 16 16C16 14.69 15.17 13.58 14 13.17V10.83L17.2 7.63C17.6 7.23 17.6 6.6 17.2 6.2C16.8 5.8 16.2 5.8 15.8 6.2L13 9V3C13 2.45 12.55 2 12 2Z</StreamGeometry>
+
+        <!-- Hotspot / Thermal Calibrated Heat Source -->
+        <StreamGeometry x:Key="IconThermal">M12 2C11.5 2 11 2.4 11 3C10.8 5.5 9.4 7.2 8.1 8.8C6.6 10.7 5 12.8 5 16C5 19.9 8.1 23 12 23C15.9 23 19 19.9 19 16C19 12.2 16.5 8.9 14.8 6.5C14.2 5.6 13.7 4.7 13.5 3.8C13.2 2.7 12.6 2 12 2ZM12 6.1C13.1 7.7 14.5 9.7 15.5 12C15.8 12.7 16 13.5 16 14.3C16 14.9 15.8 15.5 15.4 16C14.3 14.4 13.2 13.8 12 13.8C10.8 13.8 9.7 14.4 8.6 16C8.2 15.5 8 14.9 8 14.3C8 12.3 9.4 10.3 10.6 8.8C11.2 8 11.7 7.1 12 6.1Z</StreamGeometry>
+
+        <!-- Bones / Orthopedic Skeletal Articulation -->
+        <StreamGeometry x:Key="IconBones">M6.5 2C4.57 2 3 3.57 3 5.5C3 6.76 3.67 7.86 4.67 8.47L4.67 15.53C3.67 16.14 3 17.24 3 18.5C3 20.43 4.57 22 6.5 22C7.76 22 8.86 21.33 9.47 20.33H14.53C15.14 21.33 16.24 22 17.5 22C19.43 22 21 20.43 21 18.5C21 17.24 20.33 16.14 19.33 15.53V8.47C20.33 7.86 21 6.76 21 5.5C21 3.57 19.43 2 17.5 2C16.24 2 15.14 2.67 14.53 3.67H9.47C8.86 2.67 7.76 2 6.5 2ZM6.5 4C7.33 4 8 4.67 8 5.5C8 6.33 7.33 7 6.5 7C5.67 7 5 6.33 5 5.5C5 4.67 5.67 4 6.5 4ZM17.5 4C18.33 4 19 4.67 19 5.5C19 6.33 18.33 7 17.5 7C16.67 7 16 6.33 16 5.5C16 4.67 16.67 4 17.5 4ZM9.5 6H14.5C14.85 6.78 15.42 7.42 16.15 7.82L16.15 16.18C15.42 16.58 14.85 17.22 14.5 18H9.5C9.15 17.22 8.58 16.58 7.85 16.18V7.82C8.58 7.42 9.15 6.78 9.5 6ZM6.5 17C7.33 17 8 17.67 8 18.5C8 19.33 7.33 20 6.5 20C5.67 20 5 19.33 5 18.5C5 17.67 5.67 17 6.5 17ZM17.5 17C18.33 17 19 17.67 19 18.5C19 19.33 18.33 20 17.5 20C16.67 20 16 19.33 16 18.5C16 17.67 16.67 17 17.5 17Z</StreamGeometry>
+
+        <!-- Anatomy / Plantar Foot Contour -->
+        <StreamGeometry x:Key="IconAnatomy">M12 2C8.5 2 6 5.5 6 9C6 11.8 7.3 13.5 8 15.5C8.8 17.8 9 20 10.5 21.5C11.3 22.3 12.5 22.5 13.5 22C15.5 21 16.5 19 17 16.5C17.6 13.5 18 10.5 18 7C18 4.2 15.4 2 12 2ZM12 4C14.2 4 16 5.8 16 8C16 11 15.6 13.8 15 16.3C14.6 18.2 13.9 19.7 12.8 20.2C11.5 20.8 10.6 19.6 10 17.8C9.2 15.5 8 13.2 8 9C8 6.2 9.8 4 12 4Z</StreamGeometry>
+
+        <!-- Radiometry / Spectrum Histogram -->
+        <StreamGeometry x:Key="IconRadiometry">M3 3V19C3 20.1 3.9 21 5 21H21V19H5V3H3ZM7 17H9V10H7V17ZM11 17H13V6H11V17ZM15 17H17V12H15V17ZM19 17H21V8H19V17Z</StreamGeometry>
+
+        <!-- Report / Clipboard with Medical Cross -->
+        <StreamGeometry x:Key="IconReport">M19 3H14.82C14.4 1.84 13.3 1 12 1C10.7 1 9.6 1.84 9.18 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19V5C21 3.9 20.1 3 19 3ZM12 3C12.55 3 13 3.45 13 4C13 4.55 12.55 5 12 5C11.45 5 11 4.55 11 4C11 3.45 11.45 3 12 3ZM19 19H5V5H7V7H17V5H19V19ZM11 9H13V12H16V14H13V17H11V14H8V12H11V9Z</StreamGeometry>
+
+        <!-- Params / Precision Sliders -->
+        <StreamGeometry x:Key="IconParams">M3 17V19H9V17H3ZM3 5V7H13V5H3ZM13 21V19H21V17H13V15H11V21H13ZM7 9V11H3V13H7V15H9V9H7ZM21 13V11H11V13H21ZM17 9V7H21V5H17V3H15V9H17Z</StreamGeometry>
+
+        <!-- Audit / GDPR Compliance Vault & Shield -->
+        <StreamGeometry x:Key="IconAudit">M12 2L4 5V11.09C4 16.14 7.41 20.85 12 22C16.59 20.85 20 16.14 20 11.09V5L12 2ZM12 4.15L18 6.4V11.09C18 15.11 15.45 18.84 12 19.92C8.55 18.84 6 15.11 6 11.09V6.4L12 4.15ZM10.5 13.9L8.1 11.5L6.7 12.9L10.5 16.7L17.3 9.9L15.9 8.5L10.5 13.9Z</StreamGeometry>
+
+        <!-- Info / About -->
+        <StreamGeometry x:Key="IconInfo">M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM13 17H11V11H13V17ZM13 9H11V7H13V9Z</StreamGeometry>
+
+        <!-- Doctor / Physician Profile Silhouette -->
+        <StreamGeometry x:Key="IconDoctor">M12 2C9.24 2 7 4.24 7 7C7 9.76 9.24 12 12 12C14.76 12 17 9.76 17 7C17 4.24 14.76 2 12 2ZM12 4C13.66 4 15 5.34 15 7C15 8.66 13.66 10 12 10C10.34 10 9 8.66 9 7C9 5.34 10.34 4 12 4ZM6 19.5C6 16.5 9 14.5 12 14.5C15 14.5 18 16.5 18 19.5V21H6V19.5ZM8 19.5H16C15.7 17.8 14 16.5 12 16.5C10 16.5 8.3 17.8 8 19.5Z</StreamGeometry>
+
+        <!-- Search / PACS Magnifier -->
+        <StreamGeometry x:Key="IconSearch">M15.5 14H14.71L14.43 13.73C15.41 12.59 16 11.11 16 9.5C16 5.91 13.09 3 9.5 3C5.91 3 3 5.91 3 9.5C3 13.09 5.91 16 9.5 16C11.11 16 12.59 15.41 13.73 14.43L14 14.71V15.5L19 20.49L20.49 19L15.5 14ZM9.5 14C7.01 14 5 11.99 5 9.5C5 7.01 7.01 5 9.5 5C11.99 5 14 7.01 14 9.5C14 11.99 11.99 14 9.5 14Z</StreamGeometry>
+
+        <!-- Bell / Notifications -->
+        <StreamGeometry x:Key="IconBell">M12 22C13.1 22 14 21.1 14 20H10C10 21.1 10.9 22 12 22ZM18 16V11C18 7.93 16.37 5.36 13.5 4.68V4C13.5 3.17 12.83 2.5 12 2.5C11.17 2.5 10.5 3.17 10.5 4V4.68C7.64 5.36 6 7.92 6 11V16L4 18V19H20V18L18 16ZM16 17H8V11C8 8.52 9.51 6.5 12 6.5C14.49 6.5 16 8.52 16 11V17Z</StreamGeometry>
+
+        <!-- Help / Support -->
+        <StreamGeometry x:Key="IconHelp">M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20ZM11 16H13V18H11V16ZM12 6C9.79 6 8 7.79 8 10H10C10 8.9 10.9 8 12 8C13.1 8 14 8.9 14 10C14 12 11 11.75 11 15H13C13 12.75 16 12.5 16 10C16 7.79 14.21 6 12 6Z</StreamGeometry>
+
+        <!-- Menu / Hamburger -->
+        <StreamGeometry x:Key="IconMenu">M3 18H21V16H3V18ZM3 13H21V11H3V13ZM3 6V8H21V6H3Z</StreamGeometry>
+
+        <!-- Play / Diagnosis Trigger -->
+        <StreamGeometry x:Key="IconPlay">M8 5V19L19 12L8 5Z</StreamGeometry>
+
+        <!-- Pan / Hand Tool -->
+        <StreamGeometry x:Key="IconPan">M13 24C8.58 24 5 20.42 5 16L5 11.5C5 10.67 5.67 10 6.5 10C7.33 10 8 10.67 8 11.5L8 16H9V5.5C9 4.67 9.67 4 10.5 4C11.33 4 12 4.67 12 5.5L12 16H13V2.5C13 1.67 13.67 1 14.5 1C15.33 1 16 1.67 16 2.5L16 16H17V5.5C17 4.67 17.67 4 18.5 4C19.33 4 20 4.67 20 5.5L20 17C20 20.87 16.87 24 13 24Z</StreamGeometry>
+
+        <!-- ROI / Region of Interest -->
+        <StreamGeometry x:Key="IconRoi">M4 4H9V2H4C2.9 2 2 2.9 2 4V9H4V4ZM20 2H15V4H20V9H22V4C22 2.9 21.1 2 20 2ZM4 20H9V22H4C2.9 22 2 21.1 2 20V15H4V20ZM20 20H15V22H20C21.1 22 22 21.1 22 20V15H20V20ZM7 7H17V17H7V7ZM9 9V15H15V9H9Z</StreamGeometry>
+
+        <!-- Profile / Temperature Transect -->
+        <StreamGeometry x:Key="IconProfile">M3.5 18.49L9.5 12.49L13.5 16.49L22 6.92L20.59 5.51L13.5 13.66L9.5 9.66L2.09 17.08L3.5 18.49Z</StreamGeometry>
+
+        <!-- Probe / Crosshair Measurement Pin -->
+        <StreamGeometry x:Key="IconProbe">M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM13 4.07C16.39 4.57 19.06 7.24 19.56 10.63H15.86C15.44 8.78 14.02 7.36 12.17 6.94V4.07H13ZM11 4.07V6.94C9.15 7.36 7.73 8.78 7.31 10.63H3.61C4.11 7.24 6.78 4.57 10.17 4.07H11ZM3.61 12.63H7.31C7.73 14.48 9.15 15.9 11 16.32V19.19C7.61 18.69 4.94 16.02 4.44 12.63H3.61ZM13 19.19V16.32C14.85 15.9 16.27 14.48 16.69 12.63H20.39C19.89 16.02 17.22 18.69 13.83 19.19H13Z</StreamGeometry>
+
+        <!-- Goniometer / Orthopedic Angle Tool -->
+        <StreamGeometry x:Key="IconGoniometer">M19 19H5V5H7V17H19V19ZM16.5 7.5L15.09 6.09L8.5 12.68L9.91 14.09L16.5 7.5ZM19 13C16.24 13 14 10.76 14 8H12C12 11.87 15.13 15 19 15V13Z</StreamGeometry>
+
+        <!-- Window/Level Contrast Circle -->
+        <StreamGeometry x:Key="IconWindowLevel">M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20V4C16.42 4 20 7.58 20 12C20 16.42 16.42 20 12 20Z</StreamGeometry>
+
+        <!-- Zoom Fit -->
+        <StreamGeometry x:Key="IconZoomFit">M3 5V9H5V5H9V3H5C3.9 3 3 3.9 3 5ZM3 19C3 20.1 3.9 21 5 21H9V19H5V15H3V19ZM19 3H15V5H19V9H21V5C21 3.9 20.1 3 19 3ZM21 19V15H19V19H15V21H19C20.1 21 21 20.1 21 19ZM8 8H16V16H8V8Z</StreamGeometry>
+
+        <!-- Curtain Split -->
+        <StreamGeometry x:Key="IconCurtain">M4 3C2.9 3 2 3.9 2 5V19C2 20.1 2.9 21 4 21H20C21.1 21 22 20.1 22 19V5C22 3.9 21.1 3 20 3H4ZM4 5H11V19H4V5ZM13 5H20V19H13V5ZM9 10L7 12L9 14V10ZM15 10V14L17 12L15 10Z</StreamGeometry>
+
+        <!-- 3D Relief / Mountain Contour -->
+        <StreamGeometry x:Key="IconRelief">M14 6L10.25 11L13.1 14.8L11.5 16C9.7 13.6 7 10 7 10L1 18H23L14 6ZM5.4 16L7.8 12.8L9.5 15.1L5.4 16ZM14.1 8.9L19.4 16H13.6L12.2 14.1L14.1 8.9Z</StreamGeometry>
+
+        <!-- Isotherms / Thermal Bands -->
+        <StreamGeometry x:Key="IconIsotherm">M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4ZM12 7C9.24 7 7 9.24 7 12C7 14.76 9.24 17 12 17C14.76 17 17 14.76 17 12C17 9.24 14.76 7 12 7ZM12 9C13.66 9 15 10.34 15 12C15 13.66 13.66 15 12 15C10.34 15 9 13.66 9 12C9 10.34 10.34 9 12 9Z</StreamGeometry>
+
+        <!-- Pressure Proxy / Pennes Bioheat Gauge -->
+        <StreamGeometry x:Key="IconPressure">M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 4C16.41 4 20 7.59 20 12C20 13.88 19.34 15.61 18.23 17L14.41 13.18C14.78 12.83 15 12.44 15 12C15 10.34 13.66 9 12 9C10.34 9 9 10.34 9 12C9 13.66 10.34 15 12 15C12.44 15 12.83 14.78 13.18 14.41L17 18.23C15.61 19.34 13.88 20 12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4ZM12 11C12.55 11 13 11.45 13 12C13 12.55 12.55 13 12 13C11.45 13 11 12.55 11 12C11 11.45 11.45 11 12 11Z</StreamGeometry>
+
+        <!-- Laplace Deep Tissue Heat Diffusion -->
+        <StreamGeometry x:Key="IconLaplace">M12 3C7.03 3 3 7.03 3 12C3 16.97 7.03 21 12 21C16.97 21 21 16.97 21 12H19C19 15.87 15.87 19 12 19C8.13 19 5 15.87 5 12C5 8.13 8.13 5 12 5V3ZM12 7C9.24 7 7 9.24 7 12C7 14.76 9.24 17 12 17V15C10.34 15 9 13.66 9 12C9 10.34 10.34 9 12 9V7ZM12 11C11.45 11 11 11.45 11 12C11 12.55 11.45 13 12 13C12.55 13 13 12.55 13 12C13 11.45 12.55 11 12 11Z</StreamGeometry>
+
+        <!-- DICOM Radiography Illuminator -->
+        <StreamGeometry x:Key="IconDicom">M19 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19V5C21 3.9 20.1 3 19 3ZM19 19H5V5H19V19ZM11 7H13V11H17V13H13V17H11V13H7V11H11V7Z</StreamGeometry>
+
+        <!-- Microscope / Hotspots -->
+        <StreamGeometry x:Key="IconMicroscope">M9 3V5H11V3H9ZM14 4C14 2.9 13.1 2 12 2H8C6.9 2 6 2.9 6 4V7.59L4.29 9.29C3.9 9.68 3.9 10.32 4.29 10.71L6 12.41V19C6 20.1 6.9 21 8 21H16C17.1 21 18 20.1 18 19C18 17.9 17.1 17 16 17H14V14.83C15.78 13.9 17 12.1 17 10C17 7.24 14.76 5 12 5V4H14ZM8 8H12C13.1 8 14 8.9 14 10C14 11.1 13.1 12 12 12H8V8ZM8 14H12V16H8V14ZM8 19V18H16V19H8Z</StreamGeometry>
+
+        <!-- Stethoscope / Angiosomes -->
+        <StreamGeometry x:Key="IconStethoscope">M19 14C20.1 14 21 13.1 21 12V3H19V7H15V3H13V12C13 15.31 10.31 18 7 18C5.66 18 4.43 17.56 3.44 16.82L2 18.26C3.39 19.34 5.12 20 7 20C11.42 20 15 16.42 15 12V9H17V12C17 13.1 17.9 14 19 14ZM19 16C17.9 16 17 16.9 17 18C17 19.1 17.9 20 19 20C20.1 20 21 19.1 21 18C21 16.9 20.1 16 19 16Z</StreamGeometry>
+
+        <!-- Shield / Prediction -->
+        <StreamGeometry x:Key="IconShield">M12 1L3 5V11C3 16.55 6.84 21.74 12 23C17.16 21.74 21 16.55 21 11V5L12 1ZM12 11.99H19C18.47 16.11 15.72 19.78 12 20.93V12H5V6.3L12 3.19V11.99Z</StreamGeometry>
+
+        <!-- Scale / Bilateral Symmetry Balance -->
+        <StreamGeometry x:Key="IconScale">M12 3C11.45 3 11 3.45 11 4V5.08C8.5 5.54 6.55 7.42 6.1 9.92L3 16C2.5 17 3.2 18 4.3 18H8.7C9.8 18 10.5 17 10 16L6.9 9.92C7.3 8.27 8.7 7 10.5 7H11V19H8C7.45 19 7 19.45 7 20C7 20.55 7.45 21 8 21H16C16.55 21 17 20.55 17 20C17 19.45 16.55 19 16 19H13V7H13.5C15.3 7 16.7 8.27 17.1 9.92L14 16C13.5 17 14.2 18 15.3 18H19.7C20.8 18 21.5 17 21 16L17.9 9.92C17.45 7.42 15.5 5.54 13 5.08V4C13 3.45 12.55 3 12 3ZM5 16L6.5 13H3.5L5 16ZM19 16L20.5 13H17.5L19 16Z</StreamGeometry>
+
+        <!-- Perfusion / Curve -->
+        <StreamGeometry x:Key="IconPerfusion">M3 13C3.5 13 4 12.6 4.3 12.1L6.7 7.5L9.3 15.5L11.5 10.5L13.2 13.8C13.5 14.5 14.2 15 15 15H21V13H15.6L14.7 11.2L12.5 6.5C12.1 5.7 11 5.6 10.5 6.4L8.3 11.5L6.1 4.7C5.8 3.7 4.5 3.6 4 4.5L1.7 9H1V11H2.4L3 13Z</StreamGeometry>
+
+        <!-- Code / Lua Decision Guidelines -->
+        <StreamGeometry x:Key="IconCode">M9.4 16.6L4.8 12L9.4 7.4L8 6L2 12L8 18L9.4 16.6ZM14.6 16.6L19.2 12L14.6 7.4L16 6L22 12L16 18L14.6 16.6Z</StreamGeometry>
+
+        <!-- Edit / Pencil -->
+        <StreamGeometry x:Key="IconEdit">M3 17.25V21H6.75L17.81 9.94L14.06 6.19L3 17.25ZM20.71 7.04C21.1 6.65 21.1 6.02 20.71 5.63L18.37 3.29C17.98 2.9 17.35 2.9 16.96 3.29L15.13 5.12L18.88 8.87L20.71 7.04Z</StreamGeometry>
+
+        <!-- Trash / Delete -->
+        <StreamGeometry x:Key="IconTrash">M6 19C6 20.1 6.9 21 8 21H16C17.1 21 18 20.1 18 19V7H6V19ZM19 4H15.5L14.5 3H9.5L8.5 4H5V6H19V4Z</StreamGeometry>
+
+        <!-- Palette / Color Scale -->
+        <StreamGeometry x:Key="IconPalette">M12 3C6.5 3 2 6.5 2 12C2 14.5 3 16.5 4.5 18C5.2 18.7 5.7 19.5 5.5 20.5C5.4 21 5.8 21.5 6.3 21.5H7.5C12.5 21.5 22 18 22 12C22 7 17.5 3 12 3ZM6.5 12C5.7 12 5 11.3 5 10.5C5 9.7 5.7 9 6.5 9C7.3 9 8 9.7 8 10.5C8 11.3 7.3 12 6.5 12ZM9.5 8C8.7 8 8 7.3 8 6.5C8 5.7 8.7 5 9.5 5C10.3 5 11 5.7 11 6.5C11 7.3 10.3 8 9.5 8ZM14.5 8C13.7 8 13 7.3 13 6.5C13 5.7 13.7 5 14.5 5C15.3 5 16 5.7 16 6.5C16 7.3 15.3 8 14.5 8ZM17.5 12C16.7 12 16 11.3 16 10.5C16 9.7 16.7 9 17.5 9C18.3 9 19 9.7 19 10.5C19 11.3 18.3 12 17.5 12Z</StreamGeometry>
+
+        <!-- Download / Export -->
+        <StreamGeometry x:Key="IconDownload">M19 9H15V3H9V9H5L12 16L19 9ZM5 18V20H19V18H5Z</StreamGeometry>
+
+        <!-- Copy / Clipboard -->
+        <StreamGeometry x:Key="IconCopy">M16 1H4C2.9 1 2 1.9 2 3V17H4V3H16V1ZM19 5H8C6.9 5 6 5.9 6 7V21C6 22.1 6.9 23 8 23H19C20.1 23 21 22.1 21 21V7C21 5.9 20.1 5 19 5ZM19 21H8V7H19V21Z</StreamGeometry>
+
+        <!-- AutoFit / Contour Alignment -->
+        <StreamGeometry x:Key="IconAutoFit">M3 5V9H5V5H9V3H5C3.9 3 3 3.9 3 5ZM3 19C3 20.1 3.9 21 5 21H9V19H5V15H3V19ZM19 3H15V5H19V9H21V5C21 3.9 20.1 3 19 3ZM21 19V15H19V19H15V21H19C20.1 21 21 20.1 21 19ZM12 8C9.79 8 8 9.79 8 12C8 14.21 9.79 16 12 16C14.21 16 16 14.21 16 12C16 9.79 14.21 8 12 8Z</StreamGeometry>
+
+        <!-- Warning Triangle -->
+        <StreamGeometry x:Key="IconWarning">M1 21H23L12 2L1 21ZM13 18H11V16H13V18ZM13 14H11V10H13V14Z</StreamGeometry>
+
+        <!-- ============================================================ -->
         <!-- CLEAN MINIMAL SCROLLBAR SYSTEM                               -->
         <!-- ============================================================ -->
         <Style x:Key="VoicemodScrollThumb" TargetType="{x:Type Thumb}">
@@ -319,6 +459,7 @@
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter TargetName="railBd" Property="Background" Value="{StaticResource CyanBrush}"/>
+                                <Setter TargetName="railBd" Property="Effect" Value="{StaticResource ShadowGlowCyan}"/>
                                 <Setter Property="Foreground" Value="#FFFFFF"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -366,8 +507,9 @@
         <Style x:Key="VoicemodDockRadioStyle" TargetType="RadioButton">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="#475569"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="9,6"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="Padding" Value="10,6"/>
             <Setter Property="Margin" Value="2,0"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="FontSize" Value="10.5"/>
@@ -377,6 +519,8 @@
                     <ControlTemplate TargetType="RadioButton">
                         <Border x:Name="dockBd"
                                 Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
                                 CornerRadius="14"
                                 Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -388,6 +532,7 @@
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter TargetName="dockBd" Property="Background" Value="#E0F2FE"/>
+                                <Setter TargetName="dockBd" Property="BorderBrush" Value="#BAE6FD"/>
                                 <Setter Property="Foreground" Value="{StaticResource CyanBrush}"/>
                                 <Setter Property="FontWeight" Value="Bold"/>
                             </Trigger>
