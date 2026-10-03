@@ -228,7 +228,6 @@ namespace Ignite.Desktop.Services
             double mad,
             string armstrongStage,
             string riskLevel,
-            OsteoThermalMatrixReport? osteoReport,
             GoniometerMeasurement? goniometer,
             PressureProxyStats? pressureStats)
         {
@@ -250,21 +249,9 @@ namespace Ignite.Desktop.Services
             sb.AppendLine($"   • Streuungsmaß (MAD):      {mad:F2} K");
             sb.AppendLine();
 
-            if (osteoReport != null && osteoReport.Bones.Count > 0)
-            {
-                sb.AppendLine("2. OSTEO-THERMISCHE GELENKMATRIX & CHARCOT-INDEX:");
-                if (osteoReport.HighestRiskBone != null)
-                {
-                    sb.AppendLine($"   • Maximale Knochenlast:    {osteoReport.HighestRiskBone.LatinName} mit {osteoReport.HighestRiskBone.MaxTemp:F1} °C (ΔT = {osteoReport.HighestRiskBone.DeltaT:+0.0;-0.0;0.0} K)");
-                    sb.AppendLine($"   • Status Knochenlast:      {osteoReport.HighestRiskBone.RiskLevel}");
-                }
-                sb.AppendLine($"   • Charcot-Index (CII):     {osteoReport.CharcotInflammatoryIndex:F1} K -> {osteoReport.CharcotRiskStatus}");
-                sb.AppendLine();
-            }
-
             if (goniometer != null && goniometer.AngleDegrees > 0)
             {
-                sb.AppendLine("3. ORTHOPÄDISCHE WINKELMESSUNG (GONIOMETER):");
+                sb.AppendLine("2. ORTHOPÄDISCHE WINKELMESSUNG (GONIOMETER):");
                 sb.AppendLine($"   • Hallux-Valgus-Winkel (HVA): {goniometer.AngleDegrees:F1}° ({goniometer.SeverityGrade})");
                 sb.AppendLine($"   • Klassifikation:             {goniometer.Classification}");
                 sb.AppendLine($"   • Klinische Indikation:       {goniometer.ClinicalIndication}");
@@ -273,14 +260,14 @@ namespace Ignite.Desktop.Services
 
             if (pressureStats != null && pressureStats.PeakPressureKpa > 0)
             {
-                sb.AppendLine("4. BIOMECHANISCHER PLANTARDRUCK-PROXY (PENNES BIOHEAT):");
+                sb.AppendLine("3. BIOMECHANISCHER PLANTARDRUCK-PROXY (PENNES BIOHEAT):");
                 sb.AppendLine($"   • Spitzen-Druckschätzung:  {pressureStats.PeakPressureKpa:F0} kPa (Peak bei X={pressureStats.PeakLocation.X:F0}, Y={pressureStats.PeakLocation.Y:F0})");
                 sb.AppendLine($"   • Mittlerer Sohlendruck:   {pressureStats.MeanPressureKpa:F0} kPa");
                 sb.AppendLine($"   • Risikostufe:             {pressureStats.RiskCategory}");
                 sb.AppendLine();
             }
 
-            sb.AppendLine("5. DIAGNOSTISCHE GESAMTBEWERTUNG & ARMSTRONG-KLASSIFIKATION:");
+            sb.AppendLine("4. DIAGNOSTISCHE GESAMTBEWERTUNG & ARMSTRONG-KLASSIFIKATION:");
             sb.AppendLine($"   • Armstrong-Kategorie:     {armstrongStage.ToUpperInvariant()}");
             sb.AppendLine($"   • Gesamtrisiko-Einstufung: {riskLevel}");
 
@@ -296,7 +283,7 @@ namespace Ignite.Desktop.Services
             }
             sb.AppendLine();
 
-            sb.AppendLine("6. THERAPIE- & PRÄVENTIONSDIREKTIVEN (IWGDF 2023):");
+            sb.AppendLine("5. THERAPIE- & PRÄVENTIONSDIREKTIVEN (IWGDF 2023):");
             if (riskLevel.Contains("CRITICAL") || riskLevel.Contains("KRITISCH"))
             {
                 sb.AppendLine("   [!] Sofortige Entlastung der betroffenen Extremität (z. B. Vorfußentlastungsschuh).");

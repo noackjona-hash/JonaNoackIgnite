@@ -26,7 +26,6 @@ namespace Ignite.Desktop.Services
         public string OverallRiskLevel { get; set; } = "PHYSIOLOGISCH";
         public string OverallRecommendation { get; set; } = "Regulärer Befund, keine akute Intervention erforderlich.";
 
-        public OsteoThermalMatrixReport? OsteoReport { get; set; }
         public GoniometerMeasurement? Goniometer { get; set; }
         public List<AngiosomeTerritory>? Angiosomes { get; set; }
         public List<HotspotReportItem> Hotspots { get; set; } = new();
@@ -115,7 +114,7 @@ namespace Ignite.Desktop.Services
             sb.AppendLine("    <div class='header'>");
             sb.AppendLine("        <div class='logo-title'>");
             sb.AppendLine("            <h1>IGNITE MEDICAL PACS SUITE v5.0.0</h1>");
-            sb.AppendLine("            <div class='subtitle'>Radiometrische Computer-Assisted Diagnostics (CAD) &amp; Osteo-Thermologie</div>");
+            sb.AppendLine("            <div class='subtitle'>Radiometrische Computer-Assisted Diagnostics (CAD) &amp; Thermographie</div>");
             sb.AppendLine("        </div>");
             sb.AppendLine("        <div class='header-meta'>");
             sb.AppendLine($"            <div><strong>BEFUND-ID:</strong> IGN-{DateTime.Now:yyyyMMdd}-{sha256Hash.ToUpperInvariant()}</div>");
@@ -149,8 +148,8 @@ namespace Ignite.Desktop.Services
             if (!string.IsNullOrEmpty(model.Base64ImagePng))
             {
                 sb.AppendLine("    <div class='image-container'>");
-                sb.AppendLine($"        <img src='data:image/png;base64,{model.Base64ImagePng}' alt='Thermogramm Befund mit Skelettüberlagerung'/>");
-                sb.AppendLine("        <div class='image-caption'>Abbildung 1: Kalibriertes Plantar-Thermogramm mit anatomischer Skelettprojektion, osteo-thermischer Gelenkmatrix und detektierten Hyperthermie-Foci.</div>");
+                sb.AppendLine($"        <img src='data:image/png;base64,{model.Base64ImagePng}' alt='Thermogramm Befund'/>");
+                sb.AppendLine("        <div class='image-caption'>Abbildung 1: Kalibriertes Plantar-Thermogramm mit detektierten Hyperthermie-Foci und Druckverteilung.</div>");
                 sb.AppendLine("    </div>");
             }
 
@@ -163,45 +162,10 @@ namespace Ignite.Desktop.Services
             sb.AppendLine($"        <div class='meta-box'><div class='label'>MAD-Streuung</div><div class='val'>{model.MadDeviation:F2} K</div></div>");
             sb.AppendLine("    </div>");
 
-            // 6. Osteo-Thermische Knochen- & Gelenkmatrix (CAD)
-            if (model.OsteoReport != null && model.OsteoReport.Bones.Count > 0)
-            {
-                sb.AppendLine("    <div class='section-title'><span>🦴</span> 2. Osteo-Thermische Knochen- &amp; Gelenkmatrix (CAD-Analyse)</div>");
-                sb.AppendLine("    <p style='font-size: 11px; color: #64748B; margin: 0 0 8px 0;'>Automatisierte radiometrische Beprobung der knöchernen Hauptlastzonen und Charcot-Prädilektionsstellen gemäß IWGDF 2023 Richtlinie:</p>");
-                sb.AppendLine("    <table>");
-                sb.AppendLine("        <thead>");
-                sb.AppendLine("            <tr>");
-                sb.AppendLine("                <th>ID</th><th>Knochen / Anatomische Struktur</th><th>Region</th><th>T Max</th><th>T Mittel</th><th>ΔT vs Basis</th><th>Klinischer Status</th><th>Therapieempfehlung</th>");
-                sb.AppendLine("            </tr>");
-                sb.AppendLine("        </thead>");
-                sb.AppendLine("        <tbody>");
-                foreach (var b in model.OsteoReport.Bones)
-                {
-                    string bBadge = b.DeltaT >= 2.2 ? "badge-critical" : (b.DeltaT >= 1.2 ? "badge-warning" : "badge-info");
-                    sb.AppendLine("            <tr>");
-                    sb.AppendLine($"                <td><strong>{b.Id}</strong></td>");
-                    sb.AppendLine($"                <td><strong>{b.LatinName}</strong><br/><span style='font-size:10px;color:#64748B;'>{b.CommonName}</span></td>");
-                    sb.AppendLine($"                <td>{b.AnatomicalRegion}</td>");
-                    sb.AppendLine($"                <td>{b.MaxTemp:F1} °C</td>");
-                    sb.AppendLine($"                <td>{b.MeanTemp:F1} °C</td>");
-                    sb.AppendLine($"                <td><strong>{(b.DeltaT >= 0 ? "+" : "")}{b.DeltaT:F1} K</strong></td>");
-                    sb.AppendLine($"                <td><span class='badge {bBadge}'>{b.RiskLevel}</span></td>");
-                    sb.AppendLine($"                <td style='font-size:10.5px;'>{b.Recommendation}</td>");
-                    sb.AppendLine("            </tr>");
-                }
-                sb.AppendLine("        </tbody>");
-                sb.AppendLine("    </table>");
-
-                // Charcot Inflammatory Index Box
-                sb.AppendLine("    <div style='background:#F8FAFC; border:1px solid #E2E8F0; border-radius:8px; padding:10px 14px; margin-bottom:16px;'>");
-                sb.AppendLine($"        <strong>Charcot-Inflammations-Index (CII):</strong> <span style='color:#0284C7; font-weight:bold;'>{model.OsteoReport.CharcotInflammatoryIndex:F1} K</span> (Mittelfuß Tarsus vs. Rückfuß Calcaneus) &nbsp;|&nbsp; <strong>Einstufung:</strong> {model.OsteoReport.CharcotRiskStatus}");
-                sb.AppendLine("    </div>");
-            }
-
-            // 7. Orthopädische Goniometrie (Hallux Valgus)
+            // 6. Orthopädische Goniometrie (Hallux Valgus)
             if (model.Goniometer != null && model.Goniometer.AngleDegrees > 0)
             {
-                sb.AppendLine("    <div class='section-title'><span>📐</span> 3. Orthopädische Winkelmessung (Digitales Goniometer)</div>");
+                sb.AppendLine("    <div class='section-title'><span>📐</span> 2. Orthopädische Winkelmessung (Digitales Goniometer)</div>");
                 sb.AppendLine("    <div class='meta-grid'>");
                 sb.AppendLine($"        <div class='meta-box'><div class='label'>Hallux-Valgus-Winkel (HVA)</div><div class='val' style='color:#0284C7;'>{model.Goniometer.AngleDegrees:F1}°</div></div>");
                 sb.AppendLine($"        <div class='meta-box'><div class='label'>Orthopädischer Schweregrad</div><div class='val'>{model.Goniometer.SeverityGrade}</div></div>");
@@ -209,10 +173,10 @@ namespace Ignite.Desktop.Services
                 sb.AppendLine("    </div>");
             }
 
-            // 8. Detektierte Hyperthermie-Herde
+            // 7. Detektierte Hyperthermie-Herde
             if (model.Hotspots.Count > 0)
             {
-                sb.AppendLine($"    <div class='section-title'><span>🔬</span> 4. Detektierte Entzündungsherde ({model.Hotspots.Count} Foci)</div>");
+                sb.AppendLine($"    <div class='section-title'><span>🔬</span> 3. Detektierte Entzündungsherde ({model.Hotspots.Count} Foci)</div>");
                 sb.AppendLine("    <table>");
                 sb.AppendLine("        <thead>");
                 sb.AppendLine("            <tr><th>ID</th><th>Fläche (px)</th><th>Anteil (%)</th><th>Max Temp</th><th>Zirkularität</th><th>Risikostufe</th><th>Klinische Bewertung</th></tr>");
@@ -235,10 +199,10 @@ namespace Ignite.Desktop.Services
                 sb.AppendLine("    </table>");
             }
 
-            // 9. Taylor & Palmer Angiosom Territorien
+            // 8. Taylor & Palmer Angiosom Territorien
             if (model.Angiosomes != null && model.Angiosomes.Count > 0)
             {
-                sb.AppendLine("    <div class='section-title'><span>🩺</span> 5. Vaskuläre Perfusion: Taylor &amp; Palmer Angiosome</div>");
+                sb.AppendLine("    <div class='section-title'><span>🩺</span> 4. Vaskuläre Perfusion: Taylor &amp; Palmer Angiosome</div>");
                 sb.AppendLine("    <table>");
                 sb.AppendLine("        <thead>");
                 sb.AppendLine("            <tr><th>ID</th><th>Territorium</th><th>Versorgende Leitarterie</th><th>T Mittel</th><th>ΔT (K)</th><th>Status</th></tr>");

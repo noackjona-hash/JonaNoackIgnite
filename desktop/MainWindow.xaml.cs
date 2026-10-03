@@ -36,17 +36,7 @@ namespace Ignite.Desktop
         ThermalProfile,
         PointProbe,
         WindowLevelDrag,
-        BoneDrawing,
         Goniometer
-    }
-
-    public class DrawnBone
-    {
-        public string Id { get; set; } = Guid.NewGuid().ToString("N")[..6];
-        public string Name { get; set; } = "Knochen";
-        public List<Point> Points { get; set; } = new();
-        public double Thickness { get; set; } = 2.0;
-        public Brush StrokeBrush { get; set; } = new SolidColorBrush(Color.FromRgb(30, 41, 59));
     }
 
     public partial class MainWindow : Window
@@ -102,20 +92,7 @@ namespace Ignite.Desktop
         private Point _profileEndPoint;
         private ThermalProfileStats? _activeProfileStats;
 
-        // Interactive Bone Drawing & Anatomical Foot Skeleton State
-        private bool _isDrawingBone = false;
-        private readonly List<DrawnBone> _drawnBones = new();
-        private DrawnBone? _currentBoneDrawing = null;
-        private bool _showAnatomicalBones = true;
-        private bool _showDrawnBones = true;
-        private double _boneScale = 1.0;
-        private double _boneOffX = 0.0;
-        private double _boneOffY = 0.0;
-        private bool _boneIsLeftFoot = false;
-
-        // Osteo-Thermal Matrix & Orthopedic Goniometer State
-        private OsteoThermalMatrixReport? _osteoReport = null;
-        private bool _colorBonesByTemp = false;
+        // Orthopedic Goniometer State
         private GoniometerMeasurement? _goniometerMeasurement = null;
         private readonly List<Point> _goniometerPoints = new();
         private Point? _goniometerHoverPoint = null;
@@ -442,13 +419,9 @@ end";
                 CanvasCurtain.Width = _rawWidth;
                 CanvasCurtain.Height = _rawHeight;
 
-                // Auto-fit anatomical foot skeleton to tissue bounds
-                AutoFitBonesToImage();
-
-                // Compute real-time histogram, anatomical zones & osteo-thermal bone matrix
+                // Compute real-time histogram, anatomical zones & biomechanics
                 UpdateHistogramData();
                 UpdateAnatomicalZonesData();
-                SampleOsteoThermalMatrix();
                 UpdateBiomechanicsUI();
 
                 StatusText.Text = $"Thermogramm geladen: {System.IO.Path.GetFileName(path)} ({_rawWidth}x{_rawHeight} Radiometrie-Matrix).";
@@ -789,7 +762,7 @@ end";
             UpdateHudReadouts();
         }
 
-        // --- View Mode Selector (Dual, Curtain Wipe, 3D Relief, Pure DSA, Isotherm, Bones) ---
+        // --- View Mode Selector (Dual, Curtain Wipe, 3D Relief, Pure DSA, Isotherm, PressureProxy, Laplace) ---
         private void ViewMode_Checked(object sender, RoutedEventArgs e)
         {
             if (!_isInitialized || RbViewDual == null || ColViewport1 == null || ColViewport2 == null || ColDivider == null) return;
@@ -813,7 +786,6 @@ end";
                 ColViewport2.Width = new GridLength(1, GridUnitType.Star);
                 ImgCurtainRaw.Visibility = Visibility.Visible;
                 CanvasCurtain.Visibility = Visibility.Visible;
-                _showAnatomicalBones = true;
                 TxtVp2Title.Text = "SCHIEBE-VORHANG: ROHBILD (LINKS) vs BEFUND & GEFÄSSE (RECHTS)";
                 UpdateCurtainGeometry();
             }
@@ -848,23 +820,6 @@ end";
                 ImgCurtainRaw.Visibility = Visibility.Collapsed;
                 CanvasCurtain.Visibility = Visibility.Collapsed;
                 TxtVp2Title.Text = $"ISOTHERMEN-BAND: [{_isothermLow:F1}°C bis {_isothermHigh:F1}°C]";
-            }
-            else if (RbViewBones != null && RbViewBones.IsChecked == true)
-            {
-                _activeViewMode = ActiveViewMode.CurtainWipe;
-                ColViewport1.Width = new GridLength(0);
-                ColDivider.Width = new GridLength(0);
-                ColViewport2.Width = new GridLength(1, GridUnitType.Star);
-                ImgCurtainRaw.Visibility = Visibility.Visible;
-                CanvasCurtain.Visibility = Visibility.Visible;
-                _showAnatomicalBones = true;
-                if (ChkShowBones != null) ChkShowBones.IsChecked = true;
-                if (ChkEnableSkeletonTemplate != null) ChkEnableSkeletonTemplate.IsChecked = true;
-                if (InspectorTabs != null && TabBones != null) InspectorTabs.SelectedItem = TabBones;
-                if (RbToolBone != null) RbToolBone.IsChecked = true;
-                _activeTool = ActiveCanvasTool.BoneDrawing;
-                TxtVp2Title.Text = "OSTEOLOGIE & ANATOMISCHES SKELETT: Knochen einzeichnen & Befundvergleich";
-                UpdateCurtainGeometry();
             }
             else if (RbViewPressureProxy != null && RbViewPressureProxy.IsChecked == true)
             {
@@ -1027,19 +982,6 @@ end";
                 DrawProbePinsVector(OverlayResultCanvas);
             }
 
-            // 6. Draw Anatomical Foot Skeleton (Osteology Template)
-            if (_showAnatomicalBones)
-            {
-                DrawAnatomicalFootSkeleton(OverlayOriginalCanvas);
-                DrawAnatomicalFootSkeleton(OverlayResultCanvas);
-            }
-
-            // 7. Draw Physician Freehand Drawn Bones
-            if (_showDrawnBones)
-            {
-                DrawPhysicianBones(OverlayOriginalCanvas);
-                DrawPhysicianBones(OverlayResultCanvas);
-            }
 
             // 7b. Draw Orthopedic Goniometer (3-Point Angle Caliper)
             if (_goniometerPoints.Count > 0)
@@ -1254,7 +1196,6 @@ end";
             else if (RbToolRoi.IsChecked == true) _activeTool = ActiveCanvasTool.RoiSelection;
             else if (RbToolProfile.IsChecked == true) _activeTool = ActiveCanvasTool.ThermalProfile;
             else if (RbToolProbe.IsChecked == true) _activeTool = ActiveCanvasTool.PointProbe;
-            else if (RbToolBone != null && RbToolBone.IsChecked == true) _activeTool = ActiveCanvasTool.BoneDrawing;
             else if (RbToolGoniometer != null && RbToolGoniometer.IsChecked == true) _activeTool = ActiveCanvasTool.Goniometer;
             else if (RbToolWL.IsChecked == true) _activeTool = ActiveCanvasTool.WindowLevelDrag;
 
@@ -1357,12 +1298,6 @@ end";
                     CanvasOriginal.Cursor = Cursors.Cross;
                     CanvasResult.Cursor = Cursors.Cross;
                     break;
-                case ActiveCanvasTool.BoneDrawing:
-                    StatusText.Text = "Werkzeug: Knochen einzeichnen | Zeichnen Sie Knochenstrukturen frei mit der Maus auf das Gewebe.";
-                    if (TxtToolHintVp1 != null) TxtToolHintVp1.Text = " · Maus ziehen = Knochenkontur einzeichnen";
-                    CanvasOriginal.Cursor = Cursors.Pen;
-                    CanvasResult.Cursor = Cursors.Pen;
-                    break;
                 case ActiveCanvasTool.Goniometer:
                     StatusText.Text = "Werkzeug: Goniometer (Winkelmessung) | Klicken Sie 3 Punkte im Bild (1. Schaft MT-I, 2. Scheitelpunkt MTP-I Gelenk, 3. Hallux).";
                     if (TxtToolHintVp1 != null) TxtToolHintVp1.Text = " · 3 Punkte setzen = Hallux-Valgus-Winkel (HVA) messen";
@@ -1378,7 +1313,7 @@ end";
             }
         }
 
-        // --- Mouse Events for Viewports (Pan, ROI, Profile, Probes, Bones, W/L, Curtain) ---
+        // --- Mouse Events for Viewports (Pan, ROI, Profile, Probes, Goniometer, W/L, Curtain) ---
         private void ViewportOriginal_MouseDown(object sender, MouseButtonEventArgs e) => HandleViewportMouseDown(CanvasOriginal, ScrollOriginal, e);
         private void ViewportResult_MouseDown(object sender, MouseButtonEventArgs e) => HandleViewportMouseDown(CanvasResult, ScrollResult, e);
 
@@ -1439,19 +1374,6 @@ end";
 
                     case ActiveCanvasTool.PointProbe:
                         PlaceProbePoint(pos);
-                        break;
-
-                    case ActiveCanvasTool.BoneDrawing:
-                        _isDrawingBone = true;
-                        _currentBoneDrawing = new DrawnBone
-                        {
-                            Name = $"Knochen #{_drawnBones.Count + 1}",
-                            Thickness = 2.2,
-                            StrokeBrush = new SolidColorBrush(Color.FromRgb(30, 41, 59))
-                        };
-                        _currentBoneDrawing.Points.Add(pos);
-                        canvas.CaptureMouse();
-                        RedrawInteractiveOverlays();
                         break;
 
                     case ActiveCanvasTool.Goniometer:
@@ -1556,18 +1478,6 @@ end";
                 return;
             }
 
-            // Bone Drawing Live Trace (Zero Offset)
-            if (_isDrawingBone && _currentBoneDrawing != null)
-            {
-                var pts = _currentBoneDrawing.Points;
-                if (pts.Count == 0 || (pos - pts[^1]).Length >= 2.0)
-                {
-                    pts.Add(pos);
-                    RedrawInteractiveOverlays();
-                }
-                return;
-            }
-
             // Goniometer Live Hover Preview Line
             if (_activeTool == ActiveCanvasTool.Goniometer && (_goniometerPoints.Count == 1 || _goniometerPoints.Count == 2))
             {
@@ -1635,19 +1545,6 @@ end";
                 }
             }
 
-            if (_isDrawingBone)
-            {
-                _isDrawingBone = false;
-                canvas.ReleaseMouseCapture();
-
-                if (_currentBoneDrawing != null && _currentBoneDrawing.Points.Count >= 2)
-                {
-                    _drawnBones.Add(_currentBoneDrawing);
-                    StatusText.Text = $"Knochen eingezeichnet: {_currentBoneDrawing.Name} ({_currentBoneDrawing.Points.Count} Punkte). Gesamt: {_drawnBones.Count} Knochen.";
-                }
-                _currentBoneDrawing = null;
-                RedrawInteractiveOverlays();
-            }
         }
 
         private void ViewportOriginal_MouseLeave(object sender, MouseEventArgs e) => CursorCoordsText.Text = "X: --, Y: -- | Temp: --";
@@ -2420,11 +2317,6 @@ end";
                 return;
             }
 
-            // Ensure Osteo-thermal sampling is executed
-            if (_osteoReport == null && _rawGrayPixels != null)
-            {
-                SampleOsteoThermalMatrix();
-            }
 
             // Ensure Angiosomes are computed
             if (_cachedAngiosomes.Count == 0 && _rawGrayPixels != null)
@@ -2483,7 +2375,6 @@ end";
                 OverallRecommendation = _latestResult?.HighestRisk == "CRITICAL"
                     ? "Pathologische Hyperthermie (ΔT ≥ 2.2 K nach Armstrong). Sofortige Druckentlastung (Vorfußentlastungsschuh), Ausschluss Ulkus/Charcot."
                     : "Keine akute pathologische Asymmetrie nachweisbar. Regelmäßige präventive Fußpflege und 3-Monats-Follow-up empfohlen.",
-                OsteoReport = _osteoReport,
                 Goniometer = _goniometerMeasurement,
                 Angiosomes = _cachedAngiosomes
             };
@@ -2665,132 +2556,6 @@ end";
             canvas.Children.Add(roiRect);
         }
 
-        private void DrawAnatomicalFootSkeleton(Canvas canvas)
-        {
-            if (_rawWidth <= 0 || _rawHeight <= 0) return;
-
-            double cx = (_rawWidth / 2.0) + _boneOffX;
-            double cy = (_rawHeight / 2.0) + _boneOffY;
-            double sc = _boneScale;
-            double sign = _boneIsLeftFoot ? -1.0 : 1.0;
-
-            Point FPt(double rx, double ry) => new Point(cx + (rx * sc * sign), cy + (ry * sc));
-
-            var defaultStroke = new SolidColorBrush(Color.FromRgb(30, 41, 59));
-            var defaultFill = new SolidColorBrush(Color.FromArgb(14, 30, 41, 59));
-
-            (Brush stroke, Brush fill) GetBoneStyle(string boneId)
-            {
-                if (_colorBonesByTemp && _osteoReport != null)
-                {
-                    var match = _osteoReport.Bones.FirstOrDefault(b => b.Id == boneId);
-                    if (match != null)
-                    {
-                        return (match.StressBrush, match.StressFillBrush);
-                    }
-                }
-                return (defaultStroke, defaultFill);
-            }
-
-            void AddBonePoly(string boneId, params Point[] pts)
-            {
-                if (pts.Length < 3) return;
-                var (bStroke, bFill) = GetBoneStyle(boneId);
-                var poly = new Polygon
-                {
-                    Stroke = bStroke,
-                    StrokeThickness = 1.8,
-                    Fill = bFill,
-                    StrokeLineJoin = PenLineJoin.Round
-                };
-                foreach (var p in pts) poly.Points.Add(p);
-                canvas.Children.Add(poly);
-            }
-
-            // --- 1. DIGITUS I (HALLUX / GROSSZEHE) ---
-            AddBonePoly("DIG1", FPt(37, -190), FPt(48, -172), FPt(46, -154), FPt(27, -154), FPt(25, -172));
-            AddBonePoly("DIG1", FPt(44, -147), FPt(40, -125), FPt(45, -104), FPt(26, -104), FPt(30, -125), FPt(26, -147));
-            AddBonePoly("MT1", FPt(46, -97), FPt(48, -85), FPt(39, -70), FPt(37, -35), FPt(40, -18), FPt(20, -18), FPt(22, -35), FPt(22, -70), FPt(19, -85), FPt(21, -97));
-
-            // --- 2. DIGITUS II ---
-            AddBonePoly("DIG2", FPt(14, -180), FPt(17, -168), FPt(17, -158), FPt(9, -158), FPt(9, -168));
-            AddBonePoly("DIG2", FPt(16, -152), FPt(17, -140), FPt(9, -140), FPt(9, -152));
-            AddBonePoly("DIG2", FPt(17, -135), FPt(15, -120), FPt(17, -108), FPt(8, -108), FPt(9, -120), FPt(8, -135));
-            AddBonePoly("MT2", FPt(17, -102), FPt(15, -60), FPt(15, -18), FPt(7, -18), FPt(7, -60), FPt(7, -102));
-
-            // --- 3. DIGITUS III ---
-            AddBonePoly("DIG3", FPt(-6, -172), FPt(-3, -160), FPt(-3, -150), FPt(-11, -150), FPt(-11, -160));
-            AddBonePoly("DIG3", FPt(-4, -145), FPt(-3, -134), FPt(-11, -134), FPt(-11, -145));
-            AddBonePoly("DIG3", FPt(-3, -129), FPt(-5, -116), FPt(-3, -104), FPt(-12, -104), FPt(-11, -116), FPt(-12, -129));
-            AddBonePoly("MT3", FPt(-3, -98), FPt(-4, -58), FPt(-4, -16), FPt(-13, -16), FPt(-12, -58), FPt(-13, -98));
-
-            // --- 4. DIGITUS IV ---
-            AddBonePoly("DIG4", FPt(-26, -160), FPt(-23, -150), FPt(-23, -142), FPt(-31, -142), FPt(-31, -150));
-            AddBonePoly("DIG4", FPt(-23, -137), FPt(-23, -126), FPt(-31, -126), FPt(-31, -137));
-            AddBonePoly("DIG4", FPt(-23, -121), FPt(-24, -110), FPt(-22, -100), FPt(-32, -100), FPt(-31, -110), FPt(-32, -121));
-            AddBonePoly("MT4", FPt(-22, -94), FPt(-24, -54), FPt(-24, -14), FPt(-34, -14), FPt(-34, -54), FPt(-33, -94));
-
-            // --- 5. DIGITUS V (KLEINZEHE) ---
-            AddBonePoly("DIG5", FPt(-46, -145), FPt(-43, -136), FPt(-44, -130), FPt(-51, -130), FPt(-51, -136));
-            AddBonePoly("DIG5", FPt(-43, -126), FPt(-43, -117), FPt(-51, -117), FPt(-51, -126));
-            AddBonePoly("DIG5", FPt(-43, -113), FPt(-44, -104), FPt(-42, -94), FPt(-52, -94), FPt(-51, -104), FPt(-52, -113));
-            AddBonePoly("MT5", FPt(-42, -88), FPt(-46, -50), FPt(-47, -10), FPt(-64, -20), FPt(-65, -35), FPt(-56, -55), FPt(-53, -88));
-
-            // --- 6. TARSUS (FUSSWURZEL) ---
-            AddBonePoly("TARS_MED", FPt(37, -14), FPt(39, +12), FPt(19, +12), FPt(18, -14));
-            AddBonePoly("TARS_MED", FPt(15, -14), FPt(15, +10), FPt(4, +10), FPt(5, -14));
-            AddBonePoly("TARS_LAT", FPt(2, -12), FPt(2, +12), FPt(-14, +12), FPt(-13, -12));
-            AddBonePoly("TARS_LAT", FPt(-18, -10), FPt(-15, +32), FPt(-45, +32), FPt(-50, -10));
-            AddBonePoly("TARS_MED", FPt(35, +16), FPt(34, +44), FPt(-9, +44), FPt(-11, +16));
-            AddBonePoly("TAL", FPt(25, +48), FPt(24, +85), FPt(-18, +85), FPt(-14, +48));
-            AddBonePoly("CALC", FPt(18, +88), FPt(14, +160), FPt(-32, +160), FPt(-34, +88));
-        }
-
-        private void DrawPhysicianBones(Canvas canvas)
-        {
-            if (_drawnBones.Count > 0)
-            {
-                foreach (var bone in _drawnBones)
-                {
-                    if (bone.Points.Count >= 2)
-                    {
-                        var polyline = new Polyline
-                        {
-                            Stroke = bone.StrokeBrush,
-                            StrokeThickness = bone.Thickness,
-                            StrokeLineJoin = PenLineJoin.Round,
-                            StrokeStartLineCap = PenLineCap.Round,
-                            StrokeEndLineCap = PenLineCap.Round
-                        };
-                        foreach (var pt in bone.Points)
-                        {
-                            polyline.Points.Add(pt);
-                        }
-                        canvas.Children.Add(polyline);
-                    }
-                }
-            }
-
-            // Active live drawing trace
-            if (_currentBoneDrawing != null && _currentBoneDrawing.Points.Count >= 2)
-            {
-                var livePolyline = new Polyline
-                {
-                    Stroke = new SolidColorBrush(Color.FromRgb(2, 132, 199)),
-                    StrokeThickness = 2.5,
-                    StrokeDashArray = new DoubleCollection { 3, 2 },
-                    StrokeLineJoin = PenLineJoin.Round,
-                    StrokeStartLineCap = PenLineCap.Round,
-                    StrokeEndLineCap = PenLineCap.Round
-                };
-                foreach (var pt in _currentBoneDrawing.Points)
-                {
-                    livePolyline.Points.Add(pt);
-                }
-                canvas.Children.Add(livePolyline);
-            }
-        }
-
         private void DrawHotspotCalloutCard(Canvas canvas, double hx, double hy, double deltaT, string riskText)
         {
             double calloutX = hx + 14;
@@ -2850,128 +2615,9 @@ end";
             if (InspectorTabs != null) InspectorTabs.SelectedIndex = 1;
         }
 
-        private void ChkShowBones_Click(object sender, RoutedEventArgs e)
-        {
-            _showAnatomicalBones = (sender as CheckBox)?.IsChecked == true;
-            if (ChkShowBones != null) ChkShowBones.IsChecked = _showAnatomicalBones;
-            if (ChkEnableSkeletonTemplate != null) ChkEnableSkeletonTemplate.IsChecked = _showAnatomicalBones;
-            if (ChkShowBonesInspector != null) ChkShowBonesInspector.IsChecked = _showAnatomicalBones;
-            RedrawInteractiveOverlays();
-        }
-
-        private void ChkEnableSkeletonTemplate_Click(object sender, RoutedEventArgs e)
-        {
-            _showAnatomicalBones = ChkEnableSkeletonTemplate.IsChecked == true;
-            if (ChkShowBones != null) ChkShowBones.IsChecked = _showAnatomicalBones;
-            if (ChkShowBonesInspector != null) ChkShowBonesInspector.IsChecked = _showAnatomicalBones;
-            RedrawInteractiveOverlays();
-        }
-
         private void ChkShowZonesOverlay_Click(object sender, RoutedEventArgs e)
         {
             _showZonesOverlay = (sender as CheckBox)?.IsChecked == true;
-            RedrawInteractiveOverlays();
-        }
-
-        private void BtnActivateBoneTool_Click(object sender, RoutedEventArgs e)
-        {
-            _activeTool = ActiveCanvasTool.BoneDrawing;
-            if (RbToolBone != null) RbToolBone.IsChecked = true;
-            UpdateToolInstructions();
-        }
-
-        private void BtnUndoBone_Click(object sender, RoutedEventArgs e)
-        {
-            if (_drawnBones.Count > 0)
-            {
-                _drawnBones.RemoveAt(_drawnBones.Count - 1);
-                StatusText.Text = $"Letzter Knochen entfernt. Verbleibend: {_drawnBones.Count}.";
-                RedrawInteractiveOverlays();
-            }
-        }
-
-        private void BtnClearBones_Click(object sender, RoutedEventArgs e)
-        {
-            _drawnBones.Clear();
-            StatusText.Text = "Alle eingezeichneten Knochen gelöscht.";
-            RedrawInteractiveOverlays();
-        }
-
-        private void ComboBoneSide_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (!_isInitialized || ComboBoneSide == null) return;
-            _boneIsLeftFoot = (ComboBoneSide.SelectedIndex == 1);
-            RedrawInteractiveOverlays();
-        }
-
-        private void SliderBoneAdjust_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-        {
-            if (!_isInitialized) return;
-            if (SliderBoneScale != null) _boneScale = SliderBoneScale.Value;
-            if (SliderBoneOffX != null) _boneOffX = SliderBoneOffX.Value;
-            if (SliderBoneOffY != null) _boneOffY = SliderBoneOffY.Value;
-
-            if (TxtBoneScale != null) TxtBoneScale.Text = $"{(_boneScale * 100):F0}%";
-            if (TxtBoneOffX != null) TxtBoneOffX.Text = $"{_boneOffX:+0;-0;0} px";
-            if (TxtBoneOffY != null) TxtBoneOffY.Text = $"{_boneOffY:+0;-0;0} px";
-
-            RedrawInteractiveOverlays();
-        }
-
-        private void BtnAutoFitBones_Click(object sender, RoutedEventArgs e)
-        {
-            AutoFitBonesToImage();
-        }
-
-        private void AutoFitBonesToImage()
-        {
-            if (_rawGrayPixels == null || _rawWidth <= 0 || _rawHeight <= 0) return;
-
-            int minX = _rawWidth, maxX = 0, minY = _rawHeight, maxY = 0;
-            long sumX = 0, sumY = 0, count = 0;
-
-            for (int y = 0; y < _rawHeight; y++)
-            {
-                int row = y * _rawWidth;
-                for (int x = 0; x < _rawWidth; x++)
-                {
-                    byte v = _rawGrayPixels[row + x];
-                    if (v > 50)
-                    {
-                        if (x < minX) minX = x;
-                        if (x > maxX) maxX = x;
-                        if (y < minY) minY = y;
-                        if (y > maxY) maxY = y;
-                        sumX += x;
-                        sumY += y;
-                        count++;
-                    }
-                }
-            }
-
-            if (count > 500 && maxX > minX && maxY > minY)
-            {
-                double footH = maxY - minY;
-                double cx = sumX / (double)count;
-                double cy = sumY / (double)count;
-
-                _boneScale = Math.Clamp(footH / 320.0, 0.65, 1.45);
-                _boneOffX = Math.Clamp(cx - (_rawWidth / 2.0), -100, 100);
-                _boneOffY = Math.Clamp(cy - (_rawHeight / 2.0), -100, 100);
-
-                if (SliderBoneScale != null) SliderBoneScale.Value = _boneScale;
-                if (SliderBoneOffX != null) SliderBoneOffX.Value = _boneOffX;
-                if (SliderBoneOffY != null) SliderBoneOffY.Value = _boneOffY;
-
-                StatusText.Text = $"Knochenskelett automatisch eingepasst (Skalierung {(_boneScale * 100):F0}%, ΔX={_boneOffX:F0}px, ΔY={_boneOffY:F0}px).";
-            }
-            else
-            {
-                _boneScale = 1.0;
-                _boneOffX = 0;
-                _boneOffY = 0;
-            }
-
             RedrawInteractiveOverlays();
         }
 
@@ -2990,12 +2636,12 @@ end";
 
             if (_goniometerPoints.Count == 3)
             {
-                _goniometerMeasurement = OsteoThermalService.CalculateGoniometer(
+                _goniometerMeasurement = OrthopedicGoniometerService.CalculateGoniometer(
                     _goniometerPoints[0], _goniometerPoints[1], _goniometerPoints[2]);
                 UpdateGoniometerUI();
-                if (InspectorTabs != null && TabBones != null)
+                if (InspectorTabs != null && TabBiomechanics != null)
                 {
-                    InspectorTabs.SelectedItem = TabBones;
+                    InspectorTabs.SelectedItem = TabBiomechanics;
                 }
             }
             else
@@ -3205,59 +2851,7 @@ end";
             RedrawInteractiveOverlays();
         }
 
-        // ============================================================
-        // OSTEO-THERMAL SAMPLING & COLOR-CODING METHODS
-        // ============================================================
-        private void SampleOsteoThermalMatrix()
-        {
-            if (_rawGrayPixels == null || _rawWidth <= 0 || _rawHeight <= 0) return;
 
-            double cx = (_rawWidth / 2.0) + _boneOffX;
-            double cy = (_rawHeight / 2.0) + _boneOffY;
-            double sc = _boneScale;
-
-            _osteoReport = OsteoThermalService.ComputeOsteoThermalMatrix(
-                _rawGrayPixels, _rawWidth, _rawHeight, cx, cy, sc, _boneIsLeftFoot);
-
-            if (GridBoneTemps != null)
-            {
-                GridBoneTemps.ItemsSource = null;
-                GridBoneTemps.ItemsSource = _osteoReport.Bones;
-            }
-
-            if (TxtCharcotIndex != null)
-            {
-                TxtCharcotIndex.Text = $"CII = {_osteoReport.CharcotInflammatoryIndex:F1} K";
-            }
-            if (TxtCharcotStatus != null)
-            {
-                TxtCharcotStatus.Text = $"Charcot-Status: {_osteoReport.CharcotRiskStatus}";
-            }
-
-            if (_colorBonesByTemp)
-            {
-                RedrawInteractiveOverlays();
-            }
-        }
-
-        private void BtnSampleBoneTemps_Click(object sender, RoutedEventArgs e)
-        {
-            SampleOsteoThermalMatrix();
-            if (StatusText != null)
-            {
-                StatusText.Text = $"Osteo-Thermische Matrix berechnet: {_osteoReport?.TotalBonesSampled ?? 0} Knochen beprobt | CII: {_osteoReport?.CharcotInflammatoryIndex:F1} K";
-            }
-        }
-
-        private void ChkColorBonesByTemp_Click(object sender, RoutedEventArgs e)
-        {
-            _colorBonesByTemp = ChkColorBonesByTemp.IsChecked == true;
-            if (_colorBonesByTemp && _osteoReport == null)
-            {
-                SampleOsteoThermalMatrix();
-            }
-            RedrawInteractiveOverlays();
-        }
 
         // ============================================================
         // BIOMECHANICS & PENNES BIOHEAT PRESSURE PROXY METHODS
@@ -3452,7 +3046,6 @@ end";
                     mad,
                     armstrongStage,
                     _latestResult?.HighestRisk ?? "PHYSIOLOGISCH",
-                    _osteoReport,
                     _goniometerMeasurement,
                     _pressureStats);
 

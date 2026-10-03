@@ -166,27 +166,19 @@ Gemessen auf x86_64 Standard-Hardware (Intel Core i7, 4 Kerne):
 
 ---
 
-## 7. Erweiterte Computer-Assisted Diagnostics (CAD) & Osteo-Thermologie
+## 7. Erweiterte Computer-Assisted Diagnostics (CAD) & Orthopädie
 
-### 7.1 Osteo-Thermische Gelenk- & Knochenmatrix
-Die Suite führt eine quantitative radiometrische Beprobung aller 11 knöchernen Hauptlastzonen und Charcot-Prädilektionsstellen durch ([`OsteoThermalService.cs`](file:///d:/Downloads/03_Programmierung%20&%20Entwicklung/05_JUFO/JonaNoackIgnite/desktop/Services/OsteoThermalService.cs)):
-* **Ossa metatarsalia I–V & MTP-Gelenke:** Quantitative Überwachung der biomechanischen Druck- und Ulkusprädilektionsstellen gemäß IWGDF 2023.
-* **Charcot-Inflammations-Index (CII):** Mathematischer Temperaturgradient zwischen medialer/lateraler Fußwurzel (Tarsus: Os naviculare, Cuneiformia) und dem Fersenbein (Calcaneus):
-  $$\text{CII} = T_{\text{mean}}(\text{Tarsus}) - T_{\text{mean}}(\text{Calcaneus})$$
-  Ein Index $\text{CII} \ge 2{,}2\,\text{K}$ detektiert akute Charcot-Neuroarthropathien bereits im Frühstadium (Eichenholtz Stadium 0/1) vor knöchernen Deformitäten.
-* **Dynamisches Thermo-Osteologie Skelett:** Automatische Farbcodierung der Knochensegmente auf dem Live-Thermogramm (Blau: Physiologisch, Gelb: Überlastungs-Stress, Rot: $\Delta T \ge 2{,}2\,\text{K}$ Ulkusalarm).
-
-### 7.2 Orthopädisches 3-Punkt Goniometer (HVA & IMA Caliper)
-Interaktive radiometrisch-orthopädische Winkelmessung direkt auf dem Bildcanvas (`ActiveCanvasTool.Goniometer`):
+### 7.1 Orthopädisches 3-Punkt Goniometer (HVA & IMA Caliper)
+Interaktive radiometrisch-orthopädische Winkelmessung direkt auf dem Bildcanvas (`ActiveCanvasTool.Goniometer` via [`OrthopedicGoniometerService.cs`](file:///d:/Downloads/03_Programmierung%20&%20Entwicklung/05_JUFO/JonaNoackIgnite/desktop/Services/OrthopedicGoniometerService.cs)):
 * Drei anatomische Referenzpunkte: $P_1$ (Diaphyse Metatarsale I), $P_2$ (Scheitelpunkt / MTP-I Gelenkzentrum), $P_3$ (Phalanx proximalis Hallux).
 * Vektorberechnung des Hallux-Valgus-Winkels (HVA):
   $$\theta = \arccos\left(\frac{(P_1 - P_2) \cdot (P_3 - P_2)}{\|P_1 - P_2\| \|P_3 - P_2\|}\right), \quad \text{HVA} = |180^\circ - \theta|$$
 * Automatische Klassifikation: Grad 0 (Normal $< 15^\circ$), Grad I (Leicht $16^\circ-20^\circ$), Grad II (Mäßig $21^\circ-39^\circ$, Osteotomieindikation), Grad III (Schwer $\ge 40^\circ$, Arthrodeseindikation).
 
-### 7.3 Zertifizierter IWGDF 2023 Befundbericht (Arztbrief & PDF-Export)
+### 7.2 Zertifizierter IWGDF 2023 Befundbericht (Arztbrief & PDF-Export)
 Vollautomatischer klinischer Befundbericht ([`ClinicalReportService.cs`](file:///d:/Downloads/03_Programmierung%20&%20Entwicklung/05_JUFO/JonaNoackIgnite/desktop/Services/ClinicalReportService.cs)) mit:
-* Eingebettetem hochauflösendem Thermogramm-Snapshot mit anatomischem Skelett und Hotspot-Kallout.
-* Tabellarischer Osteo-Thermie-Matrix mit IWGDF 2023 Therapiedirektiven.
+* Eingebettetem hochauflösendem Thermogramm-Snapshot mit Hotspot-Kallout und Druckkontur.
+* Orthopädischer Winkelmessung und Graduierung.
 * Vaskulärem Angiosom-Status nach Taylor & Palmer.
 * Revisionssicherer SHA-256 Integritätssignatur und Drucklayout für Arztbriefe.
 
