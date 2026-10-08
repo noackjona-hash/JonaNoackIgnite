@@ -81,7 +81,7 @@ jobs:
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DAppVersion=${{ needs.resolve-version.outputs.version }} installer\ignite_installer.iss
 
       - name: Upload Windows Setup Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: IGNITE_Windows_Setup
           path: IGNITE_Setup_*.exe
@@ -132,7 +132,7 @@ jobs:
           ls -lh IGNITE_Linux_x86_64.tar.gz
 
       - name: Upload Linux Setup Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: IGNITE_Linux_Package
           path: IGNITE_Linux_x86_64.tar.gz

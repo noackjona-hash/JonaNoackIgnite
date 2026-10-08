@@ -59,14 +59,14 @@ jobs:
 
       # 4. Upload Installer & Publish Artifacts
       - name: Upload Setup Installer
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: IGNITE-v5-Installer-Windows-x64
           path: dist/IGNITE_Medical_Suite_v5.0.0_Setup.exe
           if-no-files-found: error
 
       - name: Upload Portable Published Suite
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: IGNITE-v5-Portable-Windows-x64
           path: release/publish/
