@@ -184,6 +184,12 @@ namespace Ignite.Desktop.Models
 
         [JsonPropertyName("compensated_pixel_count")]
         public int CompensatedPixelCount { get; set; }
+
+        [JsonPropertyName("mean_curvature_mm")]
+        public float MeanCurvatureMm { get; set; }
+
+        [JsonPropertyName("gaussian_curvature_mm2")]
+        public float GaussianCurvatureMm2 { get; set; }
     }
 
     public class PerfusionProfile

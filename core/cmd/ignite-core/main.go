@@ -16,6 +16,7 @@ import (
 
 	"ignite-core/pkg/imageutil"
 	"ignite-core/pkg/pipeline"
+	"ignite-core/pkg/reconstruction3d"
 	"ignite-core/pkg/symmetry"
 )
 
@@ -320,6 +321,11 @@ func main() {
 				fullDepth := imageutil.NewGrayMatrix(fullW, fullH)
 				pasteMask(fullDepth, depthGray, rx1, ry1)
 				_ = saveGrayAsPNG(fullDepth, filepath.Join(*maskDir, "depth_map_3d.png"))
+
+				mesh := reconstruction3d.GenerateMesh(result.DepthMap3D, result.Corrected3DImage, result.BodyMask, 0.6, 2)
+				_ = mesh.ExportOBJ(filepath.Join(*maskDir, "mesh_3d.obj"))
+				_ = mesh.ExportPLY(filepath.Join(*maskDir, "mesh_3d.ply"))
+				_ = mesh.ExportSTL(filepath.Join(*maskDir, "mesh_3d.stl"))
 			}
 			if result.Corrected3DImage != nil {
 				fullCorr := imageutil.NewGrayMatrix(fullW, fullH)
@@ -342,6 +348,11 @@ func main() {
 			if result.DepthMap3D != nil {
 				depthGray := result.DepthMap3D.ToGrayMasked(result.BodyMask)
 				_ = saveGrayAsPNG(depthGray, filepath.Join(*maskDir, "depth_map_3d.png"))
+
+				mesh := reconstruction3d.GenerateMesh(result.DepthMap3D, result.Corrected3DImage, result.BodyMask, 0.6, 2)
+				_ = mesh.ExportOBJ(filepath.Join(*maskDir, "mesh_3d.obj"))
+				_ = mesh.ExportPLY(filepath.Join(*maskDir, "mesh_3d.ply"))
+				_ = mesh.ExportSTL(filepath.Join(*maskDir, "mesh_3d.stl"))
 			}
 			if result.Corrected3DImage != nil {
 				_ = saveGrayAsPNG(result.Corrected3DImage, filepath.Join(*maskDir, "corrected_3d_temp.png"))

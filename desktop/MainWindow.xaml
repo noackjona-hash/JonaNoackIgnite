@@ -9,7 +9,8 @@
         AllowDrop="True"
         Drop="Window_Drop"
         DragOver="Window_DragOver"
-        Loaded="MainWindow_Loaded">
+        Loaded="MainWindow_Loaded"
+        PreviewKeyDown="Window_PreviewKeyDown">
 
     <Grid Background="{StaticResource AppBgBrush}">
         <Grid.ColumnDefinitions>
@@ -166,8 +167,22 @@
                         </Border>
                     </StackPanel>
 
-                    <!-- Right: Menu, Optionen, Berichte, Blue CTA Button (Matching Screenshot) -->
+                    <!-- Right: Undo/Redo, Menu, Optionen, Exportieren, Berichte, Blue CTA Button -->
                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <!-- Undo / Redo Buttons -->
+                        <Button x:Name="BtnUndo" Click="BtnUndo_Click" Style="{StaticResource VoicemodButtonPillStyle}" Margin="0,0,3,0" ToolTip="Rückgängig (Strg+Z)" IsEnabled="False">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Path Data="{StaticResource IconUndo}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=Control}}" Width="11" Height="11" Stretch="Uniform" Margin="0,0,4,0"/>
+                                <TextBlock Text="Undo" VerticalAlignment="Center" FontSize="11"/>
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="BtnRedo" Click="BtnRedo_Click" Style="{StaticResource VoicemodButtonPillStyle}" Margin="0,0,8,0" ToolTip="Wiederholen (Strg+Y)" IsEnabled="False">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Path Data="{StaticResource IconRedo}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=Control}}" Width="11" Height="11" Stretch="Uniform" Margin="0,0,4,0"/>
+                                <TextBlock Text="Redo" VerticalAlignment="Center" FontSize="11"/>
+                            </StackPanel>
+                        </Button>
+
                         <!-- Menu Dropdown -->
                         <Menu Background="Transparent" VerticalAlignment="Center" Margin="0,0,6,0">
                             <MenuItem Foreground="{StaticResource TextSecondaryBrush}" FontWeight="SemiBold" FontSize="11">
@@ -179,6 +194,10 @@
                                 </MenuItem.Header>
                                 <MenuItem Header="_Neues Wärmebild öffnen..." Click="MenuOpenImage_Click" InputGestureText="Strg+O"/>
                                 <MenuItem Header="_Kontralaterales Bild laden..." Click="MenuOpenContralateral_Click"/>
+                                <Separator Background="{StaticResource BorderBrush}"/>
+                                <MenuItem Header="_Rückgängig" Click="BtnUndo_Click" InputGestureText="Strg+Z"/>
+                                <MenuItem Header="_Wiederholen" Click="BtnRedo_Click" InputGestureText="Strg+Y"/>
+                                <MenuItem Header="_Alles Zurücksetzen" Click="BtnResetAll_Click" InputGestureText="Strg+R"/>
                                 <Separator Background="{StaticResource BorderBrush}"/>
                                 <MenuItem Header="_Ärztlichen Befundbericht exportieren (PDF)..." Click="MenuExportReport_Click"/>
                                 <MenuItem Header="_DSGVO Art. 30 Audit-Protokoll einsehen" Click="MenuAuditLog_Click"/>
@@ -197,6 +216,37 @@
                                 <TextBlock Text="Optionen" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
+
+                        <!-- Export Dropdown ("Export für ALLES") -->
+                        <Menu Background="Transparent" VerticalAlignment="Center" Margin="0,0,6,0">
+                            <MenuItem Foreground="{StaticResource TextSecondaryBrush}" FontWeight="SemiBold" FontSize="11">
+                                <MenuItem.Header>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Data="{StaticResource IconExport}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=MenuItem}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0" SnapsToDevicePixels="True"/>
+                                        <TextBlock Text="Exportieren ▼" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </MenuItem.Header>
+                                <MenuItem Header="-- 3D REKONSTRUKTION &amp; CAD --" IsEnabled="False" FontWeight="Bold"/>
+                                <MenuItem Header="_Wavefront 3D-Netz (*.obj mit Farben)..." Click="Export3D_Obj_Click"/>
+                                <MenuItem Header="_Stanford PLY Mesh (*.ply)..." Click="Export3D_Ply_Click"/>
+                                <MenuItem Header="_Stereolithographie STL 3D-Druck (*.stl)..." Click="Export3D_Stl_Click"/>
+                                <MenuItem Header="_XYZ Thermografische Punktwolke (*.xyz)..." Click="Export3D_Xyz_Click"/>
+                                <MenuItem Header="_3D Tiefenprofil Matrix (*.csv)..." Click="Export3D_DepthCsv_Click"/>
+                                <Separator Background="{StaticResource BorderBrush}"/>
+                                <MenuItem Header="-- KLINISCHE BERICHTE &amp; DATEN --" IsEnabled="False" FontWeight="Bold"/>
+                                <MenuItem Header="_Ärztlicher Befundbericht (PDF)..." Click="MenuExportReport_Click"/>
+                                <MenuItem Header="_Vollständiger Patientendatensatz (JSON)..." Click="ExportClinicalJson_Click"/>
+                                <MenuItem Header="_Hotspot- &amp; Ulkusrisikotabelle (CSV)..." Click="ExportHotspotsCsv_Click"/>
+                                <MenuItem Header="_5-Zonen Plantardruck- &amp; Biomechaniktabelle (CSV)..." Click="ExportBiomechanicsCsv_Click"/>
+                                <MenuItem Header="_2D Radiometrische Temperaturmatrix (CSV)..." Click="BtnExportCsv_Click"/>
+                                <Separator Background="{StaticResource BorderBrush}"/>
+                                <MenuItem Header="-- BILDER &amp; VIEWS --" IsEnabled="False" FontWeight="Bold"/>
+                                <MenuItem Header="_Aktuelle Viewport-Ansicht exportieren (*.png)..." Click="ExportCurrentView_Click"/>
+                                <MenuItem Header="_Diagnostisches Befund-Overlay (*.png)..." Click="ExportDiagnosticOverlay_Click"/>
+                                <MenuItem Header="_Vaskulärer Frangi-Gefäßbaum (*.png)..." Click="ExportVascularTree_Click"/>
+                                <MenuItem Header="_3D Tiefenrelief Farbkarte (*.png)..." Click="Export3DDepthMap_Click"/>
+                            </MenuItem>
+                        </Menu>
 
                         <!-- Berichte Button (Matching Screenshot) -->
                         <Button Click="MenuExportReport_Click" Style="{StaticResource VoicemodButtonPillStyle}" Margin="0,0,8,0">
@@ -312,6 +362,7 @@
                             <Button Content="Extremitäten trennen" Click="BtnAutoSplitFeet_Click" Padding="12,4" Margin="2,0" ToolTip="Trennt linken &amp; rechten Fuß automatisch"/>
                             <Button Content="Reset ROI" Click="BtnResetROI_Click" Padding="10,4" Margin="2,0"/>
                             <Button Content="Reset Sonden" Click="BtnResetProbes_Click" Padding="10,4" Margin="2,0"/>
+                            <Button x:Name="BtnResetAll" Content="↺ Alles Zurücksetzen" Click="BtnResetAll_Click" Padding="12,4" Margin="4,0" ToolTip="Setzt Zoom, Pan, Sonden, ROIs, Filter und Ansichten auf Ausgangszustand zurück (Strg+R)" Style="{StaticResource VoicemodButtonPillStyle}"/>
                         </StackPanel>
                     </ScrollViewer>
 
@@ -1307,19 +1358,39 @@
                                             </Border>
                                         </Grid>
 
+                                        <!-- 3D Curvature Metrics Grid -->
+                                        <Grid Margin="0,0,0,10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="10" Margin="0,0,4,0">
+                                                <StackPanel>
+                                                    <TextBlock Text="MITTLERE KRÜMMUNG (H)" FontSize="9" FontWeight="Bold" Foreground="{StaticResource CyanBrush}"/>
+                                                    <TextBlock x:Name="Txt3DMeanCurv" Text="-- mm⁻¹" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,2,0,0"/>
+                                                </StackPanel>
+                                            </Border>
+                                            <Border Grid.Column="1" Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="10" Margin="4,0,0,0">
+                                                <StackPanel>
+                                                    <TextBlock Text="GAUSSSCHE KRÜMMUNG (K)" FontSize="9" FontWeight="Bold" Foreground="{StaticResource WarningBrush}"/>
+                                                    <TextBlock x:Name="Txt3DGaussCurv" Text="-- mm⁻²" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,2,0,0"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </Grid>
+
                                         <!-- Physical Model Explanation Card -->
                                         <Border Background="#F8FAFC" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="12" Margin="0,0,0,10">
                                             <StackPanel>
                                                 <TextBlock Text="Physikalische Korrekturformeln:" FontWeight="Bold" FontSize="10.5" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,4"/>
                                                 <TextBlock Text="• Tiefe: Z(x,y) = Z_peak · [0.5 sin(u π/2) + 0.5 √(1 - (1-u)²)]^0.65" FontSize="10" FontFamily="Consolas" Foreground="{StaticResource TextPrimaryBrush}"/>
-                                                <TextBlock Text="• Winkel: cos θ = 1 / √(1 + (∂Z/∂x)² + (∂Z/∂y)²)" FontSize="10" FontFamily="Consolas" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,2,0,0"/>
-                                                <TextBlock Text="• Emissivität: ε(θ) = ε₀ · cos^γ(θ)  (Haut-Richtungsfaktor)" FontSize="10" FontFamily="Consolas" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,2,0,0"/>
-                                                <TextBlock Text="• Kompensation: T_korr = T_app + ΔT_Lambert(θ) + ΔT_Tiefe(Z)" FontSize="10" FontFamily="Consolas" Foreground="{StaticResource CyanBrush}" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                                <TextBlock Text="• Glättung: Poisson-Laplace Relaxation ∇²Z = 0 (organische Wölbung)" FontSize="10" FontFamily="Consolas" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,2,0,0"/>
+                                                <TextBlock Text="• Radiometrie: ε(θ)/ε₀ = (1 - R_Fresnel(θ))/(1 - R₀) [LWIR n=1.34]" FontSize="10" FontFamily="Consolas" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,2,0,0"/>
+                                                <TextBlock Text="• Stefan-Boltzmann: T_korr = T_app · (ε₀/ε(θ))^0.25 + ΔT_Tiefe(Z)" FontSize="10" FontFamily="Consolas" Foreground="{StaticResource CyanBrush}" FontWeight="SemiBold" Margin="0,2,0,0"/>
                                             </StackPanel>
                                         </Border>
 
                                         <!-- Action Buttons -->
-                                        <Border Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="12">
+                                        <Border Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="12" Margin="0,0,0,10">
                                             <StackPanel>
                                                 <TextBlock Text="3D-Projektionen im Viewport:" FontWeight="Bold" FontSize="11" Margin="0,0,0,8"/>
                                                 <Button Click="BtnView3DAnatomy_Click" Style="{StaticResource VoicemodPrimaryButtonStyle}" Margin="0,0,0,6">
@@ -1334,6 +1405,43 @@
                                                         <TextBlock x:Name="TxtToggleCorrectedBtn" Text="Umschalten: Kantenkorrigiertes 2D-Wärmebild" VerticalAlignment="Center"/>
                                                     </StackPanel>
                                                 </Button>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <!-- 3D Mesh & CAD Export Section -->
+                                        <Border Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="12">
+                                            <StackPanel>
+                                                <TextBlock Text="3D CAD &amp; Mesh Exporte:" FontWeight="Bold" FontSize="11" Margin="0,0,0,8"/>
+                                                <Grid Margin="0,0,0,6">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <Button Grid.Column="0" Click="Export3D_Obj_Click" Style="{StaticResource VoicemodPrimaryButtonStyle}" Margin="0,0,4,0" ToolTip="Wavefront OBJ mit Thermalfarben pro Vertex">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <Path Data="{StaticResource IconExport}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Width="11" Height="11" Stretch="Uniform" Margin="0,0,6,0"/>
+                                                            <TextBlock Text="OBJ Mesh (*.obj)" VerticalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </Button>
+                                                    <Button Grid.Column="1" Click="Export3D_Stl_Click" Margin="4,0,0,0" ToolTip="Binäres STL für 3D-Druck und Einlagenfräsen">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <Path Data="{StaticResource IconExport}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Width="11" Height="11" Stretch="Uniform" Margin="0,0,6,0"/>
+                                                            <TextBlock Text="STL 3D-Druck (*.stl)" VerticalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </Button>
+                                                </Grid>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <Button Grid.Column="0" Click="Export3D_Ply_Click" Margin="0,0,4,0" ToolTip="Stanford PLY für CloudCompare &amp; MeshLab">
+                                                        <TextBlock Text="PLY Mesh (*.ply)" VerticalAlignment="Center"/>
+                                                    </Button>
+                                                    <Button Grid.Column="1" Click="Export3D_DepthCsv_Click" Margin="4,0,0,0" ToolTip="2D Tiefenprofil Matrix als CSV">
+                                                        <TextBlock Text="Tiefenmatrix (*.csv)" VerticalAlignment="Center"/>
+                                                    </Button>
+                                                </Grid>
                                             </StackPanel>
                                         </Border>
                                     </StackPanel>

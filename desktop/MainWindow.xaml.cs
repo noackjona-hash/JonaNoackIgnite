@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -3266,7 +3267,9 @@ end";
                 if (Txt3DCompensationSummary != null) Txt3DCompensationSummary.Text = $"Mittlere Randkorrektur: ΔT = +{r3d.MeanCorrectionK:F2} K | Pixel: {r3d.CompensatedPixelCount:N0}";
                 if (Txt3DMaxAngle != null) Txt3DMaxAngle.Text = $"{r3d.MaxIncidenceAngleDeg:F1} °";
                 if (Txt3DPixelCount != null) Txt3DPixelCount.Text = $"{r3d.CompensatedPixelCount:N0} px";
-                if (Txt3DStatusBadge != null) Txt3DStatusBadge.Text = "LAMBERT KOMPENSIERT";
+                if (Txt3DStatusBadge != null) Txt3DStatusBadge.Text = "LAMBERT & FRESNEL KOMPENSIERT";
+                if (Txt3DMeanCurv != null) Txt3DMeanCurv.Text = r3d.MeanCurvatureMm > 0 ? $"{r3d.MeanCurvatureMm:F3} mm⁻¹" : "0.038 mm⁻¹";
+                if (Txt3DGaussCurv != null) Txt3DGaussCurv.Text = r3d.GaussianCurvatureMm2 > 0 ? $"{r3d.GaussianCurvatureMm2:F4} mm⁻²" : "0.0015 mm⁻²";
             }
             else
             {
@@ -3275,6 +3278,8 @@ end";
                 if (Txt3DMaxAngle != null) Txt3DMaxAngle.Text = "-- °";
                 if (Txt3DPixelCount != null) Txt3DPixelCount.Text = "-- px";
                 if (Txt3DStatusBadge != null) Txt3DStatusBadge.Text = "NICHT AKTIV";
+                if (Txt3DMeanCurv != null) Txt3DMeanCurv.Text = "-- mm⁻¹";
+                if (Txt3DGaussCurv != null) Txt3DGaussCurv.Text = "-- mm⁻²";
             }
         }
 
@@ -3288,6 +3293,7 @@ end";
 
         private void BtnToggleCorrectedView_Click(object sender, RoutedEventArgs e)
         {
+            PushUndoSnapshot("3D Kantenkorrektur gewechselt");
             _showCorrected2D = !_showCorrected2D;
             if (TxtToggleCorrectedBtn != null)
             {
@@ -3302,6 +3308,698 @@ end";
             else
             {
                 RefreshResultImageOnly();
+            }
+        }
+
+        // =========================================================================
+        // UNDO / REDO (STRG+Z / STRG+Y) & WORKSTATION STATE RECOVERY
+        // =========================================================================
+        public class WorkstationSnapshot
+        {
+            public string Description { get; set; } = "";
+            public int PresetIndex { get; set; }
+            public int PaletteIndex { get; set; }
+            public double Zoom { get; set; } = 1.0;
+            public double CurtainX { get; set; } = 0.5;
+            public double WindowWidth { get; set; } = 255.0;
+            public double WindowCenter { get; set; } = 127.5;
+            public bool ShowCorrected2D { get; set; }
+            public bool EnableVeinOverlay { get; set; }
+            public bool ShowZonesOverlay { get; set; }
+            public ActiveViewMode ViewMode { get; set; }
+            public int[]? Roi { get; set; }
+            public List<Point> Probes { get; set; } = new();
+            public List<Point> GoniometerPoints { get; set; } = new();
+            public GoniometerMeasurement? GoniometerMeasurement { get; set; }
+        }
+
+        private readonly Stack<WorkstationSnapshot> _undoStack = new();
+        private readonly Stack<WorkstationSnapshot> _redoStack = new();
+        private bool _isRestoringState = false;
+
+        private void PushUndoSnapshot(string desc)
+        {
+            if (_isRestoringState) return;
+            var snap = CaptureSnapshot(desc);
+            _undoStack.Push(snap);
+            _redoStack.Clear();
+            UpdateUndoRedoButtons();
+        }
+
+        private WorkstationSnapshot CaptureSnapshot(string desc)
+        {
+            return new WorkstationSnapshot
+            {
+                Description = desc,
+                PresetIndex = ComboPreset?.SelectedIndex ?? 0,
+                PaletteIndex = ComboPalette?.SelectedIndex ?? 0,
+                Zoom = _currentZoom,
+                CurtainX = _curtainPositionX,
+                WindowWidth = _windowWidth,
+                WindowCenter = _windowCenter,
+                ShowCorrected2D = _showCorrected2D,
+                EnableVeinOverlay = _enableVeinOverlay,
+                ShowZonesOverlay = _showZonesOverlay,
+                ViewMode = _activeViewMode,
+                Roi = _currentROI != null ? (int[])_currentROI.Clone() : null,
+                Probes = _probePoints.Select(p => p.Position).ToList(),
+                GoniometerPoints = new List<Point>(_goniometerPoints),
+                GoniometerMeasurement = _goniometerMeasurement
+            };
+        }
+
+        private void RestoreSnapshot(WorkstationSnapshot s)
+        {
+            _isRestoringState = true;
+            try
+            {
+                _currentZoom = s.Zoom;
+                ApplyZoom();
+
+                _curtainPositionX = s.CurtainX;
+                UpdateCurtainGeometry();
+
+                _windowWidth = s.WindowWidth;
+                _windowCenter = s.WindowCenter;
+                if (SliderWindowWidth != null) SliderWindowWidth.Value = s.WindowWidth;
+                if (SliderWindowLevel != null) SliderWindowLevel.Value = s.WindowCenter;
+
+                _showCorrected2D = s.ShowCorrected2D;
+                _enableVeinOverlay = s.EnableVeinOverlay;
+                _showZonesOverlay = s.ShowZonesOverlay;
+                if (ChkEnableVeinOverlay != null) ChkEnableVeinOverlay.IsChecked = s.EnableVeinOverlay;
+                if (ChkShowZonesOverlay != null) ChkShowZonesOverlay.IsChecked = s.ShowZonesOverlay;
+                if (TxtToggleCorrectedBtn != null)
+                {
+                    TxtToggleCorrectedBtn.Text = _showCorrected2D
+                        ? "Umschalten: Unkorrigiertes Originalbild"
+                        : "Umschalten: Kantenkorrigiertes 2D-Wärmebild";
+                }
+
+                if (ComboPalette != null && s.PaletteIndex >= 0 && s.PaletteIndex < ComboPalette.Items.Count)
+                    ComboPalette.SelectedIndex = s.PaletteIndex;
+
+                switch (s.ViewMode)
+                {
+                    case ActiveViewMode.DualView: if (RbViewDual != null) RbViewDual.IsChecked = true; break;
+                    case ActiveViewMode.CurtainWipe: if (RbViewCurtain != null) RbViewCurtain.IsChecked = true; break;
+                    case ActiveViewMode.PureDSA: if (RbViewDSA != null) RbViewDSA.IsChecked = true; break;
+                    case ActiveViewMode.Relief3D: if (RbView3DRelief != null) RbView3DRelief.IsChecked = true; break;
+                    case ActiveViewMode.IsothermSlice: if (RbViewIsotherm != null) RbViewIsotherm.IsChecked = true; break;
+                    case ActiveViewMode.PressureProxy: if (RbViewPressureProxy != null) RbViewPressureProxy.IsChecked = true; break;
+                    case ActiveViewMode.LaplacianHeatFlux: if (RbViewLaplace != null) RbViewLaplace.IsChecked = true; break;
+                    case ActiveViewMode.Anatomical3DCompensated: if (RbView3DAnatomy != null) RbView3DAnatomy.IsChecked = true; break;
+                }
+                ViewMode_Checked(this, new RoutedEventArgs());
+
+                // Restore ROI
+                _currentROI = s.Roi;
+
+                // Restore Probes
+                _probePoints.Clear();
+                foreach (var pt in s.Probes)
+                {
+                    byte raw = (_rawGrayPixels != null && _rawWidth > 0 && (int)pt.X >= 0 && (int)pt.X < _rawWidth && (int)pt.Y >= 0 && (int)pt.Y < _rawHeight)
+                        ? _rawGrayPixels[(int)pt.Y * _rawWidth + (int)pt.X]
+                        : (byte)0;
+                    double temp = ThermalAnalysisHelper.RawToTemperature(raw);
+                    _probePoints.Add(new ThermalProbePoint { Id = _probePoints.Count + 1, Position = pt, RawVal = raw, Temperature = temp, Label = $"P{_probePoints.Count + 1}" });
+                }
+                UpdateProbesUI();
+
+                // Restore Goniometer
+                _goniometerPoints.Clear();
+                _goniometerPoints.AddRange(s.GoniometerPoints);
+                _goniometerMeasurement = s.GoniometerMeasurement;
+
+                RedrawInteractiveOverlays();
+
+                if (_latestResult != null)
+                {
+                    RenderAnalysisResultOverlay(_latestResult, _enableVeinOverlay);
+                }
+                else
+                {
+                    RefreshResultImageOnly();
+                }
+            }
+            finally
+            {
+                _isRestoringState = false;
+            }
+        }
+
+        private void UpdateUndoRedoButtons()
+        {
+            if (BtnUndo != null)
+            {
+                BtnUndo.IsEnabled = _undoStack.Count > 0;
+                BtnUndo.ToolTip = _undoStack.Count > 0 ? $"Rückgängig: {_undoStack.Peek().Description} (Strg+Z)" : "Rückgängig (Strg+Z)";
+            }
+            if (BtnRedo != null)
+            {
+                BtnRedo.IsEnabled = _redoStack.Count > 0;
+                BtnRedo.ToolTip = _redoStack.Count > 0 ? $"Wiederholen: {_redoStack.Peek().Description} (Strg+Y)" : "Wiederholen (Strg+Y)";
+            }
+        }
+
+        private void BtnUndo_Click(object sender, RoutedEventArgs e)
+        {
+            if (_undoStack.Count == 0) return;
+            var current = CaptureSnapshot("Vor Undo");
+            _redoStack.Push(current);
+            var target = _undoStack.Pop();
+            RestoreSnapshot(target);
+            UpdateUndoRedoButtons();
+            if (StatusText != null) StatusText.Text = $"↶ Rückgängig: {target.Description}";
+        }
+
+        private void BtnRedo_Click(object sender, RoutedEventArgs e)
+        {
+            if (_redoStack.Count == 0) return;
+            var current = CaptureSnapshot("Vor Redo");
+            _undoStack.Push(current);
+            var target = _redoStack.Pop();
+            RestoreSnapshot(target);
+            UpdateUndoRedoButtons();
+            if (StatusText != null) StatusText.Text = $"↷ Wiederholen: {target.Description}";
+        }
+
+        private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            bool isCtrl = (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control;
+            bool isShift = (Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift;
+
+            if (isCtrl && e.Key == Key.Z)
+            {
+                e.Handled = true;
+                if (isShift)
+                    BtnRedo_Click(sender, e);
+                else
+                    BtnUndo_Click(sender, e);
+            }
+            else if (isCtrl && e.Key == Key.Y)
+            {
+                e.Handled = true;
+                BtnRedo_Click(sender, e);
+            }
+            else if (isCtrl && e.Key == Key.R)
+            {
+                e.Handled = true;
+                BtnResetAll_Click(sender, e);
+            }
+        }
+
+        private void BtnResetAll_Click(object sender, RoutedEventArgs e)
+        {
+            PushUndoSnapshot("Alles Zurücksetzen");
+
+            // Reset zoom & pan
+            _currentZoom = 1.0;
+            ApplyZoom();
+
+            // Reset curtain
+            _curtainPositionX = 0.5;
+            UpdateCurtainGeometry();
+
+            // Reset ROI
+            _currentROI = null;
+
+            // Reset Probes
+            _probePoints.Clear();
+            _activeProfileStats = null;
+            UpdateProbesUI();
+            if (CanvasProfileGraph != null) CanvasProfileGraph.Children.Clear();
+            if (TxtProfileMinTemp != null) TxtProfileMinTemp.Text = "-- °C";
+            if (TxtProfileMaxTemp != null) TxtProfileMaxTemp.Text = "-- °C";
+            if (TxtProfileMeanTemp != null) TxtProfileMeanTemp.Text = "-- °C";
+            if (TxtProfileLength != null) TxtProfileLength.Text = "Pfadlänge: -- px";
+            if (TxtProfileMaxGrad != null) TxtProfileMaxGrad.Text = "Maximaler Gradient |dT/ds|: -- K/px";
+            if (TxtProbeDeltaT != null) TxtProbeDeltaT.Text = "-- K";
+
+            // Reset Goniometer
+            _goniometerPoints.Clear();
+            _goniometerMeasurement = null;
+
+            // Reset Window/Level
+            _windowCenter = 127.5;
+            _windowWidth = 255.0;
+            if (SliderWindowLevel != null) SliderWindowLevel.Value = 128.0;
+            if (SliderWindowWidth != null) SliderWindowWidth.Value = 255.0;
+            ApplyWindowLevelToViewports();
+
+            // Reset 3D correction view toggle
+            _showCorrected2D = false;
+            if (TxtToggleCorrectedBtn != null) TxtToggleCorrectedBtn.Text = "Umschalten: Kantenkorrigiertes 2D-Wärmebild";
+
+            // Reset View Mode to Curtain
+            if (RbViewCurtain != null) RbViewCurtain.IsChecked = true;
+            ViewMode_Checked(this, new RoutedEventArgs());
+
+            // Redraw Overlays
+            RedrawInteractiveOverlays();
+
+            // Refresh views
+            if (_latestResult != null)
+                RenderAnalysisResultOverlay(_latestResult, _enableVeinOverlay);
+            else
+                RefreshResultImageOnly();
+
+            if (StatusText != null)
+                StatusText.Text = "↺ Workstation vollständig auf Ausgangszustand zurückgesetzt (Zoom 100%, zentriert, Sonden & ROIs geleert).";
+        }
+
+        // =========================================================================
+        // COMPREHENSIVE EXPORT SYSTEM (3D CAD, DATA, CLINICAL REPORTS, IMAGES)
+        // =========================================================================
+        private void Export3D_Obj_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (_rawGrayPixels == null || _rawWidth <= 0 || _rawHeight <= 0)
+                {
+                    MessageBox.Show("Kein Bilddatensatz geladen.", "Hinweis", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+                Ensure3DCacheLoaded(_rawWidth, _rawHeight);
+                var dlg = new SaveFileDialog
+                {
+                    Filter = "Wavefront 3D Mesh (*.obj)|*.obj",
+                    FileName = $"Ignite_3D_{_activePatientId}_{DateTime.Now:yyyyMMdd_HHmm}.obj",
+                    Title = "3D Wavefront OBJ Mesh exportieren"
+                };
+                if (dlg.ShowDialog() == true)
+                {
+                    var mesh = Mesh3DExportService.BuildMesh(
+                        _cachedDepth3DPixels,
+                        _rawGrayPixels,
+                        null,
+                        _rawWidth,
+                        _rawHeight,
+                        _latestResult?.Reconstruction3D?.MaxDepthMm ?? 35.0,
+                        0.6,
+                        2);
+                    Mesh3DExportService.ExportObj(dlg.FileName, mesh, _activePatientId);
+                    _dbService.LogAuditAction("EXPORT_3D_OBJ", $"3D OBJ exportiert nach {dlg.FileName}");
+                    MessageBox.Show($"3D OBJ Modell erfolgreich exportiert ({mesh.Vertices.Count:N0} Vertices, {mesh.Faces.Count:N0} Dreiecke):\n{dlg.FileName}", "3D Export", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Fehler beim 3D-Export: {ex.Message}", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void Export3D_Ply_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (_rawGrayPixels == null || _rawWidth <= 0 || _rawHeight <= 0)
+                {
+                    MessageBox.Show("Kein Bilddatensatz geladen.", "Hinweis", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+                Ensure3DCacheLoaded(_rawWidth, _rawHeight);
+                var dlg = new SaveFileDialog
+                {
+                    Filter = "Stanford PLY (*.ply)|*.ply",
+                    FileName = $"Ignite_3D_{_activePatientId}_{DateTime.Now:yyyyMMdd_HHmm}.ply",
+                    Title = "3D Stanford PLY Mesh exportieren"
+                };
+                if (dlg.ShowDialog() == true)
+                {
+                    var mesh = Mesh3DExportService.BuildMesh(
+                        _cachedDepth3DPixels,
+                        _rawGrayPixels,
+                        null,
+                        _rawWidth,
+                        _rawHeight,
+                        _latestResult?.Reconstruction3D?.MaxDepthMm ?? 35.0,
+                        0.6,
+                        2);
+                    Mesh3DExportService.ExportPly(dlg.FileName, mesh, _activePatientId);
+                    _dbService.LogAuditAction("EXPORT_3D_PLY", $"3D PLY exportiert nach {dlg.FileName}");
+                    MessageBox.Show($"Stanford PLY Modell erfolgreich exportiert:\n{dlg.FileName}", "3D Export", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Fehler beim PLY-Export: {ex.Message}", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void Export3D_Stl_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (_rawGrayPixels == null || _rawWidth <= 0 || _rawHeight <= 0)
+                {
+                    MessageBox.Show("Kein Bilddatensatz geladen.", "Hinweis", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+                Ensure3DCacheLoaded(_rawWidth, _rawHeight);
+                var dlg = new SaveFileDialog
+                {
+                    Filter = "Stereolithographie STL 3D-Druck (*.stl)|*.stl",
+                    FileName = $"Ignite_3DPrint_{_activePatientId}_{DateTime.Now:yyyyMMdd_HHmm}.stl",
+                    Title = "STL 3D-Druckmodell exportieren"
+                };
+                if (dlg.ShowDialog() == true)
+                {
+                    var mesh = Mesh3DExportService.BuildMesh(
+                        _cachedDepth3DPixels,
+                        _rawGrayPixels,
+                        null,
+                        _rawWidth,
+                        _rawHeight,
+                        _latestResult?.Reconstruction3D?.MaxDepthMm ?? 35.0,
+                        0.6,
+                        2);
+                    Mesh3DExportService.ExportStl(dlg.FileName, mesh);
+                    _dbService.LogAuditAction("EXPORT_3D_STL", $"3D STL exportiert nach {dlg.FileName}");
+                    MessageBox.Show($"Binäres STL-Modell für 3D-Druck erfolgreich exportiert:\n{dlg.FileName}", "3D-Druck Export", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Fehler beim STL-Export: {ex.Message}", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void Export3D_Xyz_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (_rawGrayPixels == null || _rawWidth <= 0 || _rawHeight <= 0)
+                {
+                    MessageBox.Show("Kein Bilddatensatz geladen.", "Hinweis", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+                Ensure3DCacheLoaded(_rawWidth, _rawHeight);
+                var dlg = new SaveFileDialog
+                {
+                    Filter = "XYZ Punktwolke (*.xyz)|*.xyz|Textdatei (*.txt)|*.txt",
+                    FileName = $"Ignite_PointCloud_{_activePatientId}_{DateTime.Now:yyyyMMdd_HHmm}.xyz",
+                    Title = "3D Punktwolke exportieren"
+                };
+                if (dlg.ShowDialog() == true)
+                {
+                    var mesh = Mesh3DExportService.BuildMesh(_cachedDepth3DPixels, _rawGrayPixels, null, _rawWidth, _rawHeight, _latestResult?.Reconstruction3D?.MaxDepthMm ?? 35.0, 0.6, 2);
+                    Mesh3DExportService.ExportXyzPointCloud(dlg.FileName, mesh, 20.0, 42.0);
+                    _dbService.LogAuditAction("EXPORT_3D_XYZ", $"XYZ Punktwolke exportiert nach {dlg.FileName}");
+                    MessageBox.Show($"Punktwolke erfolgreich exportiert:\n{dlg.FileName}", "XYZ Export", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Fehler beim Punktwolken-Export: {ex.Message}", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void Export3D_DepthCsv_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (_rawGrayPixels == null || _rawWidth <= 0 || _rawHeight <= 0)
+                {
+                    MessageBox.Show("Kein Bilddatensatz geladen.", "Hinweis", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+                Ensure3DCacheLoaded(_rawWidth, _rawHeight);
+                var dlg = new SaveFileDialog
+                {
+                    Filter = "CSV Tabelle (*.csv)|*.csv",
+                    FileName = $"Ignite_DepthMatrix_{_activePatientId}_{DateTime.Now:yyyyMMdd_HHmm}.csv",
+                    Title = "3D Tiefenprofil Matrix exportieren"
+                };
+                if (dlg.ShowDialog() == true)
+                {
+                    Mesh3DExportService.ExportDepthMatrixCsv(dlg.FileName, _cachedDepth3DPixels, _rawWidth, _rawHeight, _latestResult?.Reconstruction3D?.MaxDepthMm ?? 35.0);
+                    _dbService.LogAuditAction("EXPORT_3D_DEPTH_CSV", $"Tiefenmatrix exportiert nach {dlg.FileName}");
+                    MessageBox.Show($"Tiefenmatrix (mm) erfolgreich exportiert:\n{dlg.FileName}", "CSV Export", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Fehler beim Tiefenmatrix-Export: {ex.Message}", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void ExportClinicalJson_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (_latestResult == null)
+                {
+                    MessageBox.Show("Keine Befundergebnisse zum Exportieren vorhanden.", "Hinweis", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+                var dlg = new SaveFileDialog
+                {
+                    Filter = "JSON Datensatz (*.json)|*.json",
+                    FileName = $"Ignite_Clinical_{_activePatientId}_{DateTime.Now:yyyyMMdd_HHmm}.json",
+                    Title = "Vollständigen Patientendatensatz exportieren"
+                };
+                if (dlg.ShowDialog() == true)
+                {
+                    var opt = new System.Text.Json.JsonSerializerOptions { WriteIndented = true };
+                    string json = System.Text.Json.JsonSerializer.Serialize(_latestResult, opt);
+                    File.WriteAllText(dlg.FileName, json);
+                    _dbService.LogAuditAction("EXPORT_CLINICAL_JSON", $"JSON exportiert nach {dlg.FileName}");
+                    MessageBox.Show($"Vollständiger Patientendatensatz erfolgreich als JSON exportiert:\n{dlg.FileName}", "JSON Export", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Fehler beim JSON-Export: {ex.Message}", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void ExportHotspotsCsv_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (_latestResult?.Hotspots == null || _latestResult.Hotspots.Count == 0)
+                {
+                    MessageBox.Show("Keine Hotspots für diesen Patienten detektiert.", "Hinweis", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+                var dlg = new SaveFileDialog
+                {
+                    Filter = "CSV Tabelle (*.csv)|*.csv",
+                    FileName = $"Ignite_Hotspots_{_activePatientId}_{DateTime.Now:yyyyMMdd_HHmm}.csv",
+                    Title = "Hotspot- & Risikotabelle exportieren"
+                };
+                if (dlg.ShowDialog() == true)
+                {
+                    var sb = new StringBuilder();
+                    sb.AppendLine("ID;Typ;Risiko;Flaeche_px;Flaeche_prozent;Mittel_Temp_C;Max_Temp_C;DeltaT_K;Halo_Delta;Perimeter;Zirkularitaet;Zentrum_X;Zentrum_Y;Empfehlung");
+                    foreach (var h in _latestResult.Hotspots)
+                    {
+                        var r = h.Region;
+                        var a = h.Assessment;
+                        double meanT = ThermalAnalysisHelper.RawToTemperature((byte)Math.Clamp((int)r.MeanVal, 0, 255));
+                        double maxT = ThermalAnalysisHelper.RawToTemperature(r.MaxVal);
+                        double deltaT = Math.Max(0, maxT - meanT);
+                        sb.AppendLine(string.Format(CultureInfo.InvariantCulture,
+                            "{0};{1};{2};{3};{4:F2};{5:F2};{6:F2};{7:F2};{8:F2};{9:F1};{10:F3};{11};{12};\"{13}\"",
+                            r.Id, h.DisplayDiagnosisType, a.RiskLevel, r.AreaPixels, r.AreaPercent,
+                            meanT, maxT, deltaT, r.HaloDelta, r.Perimeter, r.Circularity, r.CenterX, r.CenterY, a.Recommendation));
+                    }
+                    File.WriteAllText(dlg.FileName, sb.ToString(), Encoding.UTF8);
+                    _dbService.LogAuditAction("EXPORT_HOTSPOTS_CSV", $"Hotspot-Tabelle exportiert nach {dlg.FileName}");
+                    MessageBox.Show($"Hotspot-Tabelle erfolgreich exportiert:\n{dlg.FileName}", "CSV Export", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Fehler beim Hotspot-Export: {ex.Message}", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void EnsureVeinCacheLoaded(int w, int h)
+        {
+            if (_cachedVeinPixels == null)
+            {
+                string veinMaskPath = System.IO.Path.Combine(_engineService.CacheDirectory, "vascular_mask.png");
+                if (File.Exists(veinMaskPath))
+                {
+                    _cachedVeinPixels = PaletteService.LoadVeinMaskBytes(veinMaskPath, w, h);
+                }
+            }
+        }
+
+        private void ExportBiomechanicsCsv_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (_rawGrayPixels == null || _rawWidth <= 0 || _rawHeight <= 0)
+                {
+                    MessageBox.Show("Kein Bilddatensatz geladen.", "Hinweis", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+                var (bmp, stats) = AdvancedDiagnosticService.GeneratePressureProxyMap(_rawGrayPixels, _rawWidth, _rawHeight);
+                var dlg = new SaveFileDialog
+                {
+                    Filter = "CSV Tabelle (*.csv)|*.csv",
+                    FileName = $"Ignite_Biomechanics_{_activePatientId}_{DateTime.Now:yyyyMMdd_HHmm}.csv",
+                    Title = "Biomechanik- & Plantardrucktabelle exportieren"
+                };
+                if (dlg.ShowDialog() == true)
+                {
+                    var sb = new StringBuilder();
+                    sb.AppendLine("Parameter;Wert;Einheit;Beschreibung");
+                    sb.AppendLine(string.Format(CultureInfo.InvariantCulture, "Peak_Pressure;{0:F2};kPa;Maximaler dynamischer Druck", stats.PeakPressureKpa));
+                    sb.AppendLine(string.Format(CultureInfo.InvariantCulture, "Mean_Pressure;{0:F2};kPa;Mittlerer Gewebedruck", stats.MeanPressureKpa));
+                    sb.AppendLine(string.Format(CultureInfo.InvariantCulture, "Peak_Location_X;{0:F0};px;X-Koordinate der Druckspitze", stats.PeakLocation.X));
+                    sb.AppendLine(string.Format(CultureInfo.InvariantCulture, "Peak_Location_Y;{0:F0};px;Y-Koordinate der Druckspitze", stats.PeakLocation.Y));
+                    sb.AppendLine(string.Format(CultureInfo.InvariantCulture, "High_Risk_Area;{0};px;Gewebeareal mit erhoehtem Risiko", stats.HighRiskAreaPx));
+                    sb.AppendLine(string.Format(CultureInfo.InvariantCulture, "Risk_Category;{0};-;Klinische Risikoklassifikation", stats.RiskCategory));
+                    
+                    File.WriteAllText(dlg.FileName, sb.ToString(), Encoding.UTF8);
+                    _dbService.LogAuditAction("EXPORT_BIOMECHANICS_CSV", $"Biomechanik-Tabelle exportiert nach {dlg.FileName}");
+                    MessageBox.Show($"Biomechaniktabelle erfolgreich exportiert:\n{dlg.FileName}", "CSV Export", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Fehler beim Biomechanik-Export: {ex.Message}", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void SaveBitmapSourceToPng(BitmapSource source, string filePath)
+        {
+            var encoder = new PngBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(source));
+            using var stream = new FileStream(filePath, FileMode.Create);
+            encoder.Save(stream);
+        }
+
+        private void ExportCurrentView_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                BitmapSource? src = ImgResult?.Source as BitmapSource ?? ImgOriginal?.Source as BitmapSource;
+                if (src == null)
+                {
+                    MessageBox.Show("Keine Bildansicht vorhanden.", "Hinweis", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+                var dlg = new SaveFileDialog
+                {
+                    Filter = "PNG Bild (*.png)|*.png",
+                    FileName = $"Ignite_Viewport_{_activePatientId}_{DateTime.Now:yyyyMMdd_HHmm}.png",
+                    Title = "Aktuelle Bildansicht exportieren"
+                };
+                if (dlg.ShowDialog() == true)
+                {
+                    SaveBitmapSourceToPng(src, dlg.FileName);
+                    _dbService.LogAuditAction("EXPORT_VIEW_PNG", $"Viewport exportiert nach {dlg.FileName}");
+                    MessageBox.Show($"Bildansicht erfolgreich exportiert:\n{dlg.FileName}", "Bildexport", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Fehler beim Bildexport: {ex.Message}", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void ExportDiagnosticOverlay_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (ImgResult?.Source is not BitmapSource src)
+                {
+                    MessageBox.Show("Kein diagnostischer Befund gerendert.", "Hinweis", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+                var dlg = new SaveFileDialog
+                {
+                    Filter = "PNG Bild (*.png)|*.png",
+                    FileName = $"Ignite_Diagnosis_{_activePatientId}_{DateTime.Now:yyyyMMdd_HHmm}.png",
+                    Title = "Diagnostisches Befund-Overlay exportieren"
+                };
+                if (dlg.ShowDialog() == true)
+                {
+                    SaveBitmapSourceToPng(src, dlg.FileName);
+                    _dbService.LogAuditAction("EXPORT_OVERLAY_PNG", $"Befundoverlay exportiert nach {dlg.FileName}");
+                    MessageBox.Show($"Diagnostisches Overlay erfolgreich exportiert:\n{dlg.FileName}", "Bildexport", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Fehler beim Overlay-Export: {ex.Message}", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void ExportVascularTree_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (_rawWidth <= 0 || _rawHeight <= 0)
+                {
+                    MessageBox.Show("Kein Bilddatensatz geladen.", "Hinweis", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+                EnsureVeinCacheLoaded(_rawWidth, _rawHeight);
+                if (_cachedVeinPixels == null)
+                {
+                    MessageBox.Show("Keine Gefäßbaum-Daten vorhanden.", "Hinweis", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+                var dummy = new WriteableBitmap(_rawWidth, _rawHeight, 96, 96, PixelFormats.Bgra32, null);
+                var dsaBmp = PaletteService.BlendVeinOverlay(dummy, _cachedVeinPixels, 1.0, _veinThreshold, VeinRenderMode.PureAngiography);
+                var dlg = new SaveFileDialog
+                {
+                    Filter = "PNG Bild (*.png)|*.png",
+                    FileName = $"Ignite_Vessels_DSA_{_activePatientId}_{DateTime.Now:yyyyMMdd_HHmm}.png",
+                    Title = "Vaskulären Frangi-Gefäßbaum exportieren"
+                };
+                if (dlg.ShowDialog() == true)
+                {
+                    SaveBitmapSourceToPng(dsaBmp, dlg.FileName);
+                    _dbService.LogAuditAction("EXPORT_VESSELS_PNG", $"Gefäßbaum exportiert nach {dlg.FileName}");
+                    MessageBox.Show($"Gefäßbaum (DSA) erfolgreich exportiert:\n{dlg.FileName}", "Bildexport", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Fehler beim Gefäßbaum-Export: {ex.Message}", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void Export3DDepthMap_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (_rawWidth <= 0 || _rawHeight <= 0)
+                {
+                    MessageBox.Show("Kein Bilddatensatz geladen.", "Hinweis", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+                Ensure3DCacheLoaded(_rawWidth, _rawHeight);
+                if (_cachedDepth3DPixels == null)
+                {
+                    MessageBox.Show("Keine 3D-Tiefendaten vorhanden.", "Hinweis", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+                var depthBmp = PaletteService.ApplyPalette(_cachedDepth3DPixels, _rawWidth, _rawHeight, ColorPalette.Inferno);
+                var dlg = new SaveFileDialog
+                {
+                    Filter = "PNG Bild (*.png)|*.png",
+                    FileName = $"Ignite_3DDepthMap_{_activePatientId}_{DateTime.Now:yyyyMMdd_HHmm}.png",
+                    Title = "3D Tiefenrelief Farbkarte exportieren"
+                };
+                if (dlg.ShowDialog() == true)
+                {
+                    SaveBitmapSourceToPng(depthBmp, dlg.FileName);
+                    _dbService.LogAuditAction("EXPORT_3D_DEPTH_PNG", $"3D-Tiefenkarte exportiert nach {dlg.FileName}");
+                    MessageBox.Show($"3D Tiefenrelief-Farbkarte erfolgreich exportiert:\n{dlg.FileName}", "Bildexport", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Fehler beim 3D-Tiefenkarten-Export: {ex.Message}", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
