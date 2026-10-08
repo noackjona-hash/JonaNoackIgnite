@@ -52,7 +52,8 @@ namespace Ignite.Desktop
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Initialisierungsfehler: {ex.Message}", "IGNITE Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+                string msg = ex.InnerException != null ? $"{ex.Message}\n\nDetail: {ex.InnerException.Message}" : ex.Message;
+                MessageBox.Show($"Initialisierungsfehler: {msg}", "IGNITE Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
                 Shutdown();
             }
         }

@@ -43,7 +43,8 @@ namespace Ignite.Desktop.Services
             bool vascular,
             bool perfusion,
             int[]? roi = null,
-            string? luaScriptPath = null)
+            string? luaScriptPath = null,
+            bool reconstruct3d = true)
         {
             if (!File.Exists(_coreExecutablePath))
             {
@@ -55,7 +56,8 @@ namespace Ignite.Desktop.Services
 
             string args = $"-mode=cli -input=\"{Path.GetFullPath(imagePath)}\" -output=\"{outJson}\" -maskdir=\"{_cacheDirectory}\" " +
                           $"-k={kFactor.ToString("F2", inv)} -kernel={kernelFactor.ToString("F3", inv)} -threshmode={thresholdMode} " +
-                          $"-vascular={(vascular ? "true" : "false")} -perfusion={(perfusion ? "true" : "false")}";
+                          $"-vascular={(vascular ? "true" : "false")} -perfusion={(perfusion ? "true" : "false")} " +
+                          $"-reconstruct3d={(reconstruct3d ? "true" : "false")}";
 
             if (roi != null && roi.Length == 4)
             {

@@ -26,7 +26,8 @@ namespace Ignite.Desktop
         IsothermSlice,
         DigitalSubtraction,
         PressureProxy,
-        LaplacianHeatFlux
+        LaplacianHeatFlux,
+        Anatomical3DCompensated
     }
 
     public enum ActiveCanvasTool
@@ -75,6 +76,11 @@ namespace Ignite.Desktop
         private double _dstOffset = -1.2;
         private List<AngiosomeTerritory> _cachedAngiosomes = new();
         private PredictiveUlcerRisk? _latestPredictiveRisk;
+
+        // 3D Anatomical Reconstruction & Lambertian Edge Compensation State
+        private byte[]? _cachedDepth3DPixels = null;
+        private byte[]? _cachedCorrected3DPixels = null;
+        private bool _showCorrected2D = false;
 
         // Curtain Wipe Split Compare State
         private bool _isDraggingCurtain = false;
@@ -503,10 +509,11 @@ end";
             string mode = ComboThresholdMode.SelectedIndex == 1 ? "GAUSSIAN" : "MAD";
             bool vascular = ChkFrangi.IsChecked == true;
             bool perfusion = ChkPerfusion.IsChecked == true;
+            bool reconstruct3d = Chk3DReconstruction?.IsChecked == true;
 
             try
             {
-                var result = await _engineService.RunAnalysisAsync(_currentImagePath, kFactor, kernelFactor, mode, vascular, perfusion, _currentROI);
+                var result = await _engineService.RunAnalysisAsync(_currentImagePath, kFactor, kernelFactor, mode, vascular, perfusion, _currentROI, null, reconstruct3d);
                 if (result == null)
                     return;
 
@@ -529,8 +536,10 @@ end";
                     GridHotspots.SelectedIndex = 0;
                 }
 
-                // Invalidate cached vein pixels so new ones are loaded
+                // Invalidate cached masks so new ones are loaded
                 _cachedVeinPixels = null;
+                _cachedDepth3DPixels = null;
+                _cachedCorrected3DPixels = null;
 
                 // Update Clinical Header Status Chip
                 bool isCrit = (result.HighestRisk == "CRITICAL");
@@ -569,6 +578,9 @@ end";
 
                 // Update Biomechanics & Pennes-Bioheat Pressure Proxy
                 UpdateBiomechanicsUI();
+
+                // Update 3D Surface Reconstruction & Lambertian Edge Compensation
+                Update3DReconstructionUI();
 
                 // Log into SQLite database safely
                 if (_dbService != null && !string.IsNullOrEmpty(_activePatientId) && !string.IsNullOrEmpty(_currentImagePath))
@@ -634,8 +646,22 @@ end";
                 return;
             }
 
+            // Handle 3D Anatomical Reconstruction & Lambertian Edge Compensation mode
+            if (_activeViewMode == ActiveViewMode.Anatomical3DCompensated && _rawGrayPixels != null)
+            {
+                Ensure3DCacheLoaded(w, h);
+                byte[] tempSource = (_showCorrected2D && _cachedCorrected3DPixels != null) ? _cachedCorrected3DPixels : (_cachedCorrected3DPixels ?? _rawGrayPixels);
+                var anatomical3DBmp = ThermalTopographyService.GenerateAnatomical3DSurface(
+                    tempSource, _cachedDepth3DPixels, w, h, _activePalette, true, 0.45);
+                ImgResult.Source = anatomical3DBmp;
+                OverlayResultCanvas.Children.Clear();
+                return;
+            }
+
+            byte[]? activeDisplayPixels = (_showCorrected2D && _cachedCorrected3DPixels != null) ? _cachedCorrected3DPixels : _rawGrayPixels;
+
             BitmapSource baseBmp;
-            if ((_activeViewMode == ActiveViewMode.CurtainWipe || _activeViewMode == ActiveViewMode.DualView) && _rawGrayPixels != null)
+            if ((_activeViewMode == ActiveViewMode.CurtainWipe || _activeViewMode == ActiveViewMode.DualView) && activeDisplayPixels != null)
             {
                 byte thresh = 160;
                 if (result.Stats != null && result.Stats.OrigMedian > 0)
@@ -643,12 +669,12 @@ end";
                     thresh = (byte)Math.Clamp(result.Stats.OrigMedian + 10, 100, 230);
                 }
                 baseBmp = PaletteService.CreateIsolatedFindingBitmap(
-                    _rawGrayPixels, w, h, _activePalette, thresh, _cachedVeinPixels, showVeins && _enableVeinOverlay, _windowWidth, _windowCenter);
+                    activeDisplayPixels, w, h, _activePalette, thresh, _cachedVeinPixels, showVeins && _enableVeinOverlay, _windowWidth, _windowCenter);
             }
             else
             {
-                baseBmp = _rawGrayPixels != null
-                    ? PaletteService.ApplyPalette(_rawGrayPixels, w, h, _activePalette, _windowWidth, _windowCenter)
+                baseBmp = activeDisplayPixels != null
+                    ? PaletteService.ApplyPalette(activeDisplayPixels, w, h, _activePalette, _windowWidth, _windowCenter)
                     : PaletteService.ApplyPalette(_originalBitmap, _activePalette, _windowWidth, _windowCenter);
 
                 // Blend vein mask if active
@@ -735,8 +761,20 @@ end";
                 return;
             }
 
+            if (_activeViewMode == ActiveViewMode.Anatomical3DCompensated && _rawGrayPixels != null)
+            {
+                Ensure3DCacheLoaded(w, h);
+                byte[] tempSource = (_showCorrected2D && _cachedCorrected3DPixels != null) ? _cachedCorrected3DPixels : (_cachedCorrected3DPixels ?? _rawGrayPixels);
+                ImgResult.Source = ThermalTopographyService.GenerateAnatomical3DSurface(
+                    tempSource, _cachedDepth3DPixels, w, h, _activePalette, true, 0.45);
+                OverlayResultCanvas.Children.Clear();
+                return;
+            }
+
+            byte[]? activeDisplayPixels = (_showCorrected2D && _cachedCorrected3DPixels != null) ? _cachedCorrected3DPixels : _rawGrayPixels;
+
             BitmapSource baseBmp;
-            if ((_activeViewMode == ActiveViewMode.CurtainWipe || _activeViewMode == ActiveViewMode.DualView) && _rawGrayPixels != null)
+            if ((_activeViewMode == ActiveViewMode.CurtainWipe || _activeViewMode == ActiveViewMode.DualView) && activeDisplayPixels != null)
             {
                 byte thresh = (byte)Math.Clamp(_windowCenter + 15, 120, 230);
                 if (_latestResult?.Stats != null && _latestResult.Stats.OrigMedian > 0)
@@ -744,12 +782,12 @@ end";
                     thresh = (byte)Math.Clamp(_latestResult.Stats.OrigMedian + 10, 100, 230);
                 }
                 baseBmp = PaletteService.CreateIsolatedFindingBitmap(
-                    _rawGrayPixels, w, h, _activePalette, thresh, _cachedVeinPixels, _enableVeinOverlay, _windowWidth, _windowCenter);
+                    activeDisplayPixels, w, h, _activePalette, thresh, _cachedVeinPixels, _enableVeinOverlay, _windowWidth, _windowCenter);
             }
             else
             {
-                baseBmp = _rawGrayPixels != null
-                    ? PaletteService.ApplyPalette(_rawGrayPixels, w, h, _activePalette, _windowWidth, _windowCenter)
+                baseBmp = activeDisplayPixels != null
+                    ? PaletteService.ApplyPalette(activeDisplayPixels, w, h, _activePalette, _windowWidth, _windowCenter)
                     : PaletteService.ApplyPalette(_originalBitmap, _activePalette, _windowWidth, _windowCenter);
 
                 if (_enableVeinOverlay && _cachedVeinPixels != null)
@@ -843,6 +881,17 @@ end";
                 if (InspectorTabs != null && TabBiomechanics != null) InspectorTabs.SelectedItem = TabBiomechanics;
                 TxtVp2Title.Text = "DISCRETE 2D-LAPLACE (∇²T) WÄRMESTAU- & TIEFENGEWEBE-ABSZESSFILTER";
             }
+            else if (RbView3DAnatomy != null && RbView3DAnatomy.IsChecked == true)
+            {
+                _activeViewMode = ActiveViewMode.Anatomical3DCompensated;
+                ColViewport1.Width = new GridLength(1, GridUnitType.Star);
+                ColDivider.Width = new GridLength(1);
+                ColViewport2.Width = new GridLength(1, GridUnitType.Star);
+                ImgCurtainRaw.Visibility = Visibility.Collapsed;
+                CanvasCurtain.Visibility = Visibility.Collapsed;
+                if (InspectorTabs != null && Tab3DReconstruction != null) InspectorTabs.SelectedItem = Tab3DReconstruction;
+                TxtVp2Title.Text = "3D-ANATOMISCHE OBERFLÄCHEN-REKONSTRUKTION & LAMBERT-KANTENKORREKTUR";
+            }
 
             RefreshResultImageOnly();
         }
@@ -898,34 +947,70 @@ end";
                 double origMed = _latestResult.Stats?.OrigMedian ?? 0;
                 foreach (var hspot in _latestResult.Hotspots)
                 {
-                    if (hspot?.Region == null) continue;
-                    var box = hspot.Region.BoundingBox;
+                    if (hspot == null || hspot.Region == null) continue;
+                    var reg = hspot.Region;
+                    var box = reg.BoundingBox;
                     if (box == null || box.Length < 4) continue;
 
                     int minX = box[0], minY = box[1], maxX = box[2], maxY = box[3];
                     int bw = maxX - minX, bh = maxY - minY;
                     var risk = hspot.Assessment?.RiskLevel ?? "NORMAL";
+                    string? diagType = hspot.Assessment?.DiagnosisType;
+                    if (string.IsNullOrWhiteSpace(diagType)) diagType = reg.DiagnosisType ?? "INFLAMMATION";
+
+                    Brush strokeBrush;
+                    Brush fillBrush;
+                    DoubleCollection? dashArray = null;
+                    string badgePrefix;
+
+                    if (diagType == "PRESSURE_POINT")
+                    {
+                        strokeBrush = new SolidColorBrush(Color.FromRgb(255, 179, 0)); // Amber für Druckstelle
+                        fillBrush = new SolidColorBrush(Color.FromArgb(30, 255, 179, 0));
+                        dashArray = new DoubleCollection { 4, 2 }; // Gestrichelter Rand = mechanische Druckbelastung
+                        badgePrefix = "🦶 DRUCKSTELLE";
+                    }
+                    else if (diagType == "INFLAMED_PRESSURE_POINT")
+                    {
+                        strokeBrush = new SolidColorBrush(Color.FromRgb(255, 42, 85)); // Armstrong Alarm Red
+                        fillBrush = new SolidColorBrush(Color.FromArgb(50, 255, 42, 85));
+                        badgePrefix = "⚠️ ENTZ. DRUCKSTELLE";
+                    }
+                    else if (diagType == "BENIGN")
+                    {
+                        strokeBrush = new SolidColorBrush(Color.FromRgb(0, 230, 118)); // Green
+                        fillBrush = new SolidColorBrush(Color.FromArgb(25, 0, 230, 118));
+                        badgePrefix = "🌱 NORMAL";
+                    }
+                    else
+                    {
+                        // Echte Entzündung (INFLAMMATION)
+                        strokeBrush = risk == "CRITICAL" ? new SolidColorBrush(Color.FromRgb(255, 42, 85)) : new SolidColorBrush(Color.FromRgb(255, 82, 82));
+                        fillBrush = new SolidColorBrush(Color.FromArgb(40, 255, 42, 85));
+                        badgePrefix = "🔥 ENTZÜNDUNG";
+                    }
 
                     var rect = new System.Windows.Shapes.Rectangle
                     {
                         Width = Math.Max(bw, 12),
                         Height = Math.Max(bh, 12),
-                        Stroke = risk == "CRITICAL" ? new SolidColorBrush(Color.FromRgb(255, 42, 85)) : Brushes.Yellow,
-                        StrokeThickness = 2.0,
+                        Stroke = strokeBrush,
+                        StrokeThickness = diagType == "INFLAMED_PRESSURE_POINT" ? 2.5 : 2.0,
+                        StrokeDashArray = dashArray,
                         RadiusX = 3,
                         RadiusY = 3,
-                        Fill = new SolidColorBrush(Color.FromArgb(40, 255, 42, 85))
+                        Fill = fillBrush
                     };
                     Canvas.SetLeft(rect, minX);
                     Canvas.SetTop(rect, minY);
                     OverlayResultCanvas.Children.Add(rect);
 
-                    var crosshairH = new Line { X1 = hspot.Region.CenterX - 8, Y1 = hspot.Region.CenterY, X2 = hspot.Region.CenterX + 8, Y2 = hspot.Region.CenterY, Stroke = Brushes.White, StrokeThickness = 1.5 };
-                    var crosshairV = new Line { X1 = hspot.Region.CenterX, Y1 = hspot.Region.CenterY - 8, X2 = hspot.Region.CenterX, Y2 = hspot.Region.CenterY + 8, Stroke = Brushes.White, StrokeThickness = 1.5 };
+                    var crosshairH = new Line { X1 = reg.CenterX - 8, Y1 = reg.CenterY, X2 = reg.CenterX + 8, Y2 = reg.CenterY, Stroke = Brushes.White, StrokeThickness = 1.5 };
+                    var crosshairV = new Line { X1 = reg.CenterX, Y1 = reg.CenterY - 8, X2 = reg.CenterX, Y2 = reg.CenterY + 8, Stroke = Brushes.White, StrokeThickness = 1.5 };
                     OverlayResultCanvas.Children.Add(crosshairH);
                     OverlayResultCanvas.Children.Add(crosshairV);
 
-                    double deltaT = Math.Round((hspot.Region.MaxVal - origMed) * 0.1, 1);
+                    double deltaT = Math.Round((reg.MaxVal - origMed) * 0.1, 1);
                     var labelBorder = new Border
                     {
                         Background = new SolidColorBrush(Color.FromArgb(235, 10, 14, 22)),
@@ -936,7 +1021,7 @@ end";
                     };
                     labelBorder.Child = new TextBlock
                     {
-                        Text = $"HERD #{hspot.Region.Id} (ΔT = +{deltaT:F1} K) [{risk}]",
+                        Text = $"{badgePrefix} #{reg.Id} (ΔT = +{deltaT:F1} K)",
                         FontSize = 9.5,
                         FontWeight = FontWeights.Bold,
                         Foreground = Brushes.White
@@ -2179,7 +2264,25 @@ end";
         {
             if (GridHotspots.SelectedItem is HotspotSummary sel)
             {
-                TxtLuaRecommendation.Text = $"Herd #{sel.Region.Id} [{sel.Assessment.RiskLevel}]: {sel.Assessment.Recommendation}";
+                string dt = sel.DisplayDiagnosisType;
+                string colorHex = sel.DiagnosisBadgeColor;
+                try
+                {
+                    var col = (Color)ColorConverter.ConvertFromString(colorHex);
+                    BadgeDiagnosisType.BorderBrush = new SolidColorBrush(col);
+                    BadgeDiagnosisType.Background = new SolidColorBrush(Color.FromArgb(35, col.R, col.G, col.B));
+                    TxtDiagnosisBadge.Foreground = new SolidColorBrush(col);
+                    TxtDiagnosisBadge.Text = dt.ToUpper();
+                }
+                catch { }
+
+                double grad = sel.Region?.EdgeGradient ?? 0;
+                double halo = (sel.Region?.HaloDelta ?? 0) * 0.1;
+                double lap = sel.Region?.ThermalLaplacian ?? 0;
+                double p2m = sel.Region?.PeakToMean ?? 1.0;
+
+                string biophys = $"• Randgradient: {grad:F1} | Perifokal-Halo: +{halo:F1} K | Laplace: {lap:F1} | Fokus-Index: {p2m:F2}";
+                TxtLuaRecommendation.Text = $"Herd #{sel.Region?.Id ?? 0} [{dt}] (Risikostufe: {sel.Assessment?.RiskLevel ?? "NORMAL"})\n{biophys}\n\nKlinische Empfehlung:\n{sel.Assessment?.Recommendation ?? "Keine Intervention"}";
             }
         }
 
@@ -2376,13 +2479,17 @@ end";
                     ? "Pathologische Hyperthermie (ΔT ≥ 2.2 K nach Armstrong). Sofortige Druckentlastung (Vorfußentlastungsschuh), Ausschluss Ulkus/Charcot."
                     : "Keine akute pathologische Asymmetrie nachweisbar. Regelmäßige präventive Fußpflege und 3-Monats-Follow-up empfohlen.",
                 Goniometer = _goniometerMeasurement,
-                Angiosomes = _cachedAngiosomes
+                Angiosomes = _cachedAngiosomes,
+                Reconstruction3D = _latestResult?.Reconstruction3D
             };
 
             if (_latestResult?.Hotspots != null)
             {
                 foreach (var h in _latestResult.Hotspots)
                 {
+                    string? dt = h.Assessment?.DiagnosisType;
+                    if (string.IsNullOrWhiteSpace(dt)) dt = h.Region?.DiagnosisType ?? "INFLAMMATION";
+
                     model.Hotspots.Add(new HotspotReportItem
                     {
                         Id = h.Region?.Id ?? 0,
@@ -2391,6 +2498,10 @@ end";
                         MaxTemp = h.Region?.MaxVal != null ? ThermalAnalysisHelper.RawToTemperature((byte)h.Region.MaxVal) : 0,
                         Circularity = h.Region?.Circularity ?? 0.0,
                         RiskLevel = h.Assessment?.RiskLevel ?? "BENIGN",
+                        DiagnosisType = dt,
+                        DisplayDiagnosisType = h.DisplayDiagnosisType,
+                        EdgeGradient = h.Region?.EdgeGradient ?? 0.0,
+                        HaloDelta = h.Region?.HaloDelta ?? 0.0,
                         Recommendation = h.Assessment?.Recommendation ?? "Keine Intervention"
                     });
                 }
@@ -3047,7 +3158,8 @@ end";
                     armstrongStage,
                     _latestResult?.HighestRisk ?? "PHYSIOLOGISCH",
                     _goniometerMeasurement,
-                    _pressureStats);
+                    _pressureStats,
+                    _latestResult?.Hotspots);
 
                 Clipboard.SetText(text);
                 _dbService.LogAuditAction("COPY_DOCTOR_FINDINGS", $"Arztbrief-Befundtext für Patient {_activePatientId} kopiert.");
@@ -3122,6 +3234,74 @@ end";
             if (RbViewLaplace != null)
             {
                 RbViewLaplace.IsChecked = true;
+            }
+        }
+
+        private void Ensure3DCacheLoaded(int w, int h)
+        {
+            if (_cachedDepth3DPixels == null)
+            {
+                string depthMaskPath = System.IO.Path.Combine(_engineService.CacheDirectory, "depth_map_3d.png");
+                if (File.Exists(depthMaskPath))
+                {
+                    _cachedDepth3DPixels = PaletteService.LoadVeinMaskBytes(depthMaskPath, w, h);
+                }
+            }
+            if (_cachedCorrected3DPixels == null)
+            {
+                string corrPath = System.IO.Path.Combine(_engineService.CacheDirectory, "corrected_3d_temp.png");
+                if (File.Exists(corrPath))
+                {
+                    _cachedCorrected3DPixels = PaletteService.LoadVeinMaskBytes(corrPath, w, h);
+                }
+            }
+        }
+
+        private void Update3DReconstructionUI()
+        {
+            if (_latestResult?.Reconstruction3D != null)
+            {
+                var r3d = _latestResult.Reconstruction3D;
+                if (Txt3DMaxDepth != null) Txt3DMaxDepth.Text = $"{r3d.MaxDepthMm:F1} mm";
+                if (Txt3DCompensationSummary != null) Txt3DCompensationSummary.Text = $"Mittlere Randkorrektur: ΔT = +{r3d.MeanCorrectionK:F2} K | Pixel: {r3d.CompensatedPixelCount:N0}";
+                if (Txt3DMaxAngle != null) Txt3DMaxAngle.Text = $"{r3d.MaxIncidenceAngleDeg:F1} °";
+                if (Txt3DPixelCount != null) Txt3DPixelCount.Text = $"{r3d.CompensatedPixelCount:N0} px";
+                if (Txt3DStatusBadge != null) Txt3DStatusBadge.Text = "LAMBERT KOMPENSIERT";
+            }
+            else
+            {
+                if (Txt3DMaxDepth != null) Txt3DMaxDepth.Text = "-- mm";
+                if (Txt3DCompensationSummary != null) Txt3DCompensationSummary.Text = "Keine 3D-Daten berechnet";
+                if (Txt3DMaxAngle != null) Txt3DMaxAngle.Text = "-- °";
+                if (Txt3DPixelCount != null) Txt3DPixelCount.Text = "-- px";
+                if (Txt3DStatusBadge != null) Txt3DStatusBadge.Text = "NICHT AKTIV";
+            }
+        }
+
+        private void BtnView3DAnatomy_Click(object sender, RoutedEventArgs e)
+        {
+            if (RbView3DAnatomy != null)
+            {
+                RbView3DAnatomy.IsChecked = true;
+            }
+        }
+
+        private void BtnToggleCorrectedView_Click(object sender, RoutedEventArgs e)
+        {
+            _showCorrected2D = !_showCorrected2D;
+            if (TxtToggleCorrectedBtn != null)
+            {
+                TxtToggleCorrectedBtn.Text = _showCorrected2D
+                    ? "Umschalten: Unkorrigiertes Originalbild"
+                    : "Umschalten: Kantenkorrigiertes 2D-Wärmebild";
+            }
+            if (_latestResult != null)
+            {
+                RenderAnalysisResultOverlay(_latestResult, ChkFrangi?.IsChecked == true);
+            }
+            else
+            {
+                RefreshResultImageOnly();
             }
         }
 

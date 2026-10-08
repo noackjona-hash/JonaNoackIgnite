@@ -300,6 +300,12 @@
                                     <TextBlock Text="Wärmestau (∇²T)" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </RadioButton>
+                            <RadioButton x:Name="RbView3DAnatomy" Style="{StaticResource VoicemodPillStyle}" GroupName="PillViewFilter" Checked="ViewMode_Checked" ToolTip="3D-Anatomische Rekonstruktion &amp; Lambert'sche Kantenkorrektur">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Path Data="{StaticResource IconRelief}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=Control}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0"/>
+                                    <TextBlock Text="📐 3D-Kantenkorrektur" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </RadioButton>
                             
                             <Separator Width="1" Height="20" Margin="10,0" Background="{StaticResource BorderBrush}"/>
 
@@ -769,6 +775,7 @@
                                                 <CheckBox x:Name="ChkPerfusion" Content="Longitudinaler Temperaturgradient (dT/dy)" IsChecked="True" Margin="0,3"/>
                                                 <CheckBox x:Name="ChkAnatomicalCutoff" Content="Anatomischer Cutoff (Waden oberhalb 65%)" IsChecked="True" Margin="0,3"/>
                                                 <CheckBox x:Name="ChkErodeMargin" Content="Gewebekanten-Erosion (Chamfer-Distanz)" IsChecked="True" Margin="0,3"/>
+                                                <CheckBox x:Name="Chk3DReconstruction" Content="📐 3D-Kantenkorrektur (Lambert-Kompensation)" IsChecked="True" Margin="0,3"/>
                                             </StackPanel>
                                         </Border>
 
@@ -815,17 +822,26 @@
                                     <DataGrid Grid.Row="1" x:Name="GridHotspots" SelectionChanged="GridHotspots_SelectionChanged">
                                         <DataGrid.Columns>
                                             <DataGridTextColumn Header="ID" Binding="{Binding Region.Id}" Width="35"/>
-                                            <DataGridTextColumn Header="Fläche" Binding="{Binding Region.AreaPixels}" Width="55"/>
-                                            <DataGridTextColumn Header="Anteil %" Binding="{Binding Region.AreaPercent, StringFormat={}{0:F2}%}" Width="60"/>
+                                            <DataGridTextColumn Header="Fläche" Binding="{Binding Region.AreaPixels}" Width="50"/>
                                             <DataGridTextColumn Header="Max T" Binding="{Binding Region.MaxVal}" Width="45"/>
                                             <DataGridTextColumn Header="Zirkul." Binding="{Binding Region.Circularity, StringFormat={}{0:F2}}" Width="50"/>
+                                            <DataGridTextColumn Header="Klassifikation" Binding="{Binding DisplayDiagnosisType}" Width="125" FontWeight="SemiBold"/>
                                             <DataGridTextColumn Header="Risiko" Binding="{Binding Assessment.RiskLevel}" Width="*"/>
                                         </DataGrid.Columns>
                                     </DataGrid>
 
                                     <Border Grid.Row="2" Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="12" Margin="0,10,0,0">
                                         <StackPanel>
-                                            <TextBlock Text="Klinische Bewertung des ausgewählten Herds:" FontWeight="Bold" FontSize="10.5" Foreground="{StaticResource TextMutedBrush}"/>
+                                            <Grid Margin="0,0,0,4">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="Differentialdiagnose (Druckstelle vs. Entzündung):" FontWeight="Bold" FontSize="11" Foreground="{StaticResource CyanBrush}"/>
+                                                <Border Grid.Column="1" x:Name="BadgeDiagnosisType" Background="#26FFB300" BorderBrush="#FFB300" BorderThickness="1" CornerRadius="6" Padding="6,2">
+                                                    <TextBlock x:Name="TxtDiagnosisBadge" Text="DIFFERENTIAL-ANALYSE" FontSize="9" FontWeight="Bold" Foreground="#FFB300"/>
+                                                </Border>
+                                            </Grid>
                                             <TextBlock x:Name="TxtLuaRecommendation" Text="Wählen Sie einen Herd aus der Tabelle..." TextWrapping="Wrap" Margin="0,4,0,0" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}"/>
                                         </StackPanel>
                                     </Border>
@@ -1238,6 +1254,86 @@
                                                 <TextBlock x:Name="TxtBiomechDirectives" Text="• Regelmäßige Druckmessung und radiometrische Kontrolle empfohlen." TextWrapping="Wrap" FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2"/>
                                                 <TextBlock Text="• Ab 320 kPa: Diabetesschutzschuhwerk mit retrokapitaler Entlastungsrolle" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2"/>
                                                 <TextBlock Text="• Ab 450 kPa: Akutes Ulkus-Breakdown-Risiko. Vollentlastung oder Walker erforderlich" FontSize="10" Foreground="{StaticResource CriticalBrush}" Margin="0,2"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
+                                </ScrollViewer>
+                            </TabItem>
+
+                            <!-- TAB: 3D-OBERFLÄCHEN-REKONSTRUKTION & LAMBERT-KANTENKORREKTUR -->
+                            <TabItem x:Name="Tab3DReconstruction">
+                                <TabItem.Header>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Data="{StaticResource IconRelief}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=TabItem}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0" SnapsToDevicePixels="True"/>
+                                        <TextBlock Text="3D-Kanten" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </TabItem.Header>
+                                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="14">
+                                    <StackPanel>
+                                        <TextBlock Text="3D-Anatomische Rekonstruktion &amp; Kantenkorrektur" FontWeight="Bold" FontSize="13.5" Foreground="{StaticResource CyanBrush}" Margin="0,0,0,2"/>
+                                        <TextBlock Text="Kompensation des physikalischen Randabfalls durch schräge Einstrahlwinkel θ und Lambert'sche Emissivitätsminderung ε(θ)." FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,10"/>
+
+                                        <!-- 3D KPI Banner -->
+                                        <Border Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="12" Margin="0,0,0,10">
+                                            <StackPanel>
+                                                <Grid Margin="0,0,0,6">
+                                                    <TextBlock Text="MAX. OBERFLÄCHEN-WÖLBUNG (Z_max):" FontSize="9" FontWeight="Bold" Foreground="{StaticResource TextMutedBrush}"/>
+                                                    <Border HorizontalAlignment="Right" Background="#E0F2FE" BorderBrush="{StaticResource CyanBrush}" BorderThickness="1" CornerRadius="4" Padding="6,1">
+                                                        <TextBlock x:Name="Txt3DStatusBadge" Text="LAMBERT KOMPENSIERT" FontSize="9.5" FontWeight="Bold" Foreground="{StaticResource CyanBrush}"/>
+                                                    </Border>
+                                                </Grid>
+                                                <TextBlock x:Name="Txt3DMaxDepth" Text="-- mm" FontSize="26" FontWeight="Black" Foreground="{StaticResource CyanBrush}" Margin="0,2,0,2"/>
+                                                <TextBlock x:Name="Txt3DCompensationSummary" Text="Mittlere Randkorrektur: ΔT = -- K | Pixel: --" FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <!-- 3D Metrics Grid -->
+                                        <Grid Margin="0,0,0,10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="10" Margin="0,0,4,0">
+                                                <StackPanel>
+                                                    <TextBlock Text="MAX. EINSTRAHLWINKEL (θ_max)" FontSize="9" FontWeight="Bold" Foreground="{StaticResource WarningBrush}"/>
+                                                    <TextBlock x:Name="Txt3DMaxAngle" Text="-- °" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,2,0,0"/>
+                                                </StackPanel>
+                                            </Border>
+                                            <Border Grid.Column="1" Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="10" Margin="4,0,0,0">
+                                                <StackPanel>
+                                                    <TextBlock Text="KOMPENSIERTE PIXEL" FontSize="9" FontWeight="Bold" Foreground="{StaticResource CyanBrush}"/>
+                                                    <TextBlock x:Name="Txt3DPixelCount" Text="-- px" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,2,0,0"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </Grid>
+
+                                        <!-- Physical Model Explanation Card -->
+                                        <Border Background="#F8FAFC" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="12" Margin="0,0,0,10">
+                                            <StackPanel>
+                                                <TextBlock Text="Physikalische Korrekturformeln:" FontWeight="Bold" FontSize="10.5" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,4"/>
+                                                <TextBlock Text="• Tiefe: Z(x,y) = Z_peak · [0.5 sin(u π/2) + 0.5 √(1 - (1-u)²)]^0.65" FontSize="10" FontFamily="Consolas" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                                <TextBlock Text="• Winkel: cos θ = 1 / √(1 + (∂Z/∂x)² + (∂Z/∂y)²)" FontSize="10" FontFamily="Consolas" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,2,0,0"/>
+                                                <TextBlock Text="• Emissivität: ε(θ) = ε₀ · cos^γ(θ)  (Haut-Richtungsfaktor)" FontSize="10" FontFamily="Consolas" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,2,0,0"/>
+                                                <TextBlock Text="• Kompensation: T_korr = T_app + ΔT_Lambert(θ) + ΔT_Tiefe(Z)" FontSize="10" FontFamily="Consolas" Foreground="{StaticResource CyanBrush}" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <!-- Action Buttons -->
+                                        <Border Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="12">
+                                            <StackPanel>
+                                                <TextBlock Text="3D-Projektionen im Viewport:" FontWeight="Bold" FontSize="11" Margin="0,0,0,8"/>
+                                                <Button Click="BtnView3DAnatomy_Click" Style="{StaticResource VoicemodPrimaryButtonStyle}" Margin="0,0,0,6">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <Path Data="{StaticResource IconRelief}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,6,0" SnapsToDevicePixels="True"/>
+                                                        <TextBlock Text="3D-Anatomie mit Kantenkorrektur anzeigen" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Button>
+                                                <Button Click="BtnToggleCorrectedView_Click" Padding="10,6">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <Path Data="{StaticResource IconEye}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,6,0" SnapsToDevicePixels="True"/>
+                                                        <TextBlock x:Name="TxtToggleCorrectedBtn" Text="Umschalten: Kantenkorrigiertes 2D-Wärmebild" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Button>
                                             </StackPanel>
                                         </Border>
                                     </StackPanel>

@@ -28,6 +28,7 @@ namespace Ignite.Desktop.Services
 
         public GoniometerMeasurement? Goniometer { get; set; }
         public List<AngiosomeTerritory>? Angiosomes { get; set; }
+        public Ignite.Desktop.Models.Reconstruction3DResult? Reconstruction3D { get; set; }
         public List<HotspotReportItem> Hotspots { get; set; } = new();
     }
 
@@ -39,6 +40,10 @@ namespace Ignite.Desktop.Services
         public double MaxTemp { get; set; }
         public double Circularity { get; set; }
         public string RiskLevel { get; set; } = "BENIGN";
+        public string DiagnosisType { get; set; } = "INFLAMMATION";
+        public string DisplayDiagnosisType { get; set; } = "🔥 Entzündung";
+        public double EdgeGradient { get; set; }
+        public double HaloDelta { get; set; }
         public string Recommendation { get; set; } = string.Empty;
     }
 
@@ -174,23 +179,24 @@ namespace Ignite.Desktop.Services
             }
 
             // 7. Detektierte Hyperthermie-Herde
+            // 7. Detektierte Hyperthermie-Herde & Differentialdiagnose
             if (model.Hotspots.Count > 0)
             {
-                sb.AppendLine($"    <div class='section-title'><span>🔬</span> 3. Detektierte Entzündungsherde ({model.Hotspots.Count} Foci)</div>");
+                sb.AppendLine($"    <div class='section-title'><span>🔬</span> 3. Detektierte Foci &amp; Differentialdiagnose (Entzündung vs. Druckstelle) ({model.Hotspots.Count} Areale)</div>");
                 sb.AppendLine("    <table>");
                 sb.AppendLine("        <thead>");
-                sb.AppendLine("            <tr><th>ID</th><th>Fläche (px)</th><th>Anteil (%)</th><th>Max Temp</th><th>Zirkularität</th><th>Risikostufe</th><th>Klinische Bewertung</th></tr>");
+                sb.AppendLine("            <tr><th>ID</th><th>Fläche</th><th>Max Temp</th><th>Differentialdiagnose</th><th>Randgradient / Halo</th><th>Risikostufe</th><th>Klinische Bewertung &amp; Empfehlung</th></tr>");
                 sb.AppendLine("        </thead>");
                 sb.AppendLine("        <tbody>");
                 foreach (var h in model.Hotspots)
                 {
-                    string hBadge = h.RiskLevel == "CRITICAL" ? "badge-critical" : "badge-info";
+                    string hBadge = h.RiskLevel == "CRITICAL" ? "badge-critical" : (h.DiagnosisType == "PRESSURE_POINT" ? "badge-warning" : "badge-info");
                     sb.AppendLine("            <tr>");
                     sb.AppendLine($"                <td>#{h.Id}</td>");
-                    sb.AppendLine($"                <td>{h.AreaPx} px</td>");
-                    sb.AppendLine($"                <td>{h.AreaPercent:F2} %</td>");
+                    sb.AppendLine($"                <td>{h.AreaPx} px ({h.AreaPercent:F1}%)</td>");
                     sb.AppendLine($"                <td>{h.MaxTemp:F1} °C</td>");
-                    sb.AppendLine($"                <td>{h.Circularity:F2}</td>");
+                    sb.AppendLine($"                <td><strong>{h.DisplayDiagnosisType}</strong></td>");
+                    sb.AppendLine($"                <td style='font-size:10px;'>G: {h.EdgeGradient:F1} | Halo: +{h.HaloDelta * 0.1:F1} K</td>");
                     sb.AppendLine($"                <td><span class='badge {hBadge}'>{h.RiskLevel}</span></td>");
                     sb.AppendLine($"                <td>{h.Recommendation}</td>");
                     sb.AppendLine("            </tr>");
@@ -222,6 +228,18 @@ namespace Ignite.Desktop.Services
                 }
                 sb.AppendLine("        </tbody>");
                 sb.AppendLine("    </table>");
+            }
+
+            // 9. 3D-Anatomische Rekonstruktion & Lambert-Kantenkorrektur
+            if (model.Reconstruction3D != null && model.Reconstruction3D.MaxDepthMm > 0)
+            {
+                sb.AppendLine("    <div class='section-title'><span>📐</span> 5. 3D-Anatomische Rekonstruktion &amp; Lambert-Kantenkühlungs-Kompensation</div>");
+                sb.AppendLine("    <div class='meta-grid'>");
+                sb.AppendLine($"        <div class='meta-box'><div class='label'>Anatomische Wölbung (Z_max)</div><div class='val'>{model.Reconstruction3D.MaxDepthMm:F1} mm</div></div>");
+                sb.AppendLine($"        <div class='meta-box'><div class='label'>Max. Einstrahlwinkel (θ_max)</div><div class='val'>{model.Reconstruction3D.MaxIncidenceAngleDeg:F1}°</div></div>");
+                sb.AppendLine($"        <div class='meta-box'><div class='label'>Mittlere Randkorrektur</div><div class='val' style='color:#0284C7;'>+{model.Reconstruction3D.MeanCorrectionK:F2} K</div></div>");
+                sb.AppendLine($"        <div class='meta-box'><div class='label'>Kompensierte Randpixel</div><div class='val'>{model.Reconstruction3D.CompensatedPixelCount:N0} px</div></div>");
+                sb.AppendLine("    </div>");
             }
 
             // 10. Leitlinienkonforme IWGDF 2023 Handlungsempfehlungen

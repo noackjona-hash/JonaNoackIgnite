@@ -229,7 +229,8 @@ namespace Ignite.Desktop.Services
             string armstrongStage,
             string riskLevel,
             GoniometerMeasurement? goniometer,
-            PressureProxyStats? pressureStats)
+            PressureProxyStats? pressureStats,
+            List<Ignite.Desktop.Models.HotspotSummary>? hotspots = null)
         {
             var sb = new StringBuilder();
             sb.AppendLine("================================================================================");
@@ -267,7 +268,31 @@ namespace Ignite.Desktop.Services
                 sb.AppendLine();
             }
 
-            sb.AppendLine("4. DIAGNOSTISCHE GESAMTBEWERTUNG & ARMSTRONG-KLASSIFIKATION:");
+            if (hotspots != null && hotspots.Count > 0)
+            {
+                sb.AppendLine("4. DIFFERENTIALDIAGNOSE (ENTZÜNDUNG VS. DRUCKSTELLE / HYPERKERATOSE):");
+                int inflCount = 0, pressCount = 0, critPressCount = 0;
+                foreach (var h in hotspots)
+                {
+                    if (h == null || h.Region == null) continue;
+                    string? dt = h.Assessment?.DiagnosisType;
+                    if (string.IsNullOrWhiteSpace(dt)) dt = h.Region.DiagnosisType ?? "INFLAMMATION";
+                    if (dt == "PRESSURE_POINT") pressCount++;
+                    else if (dt == "INFLAMED_PRESSURE_POINT") critPressCount++;
+                    else inflCount++;
+
+                    double deltaT = (h.Region.MaxVal - (meanTemp > 0 ? (meanTemp - 20.0) / 0.1 : 120)) * 0.1;
+                    double grad = h.Region.EdgeGradient;
+                    double halo = h.Region.HaloDelta * 0.1;
+
+                    sb.AppendLine($"   • Herd #{h.Region.Id}: {h.DisplayDiagnosisType} (ΔT = +{deltaT:F1} K, Randgradient: {grad:F1}, Halo: +{halo:F1} K)");
+                    sb.AppendLine($"     -> Beurteilung: {h.Assessment?.Recommendation ?? "Keine Intervention"}");
+                }
+                sb.AppendLine($"   -> Zählung: {inflCount} Weichteilinfektion(en), {pressCount} rein mechanische Druckstelle(n), {critPressCount} entzündete Ulkus-Vorstufe(n).");
+                sb.AppendLine();
+            }
+
+            sb.AppendLine("5. DIAGNOSTISCHE GESAMTBEWERTUNG & ARMSTRONG-KLASSIFIKATION:");
             sb.AppendLine($"   • Armstrong-Kategorie:     {armstrongStage.ToUpperInvariant()}");
             sb.AppendLine($"   • Gesamtrisiko-Einstufung: {riskLevel}");
 

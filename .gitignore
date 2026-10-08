@@ -28,6 +28,7 @@ build/
 # Runtime-Logs
 /logs/
 *.log
+/core/pap_stage_masks/
 
 # IDEs & Systemdateien
 .idea/

@@ -10,9 +10,10 @@ import (
 
 // ClinicalAssessment represents the clinical evaluation returned from the Lua script.
 type ClinicalAssessment struct {
-	RiskLevel      string `json:"risk_level"`     // "CRITICAL", "MODERATE", "LOW", "BENIGN"
-	Recommendation string `json:"recommendation"` // Clinical text
+	RiskLevel      string  `json:"risk_level"`     // "CRITICAL", "MODERATE", "LOW", "BENIGN"
+	Recommendation string  `json:"recommendation"` // Clinical text
 	Score          float64 `json:"score"`          // Quantitative score (e.g. 0 to 10)
+	DiagnosisType  string  `json:"diagnosis_type"` // "INFLAMMATION", "PRESSURE_POINT", "INFLAMED_PRESSURE_POINT", "BENIGN"
 }
 
 // LuaRuleEngine manages embedded Lua script execution for medical decisions.
@@ -58,6 +59,7 @@ func (e *LuaRuleEngine) EvaluateHotspot(h statistics.HotspotRegion, stats statis
 		return ClinicalAssessment{
 			RiskLevel:      "UNASSESSED",
 			Recommendation: "Keine Lua-Auswerteregel ('evaluate_hotspot') geladen.",
+			DiagnosisType:  h.DiagnosisType,
 		}, nil
 	}
 
@@ -69,6 +71,12 @@ func (e *LuaRuleEngine) EvaluateHotspot(h statistics.HotspotRegion, stats statis
 	htable.RawSetString("circularity", lua.LNumber(h.Circularity))
 	htable.RawSetString("max_val", lua.LNumber(h.MaxVal))
 	htable.RawSetString("mean_val", lua.LNumber(h.MeanVal))
+	htable.RawSetString("edge_gradient", lua.LNumber(h.EdgeGradient))
+	htable.RawSetString("thermal_laplacian", lua.LNumber(h.ThermalLaplacian))
+	htable.RawSetString("halo_delta", lua.LNumber(h.HaloDelta))
+	htable.RawSetString("peak_to_mean", lua.LNumber(h.PeakToMean))
+	htable.RawSetString("diagnosis_type", lua.LString(h.DiagnosisType))
+	htable.RawSetString("confidence_score", lua.LNumber(h.ConfidenceScore))
 
 	// Prepare stats table
 	stable := e.L.NewTable()
@@ -93,6 +101,7 @@ func (e *LuaRuleEngine) EvaluateHotspot(h statistics.HotspotRegion, stats statis
 	assess := ClinicalAssessment{
 		RiskLevel:      "BENIGN",
 		Recommendation: "Kein Handlungsbedarf",
+		DiagnosisType:  h.DiagnosisType,
 	}
 
 	if tbl, ok := ret.(*lua.LTable); ok {
@@ -104,6 +113,9 @@ func (e *LuaRuleEngine) EvaluateHotspot(h statistics.HotspotRegion, stats statis
 		}
 		if v := tbl.RawGetString("score"); v.Type() == lua.LTNumber {
 			assess.Score = float64(v.(lua.LNumber))
+		}
+		if v := tbl.RawGetString("diagnosis_type"); v.Type() == lua.LTString {
+			assess.DiagnosisType = v.String()
 		}
 	}
 

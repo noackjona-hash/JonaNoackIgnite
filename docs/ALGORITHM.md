@@ -103,6 +103,47 @@ Distinguishes genuine unilateral pathology from benign symmetrical warmth (e.g. 
 ### 9. Embedded Lua Clinical Rule Engine
 Permits clinicians and researchers to adapt threshold formulas and decision logic dynamically:
 * Script: `rules/armstrong_criteria.lua`
-* Receives hotspot features (`area`, `circularity`, `max_val`, `delta_t`) and tissue baseline (`median`, `mad`).
-* Returns qualitative risk level (`CRITICAL`, `MODERATE`, `BENIGN`) and German clinical recommendations without requiring application recompilation.
+* Receives hotspot features (`area`, `circularity`, `max_val`, `delta_t`, `edge_gradient`, `halo_delta`, `thermal_laplacian`, `peak_to_mean`) and tissue baseline (`median`, `mad`).
+* Returns qualitative risk level (`CRITICAL`, `MODERATE`, `BENIGN`), diagnosis type, and German clinical recommendations without requiring application recompilation.
+
+---
+
+### 10. Biophysical Differential Classification: Inflammation vs. Pressure Point (DTBC)
+Resolves the critical medical challenge of differentiating benign mechanical friction / hyperkeratotic pressure points from pathological soft-tissue infections:
+1. **Thermal Edge Gradient ($G_{\text{edge}}$):**
+   * *Pressure points (calluses/hyperkeratosis):* Show abrupt, steep thermal drop-offs at the keratotic boundary ($G_{\text{edge}} \ge 3.0$) due to keratin's thermal insulation ($\kappa_{\text{keratin}} \approx 0.21\,\text{W/m K}$).
+   * *Inflammatory foci:* Exhibit continuous, smooth thermal diffusion into healthy surrounding tissue.
+2. **Perifocal Vasodilatation Halo ($\Delta T_{\text{halo}}$):**
+   * *Inflammations:* Generate reactive capillary hyperaemia producing a distinctive thermal halo in the adjacent 1–4 px boundary ($\Delta T_{\text{halo}} \ge 0.5\,\text{K}$).
+   * *Pressure points:* Lack perifocal hyperaemia ($\Delta T_{\text{halo}} \le 0.3\,\text{K}$).
+3. **Discrete 2D Laplacian ($\nabla^2 T$):**
+   * Computes the local metabolic heat production term $\dot{q}_m$. Focal infections show sharp negative Laplacian concavity ($\nabla^2 T \le -3.5$), whereas pressure areas present a flat plateau.
+4. **Diagnostic Triaging:**
+   * **`INFLAMMATION`:** $\Delta T \ge 2.2\,\text{K}$ with diffuse halo and metabolic Laplacian peak $\rightarrow$ acute infection/phlegmon.
+   * **`PRESSURE_POINT`:** $1.0\,\text{K} \le \Delta T < 2.2\,\text{K}$ with steep keratin boundary and no halo $\rightarrow$ biomechanical pressure relief & debridement.
+   * **`INFLAMED_PRESSURE_POINT`:** $\Delta T \ge 2.2\,\text{K}$ under sharp keratotic border $\rightarrow$ acute pre-ulcerative lesion under high ulceration risk!
+
+---
+
+### 11. 3D Anatomical Surface Reconstruction & Lambertian Directional Emissivity Compensation
+Resolves the fundamental biophysical artifact where curved anatomical perimeters (e.g., lateral foot margins, toes, heel) artificially register $1.5\,\text{K}$ to $4.0\,\text{K}$ colder than the anatomical apex:
+
+1. **Biophysical Cause of False Perimeter Cooling:**
+   * **Directional Emissivity Falloff:** Human skin emissivity ($\varepsilon_0 \approx 0.98$) drops significantly at oblique viewing angles $\theta \ge 50^\circ$ according to directional Fresnel radiation:
+     $$\varepsilon(\theta) = \varepsilon_0 \cdot \cos^\gamma(\theta)$$
+   * **Lambertian Radiance Projection:** Receding edge surfaces project a larger physical surface element onto a single sensor pixel, diluting irradiance and blending cold ambient background radiation ($T_{\text{ambient}} \approx 20^\circ\text{C}$).
+2. **3D Anatomical Surface Inflation (Shape-from-Silhouette):**
+   * Computes the normalized geodesic distance transform $u(x, y) = D(x, y) / \max(D)$ from the anatomical boundary.
+   * Smoothly inflates the 3D surface height $Z(x, y)$ using a blended sinusoidal-ellipsoidal profile with exponent $\alpha = 0.65$:
+     $$Z(x, y) = Z_{\text{peak}} \cdot \left[0.5 \sin\left(u \cdot \frac{\pi}{2}\right) + 0.5 \sqrt{1 - (1-u)^2}\right]^\alpha$$
+3. **Surface Normals & Optical Incidence Angle:**
+   * Discrete central differences compute spatial gradients $(\partial Z/\partial x, \partial Z/\partial y)$.
+   * The camera-directed viewing angle $\theta$ satisfies:
+     $$\cos \theta(x, y) = \frac{1}{\sqrt{1 + \left(\frac{\partial Z}{\partial x}\right)^2 + \left(\frac{\partial Z}{\partial y}\right)^2}}$$
+4. **Radiometric Angle & Depth Compensation:**
+   * Restores the true physiological temperature matrix $T_{\text{corrected}}$:
+     $$\Delta T_{\text{angle}}(\theta) = k_\theta \cdot (1 - \cos^\gamma \theta)$$
+     $$T_{\text{corrected}}(x, y) = T_{\text{apparent}}(x, y) + \Delta T_{\text{angle}}(\theta) + \Delta T_{\text{depth}}(Z)$$
+   * Restores peripheral margins (+1.2 K to +3.5 K), eliminating false cold borders and exposing lateral ulcerations (e.g. Digitus V / lateral metatarsal head) that were previously masked.
+
 

@@ -38,6 +38,24 @@ namespace Ignite.Desktop.Models
 
         [JsonPropertyName("status")]
         public string Status { get; set; } = string.Empty;
+
+        [JsonPropertyName("edge_gradient")]
+        public double EdgeGradient { get; set; }
+
+        [JsonPropertyName("thermal_laplacian")]
+        public double ThermalLaplacian { get; set; }
+
+        [JsonPropertyName("halo_delta")]
+        public double HaloDelta { get; set; }
+
+        [JsonPropertyName("peak_to_mean")]
+        public double PeakToMean { get; set; }
+
+        [JsonPropertyName("diagnosis_type")]
+        public string DiagnosisType { get; set; } = string.Empty;
+
+        [JsonPropertyName("confidence_score")]
+        public double ConfidenceScore { get; set; }
     }
 
     public class ClinicalAssessment
@@ -50,6 +68,9 @@ namespace Ignite.Desktop.Models
 
         [JsonPropertyName("score")]
         public double Score { get; set; }
+
+        [JsonPropertyName("diagnosis_type")]
+        public string DiagnosisType { get; set; } = string.Empty;
     }
 
     public class HotspotSummary
@@ -59,6 +80,41 @@ namespace Ignite.Desktop.Models
 
         [JsonPropertyName("assessment")]
         public ClinicalAssessment Assessment { get; set; } = new();
+
+        [JsonIgnore]
+        public string DisplayDiagnosisType
+        {
+            get
+            {
+                string? dt = Assessment?.DiagnosisType;
+                if (string.IsNullOrWhiteSpace(dt)) dt = Region?.DiagnosisType ?? string.Empty;
+                return dt switch
+                {
+                    "PRESSURE_POINT" => "🦶 Druckstelle",
+                    "INFLAMED_PRESSURE_POINT" => "⚠️ Entz. Druckstelle",
+                    "INFLAMMATION" => "🔥 Entzündung",
+                    "BENIGN" => "🌱 Physiologisch",
+                    _ => (Assessment?.RiskLevel == "CRITICAL" ? "🔥 Entzündung" : "🦶 Befund")
+                };
+            }
+        }
+
+        [JsonIgnore]
+        public string DiagnosisBadgeColor
+        {
+            get
+            {
+                string? dt = Assessment?.DiagnosisType;
+                if (string.IsNullOrWhiteSpace(dt)) dt = Region?.DiagnosisType ?? string.Empty;
+                return dt switch
+                {
+                    "PRESSURE_POINT" => "#FFB300",
+                    "INFLAMED_PRESSURE_POINT" => "#FF2A55",
+                    "INFLAMMATION" => "#FF5252",
+                    _ => "#00E5FF"
+                };
+            }
+        }
     }
 
     public class OutlierStats
@@ -90,6 +146,9 @@ namespace Ignite.Desktop.Models
         [JsonPropertyName("body_mask_ms")]
         public double BodyMaskMs { get; set; }
 
+        [JsonPropertyName("reconstruction_3d_ms")]
+        public double Reconstruction3DMs { get; set; }
+
         [JsonPropertyName("tophat_ms")]
         public double TopHatMs { get; set; }
 
@@ -110,6 +169,21 @@ namespace Ignite.Desktop.Models
 
         [JsonPropertyName("total_ms")]
         public double TotalMs { get; set; }
+    }
+
+    public class Reconstruction3DResult
+    {
+        [JsonPropertyName("max_depth_mm")]
+        public float MaxDepthMm { get; set; }
+
+        [JsonPropertyName("mean_edge_correction_k")]
+        public float MeanCorrectionK { get; set; }
+
+        [JsonPropertyName("max_incidence_angle_deg")]
+        public float MaxIncidenceAngleDeg { get; set; }
+
+        [JsonPropertyName("compensated_pixel_count")]
+        public int CompensatedPixelCount { get; set; }
     }
 
     public class PerfusionProfile
@@ -146,6 +220,9 @@ namespace Ignite.Desktop.Models
 
         [JsonPropertyName("perfusion")]
         public PerfusionProfile? Perfusion { get; set; }
+
+        [JsonPropertyName("reconstruction_3d")]
+        public Reconstruction3DResult? Reconstruction3D { get; set; }
 
         [JsonPropertyName("tissue_pixel_count")]
         public int TissuePixelCount { get; set; }

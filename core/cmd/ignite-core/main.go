@@ -82,6 +82,12 @@ func handleAnalyze(w http.ResponseWriter, r *http.Request) {
 		if res.VascularMask != nil {
 			_ = saveGrayAsPNG(res.VascularMask, filepath.Join(req.OutputDir, "vascular_mask.png"))
 		}
+		if res.DepthMap3D != nil {
+			_ = saveGrayAsPNG(res.DepthMap3D.ToGrayMasked(res.BodyMask), filepath.Join(req.OutputDir, "depth_map_3d.png"))
+		}
+		if res.Corrected3DImage != nil {
+			_ = saveGrayAsPNG(res.Corrected3DImage, filepath.Join(req.OutputDir, "corrected_3d_temp.png"))
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -175,6 +181,7 @@ func main() {
 	threshMode := flag.String("threshmode", "MAD", "Threshold mode: MAD or GAUSSIAN")
 	enableVascular := flag.Bool("vascular", true, "Enable Frangi vascular filter")
 	enablePerfusion := flag.Bool("perfusion", true, "Enable longitudinal perfusion profiling")
+	enableReconstruct3D := flag.Bool("reconstruct3d", true, "Enable 3D surface reconstruction and Lambertian edge compensation")
 	leftPath := flag.String("left", "", "Path to left image for bilateral symmetry")
 	rightPath := flag.String("right", "", "Path to right image for bilateral symmetry")
 	threshDelta := flag.Float64("threshdelta", 15.0, "Threshold delta for bilateral symmetry")
@@ -270,6 +277,7 @@ func main() {
 	cfg.ThresholdMode = *threshMode
 	cfg.RunVascularMap = *enableVascular
 	cfg.RunPerfusion = *enablePerfusion
+	cfg.Enable3DReconstruction = *enableReconstruct3D
 
 	result := pipeline.Run(imgToProcess, cfg)
 
@@ -307,6 +315,17 @@ func main() {
 				pasteMask(fullVasc, result.VascularMask, rx1, ry1)
 				_ = saveGrayAsPNG(fullVasc, filepath.Join(*maskDir, "vascular_mask.png"))
 			}
+			if result.DepthMap3D != nil {
+				depthGray := result.DepthMap3D.ToGrayMasked(result.BodyMask)
+				fullDepth := imageutil.NewGrayMatrix(fullW, fullH)
+				pasteMask(fullDepth, depthGray, rx1, ry1)
+				_ = saveGrayAsPNG(fullDepth, filepath.Join(*maskDir, "depth_map_3d.png"))
+			}
+			if result.Corrected3DImage != nil {
+				fullCorr := imageutil.NewGrayMatrix(fullW, fullH)
+				pasteMask(fullCorr, result.Corrected3DImage, rx1, ry1)
+				_ = saveGrayAsPNG(fullCorr, filepath.Join(*maskDir, "corrected_3d_temp.png"))
+			}
 		} else {
 			if result.BodyMask != nil {
 				_ = saveGrayAsPNG(result.BodyMask, filepath.Join(*maskDir, "body_mask.png"))
@@ -319,6 +338,13 @@ func main() {
 			}
 			if result.VascularMask != nil {
 				_ = saveGrayAsPNG(result.VascularMask, filepath.Join(*maskDir, "vascular_mask.png"))
+			}
+			if result.DepthMap3D != nil {
+				depthGray := result.DepthMap3D.ToGrayMasked(result.BodyMask)
+				_ = saveGrayAsPNG(depthGray, filepath.Join(*maskDir, "depth_map_3d.png"))
+			}
+			if result.Corrected3DImage != nil {
+				_ = saveGrayAsPNG(result.Corrected3DImage, filepath.Join(*maskDir, "corrected_3d_temp.png"))
 			}
 		}
 	}
