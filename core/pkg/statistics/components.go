@@ -2,6 +2,7 @@ package statistics
 
 import (
 	"math"
+	"sort"
 
 	"ignite-core/pkg/imageutil"
 )
@@ -18,11 +19,14 @@ type HotspotRegion struct {
 	MaxVal           uint8   `json:"max_val"`
 	MeanVal          float64 `json:"mean_val"`
 	BoundingBox      [4]int  `json:"bounding_box"`      // [minX, minY, maxX, maxY]
-	Status           string  `json:"status"`            // "REJECTED_SMALL", "REJECTED_LINEAR", "REJECTED_BORDER", "CONFIRMED_HOTSPOT"
+	Status           string  `json:"status"`            // "REJECTED_SMALL", "REJECTED_LINEAR", "REJECTED_BORDER", "REJECTED_DIFFUSE_PLATEAU", "CONFIRMED_HOTSPOT"
 	EdgeGradient     float64 `json:"edge_gradient"`     // Mittlerer Temperaturabfall am Rand zur gesunden Umgebung
 	ThermalLaplacian float64 `json:"thermal_laplacian"` // Diskreter 2D-Laplace-Operator nabla^2 T (Zentraler Wärmequell-Fokus)
 	HaloDelta        float64 `json:"halo_delta"`        // Perifokaler Halo-Temperaturüberschuss gegenüber Median
 	PeakToMean       float64 `json:"peak_to_mean"`      // Schärfegrad / Fokus-Spitzheitsfaktor (Max-Median) / (Mean-Median)
+	LocalProminence  float64 `json:"local_prominence"`  // Lokale Überhöhung über gesunde Gewebeumgebung (Kelvin/Einheiten)
+	LocalSurroundMed float64 `json:"local_surround_med"` // Lokaler Median der gesunden Gewebeumgebung im Ring
+	ContraDelta      float64 `json:"contra_delta"`      // Kontralaterale Armstrong-Asymmetrie Delta T zum gespiegelten Referenzort
 	DiagnosisType    string  `json:"diagnosis_type"`    // "INFLAMMATION", "PRESSURE_POINT", "INFLAMED_PRESSURE_POINT", "BENIGN"
 	ConfidenceScore  float64 `json:"confidence_score"`  // Konfidenz der Differentialdiagnose (0 - 100%)
 }
@@ -31,10 +35,11 @@ type HotspotRegion struct {
 type FilterOptions struct {
 	MinAreaFraction   float64 // default 0.0005 (0.05% of tissue)
 	MinCircularity    float64 // default 0.08 (allows irregular lesions, discards veins)
-	BorderMarginPx    int     // default 15 px (reject camera frame edges)
+	BorderMarginPx    int     // default 25 px (reject camera frame edges)
 	MinDistFromBorder float32 // default 8.0 px (reject skin-air interface artifacts)
 	AnatomicalCutoffY float64 // default 0.65 (reject warm ankles/calves below the feet)
 	OrigMedian        float64 // Gewebe-Median zur biophysikalischen Halo- & Differenzanalyse
+	BodyMask          *imageutil.GrayMatrix // Segmentierte Gewebemaske zur exakten Umgebungsanalyse
 }
 
 // DefaultFilterOptions returns standard geometric parameters.
@@ -191,8 +196,14 @@ func ExtractHotspots(binaryMask *imageutil.GrayMatrix, original *imageutil.GrayM
 
 					// Liegt Nachbar außerhalb der Hotspot-Maske?
 					if binaryMask.Data[nb] == 0 {
-						nbVal := float64(original.Data[nb])
-						if nbVal > 20 { // nur Gewebepixel, kein Raumhintergrund
+						isTissue := true
+						if opts.BodyMask != nil {
+							isTissue = opts.BodyMask.Data[nb] > 0
+						} else {
+							isTissue = original.Data[nb] > 40
+						}
+						if isTissue {
+							nbVal := float64(original.Data[nb])
 							diff := pVal - nbVal
 							if diff > 0 {
 								boundaryGradSum += diff
@@ -224,6 +235,53 @@ func ExtractHotspots(binaryMask *imageutil.GrayMatrix, original *imageutil.GrayM
 			if haloCount > 0 {
 				haloMean := haloSum / float64(haloCount)
 				haloDelta = math.Round((haloMean-origMed)*10) / 10
+			}
+
+			// 2.5 Lokale fokale Prominenz: Annulare Gewebeumgebung (Radius 30 px)
+			surroundBoxR := 30
+			ax0 := minX - surroundBoxR
+			if ax0 < 0 {
+				ax0 = 0
+			}
+			ay0 := minY - surroundBoxR
+			if ay0 < 0 {
+				ay0 = 0
+			}
+			ax1 := maxX + surroundBoxR
+			if ax1 >= w {
+				ax1 = w - 1
+			}
+			ay1 := maxY + surroundBoxR
+			if ay1 >= h {
+				ay1 = h - 1
+			}
+
+			var localTissueVals []int
+			for sy := ay0; sy <= ay1; sy++ {
+				row := sy * w
+				for sx := ax0; sx <= ax1; sx++ {
+					sidx := row + sx
+					isTis := true
+					if opts.BodyMask != nil {
+						isTis = opts.BodyMask.Data[sidx] > 0
+					} else {
+						isTis = original.Data[sidx] > 40
+					}
+					if isTis && binaryMask.Data[sidx] == 0 {
+						localTissueVals = append(localTissueVals, int(original.Data[sidx]))
+					}
+				}
+			}
+
+			localSurroundMed := float64(0)
+			localProminence := float64(0)
+			if len(localTissueVals) > 10 {
+				sort.Ints(localTissueVals)
+				localSurroundMed = float64(localTissueVals[len(localTissueVals)/2])
+				localProminence = math.Max(0.0, float64(maxVal)-localSurroundMed)
+			} else {
+				localSurroundMed = origMed
+				localProminence = math.Max(0.0, float64(maxVal)-localSurroundMed)
 			}
 
 			// 3. 2D Laplace-Operator nabla^2 T am Kern des Herdes (Metabolische Wärmequelle vs. flaches Druckplateau)
@@ -306,31 +364,34 @@ func ExtractHotspots(binaryMask *imageutil.GrayMatrix, original *imageutil.GrayM
 				ThermalLaplacian: thermalLaplacian,
 				HaloDelta:        haloDelta,
 				PeakToMean:       peakToMean,
+				LocalProminence:  math.Round(localProminence*10) / 10,
+				LocalSurroundMed: math.Round(localSurroundMed*10) / 10,
 				DiagnosisType:    diagnosisType,
 				ConfidenceScore:  confidence,
 			}
 
 			// 1. Rejection: Camera frame border artifacts
 			margin := opts.BorderMarginPx
-			if minX <= margin || minY <= margin || maxX >= (w-margin) || maxY >= (h-margin) {
+			if margin < 25 {
+				margin = 25
+			}
+			bottomMargin := margin + 10 // Limbs entering bottom of FOV
+			if minX <= margin || minY <= margin || maxX >= (w-margin) || maxY >= (h-bottomMargin) {
 				hr.Status = "REJECTED_BORDER"
 			} else if opts.AnatomicalCutoffY > 0 && float64(minY) > float64(h)*opts.AnatomicalCutoffY {
-				// Rejection: Anatomical cutoff (calves/ankles below the feet)
 				hr.Status = "REJECTED_ANATOMICAL"
-			} else if distMap != nil && maxDist < opts.MinDistFromBorder && edgeGradient < 3.0 && haloDelta < 5.0 {
-				// 2. Rejection: Flat skin boundary air-leak artifact (no focal heat source)
+			} else if distMap != nil && maxDist < opts.MinDistFromBorder {
 				hr.Status = "REJECTED_BORDER"
 			} else if area < minArea {
-				// 3. Rejection: Too small
 				hr.Status = "REJECTED_SMALL"
 			} else if circularity < opts.MinCircularity {
-				// 4. Rejection: Linear/focal artifact (vein/tendon)
 				hr.Status = "REJECTED_LINEAR"
+			} else if localProminence < 18.0 && area > 800 && maxDist > 20.0 {
+				// Rejection: Diffuse warm anatomical plateau (e.g. calf/thigh) without focal elevation
+				hr.Status = "REJECTED_DIFFUSE_PLATEAU"
 			} else if opts.OrigMedian > 0 && maxVal < uint8(opts.OrigMedian) && edgeGradient < 10.0 && haloDelta < 5.0 {
-				// 5. Rejection: Below tissue baseline and lacks local focal hyperthermic peak
 				hr.Status = "REJECTED_COLD"
 			} else {
-				// Confirmed real inflammation focus!
 				hr.Status = "CONFIRMED_HOTSPOT"
 				for _, p := range compPixels {
 					filteredMask.Data[p] = 255

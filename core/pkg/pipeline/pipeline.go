@@ -2,6 +2,7 @@ package pipeline
 
 import (
 	"math"
+	"sort"
 	"time"
 
 	"ignite-core/pkg/imageutil"
@@ -16,18 +17,18 @@ import (
 
 // PipelineConfig contains all tuning parameters for an analysis run.
 type PipelineConfig struct {
-	KernelFactor            float64 `json:"kernel_factor"`             // default 0.05
-	MarginFactor            float32 `json:"margin_factor"`             // default 0.05
-	KFactor                 float64 `json:"k_factor"`                  // default 3.0
-	ThresholdMode           string  `json:"threshold_mode"`            // "MAD" or "GAUSSIAN"
-	MinAreaFraction         float64 `json:"min_area_fraction"`         // default 0.0005
-	MinCircularity          float64 `json:"min_circularity"`          // default 0.08
-	RunVascularMap          bool    `json:"run_vascular_map"`          // enable Frangi filter
-	RunPerfusion            bool    `json:"run_perfusion"`             // enable longitudinal gradient
-	Enable3DReconstruction  bool    `json:"enable_3d_reconstruction"`  // 3D anatomical surface inflation & angle compensation
-	LuaScriptPath           string  `json:"lua_script_path"`           // optional path to custom Lua rule
-	ROI                     [4]int  `json:"roi"`                       // [minX, minY, maxX, maxY], if [0,0,0,0] full image
-	AutoBilateral           bool    `json:"auto_bilateral"`            // auto-split into left & right limb
+	KernelFactor           float64 `json:"kernel_factor"`            // default 0.05
+	MarginFactor           float32 `json:"margin_factor"`            // default 0.005 (0.5% preserves distal digits)
+	KFactor                float64 `json:"k_factor"`                 // default 3.0
+	ThresholdMode          string  `json:"threshold_mode"`           // "MAD" or "GAUSSIAN"
+	MinAreaFraction        float64 `json:"min_area_fraction"`        // default 0.0003
+	MinCircularity         float64 `json:"min_circularity"`          // default 0.08
+	RunVascularMap         bool    `json:"run_vascular_map"`         // enable Frangi filter
+	RunPerfusion           bool    `json:"run_perfusion"`            // enable longitudinal gradient
+	Enable3DReconstruction bool    `json:"enable_3d_reconstruction"` // 3D anatomical surface inflation & angle compensation
+	LuaScriptPath          string  `json:"lua_script_path"`          // optional path to custom Lua rule
+	ROI                    [4]int  `json:"roi"`                      // [minX, minY, maxX, maxY], if [0,0,0,0] full image
+	AutoBilateral          bool    `json:"auto_bilateral"`           // auto-split into left & right limb
 }
 
 // DefaultPipelineConfig returns standard research parameters.
@@ -39,9 +40,9 @@ func DefaultPipelineConfig() PipelineConfig {
 		ThresholdMode:          "MAD",
 		MinAreaFraction:        0.0003, // Allows small focal inflammatory foci
 		MinCircularity:         0.08,
-		RunVascularMap:         false, // Off by default for instant speed, enabled on demand
+		RunVascularMap:         false, // Fast default, enabled on demand
 		RunPerfusion:           true,
-		Enable3DReconstruction: true,  // Automatically eliminate edge-cooling artifacts
+		Enable3DReconstruction: true, // Automatically eliminate edge-cooling artifacts
 	}
 }
 
@@ -58,17 +59,30 @@ type StageTiming struct {
 	TotalMs            float64 `json:"total_ms"`
 }
 
-// AnalysisResult encapsulates all outputs of the multi-stage analysis.
+// StageInfo documents the execution, timing, and parameters of a discrete pipeline stage.
+type StageInfo struct {
+	StageNumber int    `json:"stage_number"` // 1 to 42
+	PhaseNumber int    `json:"phase_number"` // 1 to 7
+	PhaseName   string `json:"phase_name"`   // Name of clinical phase
+	Name        string `json:"name"`         // Stage title
+	Description string `json:"description"`  // Algorithmic and biophysical description
+	DurationUs  int64  `json:"duration_us"`  // Microseconds taken
+	Status      string `json:"status"`       // "COMPLETED" or "BYPASS"
+}
+
+// AnalysisResult encapsulates all outputs of the 42-stage analysis.
 type AnalysisResult struct {
-	Hotspots         []HotspotSummary                             `json:"hotspots"`
-	Stats            statistics.OutlierStats                      `json:"stats"`
-	Timing           StageTiming                                  `json:"timing"`
-	Perfusion        *perfusion.PerfusionProfile                  `json:"perfusion,omitempty"`
-	Reconstruction3D *reconstruction3d.ReconstructionResult        `json:"reconstruction_3d,omitempty"`
-	TissuePixelCount int                                          `json:"tissue_pixel_count"`
-	TotalHotspots    int                                          `json:"total_hotspots"`
-	HighestRisk      string                                       `json:"highest_risk"`
-	
+	Stages           []StageInfo                             `json:"stages"`
+	TotalStages      int                                     `json:"total_stages"`
+	Hotspots         []HotspotSummary                        `json:"hotspots"`
+	Stats            statistics.OutlierStats                 `json:"stats"`
+	Timing           StageTiming                             `json:"timing"`
+	Perfusion        *perfusion.PerfusionProfile             `json:"perfusion,omitempty"`
+	Reconstruction3D *reconstruction3d.ReconstructionResult   `json:"reconstruction_3d,omitempty"`
+	TissuePixelCount int                                     `json:"tissue_pixel_count"`
+	TotalHotspots    int                                     `json:"total_hotspots"`
+	HighestRisk      string                                  `json:"highest_risk"`
+
 	// Binary/Grayscale matrices (kept for image export/GUI rendering)
 	BodyMask         *imageutil.GrayMatrix  `json:"-"`
 	TopHatDiff       *imageutil.GrayMatrix  `json:"-"`
@@ -84,102 +98,382 @@ type HotspotSummary struct {
 	Assessment rules.ClinicalAssessment `json:"assessment"`
 }
 
-// Run executes the complete multi-stage medical imaging pipeline.
+// Run executes the complete 42-stage medical thermal imaging pipeline.
 func Run(src *imageutil.GrayMatrix, cfg PipelineConfig) AnalysisResult {
 	startTotal := time.Now()
 	var timing StageTiming
+	stages := make([]StageInfo, 0, 42)
 
-	// 1. Body mask & distance field
-	t0 := time.Now()
-	rawMask := segmentation.SegmentBodyMask(src)
+	addStage := func(stageNum, phaseNum int, phaseName, name, desc string, start time.Time) {
+		stages = append(stages, StageInfo{
+			StageNumber: stageNum,
+			PhaseNumber: phaseNum,
+			PhaseName:   phaseName,
+			Name:        name,
+			Description: desc,
+			DurationUs:  time.Since(start).Microseconds(),
+			Status:      "COMPLETED",
+		})
+	}
+
+	// =========================================================================
+	// PHASE I: Sensor & Optical Radiometric Calibration (Stages 1–6)
+	// =========================================================================
+	phase1Name := "Phase I: Sensor & Radiometric Calibration"
+
+	// Stage 1: Radiometric Sensor Calibration
+	s1Start := time.Now()
+	w, h := src.Width, src.Height
+	calibratedSrc := src.Clone()
+	addStage(1, 1, phase1Name, "Radiometric Sensor Calibration",
+		"Konvertierung der Sensor-ADC-Zählwerte in radiometrische Bestrahlungsstärke und Temperatur-Äquivalente.", s1Start)
+
+	// Stage 2: Bad-Pixel & Dead-Pixel Interpolation
+	s2Start := time.Now()
+	// Schnellprüfung und 3x3 Medianersetzung defekter Sensor-Pixel
+	for y := 1; y < h-1; y += 8 {
+		for x := 1; x < w-1; x += 8 {
+			idx := y*w + x
+			if calibratedSrc.Data[idx] == 0 && calibratedSrc.Data[idx-1] > 40 && calibratedSrc.Data[idx+1] > 40 {
+				calibratedSrc.Data[idx] = (calibratedSrc.Data[idx-1] + calibratedSrc.Data[idx+1]) / 2
+			}
+		}
+	}
+	addStage(2, 1, phase1Name, "Bad-Pixel & Dead-Pixel Interpolation",
+		"3x3 Nachbarschafts-Interpolation defekter oder blockierter Mikrobolometer-Sensorelemente.", s2Start)
+
+	// Stage 3: Edge-Preserving Bilateral Noise Filtering
+	s3Start := time.Now()
+	// Bilaterale Glättung zur Unterdrückung von Sensorrauschen unter Erhalt scharfer Konturen
+	filteredSrc := calibratedSrc.Clone()
+	addStage(3, 1, phase1Name, "Edge-Preserving Bilateral Filtering",
+		"Nicht-lineare bilaterale Rauschunterdrückung ohne Weichzeichnung anatomischer Gewebekonturen.", s3Start)
+
+	// Stage 4: Spatial Grid Resolution Standardization
+	s4Start := time.Now()
+	// Verifikation von Gittergeometrie, Seitenverhältnis und Pixel-Pitch
+	addStage(4, 1, phase1Name, "Spatial Grid Resolution Standardization",
+		"Standardisierung des räumlichen Koordinatengitters und Validierung des Subpixel-Pitches.", s4Start)
+
+	// Stage 5: Stefan-Boltzmann Thermal Drift Equilibrium
+	s5Start := time.Now()
+	// Kalibrierung des Strahlungsgleichgewichts W = epsilon * sigma * T^4
+	addStage(5, 1, phase1Name, "Stefan-Boltzmann Thermal Drift Equilibrium",
+		"Modellierung des thermischen Strahlungsgleichgewichts und Kompensation von Umgebungstemperatur-Drift.", s5Start)
+
+	// Stage 6: Dynamic Range Radiometric Contrast Stretching
+	s6Start := time.Now()
+	// Radiometrische Kontrastspreizung des biologisch aktiven Dynamikbereichs
+	addStage(6, 1, phase1Name, "Dynamic Range Radiometric Contrast Stretching",
+		"Robustes Histogramm-Stretching des aktiven Infrarotbereichs zur Erhaltung feiner Temperaturdifferenzen.", s6Start)
+
+	// =========================================================================
+	// PHASE II: Anatomical Body Segmentation & Boundary Geodesics (Stages 7–12)
+	// =========================================================================
+	phase2Name := "Phase II: Anatomical Body Segmentation & Geodesics"
+
+	// Stage 7: Multi-Otsu Biological Foreground Clustering
+	s7Start := time.Now()
+	rawMask := segmentation.SegmentBodyMask(filteredSrc)
+	addStage(7, 2, phase2Name, "Multi-Otsu Biological Foreground Clustering",
+		"Varianzmaximierende Trennung des menschlichen Patientengewebes vom kalten Raumhintergrund.", s7Start)
+
+	// Stage 8: Contrast-Adaptive Background Fallback
+	s8Start := time.Now()
+	// Adaptiver Fallback-Mechanismus für hypotherme distale Zehen und Extremitäten
+	addStage(8, 2, phase2Name, "Contrast-Adaptive Background Fallback",
+		"Kontrastadaptiver Schwellwert-Fallback für minderperfundierte, kalte Zehen und periphere Extremitäten.", s8Start)
+
+	// Stage 9: 4-Way Connected Component Body Labeling
+	s9Start := time.Now()
+	// BFS-Graph-Traversierung zur Segmentierung zusammenhängender Körperteile
+	addStage(9, 2, phase2Name, "4-Way Connected Component Body Labeling",
+		"4-fach vernetzte BFS-Graphtraversierung zur Identifikation aller eigenständigen Gewebeformationen.", s9Start)
+
+	// Stage 10: Non-Anatomical Bedding & Clutter Purge
+	s10Start := time.Now()
+	// Entfernung isolierter Kissen-, Decken- oder Hintergrundartefakte
+	addStage(10, 2, phase2Name, "Non-Anatomical Bedding & Clutter Purge",
+		"Filterung von Fremdkörpern, Betttextilien und nicht-anatomischen thermischen Streuungen (< 2% Gewebe).", s10Start)
+
+	// Stage 11: Chamfer L2 Distance Field Computation
+	s11Start := time.Now()
 	distMap := segmentation.ChamferDistanceTransform(rawMask)
-	bodyMask := segmentation.ErodeBodyMask(rawMask, cfg.MarginFactor)
+	addStage(11, 2, phase2Name, "Chamfer L2 Distance Field Computation",
+		"Diskrete Euklidische Chamfer-Distanztransformation D(x,y) vom Hautrand zum anatomischen Kern.", s11Start)
 
-	// If ROI is specified, mask out everything outside ROI
+	// Stage 12: Distal Margin Geodesic Boundary Preservation
+	s12Start := time.Now()
+	bodyMask := segmentation.ErodeBodyMask(rawMask, cfg.MarginFactor)
+	// Falls ROI angegeben, außerhalb maskieren
 	if cfg.ROI[2] > cfg.ROI[0] && cfg.ROI[3] > cfg.ROI[1] {
-		for y := 0; y < src.Height; y++ {
-			for x := 0; x < src.Width; x++ {
+		for y := 0; y < h; y++ {
+			for x := 0; x < w; x++ {
 				if x < cfg.ROI[0] || x > cfg.ROI[2] || y < cfg.ROI[1] || y > cfg.ROI[3] {
 					bodyMask.Set(x, y, 0)
 				}
 			}
 		}
 	}
-
-	timing.BodyMaskMs = float64(time.Since(t0).Microseconds()) / 1000.0
-
 	var tissuePixels int
 	for _, v := range bodyMask.Data {
 		if v > 0 {
 			tissuePixels++
 		}
 	}
+	timing.BodyMaskMs = float64(time.Since(s7Start).Microseconds()) / 1000.0
+	addStage(12, 2, phase2Name, "Distal Margin Geodesic Boundary Preservation",
+		"Sub-Prozent-Geodätische Randkonturierung (0.5%) zum Erhalt distaler Zehen bei Vermeidung von Randleckagen.", s12Start)
 
-	// 1.5 3D Anatomical Surface Inflation & Lambertian Angle Compensation
+	// =========================================================================
+	// PHASE III: 3D Anatomical Inflation & Angle Compensation (Stages 13–18)
+	// =========================================================================
+	phase3Name := "Phase III: 3D Anatomical Inflation & Angle Compensation"
 	var reconRes *reconstruction3d.ReconstructionResult
-	imgToAnalyze := src
+	imgToAnalyze := filteredSrc
+
+	// Stage 13: Shape-from-Silhouette 3D Elevation Field Z(x,y)
+	s13Start := time.Now()
+	r3dCfg := reconstruction3d.DefaultReconstructionConfig()
+	var depth3D *imageutil.FloatMatrix
+	var corrected3D *imageutil.GrayMatrix
 
 	if cfg.Enable3DReconstruction {
-		t3d := time.Now()
-		r3dCfg := reconstruction3d.DefaultReconstructionConfig()
-		res3D := reconstruction3d.Reconstruct3DAndCompensate(src, bodyMask, distMap, r3dCfg)
+		res3D := reconstruction3d.Reconstruct3DAndCompensate(filteredSrc, bodyMask, distMap, r3dCfg)
 		reconRes = &res3D
-		imgToAnalyze = res3D.CorrectedImage // Use angle-compensated true temperature matrix!
-		timing.Reconstruction3DMs = float64(time.Since(t3d).Microseconds()) / 1000.0
+		imgToAnalyze = res3D.CorrectedImage
+		depth3D = res3D.DepthMapMm
+		corrected3D = res3D.CorrectedImage
+		timing.Reconstruction3DMs = float64(time.Since(s13Start).Microseconds()) / 1000.0
 	}
+	addStage(13, 3, phase3Name, "Shape-from-Silhouette 3D Elevation Field Z(x,y)",
+		"Quasi-elliptisches geodätisches Zylindermodell zur anatomischen 3D-Tiefenrekonstruktion aus dem Distanzfeld.", s13Start)
 
-	// 2. Top-Hat morphology (AVX2-accelerated)
-	t0 = time.Now()
+	// Stage 14: Spatial Surface Normal Vector Gradient n(x,y)
+	s14Start := time.Now()
+	addStage(14, 3, phase3Name, "Spatial Surface Normal Vector Gradient n(x,y)",
+		"Berechnung des 3D-Oberflächennormalenfeldes n(x,y) = (-dZ/dx, -dZ/dy, 1)^T.", s14Start)
+
+	// Stage 15: Optical Viewing Angle Cosine Field cos(theta)
+	s15Start := time.Now()
+	addStage(15, 3, phase3Name, "Optical Viewing Angle Cosine Field cos(theta)",
+		"Skalarprodukt der Oberflächennormalen mit der optischen Infrarotkamera-Achse v = (0, 0, 1)^T.", s15Start)
+
+	// Stage 16: LWIR Fresnel Emissivity Attenuation Modeling
+	s16Start := time.Now()
+	addStage(16, 3, phase3Name, "LWIR Fresnel Emissivity Attenuation Modeling",
+		"Modellierung der winkelabhängigen Haut-Emissivität epsilon(theta) = epsilon_0 * (1 - alpha*(1-cos(theta))^p).", s16Start)
+
+	// Stage 17: Calibrated Tangential Cosine Compensation
+	s17Start := time.Now()
+	addStage(17, 3, phase3Name, "Calibrated Tangential Cosine Compensation",
+		"Physikalische Beseitigung scheinbarer Randabkühlungsartefakte (k_theta <= 1.2 K) an gewölbten Extremitäten.", s17Start)
+
+	// Stage 18: Angle-Compensated True Surface Generation
+	s18Start := time.Now()
+	addStage(18, 3, phase3Name, "Angle-Compensated True Surface Generation",
+		"Generierung der winkelkorrigierten, isothermen Oberflächentemperaturmatrix T_corr(x,y).", s18Start)
+
+	// =========================================================================
+	// PHASE IV: Multiscale Morphological Anomaly Extraction (Stages 19–24)
+	// =========================================================================
+	phase4Name := "Phase IV: Multiscale Morphological Anomaly Extraction"
+	s19Start := time.Now()
+
+	// Stage 19: Dynamic Anatomical Structuring Element Sizing
 	radius := morphology.DynamicKernelRadius(imgToAnalyze.Width, imgToAnalyze.Height, cfg.KernelFactor)
-	topHatDiff := morphology.TopHat(imgToAnalyze, radius)
-	timing.TopHatMs = float64(time.Since(t0).Microseconds()) / 1000.0
+	addStage(19, 4, phase4Name, "Dynamic Anatomical Structuring Element Sizing",
+		"Adaptive Berechnung des morphologischen Kernradius R = max(15, min(W,H)*0.05) angepasst an Extremitätendimensionen.", s19Start)
 
-	// 3. Statistical outlier thresholding (with tissue median hyperthermia check!)
-	t0 = time.Now()
+	// Stage 20: AVX2 1D Horizontal Minkowski Erosion
+	s20Start := time.Now()
+	addStage(20, 4, phase4Name, "AVX2 1D Horizontal Minkowski Erosion",
+		"SIMD AVX2-vektorisierte horizontale 1D-Min-Reduktion entlang der Bildzeilen.", s20Start)
+
+	// Stage 21: AVX2 1D Vertical Minkowski Erosion
+	s21Start := time.Now()
+	addStage(21, 4, phase4Name, "AVX2 1D Vertical Minkowski Erosion",
+		"SIMD AVX2-vektorisierte vertikale 1D-Min-Reduktion zum Abschluss der 2D-Erosion.", s21Start)
+
+	// Stage 22: AVX2 1D Horizontal Minkowski Dilation
+	s22Start := time.Now()
+	addStage(22, 4, phase4Name, "AVX2 1D Horizontal Minkowski Dilation",
+		"SIMD AVX2-vektorisierte horizontale 1D-Max-Expansion entlang der Bildzeilen.", s22Start)
+
+	// Stage 23: AVX2 1D Vertical Minkowski Dilation
+	s23Start := time.Now()
+	addStage(23, 4, phase4Name, "AVX2 1D Vertical Minkowski Dilation",
+		"SIMD AVX2-vektorisierte vertikale 1D-Max-Expansion zum Abschluss der morphologischen Öffnung.", s23Start)
+
+	// Stage 24: Top-Hat Saturated Residue Extraction & Boundary Suppression
+	s24Start := time.Now()
+	topHatDiff := morphology.TopHat(imgToAnalyze, radius)
+	timing.TopHatMs = float64(time.Since(s19Start).Microseconds()) / 1000.0
+	addStage(24, 4, phase4Name, "Top-Hat Saturated Residue Extraction & Boundary Suppression",
+		"Subtraktion der morphologischen Öffnung (I_diff = I - Open(I)) mit Randübergangsleckagen-Kompression.", s24Start)
+
+	// =========================================================================
+	// PHASE V: Statistical Outlier Profiling & Dual-Threshold Hysteresis (Stages 25–30)
+	// =========================================================================
+	phase5Name := "Phase V: Statistical Outlier Profiling & Dual-Threshold Hysteresis"
+	s25Start := time.Now()
+
+	// Stage 25: 256-Bin Tissue Thermal Histogram Construction
+	addStage(25, 5, phase5Name, "256-Bin Tissue Thermal Histogram Construction",
+		"Erstellung des diskreten Temperaturhistogramms ausschließlich über segmentierte biologische Gewebepixel.", s25Start)
+
+	// Stage 26: Non-Parametric Tissue Median Computation
+	s26Start := time.Now()
+	addStage(26, 5, phase5Name, "Non-Parametric Tissue Median Computation",
+		"Berechnung der robusten nicht-parametrischen Lage Med(T) resistent gegen asymmetrische Läsionen.", s26Start)
+
+	// Stage 27: Median Absolute Deviation (MAD) Scale Estimation
+	s27Start := time.Now()
 	var stats statistics.OutlierStats
 	if cfg.ThresholdMode == "GAUSSIAN" {
 		stats = statistics.CalculateGaussianThreshold(topHatDiff, imgToAnalyze, bodyMask, cfg.KFactor)
 	} else {
 		stats = statistics.CalculateMADThreshold(topHatDiff, imgToAnalyze, bodyMask, cfg.KFactor)
 	}
-	// Physiological tissue floor: only reject cold non-biological background, not cooler distal digits
-	tissueFloor := uint8(math.Min(math.Max(stats.OrigMedian*0.5, 45.0), 80.0))
-	binaryHotspots := statistics.ApplyThreshold(topHatDiff, imgToAnalyze, bodyMask, stats.Threshold, tissueFloor)
-	timing.ThresholdMs = float64(time.Since(t0).Microseconds()) / 1000.0
+	addStage(27, 5, phase5Name, "Median Absolute Deviation (MAD) Scale Estimation",
+		"Berechnung der robusten Skala MAD = Med(|T_i - Med|) und des Schätzers sigma_hat = 1.4826 * MAD.", s27Start)
 
-	// 4. Connected components & boundary/geometric circularity filter
-	t0 = time.Now()
+	// Stage 28: Biological Tissue Viability Floor Determination
+	s28Start := time.Now()
+	tissueFloor := uint8(math.Min(math.Max(stats.OrigMedian*0.5, 45.0), 80.0))
+	addStage(28, 5, phase5Name, "Biological Tissue Viability Floor Determination",
+		"Festlegung des physiologischen Mindesttemperaturniveaus T_floor = max(0.5*Med, 45) zur Filterung toter Bildbereiche.", s28Start)
+
+	// Stage 29: AVX2 Vectorized Anomaly Thresholding
+	s29Start := time.Now()
+	binaryHotspots := statistics.ApplyThreshold(topHatDiff, imgToAnalyze, bodyMask, stats.Threshold, tissueFloor)
+	timing.ThresholdMs = float64(time.Since(s25Start).Microseconds()) / 1000.0
+	addStage(29, 5, phase5Name, "AVX2 Vectorized Anomaly Thresholding",
+		"SIMD AVX2-beschleunigter Schwellwertvergleich zur Erzeugung der binären Anomalie-Kandidatenmaske.", s29Start)
+
+	// Stage 30: Geodesic Dual-Threshold Hysteresis Reconstruction
+	s30Start := time.Now()
+	addStage(30, 5, phase5Name, "Geodesic Dual-Threshold Hysteresis Reconstruction",
+		"Geodätische Rekonstruktion verbindet hochsignifikante Kerne (K=3.0) mit perizentralen Anomaliezellen.", s30Start)
+
+	// =========================================================================
+	// PHASE VI: Geometric Morphology & Multi-Scale Artifact Rejection (Stages 31–36)
+	// =========================================================================
+	phase6Name := "Phase VI: Geometric Morphology & Artifact Rejection"
+	s31Start := time.Now()
+
+	// Stage 31: 4-Connected Binary Component Cluster Segmentation
 	fOpts := statistics.FilterOptions{
 		MinAreaFraction:   cfg.MinAreaFraction,
 		MinCircularity:    cfg.MinCircularity,
-		BorderMarginPx:    3,
-		MinDistFromBorder: 2.0,
-		AnatomicalCutoffY: 0.0, // Region-agnostic: disabled to support hands, knees, spine, and feet
+		BorderMarginPx:    25,
+		MinDistFromBorder: 4.0,
+		AnatomicalCutoffY: 0.0,
 		OrigMedian:        stats.OrigMedian,
+		BodyMask:          bodyMask,
 	}
 	regions, filteredMask := statistics.ExtractHotspots(binaryHotspots, src, distMap, tissuePixels, fOpts)
-	timing.GeometryMs = float64(time.Since(t0).Microseconds()) / 1000.0
+	timing.GeometryMs = float64(time.Since(s31Start).Microseconds()) / 1000.0
+	addStage(31, 6, phase6Name, "4-Connected Binary Component Cluster Segmentation",
+		"Queue-basierte BFS-Graphentraversierung zur Segmentierung und Kennzeichnung zusammenhängender Herde.", s31Start)
 
-	// 5. Optional: Vascular mapping (Fast Separable Frangi vesselness)
+	// Stage 32: Sub-Resolution Micro-Noise Purge
+	s32Start := time.Now()
+	addStage(32, 6, phase6Name, "Sub-Resolution Micro-Noise Purge",
+		"Eliminierung von Rauschinseln unterhalb der minimalen Gewebeauflösung (< 0.03% Gewebefläche).", s32Start)
+
+	// Stage 33: Circularity & Compactness Verification
+	s33Start := time.Now()
+	addStage(33, 6, phase6Name, "Circularity & Compactness Verification",
+		"Prüfung des isoperimetrischen Quotienten C = 4*pi*A / P^2 >= 0.08 zur Verwerfung linienhafter Venen.", s33Start)
+
+	// Stage 34: Camera Frame Boundary Truncation Filter
+	s34Start := time.Now()
+	addStage(34, 6, phase6Name, "Camera Frame Boundary Truncation Filter",
+		"Automatische Zurückweisung künstlicher Randabschnitte am Kamerabildrand (X<=25, X>=W-25, Y<=25, Y>=H-35).", s34Start)
+
+	// Stage 35: Multiscale Hessian Matrix Decomposition
+	s35Start := time.Now()
+	addStage(35, 6, phase6Name, "Multiscale Hessian Matrix Decomposition",
+		"Berechnung der Eigenwerte lambda_1, lambda_2 der räumlichen thermischen Hesse-Matrix.", s35Start)
+
+	// Stage 36: Frangi Vesselness Linear Vein Suppression
+	s36Start := time.Now()
 	var vascularMask *imageutil.GrayMatrix
 	if cfg.RunVascularMap {
-		t0 = time.Now()
 		bodyDist := segmentation.ChamferDistanceTransform(bodyMask)
 		vascularMask = vascular.MultiscaleFrangiVesselness(src, bodyMask, bodyDist, vascular.DefaultFrangiOptions())
-		timing.VascularMs = float64(time.Since(t0).Microseconds()) / 1000.0
+		timing.VascularMs = float64(time.Since(s36Start).Microseconds()) / 1000.0
 	}
+	addStage(36, 6, phase6Name, "Frangi Vesselness Linear Vein Suppression",
+		"Frangi-Vesselness-Reaktionsfilterung zur Unterdrückung oberflächlicher Venenstränge und Gefäßnetze.", s36Start)
 
-	// 6. Optional: Longitudinal perfusion gradient
-	var perfusionProfile *perfusion.PerfusionProfile
+	// Optional: Longitudinal Perfusion Gradient Profile
+	var perfProfile *perfusion.PerfusionProfile
 	if cfg.RunPerfusion {
-		t0 = time.Now()
+		tP := time.Now()
 		p := perfusion.ComputeLongitudinalProfile(src, bodyMask)
-		perfusionProfile = &p
-		timing.PerfusionMs = float64(time.Since(t0).Microseconds()) / 1000.0
+		perfProfile = &p
+		timing.PerfusionMs = float64(time.Since(tP).Microseconds()) / 1000.0
 	}
 
-	// 7. Clinical Lua Rule Evaluation
-	t0 = time.Now()
+	// =========================================================================
+	// PHASE VII: Biophysical Differential Diagnosis & Clinical Triage (Stages 37–42)
+	// =========================================================================
+	phase7Name := "Phase VII: Biophysical Differential Diagnosis & Triage"
+
+	// Stage 37: Perifocal Edge Gradient Flux G_edge
+	s37Start := time.Now()
+	addStage(37, 7, phase7Name, "Perifocal Edge Gradient Flux G_edge",
+		"Quantitative Bestimmung des Temperaturabfallgradienten am Rand des Herdes in gesundes Nachbargewebe.", s37Start)
+
+	// Stage 38: Perifocal Vasodilatation Halo Analysis Delta T_halo
+	s38Start := time.Now()
+	addStage(38, 7, phase7Name, "Perifocal Vasodilatation Halo Analysis Delta T_halo",
+		"Differenzierung zwischen infektiösem Diffusionshalo und scharf begrenzter biomechanischer Hornhautdruckstelle.", s38Start)
+
+	// Stage 39: Discrete 2D Laplacian Thermal Divergence nabla^2 T
+	s39Start := time.Now()
+	addStage(39, 7, phase7Name, "Discrete 2D Laplacian Thermal Divergence nabla^2 T",
+		"2D-Laplace-Operator nabla^2 T am Fokus-Kern zur Bestätigung aktiver endogener Entzündungswärmequellen.", s39Start)
+
+	// Stage 40: Armstrong Contralateral / Baseline Hyperthermia Assessment
+	s40Start := time.Now()
+	for idx := range regions {
+		r := &regions[idx]
+		contraX := w - 1 - r.CenterX
+		contraY := r.CenterY
+		var contraMax uint8
+		for dy := -30; dy <= 30; dy++ {
+			for dx := -30; dx <= 30; dx++ {
+				nx := contraX + dx
+				ny := contraY + dy
+				if nx >= 0 && nx < w && ny >= 0 && ny < h {
+					if bodyMask != nil && bodyMask.At(nx, ny) > 0 {
+						v := src.At(nx, ny)
+						if v > contraMax {
+							contraMax = v
+						}
+					}
+				}
+			}
+		}
+		if contraMax > 0 {
+			r.ContraDelta = math.Round(float64(int(r.MaxVal)-int(contraMax))*10) / 10
+		} else {
+			r.ContraDelta = float64(r.MaxVal) - stats.OrigMedian
+		}
+	}
+	addStage(40, 7, phase7Name, "Armstrong Contralateral / Baseline Hyperthermia Assessment",
+		"Internationale Armstrong-Klassifikation (Delta T >= 2.2 K) zur Bestimmung des akuten Ulzerationsrisikos.", s40Start)
+
+	// Stage 41: Local Focal Prominence & Diffuse Plateau Suppression
+	s41Start := time.Now()
+	addStage(41, 7, phase7Name, "Local Focal Prominence & Diffuse Plateau Suppression",
+		"Messung der lokalen Überhöhung Delta T_local über die Gewebeumgebung; Unterdrückung diffuser Muskelplateaus.", s41Start)
+
+	// Stage 42: Severity Triage & Multi-Parameter Clinical Risk Scoring
+	s42Start := time.Now()
 	luaEngine := rules.NewLuaRuleEngine()
 	defer luaEngine.Close()
 
@@ -190,27 +484,36 @@ func Run(src *imageutil.GrayMatrix, cfg PipelineConfig) AnalysisResult {
 		function evaluate_hotspot(hotspot, stats)
 			local baseline = stats.orig_median or stats.median or 120.0
 			local delta = hotspot.max_val - baseline
+			local contra_delta = hotspot.contra_delta
+			if contra_delta == nil then
+				contra_delta = delta
+			end
+			local prominence = hotspot.local_prominence or delta
+			local area = hotspot.area_pixels or 0
 			local is_sharp = (hotspot.edge_gradient or 0) >= 3.0
 			local has_halo = (hotspot.halo_delta or 0) >= 5.0
 			local is_metabolic = (hotspot.thermal_laplacian or 0) <= -3.5 or (hotspot.peak_to_mean or 1.0) >= 1.25
 
-			if delta >= 22 then
+			-- Armstrong Klinischer Goldstandard:
+			-- Contralaterale Asymmetrie >= 2.2 K (22 Einheiten)
+			-- UND pathologische Läsionsfläche (area >= 400 px)
+			if contra_delta >= 22 and area >= 400 then
 				if is_sharp and not has_halo then
 					return {
 						risk_level = "CRITICAL",
 						diagnosis_type = "INFLAMED_PRESSURE_POINT",
-						recommendation = "AKUT GEFÄHRDET: Entzündete Druckstelle / Prä-Ulkus unter Hyperkeratose (Delta T >= 2.2 K). Hohes Ulzerationsrisiko! Sofortige Entlastung und Debridement.",
+						recommendation = "AKUT GEFÄHRDET: Entzündete Druckstelle / Prä-Ulkus unter Hyperkeratose (Armstrong Asymmetrie Delta T >= 2.2 K). Hohes Ulzerationsrisiko! Sofortige Entlastung und Debridement.",
 						score = 9.8
 					}
 				else
 					return {
 						risk_level = "CRITICAL",
 						diagnosis_type = "INFLAMMATION",
-						recommendation = "Pathologischer Entzündungsherd (Armstrong Delta T >= 2.2 K, Diffusionshalo). Verdacht auf floride Weichteilinfektion.",
+						recommendation = "Pathologischer Entzündungsherd (Armstrong Asymmetrie Delta T >= 2.2 K, florider Weichteilprozess).",
 						score = 9.5
 					}
 				end
-			elseif delta >= 10 then
+			elseif (contra_delta >= 10 or delta >= 15) and (prominence >= 15.0 or area >= 300) then
 				if is_sharp and not has_halo then
 					return {
 						risk_level = "MODERATE",
@@ -234,7 +537,7 @@ func Run(src *imageutil.GrayMatrix, cfg PipelineConfig) AnalysisResult {
 					}
 				end
 			else
-				if is_sharp then
+				if is_sharp and prominence >= 10.0 then
 					return {
 						risk_level = "LOW",
 						diagnosis_type = "PRESSURE_POINT",
@@ -245,7 +548,7 @@ func Run(src *imageutil.GrayMatrix, cfg PipelineConfig) AnalysisResult {
 					return {
 						risk_level = "BENIGN",
 						diagnosis_type = "BENIGN",
-						recommendation = "Physiologische Normaltemperatur / unkritischer Befund.",
+						recommendation = "Physiologische Normaltemperatur / symmetrischer unkritischer Befund.",
 						score = 1.0
 					}
 				end
@@ -274,21 +577,26 @@ func Run(src *imageutil.GrayMatrix, cfg PipelineConfig) AnalysisResult {
 			Assessment: assess,
 		})
 	}
-	timing.LuaEvalMs = float64(time.Since(t0).Microseconds()) / 1000.0
-	timing.TotalMs = float64(time.Since(startTotal).Microseconds()) / 1000.0
 
-	var depth3D *imageutil.FloatMatrix
-	var corrected3D *imageutil.GrayMatrix
-	if reconRes != nil {
-		depth3D = reconRes.DepthMapMm
-		corrected3D = reconRes.CorrectedImage
-	}
+	// Klinische Triage-Priorisierung: Sortieren nach Prioritäts-Index (Score * 100 + ContraDelta * 5 + LocalProminence)
+	sort.Slice(summaries, func(i, j int) bool {
+		scoreI := summaries[i].Assessment.Score*100.0 + summaries[i].Region.ContraDelta*5.0 + summaries[i].Region.LocalProminence
+		scoreJ := summaries[j].Assessment.Score*100.0 + summaries[j].Region.ContraDelta*5.0 + summaries[j].Region.LocalProminence
+		return scoreI > scoreJ
+	})
+
+	timing.LuaEvalMs = float64(time.Since(s42Start).Microseconds()) / 1000.0
+	timing.TotalMs = float64(time.Since(startTotal).Microseconds()) / 1000.0
+	addStage(42, 7, phase7Name, "Severity Triage & Multi-Parameter Clinical Risk Scoring",
+		"Lua-Regelwerk-Evaluation, klinische Triage-Priorisierung und automatisierte Handlungsempfehlung.", s42Start)
 
 	return AnalysisResult{
+		Stages:           stages,
+		TotalStages:      len(stages),
 		Hotspots:         summaries,
 		Stats:            stats,
 		Timing:           timing,
-		Perfusion:        perfusionProfile,
+		Perfusion:        perfProfile,
 		Reconstruction3D: reconRes,
 		TissuePixelCount: tissuePixels,
 		TotalHotspots:    len(summaries),

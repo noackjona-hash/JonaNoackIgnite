@@ -51,6 +51,15 @@ namespace Ignite.Desktop.Models
         [JsonPropertyName("peak_to_mean")]
         public double PeakToMean { get; set; }
 
+        [JsonPropertyName("local_prominence")]
+        public double LocalProminence { get; set; }
+
+        [JsonPropertyName("local_surround_med")]
+        public double LocalSurroundMed { get; set; }
+
+        [JsonPropertyName("contra_delta")]
+        public double ContraDelta { get; set; }
+
         [JsonPropertyName("diagnosis_type")]
         public string DiagnosisType { get; set; } = string.Empty;
 
@@ -213,8 +222,38 @@ namespace Ignite.Desktop.Models
         public string Description { get; set; } = string.Empty;
     }
 
+    public class StageInfo
+    {
+        [JsonPropertyName("stage_number")]
+        public int StageNumber { get; set; }
+
+        [JsonPropertyName("phase_number")]
+        public int PhaseNumber { get; set; }
+
+        [JsonPropertyName("phase_name")]
+        public string PhaseName { get; set; } = string.Empty;
+
+        [JsonPropertyName("name")]
+        public string Name { get; set; } = string.Empty;
+
+        [JsonPropertyName("description")]
+        public string Description { get; set; } = string.Empty;
+
+        [JsonPropertyName("duration_us")]
+        public long DurationUs { get; set; }
+
+        [JsonPropertyName("status")]
+        public string Status { get; set; } = string.Empty;
+    }
+
     public class AnalysisResult
     {
+        [JsonPropertyName("stages")]
+        public List<StageInfo> Stages { get; set; } = new();
+
+        [JsonPropertyName("total_stages")]
+        public int TotalStages { get; set; }
+
         [JsonPropertyName("hotspots")]
         public List<HotspotSummary> Hotspots { get; set; } = new();
 

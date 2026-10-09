@@ -75,6 +75,9 @@ func (e *LuaRuleEngine) EvaluateHotspot(h statistics.HotspotRegion, stats statis
 	htable.RawSetString("thermal_laplacian", lua.LNumber(h.ThermalLaplacian))
 	htable.RawSetString("halo_delta", lua.LNumber(h.HaloDelta))
 	htable.RawSetString("peak_to_mean", lua.LNumber(h.PeakToMean))
+	htable.RawSetString("local_prominence", lua.LNumber(h.LocalProminence))
+	htable.RawSetString("local_surround_med", lua.LNumber(h.LocalSurroundMed))
+	htable.RawSetString("contra_delta", lua.LNumber(h.ContraDelta))
 	htable.RawSetString("diagnosis_type", lua.LString(h.DiagnosisType))
 	htable.RawSetString("confidence_score", lua.LNumber(h.ConfidenceScore))
 
