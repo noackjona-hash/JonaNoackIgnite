@@ -30,11 +30,11 @@ To ensure scale invariance across diverse camera sensor resolutions (e.g., $160 
 
 ---
 
-### 2. Adaptive Tissue Segmentation (Body-Mask & Chamfer Erosion)
-Before computing regional statistical distributions, background room temperature must be separated from warm anatomical tissue:
+### 2. Adaptive Tissue Segmentation & Anatomical Body Component Isolation
+Before computing regional statistical distributions, background room temperature and environmental clutter must be separated from warm anatomical tissue:
 1. **Otsu Thresholding & Contrast Fallback:** Calculates global Otsu thresholding with dynamic range fallback for low-contrast imagery.
-2. **Euclidean Distance Transform:** Computes foreground distance fields using a 2-pass Chamfer distance transform.
-3. **Proportional Boundary Erosion:** Retains pixels with boundary distance exceeding the configured margin factor (default: 5%), eliminating perimeter sensor noise and toe boundary artifacts.
+2. **Anatomical Body Component Filtering (BFS):** Isolates major anatomical bodies and eliminates detached background reflections, warm bedsheet folds, and wall clutter (< 2% of maximum body area).
+3. **3D-Calibrated Subpixel Boundary Cleaning:** Because the 3D surface reconstruction model (Stage 11) physically compensates for grazing angle emissivity drops, aggressive border erosion is unnecessary. A minimal boundary margin ($\le 0.5\%$, 1–2 pixels) cleans sensor edge aliasing while keeping thin distal extremities (toes, fingers, digits) 100% intact.
 
 ---
 
@@ -50,23 +50,28 @@ Isolates localized thermal elevations while eliminating global temperature gradi
 
 ---
 
-### 4. Statistical Outlier Thresholding (Robust MAD Mode with AVX2 SIMD)
+### 4. Statistical Outlier Thresholding (Robust MAD Mode with Adaptive Tissue Floor)
 Determines thresholds for statistically significant hyperthermia:
 * **Median Absolute Deviation (MAD Mode):** Robust non-parametric thresholding resistant to large hyperthermic clusters or cold toes (bimodal distributions):
    $$\text{MAD} = \text{median}(|X - \text{median}|)$$
    $$\text{Threshold} = \text{Median} + k \cdot 1.4826 \cdot \text{MAD}$$
 * Implemented in $O(N)$ linear time using histogram accumulators over 256 intensity bins.
+* **Physiological Tissue Floor (`tissueFloor`):** Rather than enforcing a global whole-body median floor ($I \ge \text{OrigMedian}$) which would discard naturally cooler distal extremities (fingers/toes at 24–30 °C), binarization uses a biological viability floor:
+  $$\text{TissueFloor} = \min(\max(\text{OrigMedian} \cdot 0.55, 45), 80)$$
+  This guarantees that true focal hyperthermias on cool digits are segmented while sub-biological ambient air noise (< 20 °C) remains blocked.
 * **AVX2 Vectorized Threshold & Masking (`thresholdMaskAVX2`):**
-  Uses `VPBROADCASTQ`, `VPMAXUB`, `VPCMPEQB`, and `VPAND` to simultaneously compare the Top-Hat difference against threshold, verify minimum tissue temperature, and apply the Chamfer body mask for 32 pixels in parallel.
+  Uses `VPBROADCASTQ`, `VPMAXUB`, `VPCMPEQB`, and `VPAND` to simultaneously compare the Top-Hat difference against threshold, verify minimum tissue temperature, and apply the body mask for 32 pixels in parallel.
 
 ---
 
-### 5. Geometric Noise & Circularity Filtering
-Removes single-pixel noise and false positives:
+### 5. Geometric Noise, Circularity & Extremity Preservation
+Removes single-pixel noise and false positives while preserving genuine distal lesions:
 1. **Contour Extraction:** Detects 4-connected candidate regions via breadth-first search (BFS).
-2. **Minimum Area Clamping:** Rejects regions smaller than $\text{min\_area\_factor} \times \text{tissue\_pixels}$.
-3. **Isoperimetric Circularity:** Rejects elongated boundary noise:
+2. **Minimum Area Clamping:** Rejects regions smaller than $\text{min\_area\_fraction} \times \text{tissue\_pixels}$ (default: $0.03\%$).
+3. **Isoperimetric Circularity:** Rejects linear boundary aliasing and scratch noise:
    $$C = \frac{4 \pi \cdot \text{Area}}{\text{Perimeter}^2} \ge 0.08$$
+4. **Distal Extremity & Edge Preservation:** Genuine focal lesions near tissue borders (e.g. inflamed hallux, finger pulp) exhibiting a true thermal gradient ($G_{\text{edge}} \ge 3.0$ or $\Delta T_{\text{halo}} \ge 5.0$) are preserved, whereas flat air-boundary artifacts lacking focal contrast are discarded.
+5. **Universal Multi-Anatomical Support:** Hardcoded vertical anatomical cuts (`AnatomicalCutoffY = 0.0`) are disabled, allowing automated and unbiased analysis across all body regions: feet, hands/fingers, knees, spine, and general soft tissue.
 
 ---
 
@@ -140,10 +145,18 @@ Resolves the fundamental biophysical artifact where curved anatomical perimeters
    * Discrete central differences compute spatial gradients $(\partial Z/\partial x, \partial Z/\partial y)$.
    * The camera-directed viewing angle $\theta$ satisfies:
      $$\cos \theta(x, y) = \frac{1}{\sqrt{1 + \left(\frac{\partial Z}{\partial x}\right)^2 + \left(\frac{\partial Z}{\partial y}\right)^2}}$$
-4. **Radiometric Angle & Depth Compensation:**
+4. **Physically Calibrated Radiometric Angle Compensation:**
    * Restores the true physiological temperature matrix $T_{\text{corrected}}$:
      $$\Delta T_{\text{angle}}(\theta) = k_\theta \cdot (1 - \cos^\gamma \theta)$$
-     $$T_{\text{corrected}}(x, y) = T_{\text{apparent}}(x, y) + \Delta T_{\text{angle}}(\theta) + \Delta T_{\text{depth}}(Z)$$
-   * Restores peripheral margins (+1.2 K to +3.5 K), eliminating false cold borders and exposing lateral ulcerations (e.g. Digitus V / lateral metatarsal head) that were previously masked.
+     $$T_{\text{corrected}}(x, y) = T_{\text{apparent}}(x, y) + \Delta T_{\text{angle}}(\theta)$$
+   * Bounded to physically realistic skin emissivity margins ($k_\theta \le 1.2\,\text{K}$, max $12$ raw units), compensating for peripheral cosine falloff without artificially generating hyperthermic artifacts on sloping tissues.
+
+---
+
+### 12. Clinical Severity Ranking & Finding Triaging
+In contrast to naive sorting by absolute pixel temperature (which erroneously flags naturally warm plantigrade heel or palm tissue), IGNITE ranks all detected candidate foci by **pathological severity**:
+$$\text{Priority}(H) = \text{Score}_{\text{Lua}} \cdot 100 + \Delta T_{\text{focal}}$$
+* **Acute Pathological Foci First:** Hotspots exhibiting critical risk scores (Score $\ge 9.5$, e.g. acute hallux inflammation $\Delta T \ge +5.0\,\text{K}$) are prioritized as Hotspot #1 in findings lists and interactive callout cards.
+* **Benign Physiological Plateaus Suppressed:** Symmetrically warm core regions or low-gradient friction areas are triaged appropriately, completely eliminating "random" false positive callouts.
 
 

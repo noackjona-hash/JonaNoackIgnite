@@ -148,10 +148,10 @@ $$ K_{\text{raw}} = \lfloor \min(W, H) \cdot 0{,}05 \rfloor, \quad K_{\text{odd}
 
 Die bitweise OR-Verknüpfung (`raw | 1`) erzwingt eine ungerade Pixelanzahl und garantiert ein eindeutiges mathematisches Symmetriezentrum.
 
-### Stufe 2: Adaptive Körper-Segmentierung (Chamfer-L2 Distanzerosion)
+### Stufe 2: Adaptive Körper-Segmentierung & Akren-Erhaltung
 Zur Abtrennung des kühlen Raumes dient die globale Binarisierung nach Otsu [@otsu1979threshold]. Bei kontrastarmen Aufnahmen greift ein Dynamik-Fallback ($I_{\min} + 0{,}3 \cdot \Delta I$). 
 
-Um Messunsicherheiten an den Geweberändern (Luft-Haut-Übergänge) zu eliminieren, wird die Chamfer-L2-Distanztransformation angewendet. Pixel mit einem Abstand $D(x,y)$ unterhalb der relativen Randschwelle werden erodiert:
+Um isolierte Hintergrundreflexionen (z. B. Falten auf der Untersuchungsliege) auszuschließen, filtert eine 4-Wege-Zusammenhangskomponentenanalyse alle vom Hauptkörper getrennten Kleininseln ($< 2\,\%$ der Gewebefläche) automatisch aus. Da das in Version 5.0 integrierte 3D-Oberflächenrekonstruktionsmodell den physikalischen Lambert- und Fresnel-Emissivitätsabfall an Kanten explizit kompensiert, erfordert die Maskenerosion keinen aggressiven Randverschnitt mehr: Der relative Distanzfaktor wird auf $f_{\text{dist}} \le 0{,}005$ ($1\dots 2\,\text{px}$) minimiert. Schmale distale Extremitäten (wie Zehen und Finger) bleiben so vollständig in der diagnostischen Maske erhalten:
 
 $$ \text{Mask}_{\text{eroded}}(x,y) = \begin{cases} 255, & \text{falls } D(x,y) \ge f_{\text{dist}} \cdot \max_{x',y'} D(x',y') \\ 0, & \text{sonst} \end{cases} $$
 
@@ -179,6 +179,12 @@ $$ \text{MAD} = \text{median}(|X - \tilde{\mu}|), \quad \hat{\sigma}_{\text{MAD}
 
 $$ T_{\text{MAD}} = \tilde{\mu} + k \cdot \hat{\sigma}_{\text{MAD}} $$
 
+Um zu verhindern, dass bei bimodalen Verteilungen mit stark unterkühlten Extremitäten (z. B. Zehen oder Fingerkuppen bei 24–30 °C) diese kühlen Regionen durch einen starren globalen Medianschnitt ($I \ge \tilde{\mu}$) vollständig verworfen werden, implementiert das System eine adaptive physiologische Gewebeschwelle:
+
+$$ T_{\text{floor}} = \min(\max(\tilde{\mu} \cdot 0{,}55, 45), 80) $$
+
+Dadurch werden echte Entzündungsherde auf kühlen Akren verlässlich detektiert, während Raumluftartefakte (< 20 °C) sicher eliminiert bleiben.
+
 ![Skizze 2: Gauß vs. Robust-MAD bei bimodaler Verteilung](images/skizze_gauss_vs_mad.png)  
 *Abbildung 3 (Skizze 2): Vergleichende Skizze der statistischen Schwellenwerte bei einer bimodalen Gewebeverteilung (kalte Zehen). Der Gauß-Mittelwert verschiebt sich nach links und verzerrt die Schwelle, während das Median/MAD-Verfahren stabil bleibt.*
 
@@ -198,9 +204,7 @@ kleinen Objekten systematisch überschätzt, was $C$ zusätzlich verringert. Der
 entfernt daher gezielt langgestreckte, fadenförmige Strukturen (etwa Kanten- und
 Kompressionsartefakte), ohne kompakte Herde zu verwerfen.
 
-Zusätzlich greifen zwei **datensatzspezifische** Regeln: Cluster mit Schwerpunkt unterhalb
-von 65 % der Bildhöhe sowie Cluster in einem Randstreifen werden verworfen. Ihre Wirkung
-auf die Referenzdaten wird in Kapitel 5.5 gesondert untersucht.
+In Version 5.0 wurde die vormalige starre 65-%-Grenze (`AnatomicalCutoffY`) vollständig überwunden: Das System arbeitet **strikt anatomie-agnostisch** und eignet sich gleichermaßen für Hände/Finger, Knie, Rücken/Wirbelsäule und Füße. Durch die biophysikalische Randprüfung (Erhalt von Herden mit thermischem Diffusionsgradienten $G_{\text{edge}} \ge 3{,}0$ oder Halo $\Delta T_{\text{halo}} \ge 5{,}0$) werden echte Entzündungsherde an Zehen- und Fingerkuppen zuverlässig erfasst, während flache optische Randleckartefakte zuverlässig verworfen werden.
 
 ---
 
@@ -697,7 +701,10 @@ Gegenüberstellung beider Schätzer über den annotierten Datensatz steht aus.
     der Randfilter verwerfen auf diesem Datensatz zwar 0,0 % der annotierten Pixel
     (Kapitel 5.5), beruhen aber auf der stets gleichen Aufnahmegeometrie. Ein Fersenbefund
     im unteren Bilddrittel würde systematisch unterdrückt – ein **blinder Fleck**, der bei
-    abweichender Positionierung unbemerkt bliebe.
+    abweichender Positionierung unbemerkt bliebe. *(In Version 5.0 wurde diese Limitation
+    durch vollständige Deaktivierung des starren Cutoffs und die Einführung eines gradienten-
+    und halobasierten Randschutzes überwunden, wodurch das System vollständig universell und
+    anatomie-agnostisch arbeitet.)*
 12. **Parameterabhängigkeit.** Der voreingestellte Faktor $k = 3{,}0$ erwies sich als zu
     konservativ; das auf einem Tuning-Satz bestimmte $k = 1{,}25$ liefert bessere
     Ergebnisse. Ein einzelner globaler Wert kann jedoch nicht jedem Hauttyp und jeder

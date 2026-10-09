@@ -17,6 +17,10 @@ Die Version 5.0.0 von **IGNITE** erweitert die deterministische Thermografie-Pip
    Lösung der wissenschaftlichen Kernfrage: *Wie unterscheidet man echte pathologische Entzündungen von harmloser mechanischer Belastung (Socken/Druckstellen)?* Durch den horizontalen Spiegelvergleich der Gegenseite (z. B. linker vs. rechter Fuß) werden systemische Erwärmungen als harmlos klassifiziert, während fokale Asymmetrien über der Armstrong-Schwelle sofort Alarm schlagen.
 4. **Ergonomische High-End Diagnosestation:**  
    Vollständiges Redesign der Benutzeroberfläche nach Vorbild moderner kardiologischer und radiologischer Workstations (Obsidian-Farbpalette, synchronisiertes Dual-Viewport-Canvas, Live-Fadenkreuz-Telemetrie und kalibrierte Temperatur-Farbskala).
+5. **Universal Multi-Anatomical Processing & Akren-Erhaltung:**  
+   Vollständige anatomie-agnostische Generalisierung (Füße, Hände/Finger, Knie, Rücken/Wirbelsäule, allgemeines Weichgewebe). Durch Deaktivierung starrer podologischer Zonenschnitte und Reduzierung der Randerosion ($\le 0{,}5\,\%$) bleiben schmale distale Extremitäten (Zehen und Finger) vollumfänglich erhalten.
+6. **Physikalisch kalibrierte 3D-Winkelkorrektur & Klinisches Severity-Ranking:**  
+   Präzise Modellierung des Fresnel-Emissivitätsabfalls ($k_\theta \le 1{,}2\,\text{K}$), wodurch Kanten kompensiert werden, ohne auf gewölbten Flächen Artefakte zu erzeugen. Automatische Priorisierung akuter pathologischer Foci vor harmlosen physiologischen Temperaturplateaus in der Desktop-UI.
 
 ---
 

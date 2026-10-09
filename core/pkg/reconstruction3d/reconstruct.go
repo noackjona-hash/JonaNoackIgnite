@@ -24,9 +24,9 @@ func DefaultReconstructionConfig() ReconstructionConfig {
 		MaxDepthMm:         35.0,
 		CurvatureExponent:  0.65,
 		EmissivityAlpha:    0.22,
-		AngleCompensationK: 2.5,
-		DistanceFalloffK:   0.5,
-		MaxCorrectionUnits: 35.0,
+		AngleCompensationK: 1.2,
+		DistanceFalloffK:   0.0,
+		MaxCorrectionUnits: 12.0,
 		AmbientRaw:         60.0,
 		PixelPitchMm:       0.6,
 	}

@@ -65,4 +65,10 @@ core/ignite-core.exe
 
 # Temporary CLI outputs
 ergebnis.json
+
+# LaTeX artifacts
+*.aux
+*.out
+*.toc
+docs/images/
 

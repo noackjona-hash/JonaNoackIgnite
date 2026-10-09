@@ -19,6 +19,8 @@ Entwickelt für den deutschen Jugendwettbewerb **Jugend forscht 2026** (Fachgebi
 * **Venen- & Adernkartierung (Vascular Mapping):** Multiskaliger **Frangi-Vesselness-Filter** basierend auf der 2D-Hesse-Matrix $\mathcal{H}$ zur präzisen Segmentierung tubulärer Blutgefäße und deren Unterscheidung von Entzündungsherden.
 * **Perfusion & Longitudinaler Temperaturgradient ($dT/dy$):** Automatische Erkennung distaler Durchblutungsabbrüche zur Früherkennung von pAVK („Schaufensterkrankheit“) und diabetischer Mikroangiopathie.
 * **Bilateraler Seitenvergleich (Armstrong-Kriterium $\Delta T \ge 2{,}2\,\text{K}$):** Spiegelbildlicher Vergleich beider Extremitäten (L vs. R) zur eindeutigen Unterscheidung zwischen harmloser mechanischer Belastung (Socken/Druckstellen) und echten pathologischen Entzündungen.
+* **Universal Multi-Anatomical Engine & Akren-Erhaltung:** Vollautomatische Unterstützung für alle anatomischen Regionen (Füße, Hände/Finger, Knie, Wirbelsäule, allgemeines Weichgewebe). Dank physikalisch kalibrierter 3D-Lambertian-Winkelkompensation entfällt aggressiver Randverschnitt: Entzündungsherde an Zehen- und Fingerkuppen werden mit vollständiger anatomischer Randintegrität erfasst, während abgetrennte Hintergrundartefakte (Bettlaken/Boden) automatisch gefiltert werden.
+* **Klinisches Severity-Ranking & Triaging:** Automatische Sortierung detektierter Herde nach pathologischem Risikoscore und lokaler Temperaturüberhöhung ($\Delta T$), sodass akute Entzündungsfoci in der Desktop-Workstation unmittelbar als Herd #1 mit interaktiver Callout-Karte priorisiert werden.
 * **6 spezialisierte x86_64 AVX2-Assembler-Kernels:**
   * `minVectorAVX2` & `maxVectorAVX2`: 32 Pixel parallel pro CPU-Takt für morphologische Erosion und Dilation.
   * `subVectorAVX2`: Sättigende Subtraktion (`VPSUBUSB`) für die Top-Hat-Filterung.
@@ -145,8 +147,12 @@ Die medizinische Klassifikation erfolgt dynamisch über Textskripte im Ordner `r
 
 ---
 
-## 📖 Wissenschaftliche Dokumentation
-* [Architektur-Dokumentation v5.0.0](file:///d:/Downloads/03_Programmierung%20&%20Entwicklung/05_JUFO/JonaNoackIgnite/docs/ARCHITECTURE_v5.md)
-* [Mathematische Algorithmen-Beschreibung](file:///d:/Downloads/03_Programmierung%20&%20Entwicklung/05_JUFO/JonaNoackIgnite/docs/ALGORITHM.md)
-* [Schriftliche Arbeit (Jugend forscht 2026)](file:///d:/Downloads/03_Programmierung%20&%20Entwicklung/05_JUFO/JonaNoackIgnite/docs/SCHRIFTLICHE_ARBEIT_JUGEND_FORSCHT.md)
+## 📖 Wissenschaftliche Dokumentation & Berichte
+* [Wissenschaftliche Monographie v5.0.0](docs/WISSENSCHAFTLICHE_DOKUMENTATION.md)
+* [Architektur-Dokumentation v5.0.0](docs/ARCHITECTURE_v5.md)
+* [Mathematische Algorithmen-Beschreibung](docs/ALGORITHM.md)
+* [Schriftliche Arbeit (Jugend forscht 2026)](docs/SCHRIFTLICHE_ARBEIT_JUGEND_FORSCHT.md)
+* [Schriftliche Arbeit (PDF-Druckfassung)](docs/SCHRIFTLICHE_ARBEIT_JUGEND_FORSCHT.pdf)
+* [Optimierungs-Bericht & Benchmarks](docs/OPTIMIZATIONS.md)
+* [Performance- & Optimierungs-Leitfaden](docs/OPTIMIZATION_GUIDE.md)
 

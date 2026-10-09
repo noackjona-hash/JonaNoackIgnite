@@ -50,27 +50,44 @@ thermografischen Entzündungserkennung im medizinischen
 Behandlungsalltag. Bisher müssen Ärztinnen, Ärzte und Podologen
 Wärmebildaufnahmen von Risikopatienten – beispielsweise beim
 diabetischen Fußsyndrom – manuell am Bildschirm auswerten. Diese
-visuelle Sichtprüfung erfordert viel Zeit (ca. 3 bis 5 Minuten pro
-Aufnahme), ist subjektiv und unterliegt tageszeitlichen
+visuelle Sichtprüfung erfordert Zeit (nach eigener Schätzung ca. 3 bis 5
+Minuten pro Aufnahme), ist subjektiv und unterliegt tageszeitlichen
 Ermüdungsfaktoren des Personals.</p>
 <p>Die entwickelte Software nutzt eine 5-stufige mathematische
 Bildverarbeitungs-Pipeline, um physiologische Temperaturverläufe zu
 filtern, Störabstrahlungen des Raumes zu erodieren und lokale
-Hitzespitzen als potenzielle Entzündungsherde zu isolieren. Um
-Verzögerungen im Praxisablauf zu vermeiden, wurde der Rechenkern in der
-Programmiersprache Rust umgesetzt und mittels Rayon parallelisiert,
-wodurch Auswertungszeiten unter 30 Millisekunden erreicht werden. Ein
-integrierter Instant-Splash-Screen startet die Benutzeroberfläche in
-unter 50 Millisekunden.</p>
-<p>Auf synthetischen Datensätzen mit simulierten Rauschmodellen erzielte
-das System eine Sensitivität von 1,00 sowie einen Dice-Koeffizienten von
-0,88 bis 0,91. Bei 21 realen klinischen Testaufnahmen wurden auffällige
-Stellen zuverlässig abgegrenzt. Die Arbeit analysiert jedoch auch die
-deutlichen Grenzen des Verfahrens: Da ein deterministischer Filter nicht
-zwischen biologischen Infektionen und harmlosen mechanischen
-Druckstellen (z. B. durch Socken oder Gehlenken) unterscheiden kann,
-stellt die Software kein Medizinprodukt dar, sondern dient als
-Orientierungshilfe unter ärztlicher Aufsicht.</p>
+Hitzespitzen als potenzielle Entzündungsherde zu isolieren. Der
+Rechenkern wurde in der Programmiersprache Rust umgesetzt und mittels
+Rayon parallelisiert. Auf der nativen Auflösung des verwendeten
+Thermosensors (<span class="math inline">\(160 \times 120\)</span>
+Pixel) beträgt die gemessene Auswertungszeit <strong>1,6 ms</strong>
+(Median), auf der hochskalierten JPEG-Ausgabe der Kamera (<span
+class="math inline">\(1440 \times 1080\)</span>) dagegen 104 ms. Eine
+Kernerkenntnis der Arbeit ist dabei, dass der Rust-Kern
+<strong>nicht</strong> schneller rechnet als die etablierte
+C++-Bibliothek OpenCV (Faktor 2,4 langsamer); sein Nutzen liegt in der
+Unabhängigkeit von nativen Fremdbibliotheken, im deterministischen
+Verhalten und im geringen Speicherbedarf (&lt; 25 MB).</p>
+<p>Zur Bewertung wurden <strong>9 selbst aufgenommene Thermogramme
+manuell annotiert</strong> und gegen eine Otsu-Baseline verglichen.
+IGNITE erreicht dabei einen Dice-Koeffizienten von <strong>0,325 ±
+0,159</strong> gegenüber 0,004 der Baseline (gepaarter Wilcoxon-Test:
+<span class="math inline">\(p = 0{,}0046\)</span>). Bei getrennter
+Parameterbestimmung auf einem Tuning-Satz und anschließender einmaliger
+Auswertung auf 5 ungesehenen Testbildern steigt der Dice-Wert auf
+<strong>0,513 ± 0,112</strong>. Aufschlussreich ist die Struktur des
+Fehlers: Bei einer Precision von 0,99 und einer Sensitivität von 0,21
+<strong>lokalisiert das Verfahren Herde treffsicher, unterschätzt aber
+deren Ausdehnung deutlich</strong>. Die zuvor berichteten Werte auf rein
+synthetischen Daten (Dice 0,88–0,91) werden in dieser Fassung bewusst
+nicht mehr als Wirksamkeitsnachweis geführt, da die simulierten
+gaußförmigen Herde exakt der Signalform entsprechen, auf die der Filter
+ausgelegt ist. Die Arbeit analysiert die deutlichen Grenzen des
+Verfahrens: Da ein deterministischer Filter nicht zwischen biologischen
+Infektionen und harmlosen mechanischen Druckstellen (z. B. durch Socken
+oder Gehlenken) unterscheiden kann, stellt die Software kein
+Medizinprodukt dar, sondern dient als Orientierungshilfe unter
+ärztlicher Aufsicht.</p>
 <hr />
 <h1 id="inhaltsverzeichnis">Inhaltsverzeichnis</h1>
 <ol type="1">
@@ -97,7 +114,8 @@ Materialien und Methoden</a>
 <li>3.3 Schritt-für-Schritt Implementierung in Rust</li>
 <li>3.4 Ergonomische Benutzeroberfläche und Instant-Splash-UX</li>
 <li>3.5 Datenschutzkonzept im Arbeitsumfeld</li>
-<li>3.6 Selbstständig erbrachter Projektanteil</li>
+<li>3.6 Datenherkunft, Aufnahmegerät und Annotationsverfahren</li>
+<li>3.7 Selbstständig erbrachter Projektanteil</li>
 </ul></li>
 <li><a
 href="#4-bildgestützte-visualisierung-der-pipeline-stufen">Bildgestützte
@@ -109,16 +127,19 @@ Visualisierung der Pipeline-Stufen</a>
 <li>4.4 Statistisches Thresholding und Hotspot-Maske (Stufe 4 &amp;
 5)</li>
 <li>4.5 Finales diagnostisches Overlay für das Behandlungszimmer</li>
-<li>4.6 Auswertung synthetischer Krankheits-Szenarien</li>
+<li>4.6 Auswertung synthetischer Krankheits-Szenarien
+(Regressionstest)</li>
 </ul></li>
 <li><a href="#5-ergebnisse">Ergebnisse</a>
 <ul>
 <li>5.1 Laufzeitmessungen und Rechenzeiten</li>
 <li>5.2 Parameter-Sensitivitätsanalyse des Schwellenwert-Faktors k</li>
-<li>5.3 Quantitativer Benchmark auf synthetischen
-Entzündungsszenarien</li>
-<li>5.4 Auswertung auf 21 realen klinischen Testbildern</li>
-<li>5.5 Mathematische Backend-Paritätstests</li>
+<li>5.3 Hauptergebnis: Validierung gegen manuell annotierte
+Realaufnahmen</li>
+<li>5.4 Getrennte Parameterbestimmung: Tuning- und Testsatz</li>
+<li>5.5 Ablation der geometrischen Filterregeln</li>
+<li>5.6 Backend-Paritätstests</li>
+<li>5.7 Ergänzend: synthetische Entzündungsszenarien</li>
 </ul></li>
 <li><a
 href="#6-ergebnisdiskussion-und-kritische-würdigung">Ergebnisdiskussion
@@ -155,12 +176,15 @@ täglich zahlreiche Risikopatienten untersucht werden.</p>
 pathologischer Hitzespitzen erfordert konzentriertes Absuchen am
 Bildschirm, das manuelle Einstellen dynamischer Farbskalen sowie das
 Ausmessen kontralateraler Temperaturdifferenzen. Für eine qualifizierte
-Erstbeurteilung einer thermografischen Aufnahme benötigt eine Fachkraft
-im Schnitt 3 bis 5 Minuten <span class="citation"
-data-cites="mueller2022thermografie">[@mueller2022thermografie]</span>.
-Bei einer Tagesfrequenz von 20 bis 30 Patienten summiert sich dieser
-Zusatzaufwand zu einer Arbeitszeit von über 1,5 Stunden, die für das
-persönliche Arzt-Patienten-Gespräch fehlt.</p>
+Erstbeurteilung einer thermografischen Aufnahme ist nach eigener
+Zeitmessung an den in dieser Arbeit verwendeten Aufnahmen mit etwa 3 bis
+5 Minuten zu rechnen. Es handelt sich ausdrücklich um eine
+<strong>eigene Schätzung</strong> und nicht um einen publizierten
+Kennwert; eine belastbare Erhebung des Zeitbedarfs in der Praxis steht
+noch aus (siehe Kapitel 6.3). Bei einer Tagesfrequenz von 20 bis 30
+Patienten summiert sich dieser Zusatzaufwand zu einer Arbeitszeit von
+über 1,5 Stunden, die für das persönliche Arzt-Patienten-Gespräch
+fehlt.</p>
 <p>Darüber hinaus birgt die rein visuelle Sichtprüfung ein relevantes
 Fehlerrisiko: Die wahrgenommene Intensität einer Entzündungszone auf
 Farbskalen (z. B. <em>Rainbow</em>- oder <em>Jet</em>-Colormaps) hängt
@@ -192,20 +216,32 @@ Hotspot-Isolierung. Das System soll das Fachpersonal durch eine
 objektive visuelle Orientierungshilfe entlasten, ohne den klinischen
 Behandlungsfluss durch Ladezeiten zu hemmen.</p>
 <p>Folgende Forschungsfragen stehen im Zentrum der Untersuchung: *
-<strong>Forschungsfrage 1 (Arbeitserleichterung &amp;
+<strong>Forschungsfrage 1 (Trefferqualität &amp;
 Erklärbarkeit):</strong> Lässt sich ein deterministischer, mathematisch
-vollständig nachvollziehbarer Algorithmus entwickeln, der
-Entzündungsareale auf synthetischen Testdaten mit einer Sensitivität von
-<span class="math inline">\(&gt; 0{,}95\)</span> markiert, ohne auf
-undurchsichtige KI-Blackbox-Modelle zurückzufragen? *
-<strong>Forschungsfrage 2 (Geschwindigkeit &amp; Ergonomie):</strong>
-Kann durch die Implementierung in nativem Rust mit Multi-Threading eine
-Rechenzeit von <span class="math inline">\(&lt; 50\text{ ms}\)</span>
-realisiert werden, sodass die Auswertung im Behandlungszimmer
-verzögerungsfrei erfolgt? * <strong>Forschungsfrage 3 (Kritische
-Grenzen):</strong> Wo liegen die physikalischen und algorithmischen
-Schwachstellen eines rein Schwellenwert-basierten Verfahrens im realen
-Praxisbetrieb?</p>
+vollständig nachvollziehbarer Algorithmus entwickeln, der thermisch
+auffällige Areale auf <strong>real aufgenommenen</strong> Thermogrammen
+signifikant besser markiert als eine einfache globale
+Schwellenwert-Baseline – ohne auf undurchsichtige KI-Blackbox-Modelle
+zurückzugreifen? Als Prüfgröße dient der Dice-Koeffizient gegenüber
+einer Handannotation, abgesichert durch einen gepaarten Signifikanztest.
+* <strong>Forschungsfrage 2 (Geschwindigkeit &amp; Ergonomie):</strong>
+Kann eine Rechenzeit von <span class="math inline">\(&lt; 50\text{
+ms}\)</span> erreicht werden, sodass die Auswertung im Behandlungszimmer
+verzögerungsfrei erfolgt – und welchen Beitrag leistet dabei tatsächlich
+die Implementierung in nativem Rust gegenüber der etablierten
+C++-Bibliothek OpenCV? Diese Frage wird bewusst als <strong>Vergleich
+mit einer Referenzimplementierung</strong> gestellt und nicht als bloße
+Bestätigung der eigenen Umsetzung. * <strong>Forschungsfrage 3
+(Kritische Grenzen):</strong> Wo liegen die physikalischen und
+algorithmischen Schwachstellen eines rein Schwellenwert-basierten
+Verfahrens im realen Praxisbetrieb?</p>
+<p>Vorweggenommen sei, dass die Untersuchung <strong>zwei der drei
+Ausgangserwartungen widerlegt hat</strong>: Der Rust-Kern ist langsamer
+als OpenCV (Kapitel 5.1), und die auf synthetischen Daten gemessene
+Sensitivität von nahezu 1,00 lässt sich auf Realaufnahmen nicht
+reproduzieren (Kapitel 5.3). Beide Befunde werden hier bewusst
+berichtet, da sie methodisch aufschlussreicher sind als die ursprünglich
+erhofften Bestätigungen.</p>
 <hr />
 <h1 id="hintergrund-und-theoretische-grundlagen">2. Hintergrund und
 theoretische Grundlagen</h1>
@@ -225,7 +261,8 @@ T_{\text{rechts}}| &gt; 2{,}2\,^\circ\text{C} \]</span></p>
 <p>an anatomisch identischen Messpunkten gilt in der Podiatrie als
 klinisch signifikanter Indikator für entzündliche Gewebeprozesse <span
 class="citation"
-data-cites="armstrong2007skin">[@armstrong2007skin]</span>.</p>
+data-cites="armstrong1997infrared armstrong2007skin">[@armstrong1997infrared;
+@armstrong2007skin]</span>.</p>
 <p><img src="images/skizze_asymmetrie_analyse.png"
 alt="Skizze 4: Kontralaterale Asymmetrie-Analyse" /><br />
 <em>Abbildung 1 (Skizze 4): Prinzip der kontralateralen
@@ -252,21 +289,21 @@ spezifischen Emissivitätsgrad <span class="math inline">\(\epsilon \in
 (0, 1)\)</span> und unter Berücksichtigung der von der Umgebung
 reflektierten Infrarotstrahlung <span
 class="math inline">\(T_{\text{refl}}\)</span> gilt für die vom Sensor
-erfasste Gewebetemperature <span
+erfasste Gewebetemperatur <span
 class="math inline">\(T_{\text{obj}}\)</span> <span class="citation"
-data-cites="mueller2022thermografie">[@mueller2022thermografie]</span>:</p>
+data-cites="jones1998reappraisal">[@jones1998reappraisal]</span>:</p>
 <p><span class="math display">\[ T_{\text{obj}} = \left(
 \frac{T_{\text{meas}}^4 - (1 - \epsilon) \cdot
 T_{\text{refl}}^4}{\epsilon} \right)^{1/4} \]</span></p>
-<p>Für menschliche Hautgewebe gilt in der medizinischen Praxis der
+<p>Für menschliches Hautgewebe gilt der messtechnisch bestimmte
 Literaturwert <span class="math inline">\(\epsilon \approx
 0{,}98\)</span> <span class="citation"
-data-cites="ring2012healthcare">[@ring2012healthcare]</span>.
-Infrarotkameras transformieren das thermische Strahlungsfeld in eine
-8-Bit-Grauwertmatrix <span class="math inline">\(I(x,y) \in [0,
-255]\)</span>, deren Intensität linear mit dem eingestellten
-Temperaturbereich <span class="math inline">\([T_{\min},
-T_{\max}]\)</span> korreliert.</p>
+data-cites="steketee1973spectral ring2012healthcare">[@steketee1973spectral;
+@ring2012healthcare]</span>. Infrarotkameras transformieren das
+thermische Strahlungsfeld in eine 8-Bit-Grauwertmatrix <span
+class="math inline">\(I(x,y) \in [0, 255]\)</span>, deren Intensität
+linear mit dem eingestellten Temperaturbereich <span
+class="math inline">\([T_{\min}, T_{\max}]\)</span> korreliert.</p>
 <hr />
 <h2 id="kritische-vergleichsmatrix-bestehender-auswerteverfahren">2.3
 Kritische Vergleichsmatrix bestehender Auswerteverfahren</h2>
@@ -314,12 +351,15 @@ Krankenhaus)<br>• Benötigt leistungsfähige GPUs</td>
 </tr>
 <tr>
 <td style="text-align: left;"><strong>Mein Ansatz (IGNITE)</strong></td>
-<td style="text-align: left;">• Schnelle Berechnung (&lt; 30 ms auf
-normaler CPU)<br>• 100 % lokal &amp; DSGVO-konform (kein
-Cloud-Upload)<br>• Mathematisch nachvollziehbar</td>
+<td style="text-align: left;">• Schnelle Berechnung (1,6 ms bei nativer
+Sensorauflösung, 104 ms bei <span
+class="math inline">\(1440\times1080\)</span>)<br>• 100 % lokal &amp;
+DSGVO-konform (kein Cloud-Upload)<br>• Mathematisch nachvollziehbar<br>•
+Keine nativen Fremdbibliotheken nötig (&lt; 25 MB)</td>
 <td style="text-align: left;">• Kann <strong>nicht</strong> zwischen
 Entzündung &amp; Druckstelle unterscheiden<br>• Feste Schwellenwerte
-passen nicht auf jeden Hauttyp<br>• Kein zertifiziertes
+passen nicht auf jeden Hauttyp<br>• Unterschätzt die Ausdehnung eines
+Herdes systematisch (Sensitivität 0,21)<br>• Kein zertifiziertes
 Medizinprodukt</td>
 </tr>
 </tbody>
@@ -345,18 +385,26 @@ Bilddimension:</p>
 <p>Die bitweise OR-Verknüpfung (<code>raw | 1</code>) erzwingt eine
 ungerade Pixelanzahl und garantiert ein eindeutiges mathematisches
 Symmetriezentrum.</p>
-<h3
-id="stufe-2-adaptive-körper-segmentierung-chamfer-l2-distanzerosion">Stufe
-2: Adaptive Körper-Segmentierung (Chamfer-L2 Distanzerosion)</h3>
+<h3 id="stufe-2-adaptive-körper-segmentierung-akren-erhaltung">Stufe 2:
+Adaptive Körper-Segmentierung &amp; Akren-Erhaltung</h3>
 <p>Zur Abtrennung des kühlen Raumes dient die globale Binarisierung nach
 Otsu <span class="citation"
 data-cites="otsu1979threshold">[@otsu1979threshold]</span>. Bei
 kontrastarmen Aufnahmen greift ein Dynamik-Fallback (<span
 class="math inline">\(I_{\min} + 0{,}3 \cdot \Delta I\)</span>).</p>
-<p>Um Messunsicherheiten an den Geweberändern (Luft-Haut-Übergänge) zu
-eliminieren, wird die Chamfer-L2-Distanztransformation angewendet. Pixel
-mit einem Abstand <span class="math inline">\(D(x,y)\)</span> unterhalb
-der relativen Randschwelle werden erodiert:</p>
+<p>Um isolierte Hintergrundreflexionen (z. B. Falten auf der
+Untersuchungsliege) auszuschließen, filtert eine
+4-Wege-Zusammenhangskomponentenanalyse alle vom Hauptkörper getrennten
+Kleininseln (<span class="math inline">\(&lt; 2\,\%\)</span> der
+Gewebefläche) automatisch aus. Da das in Version 5.0 integrierte
+3D-Oberflächenrekonstruktionsmodell den physikalischen Lambert- und
+Fresnel-Emissivitätsabfall an Kanten explizit kompensiert, erfordert die
+Maskenerosion keinen aggressiven Randverschnitt mehr: Der relative
+Distanzfaktor wird auf <span class="math inline">\(f_{\text{dist}} \le
+0{,}005\)</span> (<span class="math inline">\(1\dots
+2\,\text{px}\)</span>) minimiert. Schmale distale Extremitäten (wie
+Zehen und Finger) bleiben so vollständig in der diagnostischen Maske
+erhalten:</p>
 <p><span class="math display">\[ \text{Mask}_{\text{eroded}}(x,y) =
 \begin{cases} 255, &amp; \text{falls } D(x,y) \ge f_{\text{dist}} \cdot
 \max_{x&#39;,y&#39;} D(x&#39;,y&#39;) \\ 0, &amp; \text{sonst}
@@ -373,7 +421,7 @@ morphologische Opening von <span class="math inline">\(I\)</span> mit
 dem Kernel <span class="math inline">\(K\)</span> bezeichnet. Im
 Rust-Core ist die 2D-Operation in zwei sequentielle 1D-Durchläufe
 (horizontal und vertikal) nach Lemire <span class="citation"
-data-cites="lemire2011streaming">[@lemire2011streaming]</span> zerlegt.
+data-cites="lemire2006streaming">[@lemire2006streaming]</span> zerlegt.
 Die Komplexität pro Pixel sinkt dadurch von <span
 class="math inline">\(O(K^2)\)</span> auf <span
 class="math inline">\(O(K)\)</span>.</p>
@@ -404,6 +452,17 @@ Deviation (<span class="math inline">\(\text{MAD}\)</span>):</li>
 \text{MAD} \]</span></p>
 <p><span class="math display">\[ T_{\text{MAD}} = \tilde{\mu} + k \cdot
 \hat{\sigma}_{\text{MAD}} \]</span></p>
+<p>Um zu verhindern, dass bei bimodalen Verteilungen mit stark
+unterkühlten Extremitäten (z. B. Zehen oder Fingerkuppen bei 24–30 °C)
+diese kühlen Regionen durch einen starren globalen Medianschnitt (<span
+class="math inline">\(I \ge \tilde{\mu}\)</span>) vollständig verworfen
+werden, implementiert das System eine adaptive physiologische
+Gewebeschwelle:</p>
+<p><span class="math display">\[ T_{\text{floor}} =
+\min(\max(\tilde{\mu} \cdot 0{,}55, 45), 80) \]</span></p>
+<p>Dadurch werden echte Entzündungsherde auf kühlen Akren verlässlich
+detektiert, während Raumluftartefakte (&lt; 20 °C) sicher eliminiert
+bleiben.</p>
 <p><img src="images/skizze_gauss_vs_mad.png"
 alt="Skizze 2: Gauß vs. Robust-MAD bei bimodaler Verteilung" /><br />
 <em>Abbildung 3 (Skizze 2): Vergleichende Skizze der statistischen
@@ -413,13 +472,35 @@ während das Median/MAD-Verfahren stabil bleibt.</em></p>
 <hr />
 <h3 id="stufe-5-geometrische-rauschfilterung-asymmetrie">Stufe 5:
 Geometrische Rauschfilterung &amp; Asymmetrie</h3>
-<p>Zusammenhängende Pixelgruppen werden mittels Union-Find-Algorithmus
-analysiert. Ein Cluster wird verworfen, wenn seine Fläche kleiner als
-<span class="math inline">\(0{,}05\%\)</span> der Körperoberfläche ist
-oder seine Form-Circularity <span class="math inline">\(C\)</span> den
-Schwellenwert unterschreitet:</p>
-<p><span class="math display">\[ C = \frac{4\pi \cdot A}{P^2} &lt;
-0{,}01 \]</span></p>
+<p>Zusammenhängende Pixelgruppen werden über eine Zusammenhangsanalyse
+in 4er-Nachbarschaft bestimmt. Ein Cluster wird
+<strong>beibehalten</strong>, wenn seine Fläche mindestens <span
+class="math inline">\(0{,}05\,\%\)</span> der Körperoberfläche beträgt
+und seine Form-Circularity <span class="math inline">\(C\)</span> den
+Schwellenwert erreicht:</p>
+<p><span class="math display">\[ C = \frac{4\pi \cdot A}{P^2} \ge 0{,}08
+\]</span></p>
+<p>Der Wert <span class="math inline">\(0{,}08\)</span> entspricht der
+Implementierung (<code>DEFAULT_MIN_CIRCULARITY</code> in
+<code>config.py</code>). Er ist bewusst niedrig gewählt: Ein exakter
+Kreis erreicht <span class="math inline">\(C = 1\)</span>, reale
+Entzündungsherde sind jedoch unregelmäßig berandet, und durch die
+pixelweise Umfangsberechnung wird <span class="math inline">\(P\)</span>
+bei kleinen Objekten systematisch überschätzt, was <span
+class="math inline">\(C\)</span> zusätzlich verringert. Der Filter
+entfernt daher gezielt langgestreckte, fadenförmige Strukturen (etwa
+Kanten- und Kompressionsartefakte), ohne kompakte Herde zu
+verwerfen.</p>
+<p>In Version 5.0 wurde die vormalige starre 65-%-Grenze
+(<code>AnatomicalCutoffY</code>) vollständig überwunden: Das System
+arbeitet <strong>strikt anatomie-agnostisch</strong> und eignet sich
+gleichermaßen für Hände/Finger, Knie, Rücken/Wirbelsäule und Füße. Durch
+die biophysikalische Randprüfung (Erhalt von Herden mit thermischem
+Diffusionsgradienten <span class="math inline">\(G_{\text{edge}} \ge
+3{,}0\)</span> oder Halo <span class="math inline">\(\Delta
+T_{\text{halo}} \ge 5{,}0\)</span>) werden echte Entzündungsherde an
+Zehen- und Fingerkuppen zuverlässig erfasst, während flache optische
+Randleckartefakte zuverlässig verworfen werden.</p>
 <hr />
 <h1 id="vorgehensweise-materialien-und-methoden">3. Vorgehensweise,
 Materialien und Methoden</h1>
@@ -470,7 +551,101 @@ Server übertragen.</li>
 <li><strong>SHA-256 Pseudonymisierung:</strong> Patientennamen werden
 mit Salt gehasht (<code>ANON-&lt;hash&gt;</code>).</li>
 </ol>
-<h2 id="selbstständig-erbrachter-projektanteil">3.6 Selbstständig
+<h2 id="datenherkunft-aufnahmegerät-und-annotationsverfahren">3.6
+Datenherkunft, Aufnahmegerät und Annotationsverfahren</h2>
+<h3 id="herkunft-der-aufnahmen">Herkunft der Aufnahmen</h3>
+<p>Alle 21 in dieser Arbeit ausgewerteten Thermogramme wurden
+<strong>von mir selbst aufgenommen</strong>. Als Aufnahmepersonen
+dienten <strong>Familienmitglieder und Bekannte</strong>, die vor der
+Aufnahme über Zweck und Verwendung der Bilder informiert wurden und ihr
+<strong>Einverständnis</strong> erteilt haben. Bei minderjährigen
+Personen lag zusätzlich das Einverständnis der Erziehungsberechtigten
+vor.</p>
+<p>Um Fehlinterpretationen vorzubeugen, ist ausdrücklich
+festzuhalten:</p>
+<ul>
+<li>Es handelt sich <strong>nicht um klinische Patientendaten</strong>.
+Ein früherer Wortlaut dieser Arbeit sprach von „21 realen klinischen
+Testaufnahmen”; diese Formulierung war irreführend und wurde
+korrigiert.</li>
+<li>Die aufgenommenen Personen sind <strong>nicht diagnostiziert
+erkrankt</strong>. Es liegen daher keine ärztlich bestätigten
+Entzündungsherde vor; die Annotationen markieren <em>thermisch
+auffällige Regionen</em>, nicht <em>gesicherte Pathologien</em>.</li>
+<li>Es wurde <strong>kein Ethikvotum</strong> eingeholt, da keine Studie
+an Patientinnen und Patienten durchgeführt wurde und keine
+Gesundheitsdaten Dritter aus einer Behandlung stammen.</li>
+<li>Die Bilddateien enthalten keine Namen; eine Zuordnung zu Personen
+ist über die Dateinamen (<code>bild (1)</code> … <code>bild (21)</code>)
+nicht möglich.</li>
+</ul>
+<h3 id="aufnahmegerät-und-dessen-konsequenzen">Aufnahmegerät und dessen
+Konsequenzen</h3>
+<p>Verwendet wurde eine <strong>FLIR ONE bzw. FLIR ONE Pro</strong> –
+eine an ein Smartphone ansteckbare Thermografiekamera. Für die Bewertung
+der Ergebnisse ist eine Eigenschaft dieses Geräts von zentraler
+Bedeutung:</p>
+<blockquote>
+<p>Der <strong>thermische Sensor</strong> der FLIR ONE Pro besitzt eine
+Auflösung von lediglich <strong><span class="math inline">\(160 \times
+120\)</span> Pixeln</strong>. Die ausgegebene JPEG-Datei mit <span
+class="math inline">\(1440 \times 1080\)</span> Pixeln entsteht durch
+Hochskalierung und Überlagerung mit den Kanten des sichtbaren
+Lichtbildes (<em>MSX</em>). Sie enthält <strong>keine zusätzliche
+thermische Information</strong>.</p>
+</blockquote>
+<p>Daraus folgen drei wesentliche Einschränkungen:</p>
+<ol type="1">
+<li><strong>Scheinauflösung.</strong> Ein im <span
+class="math inline">\(1440 \times 1080\)</span>-Bild fein umrandeter
+Hotspot beruht real auf wenigen Sensorpixeln. Die Genauigkeit der
+Konturbestimmung ist entsprechend begrenzt – dies erklärt einen Teil der
+in Kapitel 5.3 gemessenen Abweichung zwischen Algorithmus- und
+Handannotation.</li>
+<li><strong>Verlust der Radiometrie.</strong> Die exportierten
+JPEG-Dateien enthalten <strong>keine Absoluttemperaturen</strong>,
+sondern nur 8-Bit-Grauwerte einer geräteseitig und je Bild dynamisch
+skalierten Farbpalette. Die in Kapitel 2.2 hergeleitete Umrechnung nach
+Stefan-Boltzmann konnte auf diesen Daten daher <strong>nicht
+angewendet</strong> werden. Insbesondere ist das podiatrische Kriterium
+einer kontralateralen Differenz von <span class="math inline">\(\Delta T
+&gt; 2{,}2\,\)</span>K <span class="citation"
+data-cites="armstrong1997infrared">[@armstrong1997infrared]</span> auf
+diesem Material <strong>nicht überprüfbar</strong>; die Pipeline
+arbeitet ausschließlich auf relativen Intensitäten.</li>
+<li><strong>Kompressionsartefakte.</strong> Die JPEG-Kompression erzeugt
+Blockartefakte, die der Top-Hat-Filter prinzipiell als lokale Maxima
+aufgreifen kann.</li>
+</ol>
+<h3 id="aufnahmebedingungen">Aufnahmebedingungen</h3>
+<p>Die Aufnahmen erfolgten in Innenräumen bei üblicher Zimmertemperatur,
+aus etwa gleichem Abstand und in gleicher Ausrichtung (Füße mittig im
+Bild). Eine standardisierte Akklimatisierungsphase, wie sie das
+<em>Glamorgan-Protokoll</em> für medizinische Thermografie vorsieht,
+wurde <strong>nicht</strong> eingehalten. Raumtemperatur und
+Luftbewegung wurden nicht protokolliert. Die einheitliche
+Aufnahmegeometrie ist zugleich der Grund dafür, dass die geometrischen
+Filterregeln aus Kapitel 5.5 auf diesem Datensatz unschädlich sind – auf
+anders aufgenommenem Material wäre das nicht zu erwarten.</p>
+<h3 id="annotationsverfahren">Annotationsverfahren</h3>
+<p>Die Referenzmasken wurden mit dem eigens entwickelten Werkzeug
+<code>benchmark_annotator.py</code> per Pinselwerkzeug erstellt und als
+binäre PNG-Masken abgelegt. Wichtige Einschränkungen:</p>
+<ul>
+<li>Annotiert wurden <strong>9 der 21 Aufnahmen</strong>; für die
+übrigen 12 liegt keine Referenz vor.</li>
+<li>Die Annotation erfolgte durch <strong>eine einzige, medizinisch
+nicht ausgebildete Person</strong> (den Autor). Es gibt daher
+<strong>weder eine Intra- noch eine Inter-Rater-Übereinstimmung</strong>
+(z. B. Cohens <span class="math inline">\(\kappa\)</span>), und die
+Referenz ist <strong>kein diagnostischer Goldstandard</strong>.</li>
+<li>Die Annotation erfolgte in Kenntnis des Projektziels, eine
+Verblindung fand nicht statt.</li>
+</ul>
+<p>Diese Punkte begrenzen die Aussagekraft aller in Kapitel 5.3 und 5.4
+berichteten Werte erheblich und werden in Kapitel 6.3 erneut
+aufgegriffen.</p>
+<h2 id="selbstständig-erbrachter-projektanteil">3.7 Selbstständig
 erbrachter Projektanteil</h2>
 <p>Die mathematische Ausarbeitung, die Programmierung in Rust und
 Python, das Erstellen der Benutzeroberfläche sowie die Durchführung
@@ -525,54 +700,162 @@ Fußgeschwürs.</em></p>
 <h1 id="ergebnisse">5. Ergebnisse</h1>
 <h2 id="laufzeitmessungen-und-rechenzeiten">5.1 Laufzeitmessungen und
 Rechenzeiten</h2>
-<p>Gemessen über 100 Durchläufe auf einem Mittelklasse-PC:</p>
+<p>Alle Zahlen dieses Kapitels werden von
+<code>scripts/run_validation.py</code> reproduzierbar erzeugt (fester
+Zufalls-Seed, protokollierte Hardware). Der vollständige Ergebnisbericht
+ist als <code>docs/validation/validation_report.json</code> dem Projekt
+beigelegt. Gemessen wurde auf einem x86_64-System mit <strong>4
+CPU-Kernen</strong>, 60 Wiederholungen nach 10 Aufwärmläufen. Angegeben
+sind Minimum und Median, da Einzelmessungen unter einem
+Desktop-Betriebssystem stark streuen.</p>
 <table>
 <colgroup>
-<col style="width: 21%" />
-<col style="width: 26%" />
-<col style="width: 26%" />
-<col style="width: 26%" />
+<col style="width: 28%" />
+<col style="width: 35%" />
+<col style="width: 35%" />
 </colgroup>
 <thead>
 <tr>
-<th style="text-align: left;">Backend / Sprache</th>
-<th style="text-align: center;">Bildgröße <span
-class="math inline">\(400 \times 400\)</span></th>
-<th style="text-align: center;">Bildgröße <span
-class="math inline">\(1440 \times 1080\)</span></th>
-<th style="text-align: center;">Arbeitsspeicher</th>
+<th style="text-align: left;">Backend</th>
+<th style="text-align: center;"><span class="math inline">\(400 \times
+400\)</span> (min / median)</th>
+<th style="text-align: center;"><span class="math inline">\(1440 \times
+1080\)</span> (min / median)</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td style="text-align: left;"><strong>PyTorch (NVIDIA CUDA
-GPU)</strong></td>
-<td style="text-align: center;"><strong>8,2 ms</strong></td>
-<td style="text-align: center;"><strong>18,4 ms</strong></td>
-<td style="text-align: center;">~350 MB VRAM</td>
+<td style="text-align: left;"><strong>Rust-Core (CPU,
+rayon)</strong></td>
+<td style="text-align: center;">7,9 / 9,1 ms</td>
+<td style="text-align: center;">86,4 / 104,3 ms</td>
 </tr>
 <tr>
-<td style="text-align: left;"><strong>Mein Rust-Core (CPU
-Standard)</strong></td>
-<td style="text-align: center;"><strong>22,5 ms</strong></td>
-<td style="text-align: center;"><strong>41,1 ms</strong></td>
-<td style="text-align: center;"><strong>&lt; 25 MB RAM</strong></td>
-</tr>
-<tr>
-<td style="text-align: left;"><strong>Python Fallback
+<td style="text-align: left;"><strong>Python + OpenCV
 (CPU)</strong></td>
-<td style="text-align: center;">78,4 ms</td>
-<td style="text-align: center;">210,6 ms</td>
-<td style="text-align: center;">~85 MB RAM</td>
+<td style="text-align: center;">3,1 / 3,3 ms</td>
+<td style="text-align: center;">40,6 / 43,9 ms</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>PyTorch (CUDA)</strong></td>
+<td style="text-align: center;">nicht validierbar</td>
+<td style="text-align: center;">nicht validierbar</td>
 </tr>
 </tbody>
 </table>
-<p><img src="images/diagramm_rechenzeiten_vergleich.png"
-alt="Diagramm 1: Rechenzeiten im Vergleich" /><br />
-<em>Abbildung 12 (Diagramm 1): Vergleichendes Balkendiagramm der
-Ausführungszeiten aller drei Backends bei unterschiedlichen
-Bildauflösungen.</em></p>
-<hr />
+<p><strong>Dieses Ergebnis widerlegt meine ursprüngliche Erwartung und
+ist das wichtigste methodische Resultat der
+Laufzeituntersuchung.</strong> In einer früheren Messung erschien der
+Rust-Core rund dreimal schneller als der Python-Pfad. Diese Messung war
+jedoch <strong>nicht fair</strong>: Der Python-Fallback berechnete
+damals eine <em>Multi-Scale</em>-Top-Hat-Transformation über drei Skalen
+zuzüglich einer Vorglättung, während der Rust-Core nur
+<strong>eine</strong> Skala rechnete. Verglichen wurden also
+unterschiedliche Algorithmen. Nachdem beide Backends auf denselben
+einskaligen Algorithmus angeglichen wurden (siehe Kapitel 5.5), zeigt
+sich:</p>
+<blockquote>
+<p>Die SIMD- und multithread-optimierte C++-Morphologie von OpenCV ist
+auf dieser Hardware etwa <strong>2,4-mal schneller</strong> als meine
+handgeschriebene Rust-Implementierung.</p>
+</blockquote>
+<p>Das ist kein Fehler der Rust-Umsetzung, sondern erwartbar: OpenCV ist
+eine seit über zwei Jahrzehnten auf Vektorbefehlssätze hin optimierte
+Bibliothek. Der Nutzen des Rust-Cores liegt daher <strong>nicht in der
+Rohgeschwindigkeit</strong>, sondern in:</p>
+<ul>
+<li><strong>Unabhängigkeit von nativen Fremdbibliotheken</strong> – der
+Installer benötigt keine OpenCV-Laufzeitkomponenten (&lt; 25 MB statt
+&gt; 200 MB),</li>
+<li><strong>deterministischem, plattformgleichem Verhalten</strong> ohne
+Abhängigkeit von der jeweils installierten OpenCV-Version,</li>
+<li><strong>Speichersicherheit</strong> und geringem
+Arbeitsspeicherbedarf (&lt; 25 MB).</li>
+</ul>
+<h3 id="profilierung-der-pipeline-stufen">Profilierung der
+Pipeline-Stufen</h3>
+<p>Mit gesetzter Umgebungsvariable <code>IGNITE_DEBUG</code> gibt der
+Rust-Core Stufenzeiten aus (<span class="math inline">\(1440 \times
+1080\)</span>, Minimum aus 10 Läufen):</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Stufe</th>
+<th style="text-align: center;">Zeit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">Körpermaske (Otsu + Closing +
+Distanztransformation)</td>
+<td style="text-align: center;">39,0 ms</td>
+</tr>
+<tr>
+<td style="text-align: left;">Top-Hat-Transformation</td>
+<td style="text-align: center;">26,8 ms</td>
+</tr>
+<tr>
+<td style="text-align: left;">Statistisches Thresholding</td>
+<td style="text-align: center;">2,5 ms</td>
+</tr>
+<tr>
+<td style="text-align: left;">Geometriefilter</td>
+<td style="text-align: center;">5,7 ms</td>
+</tr>
+</tbody>
+</table>
+<p>Die Profilierung führte zu einer gezielten Optimierung: Das
+statistische Thresholding materialisierte zuvor zwei Vektoren mit je
+rund 500 000 <code>f64</code>-Werten. Durch eine einzige parallele
+Reduktion über Summen (ohne Zwischenspeicherung) sank diese Stufe von
+17,9 ms auf 2,5 ms – eine Beschleunigung um Faktor 7.</p>
+<h3
+id="auflösungsabhängigkeit-und-praktische-konsequenz">Auflösungsabhängigkeit
+und praktische Konsequenz</h3>
+<p>Die FLIR ONE Pro besitzt einen <strong>thermischen Sensor von nur
+<span class="math inline">\(160 \times 120\)</span> Pixeln</strong>; die
+ausgegebene JPEG-Datei mit <span class="math inline">\(1440 \times
+1080\)</span> Pixeln ist eine hochskalierte Darstellung (vgl. Kapitel
+3.6). Die Verarbeitung der hochskalierten Datei kostet daher Rechenzeit,
+ohne zusätzliche thermische Information zu liefern:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Verarbeitungsauflösung</th>
+<th style="text-align: center;">Rust-Core (min / median)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><span class="math inline">\(160 \times
+120\)</span> (native Sensorauflösung)</td>
+<td style="text-align: center;"><strong>1,2 / 1,6 ms</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"><span class="math inline">\(320 \times
+240\)</span></td>
+<td style="text-align: center;">3,8 / 4,7 ms</td>
+</tr>
+<tr>
+<td style="text-align: left;"><span class="math inline">\(640 \times
+480\)</span></td>
+<td style="text-align: center;">17,5 / 20,1 ms</td>
+</tr>
+<tr>
+<td style="text-align: left;"><span class="math inline">\(1440 \times
+1080\)</span> (JPEG-Ausgabegröße)</td>
+<td style="text-align: center;">86,4 / 104,3 ms</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Forschungsfrage 2 ist damit differenziert zu
+beantworten:</strong> Auf der hochskalierten JPEG-Auflösung wird die
+ursprünglich angestrebte Grenze von 50 ms <strong>nicht</strong>
+eingehalten (86–104 ms). Auf der tatsächlichen Sensorauflösung liegt die
+Auswertung dagegen mit 1,6 ms um mehr als das Dreißigfache unter dieser
+Grenze. Für den Praxiseinsatz folgt daraus die konkrete Empfehlung, vor
+der Analyse auf die native Sensorauflösung zu reduzieren, statt auf
+Interpolationsartefakten zu rechnen.</p>
 <h2 id="parameter-sensitivitätsanalyse-des-schwellenwert-faktors-k">5.2
 Parameter-Sensitivitätsanalyse des Schwellenwert-Faktors k</h2>
 <p>Um zu untersuchen, wie stabil der Schwellenwert-Faktor <span
@@ -581,147 +864,560 @@ ich eine Sensitivitätsanalyse durchgeführt:</p>
 <p><img src="images/diagramm_parameter_sensitivitaet.png"
 alt="Diagramm 2: Parameter-Sensitivitätsanalyse" /><br />
 <em>Abbildung 13 (Diagramm 2): Sensitivitätsanalyse des Faktors <span
-class="math inline">\(k\)</span>. Der Bereich <span
-class="math inline">\(k \in [2{,}5, 3{,}5]\)</span> bietet die beste
-Balance zwischen Erkennungsquote (Sensitivität) und Fehlalarm-Vermeidung
-(Spezifität).</em></p>
+class="math inline">\(k\)</span> auf <strong>synthetischen</strong>
+Daten.</em></p>
+<p><strong>Wichtige Einschränkung:</strong> Diese Analyse beruht auf
+synthetischen Szenarien und legte den Bereich <span
+class="math inline">\(k \in [2{,}5;\ 3{,}5]\)</span> nahe. Die
+Auswertung gegen echte Handannotationen (Kapitel 5.4) widerspricht dem
+deutlich: Dort liegt das Optimum bei <span class="math inline">\(k =
+1{,}25\)</span>, während <span class="math inline">\(k = 3{,}0\)</span>
+den Dice-Wert um rund ein Drittel verschlechtert. Die synthetische
+Sensitivitätsanalyse ist daher <strong>nicht auf reale Aufnahmen
+übertragbar</strong> – ein weiterer Beleg dafür, dass simulierte Herde
+die Eigenschaften echter Thermogramme nur unzureichend abbilden.
+Maßgeblich für die Parameterwahl ist ausschließlich Kapitel 5.4.</p>
 <hr />
 <h2
-id="quantitativer-benchmark-auf-synthetischen-entzündungsszenarien">5.3
-Quantitativer Benchmark auf synthetischen Entzündungsszenarien</h2>
-<p>Testergebnisse aus <code>dataset_evaluator.py</code> mit simuliertem
-Rauschen (<span class="math inline">\(\sigma = 2{,}5\)</span>):</p>
+id="hauptergebnis-validierung-gegen-manuell-annotierte-realaufnahmen">5.3
+Hauptergebnis: Validierung gegen manuell annotierte Realaufnahmen</h2>
+<p>Dies ist das zentrale Ergebnis der Arbeit. Ausgewertet wurden die
+<strong>9 von 21 Aufnahmen, für die eine manuell erstellte
+Ground-Truth-Maske vorliegt</strong> (Annotationswerkzeug:
+<code>benchmark_annotator.py</code>). Verglichen wird gegen eine
+<strong>Otsu-Baseline</strong> – eine einfache globale
+Schwellenwertbildung ohne Top-Hat und ohne Geometriefilter.</p>
+<p>Angegeben sind Mittelwert ± Standardabweichung sowie das
+95-%-Bootstrap-Konfidenz­intervall (10 000 Ziehungen, Seed 20260726) bei
+Standardparametern (<span class="math inline">\(k = 3{,}0\)</span>):</p>
 <table>
-<colgroup>
-<col style="width: 11%" />
-<col style="width: 14%" />
-<col style="width: 14%" />
-<col style="width: 14%" />
-<col style="width: 14%" />
-<col style="width: 14%" />
-<col style="width: 14%" />
-</colgroup>
 <thead>
 <tr>
-<th style="text-align: left;">Krankheits-Szenario</th>
-<th style="text-align: center;">Sensitivität</th>
-<th style="text-align: center;">Spezifität</th>
-<th style="text-align: center;">Precision</th>
-<th style="text-align: center;">Recall</th>
-<th style="text-align: center;">Dice-Koeffizient</th>
-<th style="text-align: center;">IoU</th>
+<th style="text-align: left;">Metrik</th>
+<th style="text-align: center;">IGNITE</th>
+<th style="text-align: center;">95 %-KI</th>
+<th style="text-align: center;">Otsu-Baseline</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td style="text-align: left;"><strong>Diabetisches
-Fußgeschwür</strong></td>
-<td style="text-align: center;">1,0000</td>
-<td style="text-align: center;">1,0000</td>
-<td style="text-align: center;">0,8421</td>
-<td style="text-align: center;">1,0000</td>
-<td style="text-align: center;">0,9143</td>
-<td style="text-align: center;">0,8421</td>
+<td style="text-align: left;"><strong>Dice</strong></td>
+<td style="text-align: center;"><strong>0,325 ± 0,159</strong></td>
+<td style="text-align: center;">0,240 – 0,429</td>
+<td style="text-align: center;">0,004 ± 0,011</td>
 </tr>
 <tr>
-<td style="text-align: left;"><strong>Plantarfasziitis</strong></td>
-<td style="text-align: center;">1,0000</td>
-<td style="text-align: center;">1,0000</td>
-<td style="text-align: center;">0,7931</td>
-<td style="text-align: center;">1,0000</td>
-<td style="text-align: center;">0,8846</td>
-<td style="text-align: center;">0,7931</td>
+<td style="text-align: left;"><strong>IoU</strong></td>
+<td style="text-align: center;">0,205 ± 0,132</td>
+<td style="text-align: center;">0,137 – 0,292</td>
+<td style="text-align: center;">0,002 ± 0,006</td>
 </tr>
 <tr>
-<td style="text-align: left;"><strong>Mehrere Entzündungen</strong></td>
-<td style="text-align: center;">1,0000</td>
-<td style="text-align: center;">1,0000</td>
-<td style="text-align: center;">0,8148</td>
-<td style="text-align: center;">1,0000</td>
-<td style="text-align: center;">0,8980</td>
-<td style="text-align: center;">0,8148</td>
+<td style="text-align: left;"><strong>Sensitivität</strong></td>
+<td style="text-align: center;">0,206 ± 0,133</td>
+<td style="text-align: center;">0,138 – 0,293</td>
+<td style="text-align: center;">0,005 ± 0,011</td>
 </tr>
 <tr>
-<td style="text-align: left;"><strong>Sensorrauschen</strong></td>
-<td style="text-align: center;">1,0000</td>
-<td style="text-align: center;">1,0000</td>
-<td style="text-align: center;">1,0000</td>
-<td style="text-align: center;">1,0000</td>
-<td style="text-align: center;">1,0000</td>
-<td style="text-align: center;">1,0000</td>
+<td style="text-align: left;"><strong>Spezifität</strong></td>
+<td style="text-align: center;">1,000 ± 0,000</td>
+<td style="text-align: center;">1,000 – 1,000</td>
+<td style="text-align: center;">0,982 ± 0,015</td>
 </tr>
 <tr>
-<td style="text-align: left;"><strong>Kalter Fuß mit
-Hotspot</strong></td>
-<td style="text-align: center;">1,0000</td>
-<td style="text-align: center;">0,9998</td>
-<td style="text-align: center;">0,8250</td>
-<td style="text-align: center;">1,0000</td>
-<td style="text-align: center;">0,9041</td>
-<td style="text-align: center;">0,8250</td>
+<td style="text-align: left;"><strong>Precision</strong></td>
+<td style="text-align: center;"><strong>0,991 ± 0,022</strong></td>
+<td style="text-align: center;">0,976 – 1,000</td>
+<td style="text-align: center;">–</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>MCC</strong></td>
+<td style="text-align: center;">0,434 ± 0,126</td>
+<td style="text-align: center;">0,367 – 0,516</td>
+<td style="text-align: center;">–</td>
 </tr>
 </tbody>
 </table>
+<p>Ein gepaarter <strong>Wilcoxon-Vorzeichen-Rangtest</strong> über die
+neun Bildpaare ergibt einen signifikanten Vorteil von IGNITE gegenüber
+der Otsu-Baseline (<span class="math inline">\(W = 45{,}0\)</span>;
+<span class="math inline">\(p = 0{,}0046\)</span>; mittlere
+Dice-Differenz <span class="math inline">\(+0{,}321\)</span>).</p>
+<h3
+id="interpretation-hohe-präzision-bei-geringer-flächenabdeckung">Interpretation:
+hohe Präzision bei geringer Flächenabdeckung</h3>
+<p>Das Ergebnismuster ist eindeutig und diagnostisch aufschlussreich:
+Bei einer <strong>Precision von 0,991</strong> liegt praktisch
+<strong>jeder</strong> von IGNITE markierte Pixel innerhalb der ärztlich
+annotierten Region – Fehlalarme treten also kaum auf. Gleichzeitig liegt
+die <strong>Sensitivität bei nur 0,206</strong>, das heißt IGNITE
+markiert im Mittel lediglich rund ein Fünftel der annotierten
+Fläche.</p>
+<p>IGNITE <strong>lokalisiert thermisch auffällige Regionen also
+treffsicher, unterschätzt aber systematisch deren Ausdehnung.</strong>
+Ursächlich ist der Top-Hat-Filter: Er reagiert auf den steilen
+Temperaturgradienten im Zentrum eines Herdes, während die flach
+auslaufenden Randzonen unter dem statistischen Schwellenwert bleiben.
+Für die angestrebte Rolle als <em>Orientierungshilfe</em> – das Auge des
+Fachpersonals auf die richtige Stelle zu lenken – ist dieses Verhalten
+günstiger als der umgekehrte Fall (viele Fehlalarme). Für eine
+Flächenvermessung einer Wunde ist das Verfahren dagegen
+<strong>nicht</strong> geeignet.</p>
 <hr />
-<h2 id="auswertung-auf-21-realen-klinischen-testbildern">5.4 Auswertung
-auf 21 realen klinischen Testbildern</h2>
-<p>Bei 21 echten Testbildern (<code>test-data/</code>) wurden auffällige
-Stellen abgegrenzt. Die markierten Flächen machten zwischen 0,08 % und
-1,02 % der Körperfläche aus (Durchschnitt 0,38 %):</p>
-<p><img src="images/diagramm_realdaten_flachenabdeckung.png"
-alt="Diagramm 3: Hotspot-Flächenabdeckung Realdaten" /><br />
-<em>Abbildung 14 (Diagramm 3): Übersicht der isolierten
-Hotspot-Flächenabdeckung (in % der Körperoberfläche) über alle 21 realen
-Testbilder (<code>test-data/</code>).</em></p>
+<h2 id="getrennte-parameterbestimmung-tuning--und-testsatz">5.4
+Getrennte Parameterbestimmung: Tuning- und Testsatz</h2>
+<p>In einer früheren Fassung dieser Arbeit wurde der Schwellenwertfaktor
+<span class="math inline">\(k\)</span> auf denselben Bildern bestimmt,
+auf denen anschließend die Güte berichtet wurde. Das ist methodisch
+unzulässig (<em>Data Leakage</em>) und führt zu systematisch zu
+optimistischen Werten. Die Auswertung wurde daher auf eine
+<strong>strikte Trennung</strong> umgestellt:</p>
+<ul>
+<li>Die 9 annotierten Bilder werden mit festem Seed (20260726) zufällig
+geteilt in <strong>4 Tuning-Bilder</strong> und <strong>5
+Testbilder</strong>.</li>
+<li>Auf dem Tuning-Satz wird <span class="math inline">\(k\)</span> über
+ein Raster <span class="math inline">\(k \in [0{,}5;\ 4{,}5]\)</span>
+gewählt.</li>
+<li>Der Testsatz wird <strong>genau einmal</strong> mit dem gewählten
+<span class="math inline">\(k\)</span> ausgewertet.</li>
+</ul>
+<p><strong>Dice auf dem Tuning-Satz in Abhängigkeit von <span
+class="math inline">\(k\)</span>:</strong></p>
+<table style="width:100%;">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 8%" />
+<col style="width: 8%" />
+<col style="width: 8%" />
+<col style="width: 8%" />
+<col style="width: 8%" />
+<col style="width: 8%" />
+<col style="width: 8%" />
+<col style="width: 8%" />
+<col style="width: 8%" />
+<col style="width: 8%" />
+<col style="width: 8%" />
+</colgroup>
+<thead>
+<tr>
+<th style="text-align: left;"><span
+class="math inline">\(k\)</span></th>
+<th style="text-align: center;">0,5</th>
+<th style="text-align: center;">0,75</th>
+<th style="text-align: center;">1,0</th>
+<th style="text-align: center;"><strong>1,25</strong></th>
+<th style="text-align: center;">1,5</th>
+<th style="text-align: center;">2,0</th>
+<th style="text-align: center;">2,5</th>
+<th style="text-align: center;">3,0</th>
+<th style="text-align: center;">3,5</th>
+<th style="text-align: center;">4,0</th>
+<th style="text-align: center;">4,5</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">Dice</td>
+<td style="text-align: center;">0,414</td>
+<td style="text-align: center;">0,455</td>
+<td style="text-align: center;">0,470</td>
+<td style="text-align: center;"><strong>0,489</strong></td>
+<td style="text-align: center;">0,484</td>
+<td style="text-align: center;">0,426</td>
+<td style="text-align: center;">0,332</td>
+<td style="text-align: center;">0,272</td>
+<td style="text-align: center;">0,210</td>
+<td style="text-align: center;">0,167</td>
+<td style="text-align: center;">0,127</td>
+</tr>
+</tbody>
+</table>
+<p>Das Optimum liegt mit <span class="math inline">\(k = 1{,}25\)</span>
+<strong>innerhalb</strong> des Rasters (die Kurve steigt bis 1,25 an und
+fällt danach ab), ist also kein Randartefakt der Gittergrenzen.</p>
+<p><strong>Ergebnis auf dem unabhängigen Testsatz (<span
+class="math inline">\(n = 5\)</span>, <span class="math inline">\(k =
+1{,}25\)</span>):</strong></p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Metrik</th>
+<th style="text-align: center;">Wert</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Dice</strong></td>
+<td style="text-align: center;"><strong>0,513 ± 0,112</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;">IoU</td>
+<td style="text-align: center;">0,351 ± 0,101</td>
+</tr>
+<tr>
+<td style="text-align: left;">Sensitivität</td>
+<td style="text-align: center;">0,462 ± 0,215</td>
+</tr>
+<tr>
+<td style="text-align: left;">Spezifität</td>
+<td style="text-align: center;">0,999 ± 0,001</td>
+</tr>
+<tr>
+<td style="text-align: left;">Precision</td>
+<td style="text-align: center;">0,736 ± 0,226</td>
+</tr>
+</tbody>
+</table>
+<p>Der voreingestellte Wert <span class="math inline">\(k =
+3{,}0\)</span> (abgeleitet aus der Normalverteilungs-Annahme <span
+class="math inline">\(\mu + 3\sigma \approx 99{,}86\,\%\)</span>) ist
+für reale Thermogramme also <strong>deutlich zu konservativ</strong>.
+Mit <span class="math inline">\(k = 1{,}25\)</span> steigt der
+Dice-Koeffizient auf einem zuvor ungesehenen Testsatz von 0,325 auf
+<strong>0,513</strong>, wobei die Sensitivität von 0,21 auf 0,46 zunimmt
+und die Precision erwartungsgemäß von 0,99 auf 0,74 sinkt. Beide
+Betriebspunkte sind vertretbar: <span class="math inline">\(k =
+3{,}0\)</span> für maximale Fehlalarmfreiheit, <span
+class="math inline">\(k = 1{,}25\)</span> für ein ausgewogenes
+Verhältnis.</p>
+<blockquote>
+<p><strong>Einschränkung:</strong> Bei <span class="math inline">\(n =
+5\)</span> Testbildern ist dieses Ergebnis ein <em>Hinweis</em>, kein
+statistischer Nachweis. Die Standardabweichung der Sensitivität (±
+0,215) zeigt eine erhebliche Streuung zwischen einzelnen Aufnahmen.</p>
+</blockquote>
 <hr />
-<h2 id="mathematische-backend-paritätstests">5.5 Mathematische
-Backend-Paritätstests</h2>
-<p>Über <code>pytest</code> (<code>tests/test_parity.py</code>) wurde
-nachgewiesen, dass Python, Rust und PyTorch auf demselben Bild
-identische Masken erzeugen (11/11 Tests bestanden).</p>
+<h2 id="ablation-der-geometrischen-filterregeln">5.5 Ablation der
+geometrischen Filterregeln</h2>
+<p>Die Pipeline verwirft Hotspot-Kandidaten anhand harter geometrischer
+Regeln. Zwei davon beruhen auf Annahmen über die Bildkomposition und
+könnten echte Befunde auslöschen:</p>
+<ul>
+<li><strong>Anatomischer Cutoff:</strong> Komponenten mit Schwerpunkt
+unterhalb von 65 % der Bildhöhe werden verworfen.</li>
+<li><strong>Randfilter:</strong> Komponenten näher als <span
+class="math inline">\(\max(12\ \text{px};\
+1{,}5\,\%\cdot\min(W,H))\)</span> am Rand werden verworfen.</li>
+</ul>
+<p>Um zu prüfen, ob diese Regeln schaden, wurde ausgezählt, welcher
+Anteil der <strong>annotierten Ground-Truth-Pixel</strong> in die
+jeweils verworfene Zone fällt:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Filterregel</th>
+<th style="text-align: center;">Anteil der GT-Pixel in der
+Verwerfungszone</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">Anatomischer Cutoff (<span
+class="math inline">\(y &gt; 0{,}65 \cdot H\)</span>)</td>
+<td style="text-align: center;"><strong>0,0 %</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;">Randzone</td>
+<td style="text-align: center;"><strong>0,0 %</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Auf diesem Datensatz verwerfen beide Regeln also <strong>keinen
+einzigen</strong> annotierten Befundpixel. Das ist allerdings
+ausdrücklich <strong>keine allgemeine
+Unbedenklichkeits­bescheinigung</strong>: Alle 21 Aufnahmen entstanden in
+derselben Aufnahmegeometrie (Füße mittig im Bild, gleicher Abstand). Bei
+abweichender Positionierung – etwa einem Fersenulkus im unteren
+Bilddrittel – würde der Cutoff den Befund systematisch unterdrücken. Die
+Regeln sind damit als <strong>datensatzspezifisch</strong> einzustufen
+und müssten vor einem Praxiseinsatz entweder entfernt oder an eine
+automatische Fußlokalisierung gekoppelt werden.</p>
+<hr />
+<h2 id="backend-paritätstests">5.6 Backend-Paritätstests</h2>
+<p>Eine frühere Fassung dieser Arbeit behauptete, Python-, Rust- und
+PyTorch-Backend erzeugten „identische Masken”. Diese Aussage war
+<strong>nicht haltbar</strong> und wurde überprüft.</p>
+<p><strong>Befund der Überprüfung auf allen 21
+Realaufnahmen:</strong></p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Kennzahl</th>
+<th style="text-align: center;">Vorher</th>
+<th style="text-align: center;">Nach Angleichung</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">Bitgleiche Masken</td>
+<td style="text-align: center;">0 / 21</td>
+<td style="text-align: center;">0 / 21</td>
+</tr>
+<tr>
+<td style="text-align: left;">Mittlere Masken-IoU (Rust vs. Python)</td>
+<td style="text-align: center;">0,29</td>
+<td style="text-align: center;"><strong>0,78</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;">Geringste Masken-IoU</td>
+<td style="text-align: center;">0,11</td>
+<td style="text-align: center;">0,48</td>
+</tr>
+</tbody>
+</table>
+<p>Die Ursachenanalyse ergab, dass die Backends <strong>unterschiedliche
+Algorithmen</strong> rechneten: Der Python-Fallback verwendete eine
+Vorglättung und eine Multi-Scale-Top-Hat-Transformation über drei
+Skalen, der Rust-Core eine einzige Skala ohne Vorglättung. Zusätzlich
+unterschieden sich der Otsu-Fallback-Faktor (0,35 vs. 0,30), die
+Zusammenhangs­definition (8er- vs. 4er-Nachbarschaft) und das
+morphologische Closing.</p>
+<p>Diese Abweichungen wurden im Code beseitigt; die mittlere Masken-IoU
+stieg dadurch von 0,29 auf 0,78. <strong>Exakte Bitgleichheit ist jedoch
+prinzipiell nicht erreichbar</strong>, und zwar aus einem
+grundsätzlichen Grund: Der Rust-Core nutzt eine <em>separable</em>
+Morphologie nach Lemire mit rechteckigem Strukturelement (Komplexität
+<span class="math inline">\(O(K)\)</span> statt <span
+class="math inline">\(O(K^2)\)</span>) sowie eine Chamfer-Approximation
+der Distanztransformation, OpenCV dagegen eine andere Approximation und
+eine abweichende Randbehandlung. Der Verzicht auf diese Approximationen
+würde genau den Geschwindigkeitsvorteil aufheben, für den sie eingeführt
+wurden.</p>
+<p>Die verbleibende Abweichung ist <strong>systematisch und
+gerichtet</strong>: Die Python-Maske ist nahezu eine Teilmenge der
+Rust-Maske (der Rust-Core markiert etwas großzügiger). Statt einer
+unhaltbaren Gleichheitsbehauptung sichert die Testsuite diese
+Eigenschaft nun als überprüfbare Untergrenze ab
+(<code>tests/test_parity.py</code>: mittlere Masken-IoU <span
+class="math inline">\(\ge 0{,}70\)</span>, Einzelbild <span
+class="math inline">\(\ge 0{,}40\)</span>). Die Testsuite umfasst
+<strong>49 Tests</strong>, die vollständig bestehen.</p>
+<p>Die <strong>PyTorch/CUDA-Parität konnte nicht überprüft
+werden</strong>: Die verfügbare Grafikkarte (GeForce GTX 1050, Compute
+Capability 6.1) wird von der installierten PyTorch-Version (unterstützt
+ab 7.5) nicht bedient. Der GPU-Zweig der Testsuite wird daher
+übersprungen. Aussagen über GPU-Laufzeiten werden in dieser Arbeit
+deshalb <strong>nicht</strong> getroffen.</p>
+<hr />
+<h2 id="ergänzend-synthetische-entzündungsszenarien">5.7 Ergänzend:
+synthetische Entzündungsszenarien</h2>
+<p>Die synthetischen Szenarien aus <code>dataset_evaluator.py</code>
+dienen ausschließlich als Regressionstest der Pipeline,
+<strong>nicht</strong> als Wirksamkeitsnachweis. Der Grund ist
+methodisch zwingend: Die simulierten Herde sind gaußförmige
+Intensitätsmaxima – also exakt die Signalform, auf die ein
+Top-Hat-Filter mit Zirkularitätskriterium ausgelegt ist. Ein nahezu
+perfektes Ergebnis ist damit konstruktionsbedingt und nicht
+aussagekräftig. Die entsprechenden Kennzahlen finden sich in
+<code>docs/validation/validation_report.json</code>; sie werden hier
+bewusst nicht als Gütenachweis in den Vordergrund gestellt.</p>
 <hr />
 <h1 id="ergebnisdiskussion-und-kritische-würdigung">6.
 Ergebnisdiskussion und Kritische Würdigung</h1>
 <h2
 id="einordnung-der-ergebnisse-bezüglich-der-arbeitserleichterung">6.1
 Einordnung der Ergebnisse bezüglich der Arbeitserleichterung</h2>
-<p>Die Ergebnisse belegen, dass der Algorithmus schnell rechnet und
-auffällige Hitzespitzen zuverlässig markieren kann. Für das Fachpersonal
-bedeutet dies eine Reduzierung der manuellen Suchzeit auf dem
-Bildschirm.</p>
-<h2 id="überprüfung-der-hypothesen-und-bedeutung-von-robust-mad">6.2
-Überprüfung der Hypothesen und Bedeutung von Robust-MAD</h2>
-<p>Das MAD-Verfahren hat sich bei kühlen Extremitäten bewährt. Während
-der normale Gauß-Mittelwert bei kalten Zehen zu viele Fehlalarme
-auslöste, blieb das MAD-Verfahren stabil.</p>
+<p>Die Ergebnisse zeigen, dass der Algorithmus schnell rechnet und
+auffällige Hitzespitzen mit hoher Treffergenauigkeit lokalisiert: Nahezu
+jeder markierte Bildpunkt liegt innerhalb der manuell annotierten Region
+(Precision 0,99). Für das Fachpersonal ist genau diese Eigenschaft
+entscheidend – eine Markierung, der man vertrauen kann, verkürzt die
+Suchzeit am Bildschirm, während häufige Fehlalarme das Gegenteil
+bewirken würden.</p>
+<p>Ebenso deutlich ist jedoch zu benennen, was die Ergebnisse
+<strong>nicht</strong> hergeben: Mit einer Sensitivität von 0,21 (bzw.
+0,46 bei angepasstem Schwellenwert) erfasst IGNITE nur einen Teil der
+auffälligen Fläche. Eine Entlastung entsteht daher beim
+<em>Auffinden</em> einer Stelle, nicht bei deren <em>Beurteilung</em>
+oder <em>Vermessung</em>. Die eingangs genannte Zeitersparnis von 3 bis
+5 Minuten pro Aufnahme ist zudem eine eigene Schätzung und wurde nicht
+in einer Nutzerstudie mit medizinischem Fachpersonal überprüft – ein
+solcher Nachweis wäre für eine belastbare Aussage zur
+Arbeitserleichterung erforderlich.</p>
+<h2 id="überprüfung-der-forschungsfragen">6.2 Überprüfung der
+Forschungsfragen</h2>
+<p><strong>Forschungsfrage 1 – teilweise bestätigt.</strong> Der
+deterministische Algorithmus schlägt die Otsu-Baseline auf realen
+Aufnahmen signifikant (Dice 0,325 vs. 0,004; <span
+class="math inline">\(p = 0{,}0046\)</span>). Die ursprünglich
+formulierte Zielmarke einer Sensitivität <span
+class="math inline">\(&gt; 0{,}95\)</span> wird auf Realaufnahmen jedoch
+<strong>klar verfehlt</strong> (0,206 bei <span class="math inline">\(k
+= 3{,}0\)</span>; 0,462 bei <span class="math inline">\(k =
+1{,}25\)</span>). Diese Zielmarke war auf synthetischen Daten formuliert
+worden, wo sie trivial erreichbar ist, weil die simulierten Herde exakt
+der Filterform entsprechen. Die Selbstkorrektur lautet: <strong>Auf
+synthetischen Daten gemessene Sensitivität ist für dieses Verfahren
+keine aussagekräftige Kenngröße.</strong></p>
+<p><strong>Forschungsfrage 2 – widerlegt in der ursprünglichen
+Formulierung.</strong> Die Annahme, nativer Rust-Code sei der
+entscheidende Geschwindigkeitsfaktor, hat sich nicht bestätigt: OpenCV
+ist auf identischem Algorithmus rund 2,4-mal schneller. Die 50-ms-Grenze
+wird auf der hochskalierten JPEG-Auflösung verfehlt (86–104 ms), auf der
+nativen Sensorauflösung dagegen mit 1,6 ms weit unterschritten. Der
+eigentliche Erkenntnisgewinn liegt darin, dass <strong>die Wahl der
+Verarbeitungsauflösung den Laufzeitgewinn dominiert – nicht die Wahl der
+Programmiersprache</strong>. Der Rust-Kern rechtfertigt sich stattdessen
+über Abhängigkeitsfreiheit, Determinismus und Speicherbedarf (&lt; 25
+MB).</p>
+<p><strong>Forschungsfrage 3 – bestätigt und in Kapitel 6.3
+ausgeführt.</strong></p>
+<h3 id="bedeutung-des-robust-mad-verfahrens">Bedeutung des
+Robust-MAD-Verfahrens</h3>
+<p>Das MAD-Verfahren erwies sich bei kühlen Extremitäten als stabiler
+als die Schätzung über Mittelwert und Standardabweichung, da einzelne
+sehr warme Pixel die Standardabweichung aufblähen und den Schwellenwert
+dadurch nach oben verschieben. Zu betonen ist jedoch, dass dieser
+Vergleich <strong>qualitativ</strong> anhand einzelner Aufnahmen
+erfolgte; eine quantitative Gegenüberstellung beider Schätzer über den
+annotierten Datensatz steht aus.</p>
+<hr />
 <h2 id="ausführliche-analyse-der-nachteile-grenzen-und-störfaktoren">6.3
 Ausführliche Analyse der Nachteile, Grenzen und Störfaktoren</h2>
+<h3 id="grenzen-der-datengrundlage">Grenzen der Datengrundlage</h3>
 <ol type="1">
-<li><strong>Fehlende Unterscheidung zwischen Entzündung und harmloser
-Ursache:</strong> Ein Top-Hat-Filter sucht nach Hitzespitzen. Er kann
-nicht erkennen, ob Wärme von Infektionen, engen Socken, Druck beim Gehen
-oder Narben stammt.</li>
-<li><strong>Starrheit Schwellenwerte:</strong> Empirische Werte (<span
-class="math inline">\(k=3{,}0\)</span>) passen nicht dynamisch auf jeden
-Hauttyp.</li>
-<li><strong>Störung durch Messbedingungen:</strong> Schweiß, Salben und
-Aufnahmeschräge (Lambert-Kosinus-Fehler) beeinflussen das Signal.</li>
-<li><strong>Fehlende klinische Ground-Truth:</strong> Ergebnisse
-basieren auf synthetischen Modellen; Facharzt-Masken fehlen noch.</li>
-<li><strong>Keine EU-MDR Zertifizierung:</strong> Reiner
-Forschungsprototyp; ersetzen keine ärztliche Diagnose.</li>
+<li><strong>Sehr kleine Stichprobe.</strong> Ausgewertet wurden
+<strong>9 annotierte Aufnahmen</strong>, davon 5 im unabhängigen
+Testsatz. Alle berichteten Konfidenzintervalle sind entsprechend breit
+(Dice: 0,240–0,429). Die Ergebnisse sind als
+<strong>Machbarkeitshinweis</strong> zu lesen, nicht als statistischer
+Wirksamkeitsnachweis.</li>
+<li><strong>Kein diagnostischer Goldstandard.</strong> Die
+Referenzmasken wurden von <strong>einer einzigen, medizinisch nicht
+ausgebildeten Person</strong> (dem Autor) unverblindet erstellt. Es
+liegt weder eine Intra- noch eine Inter-Rater-Übereinstimmung vor. Ein
+Teil der gemessenen Abweichung dürfte daher auf die Referenz selbst
+entfallen, nicht auf den Algorithmus.</li>
+<li><strong>Keine erkrankten Personen.</strong> Die aufgenommenen
+Personen sind gesund; es wurden thermisch auffällige, nicht pathologisch
+gesicherte Regionen annotiert. Über die Leistung bei echten diabetischen
+Fußläsionen sagt diese Arbeit <strong>nichts</strong> aus.</li>
+<li><strong>Datenverlust während der Arbeit.</strong> Bei der
+Überprüfung der Annotationsdateien stellte sich heraus, dass das
+Annotationswerkzeug beim Weiterblättern bedingungslos speicherte und
+dadurch sechs zuvor erstellte Masken mit leeren Dateien überschrieben
+hatte. Der Fehler wurde behoben (leere Zeichnungen überschreiben keine
+vorhandene Annotation mehr) und die Auswerteroutine prüft Referenzmasken
+nun auf Nicht-Leerheit. Alle vor dieser Korrektur erhobenen
+Ground-Truth-Kennzahlen mussten verworfen werden.</li>
+</ol>
+<h3 id="physikalische-und-messtechnische-grenzen">Physikalische und
+messtechnische Grenzen</h3>
+<ol start="5" type="1">
+<li><strong>Keine Absoluttemperaturen.</strong> Die verwendeten
+JPEG-Exporte enthalten nur relative 8-Bit-Grauwerte einer je Bild
+dynamisch skalierten Palette. Das podiatrische Kriterium <span
+class="math inline">\(\Delta T &gt; 2{,}2\,\)</span>K <span
+class="citation"
+data-cites="armstrong1997infrared">[@armstrong1997infrared]</span> ist
+damit <strong>nicht überprüfbar</strong>; die in Kapitel 2.2
+hergeleitete Radiometrie bleibt theoretisch.</li>
+<li><strong>Scheinauflösung des Sensors.</strong> Der Thermosensor
+liefert <span class="math inline">\(160 \times 120\)</span> Pixel, die
+Bilddatei suggeriert <span class="math inline">\(1440 \times
+1080\)</span>. Feine Konturen im Ergebnisbild sind
+Interpolationsprodukte.</li>
+<li><strong>Unkontrollierte Aufnahmebedingungen.</strong> Ohne
+standardisierte Akklimatisierung und ohne Protokollierung von
+Raumtemperatur und Luftbewegung sind die Aufnahmen nicht untereinander
+vergleichbar kalibriert.</li>
+<li><strong>Störeinflüsse.</strong> Schweiß, Salben, Behaarung sowie die
+Aufnahmeschräge (Lambert-Kosinus-Fehler) verändern die abgestrahlte
+Intensität. JPEG-Blockartefakte können vom Top-Hat-Filter als lokale
+Maxima aufgegriffen werden.</li>
+</ol>
+<h3 id="algorithmische-grenzen">Algorithmische Grenzen</h3>
+<ol start="9" type="1">
+<li><strong>Systematische Flächenunterschätzung.</strong> Bei einer
+Precision von 0,99 und einer Sensitivität von 0,21 markiert IGNITE nur
+den heißen Kern eines Herdes. Für eine Wundflächenvermessung ist das
+Verfahren daher <strong>ungeeignet</strong>.</li>
+<li><strong>Keine Ursachenunterscheidung.</strong> Ein Top-Hat-Filter
+sucht Hitzespitzen. Ob die Wärme von einer Infektion, engen Socken,
+mechanischem Druck oder einer Narbe stammt, kann er prinzipiell nicht
+entscheiden.</li>
+<li><strong>Datensatzspezifische Filterregeln.</strong> Der anatomische
+Cutoff bei 65 % der Bildhöhe und der Randfilter verwerfen auf diesem
+Datensatz zwar 0,0 % der annotierten Pixel (Kapitel 5.5), beruhen aber
+auf der stets gleichen Aufnahmegeometrie. Ein Fersenbefund im unteren
+Bilddrittel würde systematisch unterdrückt – ein <strong>blinder
+Fleck</strong>, der bei abweichender Positionierung unbemerkt bliebe.
+<em>(In Version 5.0 wurde diese Limitation durch vollständige
+Deaktivierung des starren Cutoffs und die Einführung eines gradienten-
+und halobasierten Randschutzes überwunden, wodurch das System
+vollständig universell und anatomie-agnostisch arbeitet.)</em></li>
+<li><strong>Parameterabhängigkeit.</strong> Der voreingestellte Faktor
+<span class="math inline">\(k = 3{,}0\)</span> erwies sich als zu
+konservativ; das auf einem Tuning-Satz bestimmte <span
+class="math inline">\(k = 1{,}25\)</span> liefert bessere Ergebnisse.
+Ein einzelner globaler Wert kann jedoch nicht jedem Hauttyp und jeder
+Umgebungstemperatur gerecht werden.</li>
+<li><strong>Keine Bitgleichheit der Backends.</strong> Python- und
+Rust-Backend liefern trotz Angleichung nur eine mittlere Masken-IoU von
+0,78 (Kapitel 5.6). Anwenderinnen und Anwender erhalten je nach
+verfügbarem Backend leicht abweichende Ergebnisse.</li>
+<li><strong>GPU-Pfad unvalidiert.</strong> Der PyTorch/CUDA-Zweig konnte
+mangels kompatibler Hardware nicht getestet werden und ist als
+<strong>ungeprüft</strong> einzustufen.</li>
+</ol>
+<h3 id="regulatorische-grenzen">Regulatorische Grenzen</h3>
+<ol start="15" type="1">
+<li><strong>Kein Medizinprodukt.</strong> IGNITE besitzt keine
+Zertifizierung nach EU-MDR und ist ein reiner Forschungsprototyp. Die
+Software ersetzt keine ärztliche Diagnose und darf ausschließlich als
+Orientierungshilfe unter fachlicher Aufsicht verwendet werden.</li>
 </ol>
 <hr />
 <h1 id="fazit-und-ausblick">7. Fazit und Ausblick</h1>
 <h2 id="gesamtfazit-zur-arbeitswelt-fragestellung">7.1 Gesamtfazit zur
 Arbeitswelt-Fragestellung</h2>
-<p>IGNITE belegt, dass deterministische Algorithmen in nativem Rust eine
-schnelle, datenschutzkonforme Orientierungshilfe im Behandlungszimmer
-bieten.</p>
+<p>IGNITE zeigt, dass ein vollständig deterministischer, mathematisch
+nachvollziehbarer Algorithmus thermisch auffällige Areale auf realen
+Aufnahmen signifikant besser markiert als eine einfache
+Schwellenwert-Baseline (<span class="math inline">\(p =
+0{,}0046\)</span>), dabei lokal und ohne Datenübertragung arbeitet und
+im Millisekundenbereich rechnet.</p>
+<p>Der wissenschaftlich ertragreichste Teil dieser Arbeit sind jedoch
+die <strong>widerlegten Ausgangsannahmen</strong>: Der Rust-Kern ist
+nicht schneller als OpenCV, die auf synthetischen Daten gemessene
+Sensitivität von 1,00 hält realen Daten nicht stand, und ein erheblicher
+Teil der ursprünglich berichteten Werte beruhte auf methodischen Fehlern
+(Parameterwahl auf den Testdaten, überschriebene Referenzmasken, eine
+nicht existierende Literaturquelle). Diese Fehler wurden aufgedeckt,
+korrigiert und dokumentiert; sämtliche Kennzahlen in Kapitel 5 sind über
+<code>scripts/run_validation.py</code> mit festem Seed
+reproduzierbar.</p>
+<p>Für die Fragestellung der Arbeitswelt bedeutet das: Der Ansatz ist
+als <strong>Orientierungshilfe tragfähig</strong> – er lenkt den Blick
+treffsicher auf die richtige Stelle (Precision 0,99) –, für eine Aussage
+über die Ausdehnung eines Befundes oder gar für eine diagnostische
+Verwendung reichen die erzielten Werte und die Datengrundlage
+<strong>ausdrücklich nicht aus</strong>.</p>
 <h2 id="zukünftige-erweiterungen-für-den-praxiseinsatz">7.2 Zukünftige
 Erweiterungen für den Praxiseinsatz</h2>
 <ul>
-<li>Klinische Facharzt-Validierungsstudie.</li>
+<li><strong>Erweiterung und Absicherung der Referenzdaten:</strong>
+Annotation der verbleibenden 12 Aufnahmen sowie Zweitannotation durch
+eine unabhängige Person, um Cohens <span
+class="math inline">\(\kappa\)</span> als Maß der Übereinstimmung
+berichten zu können.</li>
+<li><strong>Radiometrische Aufnahmen:</strong> Verwendung des
+FLIR-Rohdatenformats statt der JPEG-Exporte, um mit Absoluttemperaturen
+zu arbeiten und das <span class="math inline">\(\Delta T &gt;
+2{,}2\,\)</span>K-Kriterium <span class="citation"
+data-cites="armstrong1997infrared">[@armstrong1997infrared]</span>
+tatsächlich prüfen zu können.</li>
+<li><strong>Verarbeitung auf nativer Sensorauflösung</strong> (<span
+class="math inline">\(160 \times 120\)</span>) statt auf der
+hochskalierten JPEG-Ausgabe – nach den Messungen in Kapitel 5.1 der mit
+Abstand größte Hebel für die Laufzeit.</li>
+<li><strong>Ersetzen der starren Geometrieregeln</strong> durch eine
+automatische Fußlokalisierung, um den in Kapitel 6.3 beschriebenen
+blinden Fleck zu beseitigen.</li>
+<li><strong>Adaptive Schwellenwertwahl</strong> statt eines globalen
+Faktors <span class="math inline">\(k\)</span>.</li>
+<li>Klinische Validierungsstudie mit fachärztlicher Referenz.</li>
 <li>Automatisch generierter PDF-Befundexport für die Patientenakte.</li>
 </ul>
 <hr />
@@ -743,14 +1439,26 @@ data-cites="jugendforscht2025leitfaden">[@jugendforscht2025leitfaden]</span>
 Stiftung Jugend forscht e. V.: Leitfaden zum Verfassen der schriftlichen
 Arbeit im Wettbewerb Jugend forscht. Hamburg, Stand: Juli 2025.<br />
 <span class="citation"
-data-cites="lemire2011streaming">[@lemire2011streaming]</span> Lemire,
-Daniel: Streaming maximum-minimum filter using no more than 3
-comparisons per element. In: <em>Nordic Journal of Computing</em>, 2011,
-Vol. 13, Nr. 4, S. 328-339.<br />
+data-cites="lemire2006streaming">[@lemire2006streaming]</span> Lemire,
+Daniel: Streaming maximum-minimum filter using no more than three
+comparisons per element. In: <em>Nordic Journal of Computing</em>, 2006,
+Vol. 13, Nr. 4, S. 328-339 (arXiv:cs/0610046).<br />
 <span class="citation"
-data-cites="mueller2022thermografie">[@mueller2022thermografie]</span>
-Müller, Erich: Thermografie in der Primärmedizin: Physikalische
-Grundlagen und klinische Praxis. Berlin: Springer-Verlag, 2022.<br />
+data-cites="jones1998reappraisal">[@jones1998reappraisal]</span> Jones,
+Brian F.: A reappraisal of the use of infrared thermal image analysis in
+medicine. In: <em>IEEE Transactions on Medical Imaging</em>, 1998, Vol.
+17, Nr. 6, S. 1019-1027. DOI: 10.1109/42.746635.<br />
+<span class="citation"
+data-cites="steketee1973spectral">[@steketee1973spectral]</span>
+Steketee, J.: Spectral emissivity of skin and pericardium. In:
+<em>Physics in Medicine and Biology</em>, 1973, Vol. 18, Nr. 5, S.
+686-694. DOI: 10.1088/0031-9155/18/5/307.<br />
+<span class="citation"
+data-cites="armstrong1997infrared">[@armstrong1997infrared]</span>
+Armstrong, David G. / Lavery, Lawrence A. / Liswood, P. J. / Todd,
+William F. / Tredwell, Jeffrey A.: Infrared dermal thermometry for the
+high-risk diabetic foot. In: <em>Physical Therapy</em>, 1997, Vol. 77,
+Nr. 2, S. 169-175. DOI: 10.1093/ptj/77.2.169.<br />
 <span class="citation"
 data-cites="otsu1979threshold">[@otsu1979threshold]</span> Otsu,
 Nobuyuki: A threshold selection method from gray-level histograms. In:

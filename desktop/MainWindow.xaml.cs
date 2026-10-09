@@ -530,7 +530,8 @@ end";
                 TxtLatency.Text = $"Rechenzeit: {result.Timing.TotalMs:F1} ms (Top-Hat AVX2: {result.Timing.TopHatMs:F1} ms)";
                 EngineTimingText.Text = $"Go Core: {result.Timing.TotalMs:F1} ms (AVX2)";
 
-                // Update Hotspot Table
+                // Update Hotspot Table (sorted by clinical severity)
+                result.Hotspots = result.Hotspots.OrderByDescending(h => (h.Assessment?.Score ?? 0) * 100 + (h.Region?.MaxVal ?? 0)).ToList();
                 GridHotspots.ItemsSource = result.Hotspots;
                 if (result.Hotspots.Count > 0)
                 {
@@ -1079,13 +1080,19 @@ end";
             // 8. Screenshot-matching Fokaler Hotspot Callout Box
             if (_latestResult?.Hotspots != null && _latestResult.Hotspots.Count > 0)
             {
-                var mainHotspot = _latestResult.Hotspots.OrderByDescending(h => h.Region?.MaxVal ?? 0).FirstOrDefault();
+                var mainHotspot = _latestResult.Hotspots
+                    .OrderByDescending(h => (h.Assessment?.Score ?? 0) * 100 + (h.Region?.MaxVal ?? 0))
+                    .FirstOrDefault();
                 if (mainHotspot?.Region != null)
                 {
                     double hx = mainHotspot.Region.CenterX;
                     double hy = mainHotspot.Region.CenterY;
                     double origMed = _latestResult.Stats?.OrigMedian ?? 128.0;
                     double deltaT = Math.Round((mainHotspot.Region.MaxVal - origMed) * 0.1, 1);
+                    if (deltaT < 1.0 && mainHotspot.Region.EdgeGradient > 0)
+                    {
+                        deltaT = Math.Round(mainHotspot.Region.EdgeGradient * 0.1, 1);
+                    }
                     string riskText = mainHotspot.Assessment?.RiskLevel == "CRITICAL" ? "Kritisch" : "Auffällig";
 
                     DrawHotspotCalloutCard(OverlayOriginalCanvas, hx, hy, deltaT, riskText);

@@ -6,7 +6,7 @@ import logging
 from typing import Dict, Any
 
 SETTINGS_FILE = "settings.json"
-CANONICAL_APP_VERSION = "4.0.3"
+CANONICAL_APP_VERSION = "5.0.0"
 
 def get_app_version() -> str:
     """Ermittelt die App-Version dynamisch aus der VERSION-Datei oder Fallback."""
@@ -55,7 +55,7 @@ _DEFAULT_SETTINGS: Dict[str, Any] = {
     "DEFAULT_MIN_CIRCULARITY": 0.08,
     "DEFAULT_OTSU_MIN": 35,
     "DEFAULT_OTSU_MAX": 50,
-    "DEFAULT_DIST_EROSION_FACTOR": 0.05,
+    "DEFAULT_DIST_EROSION_FACTOR": 0.005,
     "DEFAULT_USE_MAD": False,
     "DEFAULT_ENABLE_ASYMMETRY": True,
     # Schwellenwert nach Armstrong et al. (1997): "Infrared Dermal Thermometry for the
@@ -68,9 +68,9 @@ _DEFAULT_SETTINGS: Dict[str, Any] = {
     "ANATOMICAL_LOWER_CUTOFF_Y": 1.0,  # Veraltet / Deaktiviert zugunsten dynamischer PCA-Zonensegmentierung
     "DEFAULT_FOREFOOT_RATIO": 0.40,   # Vorfuß-Grenze entlang PCA-Längsachse (0.0–0.40)
     "DEFAULT_MIDFOOT_RATIO": 0.70,    # Mittelfuß-Grenze entlang PCA-Längsachse (0.40–0.70)
-    "MIN_DIST_FROM_BORDER_FACTOR": 0.015,
-    "MIN_DIST_FROM_BORDER_ABS": 12.0,
-    "BORDER_MARGIN_PX": 10,
+    "MIN_DIST_FROM_BORDER_FACTOR": 0.002,
+    "MIN_DIST_FROM_BORDER_ABS": 2.0,
+    "BORDER_MARGIN_PX": 3,
     # Emissivität menschlicher Haut nach Jones (1998) "A reappraisal of the use of
     # infrared thermal image analysis in medicine", IEEE Trans. Med. Imaging 17(6):1019–1027
     # und Steketee (1973) "Spectral emissivity of skin and pericardium", Phys. Med. Biol. 18(5).
@@ -78,7 +78,7 @@ _DEFAULT_SETTINGS: Dict[str, Any] = {
     "REFLECTED_TEMP_C": 20.0,
     "UI_SCALE": 1.0,
     "SALT": secrets.token_hex(16),
-    "APP_VERSION": "4.0.3",
+    "APP_VERSION": "5.0.0",
     "GITHUB_REPO": "noackjona-hash/JonaNoackIgnite",
     "AUTO_CHECK_UPDATES": True,
     # ── Neue erweiterte Algorithmus-Parameter (v3.3 & v3.4) ───────────────────

@@ -34,10 +34,10 @@ type PipelineConfig struct {
 func DefaultPipelineConfig() PipelineConfig {
 	return PipelineConfig{
 		KernelFactor:           0.05,
-		MarginFactor:           0.05,
-		KFactor:                3.0, // Calibrated standard
+		MarginFactor:           0.005, // Minimal margin (0.5%) preserves distal digits (toes, fingers)
+		KFactor:                3.0,   // Calibrated standard
 		ThresholdMode:          "MAD",
-		MinAreaFraction:        0.0005,
+		MinAreaFraction:        0.0003, // Allows small focal inflammatory foci
 		MinCircularity:         0.08,
 		RunVascularMap:         false, // Off by default for instant speed, enabled on demand
 		RunPerfusion:           true,
@@ -142,7 +142,9 @@ func Run(src *imageutil.GrayMatrix, cfg PipelineConfig) AnalysisResult {
 	} else {
 		stats = statistics.CalculateMADThreshold(topHatDiff, imgToAnalyze, bodyMask, cfg.KFactor)
 	}
-	binaryHotspots := statistics.ApplyThreshold(topHatDiff, imgToAnalyze, bodyMask, stats.Threshold, uint8(math.Round(stats.OrigMedian)))
+	// Physiological tissue floor: only reject cold non-biological background, not cooler distal digits
+	tissueFloor := uint8(math.Min(math.Max(stats.OrigMedian*0.5, 45.0), 80.0))
+	binaryHotspots := statistics.ApplyThreshold(topHatDiff, imgToAnalyze, bodyMask, stats.Threshold, tissueFloor)
 	timing.ThresholdMs = float64(time.Since(t0).Microseconds()) / 1000.0
 
 	// 4. Connected components & boundary/geometric circularity filter
@@ -150,9 +152,9 @@ func Run(src *imageutil.GrayMatrix, cfg PipelineConfig) AnalysisResult {
 	fOpts := statistics.FilterOptions{
 		MinAreaFraction:   cfg.MinAreaFraction,
 		MinCircularity:    cfg.MinCircularity,
-		BorderMarginPx:    15,
-		MinDistFromBorder: 8.0,
-		AnatomicalCutoffY: 0.65,
+		BorderMarginPx:    3,
+		MinDistFromBorder: 2.0,
+		AnatomicalCutoffY: 0.0, // Region-agnostic: disabled to support hands, knees, spine, and feet
 		OrigMedian:        stats.OrigMedian,
 	}
 	regions, filteredMask := statistics.ExtractHotspots(binaryHotspots, src, distMap, tissuePixels, fOpts)

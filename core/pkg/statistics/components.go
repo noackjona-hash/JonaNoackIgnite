@@ -317,8 +317,8 @@ func ExtractHotspots(binaryMask *imageutil.GrayMatrix, original *imageutil.GrayM
 			} else if opts.AnatomicalCutoffY > 0 && float64(minY) > float64(h)*opts.AnatomicalCutoffY {
 				// Rejection: Anatomical cutoff (calves/ankles below the feet)
 				hr.Status = "REJECTED_ANATOMICAL"
-			} else if distMap != nil && maxDist < opts.MinDistFromBorder {
-				// 2. Rejection: Skin boundary air-leak artifact
+			} else if distMap != nil && maxDist < opts.MinDistFromBorder && edgeGradient < 3.0 && haloDelta < 5.0 {
+				// 2. Rejection: Flat skin boundary air-leak artifact (no focal heat source)
 				hr.Status = "REJECTED_BORDER"
 			} else if area < minArea {
 				// 3. Rejection: Too small
@@ -326,6 +326,9 @@ func ExtractHotspots(binaryMask *imageutil.GrayMatrix, original *imageutil.GrayM
 			} else if circularity < opts.MinCircularity {
 				// 4. Rejection: Linear/focal artifact (vein/tendon)
 				hr.Status = "REJECTED_LINEAR"
+			} else if opts.OrigMedian > 0 && maxVal < uint8(opts.OrigMedian) && edgeGradient < 10.0 && haloDelta < 5.0 {
+				// 5. Rejection: Below tissue baseline and lacks local focal hyperthermic peak
+				hr.Status = "REJECTED_COLD"
 			} else {
 				// Confirmed real inflammation focus!
 				hr.Status = "CONFIRMED_HOTSPOT"

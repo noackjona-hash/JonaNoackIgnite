@@ -31,7 +31,7 @@ cmd_pandoc = [
     "-V", "document-class=article"
 ]
 
-res_pandoc = subprocess.run(cmd_pandoc, capture_output=True, text=True)
+res_pandoc = subprocess.run(cmd_pandoc, capture_output=True, text=True, cwd=DOCS_DIR)
 if res_pandoc.returncode != 0:
     print("[!] Fehler bei Pandoc TeX-Erzeugung:")
     print(res_pandoc.stderr)

@@ -1246,6 +1246,7 @@ def run_rust_pipeline(
     global FORCED_BACKEND
 
     if FORCED_BACKEND == "gpu":
+        _init_gpu()
         if _GPU_AVAILABLE:
             return _pytorch_gpu_pipeline(
                 img, sigma_k, tophat_factor, min_area_factor, min_circularity,
@@ -1258,10 +1259,16 @@ def run_rust_pipeline(
     elif FORCED_BACKEND == "rust":
         if _RUST_BACKEND_AVAILABLE and _ignite_core is not None:
             img_contiguous = np.ascontiguousarray(img, dtype=np.uint8)
-            return _ignite_core.process_thermal_pipeline(
-                img_contiguous, sigma_k, tophat_factor, min_area_factor, min_circularity,
-                otsu_min, otsu_max, dist_erosion_factor, use_mad, enable_hysteresis, hysteresis_k_low
-            )
+            try:
+                return _ignite_core.process_thermal_pipeline(
+                    img_contiguous, sigma_k, tophat_factor, min_area_factor, min_circularity,
+                    otsu_min, otsu_max, dist_erosion_factor, use_mad, enable_hysteresis, hysteresis_k_low
+                )
+            except TypeError:
+                return _ignite_core.process_thermal_pipeline(
+                    img_contiguous, sigma_k, tophat_factor, min_area_factor, min_circularity,
+                    otsu_min, otsu_max, dist_erosion_factor
+                )
         else:
             raise RuntimeError("Natives Rust-Core-Modul ist nicht verfügbar!")
 
@@ -1273,6 +1280,7 @@ def run_rust_pipeline(
         )
 
     else:  # auto
+        _init_gpu()
         if _GPU_AVAILABLE:
             try:
                 return _pytorch_gpu_pipeline(
@@ -1289,10 +1297,16 @@ def run_rust_pipeline(
 
         if _RUST_BACKEND_AVAILABLE and _ignite_core is not None:
             img_contiguous = np.ascontiguousarray(img, dtype=np.uint8)
-            return _ignite_core.process_thermal_pipeline(
-                img_contiguous, sigma_k, tophat_factor, min_area_factor, min_circularity,
-                otsu_min, otsu_max, dist_erosion_factor, use_mad, enable_hysteresis, hysteresis_k_low
-            )
+            try:
+                return _ignite_core.process_thermal_pipeline(
+                    img_contiguous, sigma_k, tophat_factor, min_area_factor, min_circularity,
+                    otsu_min, otsu_max, dist_erosion_factor, use_mad, enable_hysteresis, hysteresis_k_low
+                )
+            except TypeError:
+                return _ignite_core.process_thermal_pipeline(
+                    img_contiguous, sigma_k, tophat_factor, min_area_factor, min_circularity,
+                    otsu_min, otsu_max, dist_erosion_factor
+                )
         else:
             return _python_fallback_pipeline(
                 img, sigma_k, tophat_factor, min_area_factor, min_circularity,
