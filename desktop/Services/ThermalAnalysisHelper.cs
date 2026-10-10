@@ -195,5 +195,72 @@ namespace Ignite.Desktop.Services
 
             return (delta, isPathologic, text);
         }
+
+        public class DualProbeComparison
+        {
+            public double DeltaT { get; set; }
+            public double DistancePx { get; set; }
+            public double DistanceMm { get; set; }
+            public double BioheatConductiveFluxWattsM2 { get; set; }
+            public double ThermalGradientKPerCm { get; set; }
+            public string ArmstrongBadge { get; set; } = "";
+            public string ClinicalAssessment { get; set; } = "";
+            public string ConductionDirection { get; set; } = "";
+        }
+
+        public static DualProbeComparison CompareProbes(ThermalProbePoint p1, ThermalProbePoint p2, double pitchMm = 0.6)
+        {
+            double dx = p2.Position.X - p1.Position.X;
+            double dy = p2.Position.Y - p1.Position.Y;
+            double distPx = Math.Sqrt(dx * dx + dy * dy);
+            double distMm = distPx * pitchMm;
+            double distMeters = Math.Max(0.0001, distMm * 0.001);
+            double distCm = Math.Max(0.01, distMm * 0.1);
+
+            double deltaT = Math.Round(Math.Abs(p1.Temperature - p2.Temperature), 2);
+            double kTissue = 0.45; // W / (m * K)
+            double flux = Math.Round(kTissue * (deltaT / distMeters), 1);
+            double gradKPerCm = Math.Round(deltaT / distCm, 2);
+
+            string badge;
+            string assess;
+            if (deltaT >= 4.0)
+            {
+                badge = "🔴 AKUTE LÄSION / KRITISCH (≥ 4.0 K)";
+                assess = $"Schwere thermische Asymmetrie (ΔT = {deltaT:F1} K, Wärmefluss q = {flux:F0} W/m²). Sofortige Druckentlastung und Entzündungsabklärung dringend indiziert.";
+            }
+            else if (deltaT >= 2.2)
+            {
+                badge = "🟠 ARMSTRONG-KRITISCH (≥ 2.2 K)";
+                assess = $"Pathologische Temperaturdifferenz (ΔT = {deltaT:F1} K). Frühes Ulzerationsrisiko nach Armstrong/IWGDF. Engmaschige Verlaufskontrolle.";
+            }
+            else if (deltaT >= 1.2)
+            {
+                badge = "🟡 MÄSSIG / BEOBACHTEN (1.2 - 2.1 K)";
+                assess = $"Mäßige lokale Hyperthermie (ΔT = {deltaT:F1} K). Ggf. kompensatorische Druckbelastung oder beginnende Irritation.";
+            }
+            else
+            {
+                badge = "🟢 PHYSIOLOGISCH NORM (< 1.2 K)";
+                assess = $"Homogene thermische Symmetrie (ΔT = {deltaT:F1} K, {gradKPerCm:F2} K/cm). Keine Anzeichen für akute entzündliche Fokuserwärmung.";
+            }
+
+            string direction = p1.Temperature >= p2.Temperature
+                ? $"{p1.Label} ({p1.Temperature:F1}°C) ➔ {p2.Label} ({p2.Temperature:F1}°C)"
+                : $"{p2.Label} ({p2.Temperature:F1}°C) ➔ {p1.Label} ({p1.Temperature:F1}°C)";
+
+            return new DualProbeComparison
+            {
+                DeltaT = deltaT,
+                DistancePx = Math.Round(distPx, 1),
+                DistanceMm = Math.Round(distMm, 1),
+                BioheatConductiveFluxWattsM2 = flux,
+                ThermalGradientKPerCm = gradKPerCm,
+                ArmstrongBadge = badge,
+                ClinicalAssessment = assess,
+                ConductionDirection = direction
+            };
+        }
     }
 }
+

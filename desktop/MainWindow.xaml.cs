@@ -28,7 +28,8 @@ namespace Ignite.Desktop
         DigitalSubtraction,
         PressureProxy,
         LaplacianHeatFlux,
-        Anatomical3DCompensated
+        Anatomical3DCompensated,
+        BioheatPerfusion
     }
 
     public enum ActiveCanvasTool
@@ -132,6 +133,8 @@ namespace Ignite.Desktop
         private PressureProxyStats? _pressureStats = null;
         private WriteableBitmap? _cachedPressureBitmap = null;
         private WriteableBitmap? _cachedLaplaceBitmap = null;
+        private WriteableBitmap? _cachedBioheatBitmap = null;
+        private AdvancedDiagnosticService.BioheatPerfusionStats? _cachedBioheatStats = null;
 
         // Filmstrip Gallery
         private readonly List<string> _filmstripFiles = new();
@@ -387,6 +390,8 @@ end";
                 _activeProfileStats = null;
                 _cachedPressureBitmap = null;
                 _cachedLaplaceBitmap = null;
+                _cachedBioheatBitmap = null;
+                _cachedBioheatStats = null;
                 _pressureStats = null;
                 OverlayOriginalCanvas.Children.Clear();
                 OverlayResultCanvas.Children.Clear();
@@ -782,6 +787,20 @@ end";
                 return;
             }
 
+            if (_activeViewMode == ActiveViewMode.BioheatPerfusion && _rawGrayPixels != null)
+            {
+                if (_cachedBioheatBitmap == null || _cachedBioheatStats == null)
+                {
+                    var (bBmp, bStats) = AdvancedDiagnosticService.GenerateBioheatPerfusionMap(_rawGrayPixels, w, h);
+                    _cachedBioheatBitmap = bBmp;
+                    _cachedBioheatStats = bStats;
+                }
+                ImgResult.Source = _cachedBioheatBitmap;
+                OverlayResultCanvas.Children.Clear();
+                RedrawInteractiveOverlays();
+                return;
+            }
+
             byte[]? activeDisplayPixels = (_showCorrected2D && _cachedCorrected3DPixels != null) ? _cachedCorrected3DPixels : _rawGrayPixels;
 
             BitmapSource baseBmp;
@@ -902,6 +921,17 @@ end";
                 CanvasCurtain.Visibility = Visibility.Collapsed;
                 if (InspectorTabs != null && Tab3DReconstruction != null) InspectorTabs.SelectedItem = Tab3DReconstruction;
                 TxtVp2Title.Text = "3D-ANATOMISCHE OBERFLÄCHEN-REKONSTRUKTION & LAMBERT-KANTENKORREKTUR";
+            }
+            else if (RbViewBioheat != null && RbViewBioheat.IsChecked == true)
+            {
+                _activeViewMode = ActiveViewMode.BioheatPerfusion;
+                ColViewport1.Width = new GridLength(1, GridUnitType.Star);
+                ColDivider.Width = new GridLength(1);
+                ColViewport2.Width = new GridLength(1, GridUnitType.Star);
+                ImgCurtainRaw.Visibility = Visibility.Collapsed;
+                CanvasCurtain.Visibility = Visibility.Collapsed;
+                if (InspectorTabs != null && TabBiomechanics != null) InspectorTabs.SelectedItem = TabBiomechanics;
+                TxtVp2Title.Text = "PENNES 2D BIOHEAT MIKROVASKULÄRE PERFUSIONSMAP (ω_b in ml / 100g / min)";
             }
 
             RefreshResultImageOnly();
@@ -1723,6 +1753,40 @@ end";
 
                     FloatingArmstrongBanner.Visibility = Visibility.Collapsed;
                 }
+
+                // Dual-Probe Bioheat Fourier Conduction Diff-Meter
+                var diffComp = ThermalAnalysisHelper.CompareProbes(p1, p2);
+                if (BorderProbeDiffMeterCard != null)
+                {
+                    BorderProbeDiffMeterCard.Visibility = Visibility.Visible;
+                    if (TxtProbeFlux != null) TxtProbeFlux.Text = $"{diffComp.BioheatConductiveFluxWattsM2:F0} W/m²";
+                    if (TxtProbeGrad != null) TxtProbeGrad.Text = $"{diffComp.ThermalGradientKPerCm:F2} K/cm";
+                    if (TxtProbeDistance != null) TxtProbeDistance.Text = $"Distanz: {diffComp.DistanceMm:F1} mm ({diffComp.DistancePx:F0} px)";
+                    if (TxtProbeDirection != null) TxtProbeDirection.Text = $"Wärmefluss: {diffComp.ConductionDirection}";
+                    if (TxtProbeDiffAssessment != null) TxtProbeDiffAssessment.Text = diffComp.ClinicalAssessment;
+                    if (TxtProbeConductionBadge != null) TxtProbeConductionBadge.Text = diffComp.ArmstrongBadge;
+                    if (BadgeProbeConduction != null)
+                    {
+                        if (diffComp.DeltaT >= 4.0)
+                        {
+                            BadgeProbeConduction.Background = new SolidColorBrush(Color.FromRgb(254, 226, 226));
+                            BadgeProbeConduction.BorderBrush = (Brush)FindResource("CriticalBrush");
+                            if (TxtProbeConductionBadge != null) TxtProbeConductionBadge.Foreground = (Brush)FindResource("CriticalBrush");
+                        }
+                        else if (diffComp.DeltaT >= 2.2)
+                        {
+                            BadgeProbeConduction.Background = new SolidColorBrush(Color.FromRgb(254, 243, 199));
+                            BadgeProbeConduction.BorderBrush = (Brush)FindResource("WarningBrush");
+                            if (TxtProbeConductionBadge != null) TxtProbeConductionBadge.Foreground = (Brush)FindResource("WarningBrush");
+                        }
+                        else
+                        {
+                            BadgeProbeConduction.Background = new SolidColorBrush(Color.FromRgb(224, 242, 254));
+                            BadgeProbeConduction.BorderBrush = (Brush)FindResource("CyanBrush");
+                            if (TxtProbeConductionBadge != null) TxtProbeConductionBadge.Foreground = (Brush)FindResource("CyanBrush");
+                        }
+                    }
+                }
             }
             else
             {
@@ -1732,6 +1796,7 @@ end";
                 TxtProbeRiskBadge.Text = "1/2 SONDE GESETZT";
                 TxtProbeRiskBadge.Foreground = (Brush)FindResource("CyanBrush");
                 FloatingArmstrongBanner.Visibility = Visibility.Collapsed;
+                if (BorderProbeDiffMeterCard != null) BorderProbeDiffMeterCard.Visibility = Visibility.Collapsed;
             }
         }
 
@@ -2517,8 +2582,22 @@ end";
                     : "Keine akute pathologische Asymmetrie nachweisbar. Regelmäßige präventive Fußpflege und 3-Monats-Follow-up empfohlen.",
                 Goniometer = _goniometerMeasurement,
                 Angiosomes = _cachedAngiosomes,
-                Reconstruction3D = _latestResult?.Reconstruction3D
+                Reconstruction3D = _latestResult?.Reconstruction3D,
+                BioheatPerfusion = _cachedBioheatStats,
+                DualProbe = _probePoints.Count >= 2 ? ThermalAnalysisHelper.CompareProbes(_probePoints[0], _probePoints[1]) : null
             };
+
+            if (_pressureStats != null && _rawGrayPixels != null)
+            {
+                double maxContra = 0.0;
+                if (_probePoints.Count >= 2) maxContra = Math.Max(maxContra, Math.Abs(_probePoints[0].Temperature - _probePoints[1].Temperature));
+                if (_latestResult?.Hotspots != null && _latestResult.Hotspots.Count > 0) maxContra = Math.Max(maxContra, _latestResult.Hotspots.Max(h => h.Region?.ContraDelta ?? 0.0));
+                var rZones = ThermalTopographyService.ComputeAnatomicalZones(_rawGrayPixels, _rawWidth, _rawHeight);
+                if (rZones != null && rZones.Count > 0) maxContra = Math.Max(maxContra, rZones.Max(z => z.DeltaT));
+                double pPerf = _cachedBioheatStats?.MeanPerfusion ?? 3.5;
+                double hva = _goniometerMeasurement?.AngleDegrees ?? 0.0;
+                model.IwgdfPrognosis = AdvancedDiagnosticService.EvaluateIwgdfRisk(maxContra, _pressureStats.PeakPressureKpa, pPerf, hva, _latestResult?.Hotspots?.Count > 0);
+            }
 
             if (_latestResult?.Hotspots != null)
             {
@@ -3059,6 +3138,75 @@ end";
                         TxtBiomechDirectives.Text = "✅ NORMAL: Keine pathologische Scherspannungskonzentration nachweisbar.";
                     }
                 }
+
+                // Evaluate IWGDF 2023 Multi-Modal Prognosis
+                double maxContraDeltaK = 0.0;
+                if (_probePoints.Count >= 2)
+                {
+                    maxContraDeltaK = Math.Max(maxContraDeltaK, Math.Abs(_probePoints[0].Temperature - _probePoints[1].Temperature));
+                }
+                if (_latestResult?.Hotspots != null && _latestResult.Hotspots.Count > 0)
+                {
+                    maxContraDeltaK = Math.Max(maxContraDeltaK, _latestResult.Hotspots.Max(h => h.Region?.ContraDelta ?? 0.0));
+                }
+                var zones = ThermalTopographyService.ComputeAnatomicalZones(_rawGrayPixels, _rawWidth, _rawHeight);
+                if (zones != null && zones.Count > 0)
+                {
+                    maxContraDeltaK = Math.Max(maxContraDeltaK, zones.Max(z => z.DeltaT));
+                }
+
+                if (_cachedBioheatStats == null)
+                {
+                    var (_, bStats) = AdvancedDiagnosticService.GenerateBioheatPerfusionMap(_rawGrayPixels, _rawWidth, _rawHeight);
+                    _cachedBioheatStats = bStats;
+                }
+
+                double peakPressure = _pressureStats.PeakPressureKpa;
+                double hvaAngle = _goniometerMeasurement?.AngleDegrees ?? 0.0;
+                double meanPerf = _cachedBioheatStats?.MeanPerfusion ?? 3.5;
+                bool hasHotspots = _latestResult?.Hotspots?.Count > 0;
+
+                var iwgdf = AdvancedDiagnosticService.EvaluateIwgdfRisk(maxContraDeltaK, peakPressure, meanPerf, hvaAngle, hasHotspots);
+
+                if (BorderIwgdfPrognosisCard != null)
+                {
+                    if (TxtIwgdfRiskGrade != null) TxtIwgdfRiskGrade.Text = iwgdf.RiskGradeText;
+                    if (TxtIwgdfProbability != null) TxtIwgdfProbability.Text = $"{iwgdf.UlcerationProbabilityPct:F1} %";
+                    if (TxtIwgdfTimeWindow != null) TxtIwgdfTimeWindow.Text = iwgdf.TimeToUlcerWindow;
+                    if (TxtIwgdfPrescription != null) TxtIwgdfPrescription.Text = iwgdf.OffloadingPrescription;
+                    if (TxtIwgdfRationale != null) TxtIwgdfRationale.Text = iwgdf.ClinicalRationale;
+                    if (ListIwgdfAlerts != null) ListIwgdfAlerts.ItemsSource = iwgdf.ClinicalAlerts;
+
+                    if (BadgeIwgdfRiskGrade != null)
+                    {
+                        if (iwgdf.RiskGrade >= 3)
+                        {
+                            BadgeIwgdfRiskGrade.Background = new SolidColorBrush(Color.FromRgb(254, 226, 226));
+                            BadgeIwgdfRiskGrade.BorderBrush = (Brush)FindResource("CriticalBrush");
+                            if (TxtIwgdfRiskGrade != null) TxtIwgdfRiskGrade.Foreground = (Brush)FindResource("CriticalBrush");
+                        }
+                        else if (iwgdf.RiskGrade >= 2)
+                        {
+                            BadgeIwgdfRiskGrade.Background = new SolidColorBrush(Color.FromRgb(254, 243, 199));
+                            BadgeIwgdfRiskGrade.BorderBrush = (Brush)FindResource("WarningBrush");
+                            if (TxtIwgdfRiskGrade != null) TxtIwgdfRiskGrade.Foreground = (Brush)FindResource("WarningBrush");
+                        }
+                        else
+                        {
+                            BadgeIwgdfRiskGrade.Background = new SolidColorBrush(Color.FromRgb(224, 242, 254));
+                            BadgeIwgdfRiskGrade.BorderBrush = (Brush)FindResource("CyanBrush");
+                            if (TxtIwgdfRiskGrade != null) TxtIwgdfRiskGrade.Foreground = (Brush)FindResource("CyanBrush");
+                        }
+                    }
+                }
+            }
+        }
+
+        private void BtnViewBioheatPerfusion_Click(object sender, RoutedEventArgs e)
+        {
+            if (RbViewBioheat != null)
+            {
+                RbViewBioheat.IsChecked = true;
             }
         }
 

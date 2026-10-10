@@ -29,6 +29,9 @@ namespace Ignite.Desktop.Services
         public GoniometerMeasurement? Goniometer { get; set; }
         public List<AngiosomeTerritory>? Angiosomes { get; set; }
         public Ignite.Desktop.Models.Reconstruction3DResult? Reconstruction3D { get; set; }
+        public AdvancedDiagnosticService.BioheatPerfusionStats? BioheatPerfusion { get; set; }
+        public AdvancedDiagnosticService.IwgdfPrognosisResult? IwgdfPrognosis { get; set; }
+        public ThermalAnalysisHelper.DualProbeComparison? DualProbe { get; set; }
         public List<HotspotReportItem> Hotspots { get; set; } = new();
     }
 
@@ -240,6 +243,54 @@ namespace Ignite.Desktop.Services
                 sb.AppendLine($"        <div class='meta-box'><div class='label'>Mittlere Randkorrektur</div><div class='val' style='color:#0284C7;'>+{model.Reconstruction3D.MeanCorrectionK:F2} K</div></div>");
                 sb.AppendLine($"        <div class='meta-box'><div class='label'>Kompensierte Randpixel</div><div class='val'>{model.Reconstruction3D.CompensatedPixelCount:N0} px</div></div>");
                 sb.AppendLine("    </div>");
+            }
+
+            // 6. Pennes 2D Mikrovaskuläre Bioheat Perfusion (ml / 100g / min)
+            if (model.BioheatPerfusion != null)
+            {
+                sb.AppendLine("    <div class='section-title'><span>🩸</span> 6. Mikrovaskuläre Gewebsperfusion (Inverse Pennes 2D Bioheat PDE)</div>");
+                sb.AppendLine("    <div class='meta-grid'>");
+                sb.AppendLine($"        <div class='meta-box'><div class='label'>Mittlere Perfusion (Ø ω_b)</div><div class='val'>{model.BioheatPerfusion.MeanPerfusion:F1} ml/100g/min</div></div>");
+                sb.AppendLine($"        <div class='meta-box'><div class='label'>Spitzenperfusion (Max ω_b)</div><div class='val'>{model.BioheatPerfusion.MaxPerfusion:F1} ml/100g/min</div></div>");
+                sb.AppendLine($"        <div class='meta-box'><div class='label'>Hyperämie-Anteil (>8 ml)</div><div class='val' style='color:#EF4444;'>{model.BioheatPerfusion.HyperaemicFractionPct:F1}%</div></div>");
+                sb.AppendLine($"        <div class='meta-box'><div class='label'>Ischämie-Defizit (<1.5 ml)</div><div class='val' style='color:#0284C7;'>{model.BioheatPerfusion.IschemicFractionPct:F1}%</div></div>");
+                sb.AppendLine("    </div>");
+                sb.AppendLine($"    <p style='font-size:11.5px; margin: 4px 0 16px 0; color:#334155;'><strong>Vaskuläre Beurteilung:</strong> {model.BioheatPerfusion.Description}</p>");
+            }
+
+            // 7. IWGDF 2023 Multi-Modale Ulzerations-Prognose
+            if (model.IwgdfPrognosis != null)
+            {
+                string iwgdfBadge = model.IwgdfPrognosis.RiskGrade >= 3 ? "badge-critical" : (model.IwgdfPrognosis.RiskGrade >= 2 ? "badge-warning" : "badge-success");
+                sb.AppendLine("    <div class='section-title'><span>🦶</span> 7. IWGDF 2023 Multimodale Ulzerations-Prognose &amp; Schuhverordnung</div>");
+                sb.AppendLine("    <div class='meta-grid'>");
+                sb.AppendLine($"        <div class='meta-box'><div class='label'>IWGDF Risikokategorie</div><div class='val'><span class='badge {iwgdfBadge}'>{model.IwgdfPrognosis.RiskGradeText}</span></div></div>");
+                sb.AppendLine($"        <div class='meta-box'><div class='label'>Ulkus-Wahrscheinlichkeit P(U)</div><div class='val' style='color:#DC2626;'>{model.IwgdfPrognosis.UlcerationProbabilityPct:F1}%</div></div>");
+                sb.AppendLine($"        <div class='meta-box'><div class='label'>Prognostiziertes Zeitfenster</div><div class='val'>{model.IwgdfPrognosis.TimeToUlcerWindow}</div></div>");
+                sb.AppendLine($"        <div class='meta-box'><div class='label'>Schuhwerk-Empfehlung</div><div class='val' style='font-size:11px;'>{model.IwgdfPrognosis.OffloadingPrescription}</div></div>");
+                sb.AppendLine("    </div>");
+                if (model.IwgdfPrognosis.ClinicalAlerts.Count > 0)
+                {
+                    sb.AppendLine("    <ul style='font-size:11px; color:#DC2626; margin: 4px 0 14px 20px;'>");
+                    foreach (var alert in model.IwgdfPrognosis.ClinicalAlerts)
+                    {
+                        sb.AppendLine($"        <li>{alert}</li>");
+                    }
+                    sb.AppendLine("    </ul>");
+                }
+            }
+
+            // 8. Dual-Sonden Fourier Wärmefluss
+            if (model.DualProbe != null)
+            {
+                sb.AppendLine("    <div class='section-title'><span>🌡️</span> 8. Duale Punktsonden &amp; Fourier-Wärmeleitung</div>");
+                sb.AppendLine("    <div class='meta-grid'>");
+                sb.AppendLine($"        <div class='meta-box'><div class='label'>Bilateral ΔT</div><div class='val'>{model.DualProbe.DeltaT:F1} K</div></div>");
+                sb.AppendLine($"        <div class='meta-box'><div class='label'>Bioheat Wärmefluss (q)</div><div class='val'>{model.DualProbe.BioheatConductiveFluxWattsM2:F0} W/m²</div></div>");
+                sb.AppendLine($"        <div class='meta-box'><div class='label'>Thermischer Gradient (|∇T|)</div><div class='val'>{model.DualProbe.ThermalGradientKPerCm:F2} K/cm</div></div>");
+                sb.AppendLine($"        <div class='meta-box'><div class='label'>Abstand (P₁-P₂)</div><div class='val'>{model.DualProbe.DistanceMm:F1} mm</div></div>");
+                sb.AppendLine("    </div>");
+                sb.AppendLine($"    <p style='font-size:11px; margin: 4px 0 16px 0;'><strong>Flussvektor:</strong> {model.DualProbe.ConductionDirection} — {model.DualProbe.ClinicalAssessment}</p>");
             }
 
             // 10. Leitlinienkonforme IWGDF 2023 Handlungsempfehlungen

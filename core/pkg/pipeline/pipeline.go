@@ -78,6 +78,7 @@ type AnalysisResult struct {
 	Stats            statistics.OutlierStats                 `json:"stats"`
 	Timing           StageTiming                             `json:"timing"`
 	Perfusion        *perfusion.PerfusionProfile             `json:"perfusion,omitempty"`
+	BioheatPerfusion *perfusion.BioheatPerfusionMap          `json:"bioheat_perfusion,omitempty"`
 	Reconstruction3D *reconstruction3d.ReconstructionResult   `json:"reconstruction_3d,omitempty"`
 	TissuePixelCount int                                     `json:"tissue_pixel_count"`
 	TotalHotspots    int                                     `json:"total_hotspots"`
@@ -628,12 +629,15 @@ func Run(src *imageutil.GrayMatrix, cfg PipelineConfig) AnalysisResult {
 	addStage(36, 6, phase6Name, "Frangi Vesselness Linear Vein Suppression",
 		"Frangi-Vesselness-Reaktionsfilterung zur Unterdrückung oberflächlicher Venenstränge und Gefäßnetze.", s36Start)
 
-	// Optional: Longitudinal Perfusion Gradient Profile
+	// Optional: Longitudinal Perfusion Gradient Profile & 2D Bioheat Inverse Perfusion Field
 	var perfProfile *perfusion.PerfusionProfile
+	var bioheatMap *perfusion.BioheatPerfusionMap
 	if cfg.RunPerfusion {
 		tP := time.Now()
 		p := perfusion.ComputeLongitudinalProfile(src, bodyMask)
 		perfProfile = &p
+		bm := perfusion.SolvePennesBioheatField(src, bodyMask, 20.0, 42.0)
+		bioheatMap = &bm
 		timing.PerfusionMs = float64(time.Since(tP).Microseconds()) / 1000.0
 	}
 
@@ -858,6 +862,7 @@ func Run(src *imageutil.GrayMatrix, cfg PipelineConfig) AnalysisResult {
 		Stats:            stats,
 		Timing:           timing,
 		Perfusion:        perfProfile,
+		BioheatPerfusion: bioheatMap,
 		Reconstruction3D: reconRes,
 		TissuePixelCount: tissuePixels,
 		TotalHotspots:    len(summaries),
