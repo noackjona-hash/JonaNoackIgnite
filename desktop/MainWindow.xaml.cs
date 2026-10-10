@@ -527,8 +527,17 @@ end";
                 // Update UI metrics
                 TxtTissuePixels.Text = $"Gewebe-Pixel: {result.TissuePixelCount:N0}";
                 TxtHotspotCount.Text = $"Gefundene Herde: {result.TotalHotspots}";
-                TxtLatency.Text = $"Rechenzeit: {result.Timing.TotalMs:F1} ms (Top-Hat AVX2: {result.Timing.TopHatMs:F1} ms)";
-                EngineTimingText.Text = $"Go Core: {result.Timing.TotalMs:F1} ms (AVX2)";
+                TxtLatency.Text = $"Rechenzeit: {result.Timing.TotalMs:F1} ms (42 Stufen | Top-Hat AVX2: {result.Timing.TopHatMs:F1} ms)";
+                EngineTimingText.Text = $"Go Core: {result.Timing.TotalMs:F1} ms (42 Stufen / AVX2)";
+
+                // Update 42 Pipeline Stages Table
+                if (result.Stages != null && result.Stages.Count > 0)
+                {
+                    GridStages.ItemsSource = result.Stages;
+                    TxtStagesCount.Text = $"{result.Stages.Count} / 42";
+                    TxtStagesTotalMs.Text = $"{result.Timing.TotalMs:F1} ms";
+                    GridStages.SelectedIndex = 0;
+                }
 
                 // Update Hotspot Table (sorted by clinical severity)
                 result.Hotspots = result.Hotspots.OrderByDescending(h => (h.Assessment?.Score ?? 0) * 100 + (h.Region?.MaxVal ?? 0)).ToList();
@@ -2291,6 +2300,26 @@ end";
 
                 string biophys = $"• Randgradient: {grad:F1} | Perifokal-Halo: +{halo:F1} K | Laplace: {lap:F1} | Fokus-Index: {p2m:F2}";
                 TxtLuaRecommendation.Text = $"Herd #{sel.Region?.Id ?? 0} [{dt}] (Risikostufe: {sel.Assessment?.RiskLevel ?? "NORMAL"})\n{biophys}\n\nKlinische Empfehlung:\n{sel.Assessment?.Recommendation ?? "Keine Intervention"}";
+            }
+        }
+
+        private void BtnViewStages_Click(object sender, RoutedEventArgs e)
+        {
+            if (TabStages != null && InspectorTabs != null)
+            {
+                InspectorTabs.SelectedItem = TabStages;
+            }
+        }
+
+        private void GridStages_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (GridStages.SelectedItem is StageInfo stage)
+            {
+                TxtSelectedStageTitle.Text = $"Stufe #{stage.StageNumber}: {stage.Name}";
+                TxtSelectedStagePhase.Text = stage.PhaseName;
+                TxtSelectedStageDuration.Text = $"Laufzeit: {stage.DurationUs:N0} µs ({(stage.DurationUs / 1000.0):F2} ms)";
+                TxtSelectedStageDesc.Text = stage.Description;
+                TxtSelectedStageStatus.Text = stage.Status == "COMPLETED" ? "✓ ERFOLGREICH" : stage.Status;
             }
         }
 

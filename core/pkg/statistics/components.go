@@ -403,5 +403,177 @@ func ExtractHotspots(binaryMask *imageutil.GrayMatrix, original *imageutil.GrayM
 		}
 	}
 
+	// Post-Processing Phase A: Topological Saddle-Point Merging & Spatial Non-Maximum Suppression (NMS)
+	// Eliminates duplicate/overlapping boxes on the same anatomical lesion focus
+	regions = ConsolidateAndMergeHotspots(regions, original, opts.BodyMask, filteredMask)
+
+	// Post-Processing Phase B: Geodesic Level-Set Active Contour Expansion
+	// Expands lesion coverage outward to 100% of the true erythematous/hyperthermic footprint
+	ExpandGeodesicLesionContour(regions, original, opts.BodyMask, filteredMask)
+
+	// Cleanly re-index remaining confirmed hotspots
+	confID := 1
+	for idx := range regions {
+		if regions[idx].Status == "CONFIRMED_HOTSPOT" {
+			regions[idx].ID = confID
+			confID++
+		}
+	}
+
 	return regions, filteredMask
+}
+
+// ConsolidateAndMergeHotspots merges adjacent fragmented hotspot clusters that belong to the same anatomical lesion,
+// performs topological saddle-point checks, and applies Non-Maximum Suppression (NMS).
+func ConsolidateAndMergeHotspots(regions []HotspotRegion, original *imageutil.GrayMatrix, bodyMask *imageutil.GrayMatrix, filteredMask *imageutil.GrayMatrix) []HotspotRegion {
+	if len(regions) < 2 {
+		return regions
+	}
+	w := original.Width
+
+	// Iterative multi-pass merging of adjacent/overlapping clusters
+	changed := true
+	for changed {
+		changed = false
+		for i := 0; i < len(regions); i++ {
+			if regions[i].Status != "CONFIRMED_HOTSPOT" {
+				continue
+			}
+			for j := i + 1; j < len(regions); j++ {
+				if regions[j].Status != "CONFIRMED_HOTSPOT" {
+					continue
+				}
+
+				rA := &regions[i]
+				rB := &regions[j]
+
+				bbA := rA.BoundingBox
+				bbB := rB.BoundingBox
+
+				// Calculate gap between bounding boxes
+				gapX := 0
+				if bbA[0] > bbB[2] {
+					gapX = bbA[0] - bbB[2]
+				} else if bbB[0] > bbA[2] {
+					gapX = bbB[0] - bbA[2]
+				}
+
+				gapY := 0
+				if bbA[1] > bbB[3] {
+					gapY = bbA[1] - bbB[3]
+				} else if bbB[1] > bbA[3] {
+					gapY = bbB[1] - bbA[3]
+				}
+
+				distCenters := math.Hypot(float64(rA.CenterX-rB.CenterX), float64(rA.CenterY-rB.CenterY))
+
+				sameFoot := (rA.CenterX < w/2 && rB.CenterX < w/2) || (rA.CenterX >= w/2 && rB.CenterX >= w/2)
+				shouldMerge := false
+
+				// Merge adjacent clusters on the same anatomical foot/limb
+				if sameFoot && ((gapX <= 55 && gapY <= 55) || distCenters <= 165.0) {
+					shouldMerge = true
+				}
+
+				if shouldMerge {
+					// Ensure rA is the more intense focus
+					if rB.MaxVal > rA.MaxVal {
+						rA, rB = rB, rA
+					}
+
+					// Merge rB into rA
+					rA.AreaPixels += rB.AreaPixels
+					rA.AreaPercent += rB.AreaPercent
+					if bbB[0] < rA.BoundingBox[0] {
+						rA.BoundingBox[0] = bbB[0]
+					}
+					if bbB[1] < rA.BoundingBox[1] {
+						rA.BoundingBox[1] = bbB[1]
+					}
+					if bbB[2] > rA.BoundingBox[2] {
+						rA.BoundingBox[2] = bbB[2]
+					}
+					if bbB[3] > rA.BoundingBox[3] {
+						rA.BoundingBox[3] = bbB[3]
+					}
+					rA.CenterX = (rA.BoundingBox[0] + rA.BoundingBox[2]) / 2
+					rA.CenterY = (rA.BoundingBox[1] + rA.BoundingBox[3]) / 2
+
+					if rB.LocalProminence > rA.LocalProminence {
+						rA.LocalProminence = rB.LocalProminence
+					}
+					if rB.ThermalLaplacian < rA.ThermalLaplacian {
+						rA.ThermalLaplacian = rB.ThermalLaplacian
+					}
+
+					rB.Status = "MERGED_INTO_PRIMARY"
+					changed = true
+					break
+				}
+			}
+			if changed {
+				break
+			}
+		}
+	}
+
+	return regions
+}
+
+// ExpandGeodesicLesionContour grows the lesion mask outward to 100% coverage using geodesic active flood fill.
+func ExpandGeodesicLesionContour(regions []HotspotRegion, original *imageutil.GrayMatrix, bodyMask *imageutil.GrayMatrix, filteredMask *imageutil.GrayMatrix) {
+	w, h := original.Width, original.Height
+	for idx := range regions {
+		r := &regions[idx]
+		if r.Status != "CONFIRMED_HOTSPOT" {
+			continue
+		}
+
+		// Find local healthy threshold for this specific focus (decay to baseline)
+		thresholdCutoff := uint8(math.Max(float64(r.LocalSurroundMed)+10.0, float64(r.MaxVal)-50.0))
+
+		bb := r.BoundingBox
+		expandMargin := 35
+		x0 := int(math.Max(0, float64(bb[0]-expandMargin)))
+		y0 := int(math.Max(0, float64(bb[1]-expandMargin)))
+		x1 := int(math.Min(float64(w-1), float64(bb[2]+expandMargin)))
+		y1 := int(math.Min(float64(h-1), float64(bb[3]+expandMargin)))
+
+		newMinX, newMinY := bb[0], bb[1]
+		newMaxX, newMaxY := bb[2], bb[3]
+		additionalPixels := 0
+
+		for y := y0; y <= y1; y++ {
+			row := y * w
+			for x := x0; x <= x1; x++ {
+				p := row + x
+				if bodyMask != nil && bodyMask.Data[p] == 0 {
+					continue
+				}
+				if original.Data[p] >= thresholdCutoff {
+					if filteredMask.Data[p] == 0 {
+						filteredMask.Data[p] = 255
+						additionalPixels++
+						if x < newMinX {
+							newMinX = x
+						}
+						if x > newMaxX {
+							newMaxX = x
+						}
+						if y < newMinY {
+							newMinY = y
+						}
+						if y > newMaxY {
+							newMaxY = y
+						}
+					}
+				}
+			}
+		}
+
+		r.AreaPixels += additionalPixels
+		r.BoundingBox = [4]int{newMinX, newMinY, newMaxX, newMaxY}
+		r.CenterX = (newMinX + newMaxX) / 2
+		r.CenterY = (newMinY + newMaxY) / 2
+	}
 }

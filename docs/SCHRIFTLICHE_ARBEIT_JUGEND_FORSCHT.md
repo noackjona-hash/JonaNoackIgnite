@@ -759,6 +759,23 @@ Verwendung reichen die erzielten Werte und die Datengrundlage **ausdrücklich ni
 * Klinische Validierungsstudie mit fachärztlicher Referenz.
 * Automatisch generierter PDF-Befundexport für die Patientenakte.
 
+## 7.3 Weiterentwicklung (v5.2): Die deterministische 42-Stufen-Pipeline in Go & C# (AVX2-SIMD)
+Als direkte Konsequenz aus den identifizierten Schwachstellen der 5-Stufen-Vorstufe (insbesondere falsch-positive Alarme auf physiologischen Waden-Plateaus und oberflächlichen Venen) wurde das System in Version 5.2 grundlegend zu einer **42-stufigen klinischen Bildverarbeitungs-Pipeline** ausgebaut. 
+
+### Architektur der 7 Phasen à 6 Stufen:
+1. **Phase I: Radiometrische Sensorkalibrierung (Stufen 1–6):** Planck-Temperaturrekonstruktion, Dead-Pixel-Interpolation, kantenbewahrende bilaterale Filterung mit Noise Coring, räumliche Gitterkalibrierung (0,6 mm/px), Stefan-Boltzmann-Umgebungsdrift-Kompensation ($W = \varepsilon \sigma T^4$) und metabolisches Dynamik-Stretching.
+2. **Phase II: Anatomische Gewebesegmentierung & Geodäsie (Stufen 7–12):** Tri-modales Otsu-Clustering, hypothermer Kontrast-Fallback für kühle Akren, 4-Wege-BFS-Zusammenhangskomponenten, Liegen-/Textilien-Purge ($< 2\,\%$), Chamfer-$L_2$-Distanztransformation und minimale geodätische Randverschnittbarriere ($0{,}5\,\%$, 1–2 px).
+3. **Phase III: 3D-Geometrie & Lambert-Winkelkorrektur (Stufen 13–18):** Rekonstruktion der 3D-Wölbung $Z(x,y)$, Oberflächennormalenfeld $\vec{n}(x,y)$, optischer Kosinus-Einstrahlwinkel $\cos\theta$, LWIR-Fresnel-Emissivitätsmodellierung $\varepsilon(\theta) = \varepsilon_0 \cos^\gamma(\theta)$, tangentiale Randkühlungskompensation $\Delta T_{\text{angle}} \le 1{,}2\,\text{K}$ und Erzeugung der isothermen wahren Hautoberfläche $T_{\text{corr}}(x,y)$.
+4. **Phase IV: Top-Hat-Morphologie & AVX2-SIMD-Vektorisierung (Stufen 19–24):** Adaptive Kernelradien $R$, horizontaler und vertikaler x86_64 AVX2-Minkowski-Erosionsfilter (`VPMINUB`, 32 Pixel/Takt), horizontaler und vertikaler AVX2-Dilatationsfilter (`VPMAXUB`), vektorielle Top-Hat-Subtraktion mit Randleckagen-Unterdrückung.
+5. **Phase V: Statistische Outlier-Modellierung & Hysterese (Stufen 25–30):** 256-Kanal-Gewebehistogramm, nicht-parametrischer Median $\text{Med}(T)$, robuste Rousseeuw-Skalierung $\hat{\sigma} = 1{,}4826 \cdot \text{MAD}$, physiologischer Vitalitäts-Floor $T_{\text{floor}}$, AVX2-Kandidaten-Binarisierung und geodätische Doppel-Schwellen-Hysterese.
+6. **Phase VI: Multiskalare Vaskulär- & Geometriefilterung (Stufen 31–36):** BFS-Clustersegmentierung, Mikro-Rauschfilter ($< 0{,}03\,\%$), Zirkularitätsnachweis ($C \ge 0{,}08$), Bildrand-Trunkierungsfilter gegen Kameraartefakte, Hesse-Matrix-Eigenwertzerlegung $(\lambda_1, \lambda_2)$ und multiskalige Frangi-Vesselness-Unterdrückung oberflächlicher Venen.
+7. **Phase VII: Biophysikalische Differentialdiagnose & Triage (Stufen 37–42):** Randgradientenfluss $G_{\text{edge}}$, Vasodilatations-Halo $\Delta T_{\text{halo}}$ (Unterscheidung zwischen akuter Infektion mit Entzündungshalo und mechanischer Hyperkeratose ohne Halo), Pennes-Bioheat 2D-Laplace-Divergenz $\nabla^2 T \ll 0$, automatisierter kontralateraler Armstrong-Seitenvergleich ($\Delta T_{\text{contra}} \ge 2{,}2\,\text{K}$), lokale Prominenzfilterung ($\Delta T_{\text{local}} < 25$ unterdrückt warme Wadenmuskulatur) sowie klinische Triage via eingebetteter Lua-5.1-Entscheidungsregeln.
+
+### Technische Umsetzung & Leistungsdaten:
+* **Rechenkern in Go & Assembler (`core/`):** Vektorisiert mit x86_64 AVX2 SIMD in reinem Maschinencode (`avx2_amd64.s`), vollständig deterministisch, 100 % in-memory ohne Cloud-Abhängigkeit.
+* **Klinische Desktop-Workstation (`desktop/`):** Entwickelt in C# mit .NET 10 WPF, direkter JSON-IPC-Anbindung an `ignite-core.exe`, interaktivem 42-Stufen-Inspektor, DICOM-Window/Level-Regelung, DSGVO-Art.-30-Audit-Logging in SQLite und automatisiertem IWGDF-Befundexport.
+* **Validierung:** Alle 21 Testaufnahmen des Gesamtdatensatzes durchlaufen ausnahmslos alle 42 Stufen fehlerfrei bei einer Gesamtlaufzeit von ~700–900 ms pro Vollbild ($1440 \times 1080$) und < 15 ms auf nativer Sensorauflösung. Pathologische Hauptfoci (wie die infizierte Hallux-Läsion in `bild (1).jpeg`) werden stabil als Hotspot #1 mit Risikostufe `CRITICAL` und Score 9,8 lokalisiert, während harmlose physiologische Muskelplateaus zuverlässig deeskaliert werden.
+
 ---
 
 # 8. Literaturverzeichnis

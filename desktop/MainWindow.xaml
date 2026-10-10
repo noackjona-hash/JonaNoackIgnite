@@ -201,6 +201,7 @@
                                 <Separator Background="{StaticResource BorderBrush}"/>
                                 <MenuItem Header="_Ärztlichen Befundbericht exportieren (PDF)..." Click="MenuExportReport_Click"/>
                                 <MenuItem Header="_DSGVO Art. 30 Audit-Protokoll einsehen" Click="MenuAuditLog_Click"/>
+                                <MenuItem Header="_42-Stufige Diagnostische Pipeline inspizieren" Click="BtnViewStages_Click" InputGestureText="Strg+P"/>
                                 <MenuItem Header="_Klinische Lua-Entscheidungsregeln" Click="MenuLuaEditor_Click"/>
                                 <MenuItem Header="_Hardware-Benchmark (AVX2 Vektor)" Click="MenuBenchmark_Click"/>
                                 <Separator Background="{StaticResource BorderBrush}"/>
@@ -845,6 +846,12 @@
                                                 <TextBlock x:Name="TxtTissuePixels" Text="Gewebe-Pixel: 236.450" Margin="0,4,0,2" FontSize="11"/>
                                                 <TextBlock x:Name="TxtHotspotCount" Text="Gefundene Herde: 3" Margin="0,2" FontSize="11"/>
                                                 <TextBlock x:Name="TxtLatency" Text="Rechenzeit: 271,4 ms (AVX2 SIMD: 25.4 ms)" Margin="0,2" FontSize="11" Foreground="{StaticResource CyanBrush}" FontWeight="Bold"/>
+                                                <Button Click="BtnViewStages_Click" Margin="0,8,0,0" Padding="8,5" Background="#F1F5F9" BorderBrush="{StaticResource BorderBrush}">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <Path Data="{StaticResource IconCode}" Fill="{StaticResource CyanBrush}" Width="11" Height="11" Stretch="Uniform" Margin="0,0,6,0"/>
+                                                        <TextBlock Text="42 Pipeline-Stufen im Detail anzeigen ›" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource CyanBrush}"/>
+                                                    </StackPanel>
+                                                </Button>
                                             </StackPanel>
                                         </Border>
                                     </StackPanel>
@@ -1757,6 +1764,94 @@
                                         </Button>
                                     </StackPanel>
                                 </ScrollViewer>
+                            </TabItem>
+
+                            <!-- TAB 16: 42-STUFIGE DIAGNOSTISCHE PIPELINE -->
+                            <TabItem x:Name="TabStages">
+                                <TabItem.Header>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Data="{StaticResource IconCode}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=TabItem}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0" SnapsToDevicePixels="True"/>
+                                        <TextBlock Text="42 Stufen" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </TabItem.Header>
+                                <Grid Margin="12">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <!-- Header -->
+                                    <StackPanel Grid.Row="0" Margin="0,0,0,8">
+                                        <TextBlock Text="42-Stufige Diagnostische Pipeline (AVX2-SIMD)" FontWeight="Bold" FontSize="13.5" Foreground="{StaticResource CyanBrush}"/>
+                                        <TextBlock Text="Lückenlose Infrarot-Signalverarbeitungskette über 7 biophysikalische Phasen." FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+
+                                    <!-- KPI Banner -->
+                                    <Grid Grid.Row="1" Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0" Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="8,6" Margin="0,0,3,0">
+                                            <StackPanel>
+                                                <TextBlock Text="STUFEN" FontSize="9" FontWeight="Bold" Foreground="{StaticResource CyanBrush}"/>
+                                                <TextBlock x:Name="TxtStagesCount" Text="42 / 42" FontSize="13" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                            </StackPanel>
+                                        </Border>
+                                        <Border Grid.Column="1" Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="8,6" Margin="3,0">
+                                            <StackPanel>
+                                                <TextBlock Text="PHASEN" FontSize="9" FontWeight="Bold" Foreground="{StaticResource WarningBrush}"/>
+                                                <TextBlock Text="7 Phasen" FontSize="13" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                            </StackPanel>
+                                        </Border>
+                                        <Border Grid.Column="2" Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="8,6" Margin="3,0">
+                                            <StackPanel>
+                                                <TextBlock Text="GESAMTZEIT" FontSize="9" FontWeight="Bold" Foreground="{StaticResource SuccessBrush}"/>
+                                                <TextBlock x:Name="TxtStagesTotalMs" Text="-- ms" FontSize="13" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                            </StackPanel>
+                                        </Border>
+                                        <Border Grid.Column="3" Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="8,6" Margin="3,0,0,0">
+                                            <StackPanel>
+                                                <TextBlock Text="HARDWARE" FontSize="9" FontWeight="Bold" Foreground="{StaticResource CyanBrush}"/>
+                                                <TextBlock Text="AVX2 256-Bit" FontSize="13" FontWeight="Bold" Foreground="{StaticResource CyanBrush}"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+
+                                    <!-- DataGrid -->
+                                    <DataGrid Grid.Row="2" x:Name="GridStages" SelectionChanged="GridStages_SelectionChanged" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" HeadersVisibility="Column" GridLinesVisibility="Horizontal">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Header="#" Binding="{Binding StageNumber}" Width="32"/>
+                                            <DataGridTextColumn Header="Phase" Binding="{Binding PhaseName}" Width="145"/>
+                                            <DataGridTextColumn Header="Stufen-Algorithmus" Binding="{Binding Name}" Width="*" FontWeight="SemiBold"/>
+                                            <DataGridTextColumn Header="Laufzeit" Binding="{Binding DurationUs, StringFormat={}{0:N0} µs}" Width="75"/>
+                                            <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="85"/>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+
+                                    <!-- Detail Card -->
+                                    <Border Grid.Row="3" Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="12" Margin="0,10,0,0">
+                                        <StackPanel>
+                                            <Grid Margin="0,0,0,4">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock x:Name="TxtSelectedStageTitle" Text="Wählen Sie eine Stufe zur Detailprüfung..." FontWeight="Bold" FontSize="11" Foreground="{StaticResource CyanBrush}"/>
+                                                <Border Grid.Column="1" Background="#260284C7" BorderBrush="{StaticResource CyanBrush}" BorderThickness="1" CornerRadius="4" Padding="6,1">
+                                                    <TextBlock x:Name="TxtSelectedStageStatus" Text="BEREIT" FontSize="9" FontWeight="Bold" Foreground="{StaticResource CyanBrush}"/>
+                                                </Border>
+                                            </Grid>
+                                            <TextBlock x:Name="TxtSelectedStagePhase" Text="Phase: --" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,2"/>
+                                            <TextBlock x:Name="TxtSelectedStageDuration" Text="Laufzeit: --" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,6"/>
+                                            <TextBlock x:Name="TxtSelectedStageDesc" Text="Detaillierte Beschreibung der mathematischen und biophysikalischen Funktionsweise..." TextWrapping="Wrap" FontSize="10.5" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
                             </TabItem>
 
                         </TabControl>

@@ -1,12 +1,17 @@
 -- armstrong_criteria.lua
--- IGNITE Medical Imaging Suite v5.0.0
+-- IGNITE Medical Imaging Suite v5.2.0
 -- Klinische Entscheidungskriterien nach Armstrong et al. (1997, 2007)
 -- mit Differentialdiagnose: Pathologische Entzündung vs. Biomechanische Druckstelle
+-- und deterministischer Deeskalation bilateraler Muskelphysiologie (Waden/Oberschenkel)
 
 function evaluate_hotspot(hotspot, stats)
-    -- delta_t entspricht dem relativen Temperaturanstieg gegenüber dem gesunden Gewebemedian
-    local baseline = stats.orig_median or stats.median or 120.0
-    local delta_t = hotspot.max_val - baseline
+    local contra_delta = hotspot.contra_delta
+    if contra_delta == nil then
+        local baseline = stats.orig_median or stats.median or 120.0
+        contra_delta = hotspot.max_val - baseline
+    end
+    local prominence = hotspot.local_prominence or contra_delta
+    local area = hotspot.area_pixels or 0
     local circularity = hotspot.circularity or 0.5
     local edge_grad = hotspot.edge_gradient or 0.0
     local halo_delta = hotspot.halo_delta or 0.0
@@ -14,24 +19,32 @@ function evaluate_hotspot(hotspot, stats)
     local peak_to_mean = hotspot.peak_to_mean or 1.0
 
     -- Biophysikalische Kriterien:
-    -- 1. Steiler Randgradient (>= 3.0) signalisiert scharfe Hornhautbegrenzung (Druckstelle/Callus)
     local is_sharp_edge = edge_grad >= 3.0
-    -- 2. Signifikanter Perifokal-Halo (>= 5.0) signalisiert reaktive Kapillarhyperämie (Entzündung)
     local has_halo = halo_delta >= 5.0
-    -- 3. Stark negativer Laplace-Kern (<= -3.5) oder hohe Spitzheit: aktiver metabolischer Wärmequell-Fokus
     local is_focal_metabolic = laplacian <= -3.5 or peak_to_mean >= 1.25
 
-    -- 1. Kritisches Kriterium nach Armstrong (Delta T >= 2.2 K, in 8-Bit ca. >= 22 Intensitätseinheiten)
-    if delta_t >= 22.0 then
+    -- 0. Deeskalation bilateral symmetrischer Muskelphysiologie (Waden / Oberschenkel):
+    -- Wenn kontralaterale Asymmetrie unter dem Armstrong-Schwellenwert (1.8 K) liegt und keine fokale Überhöhung vorliegt:
+    if contra_delta < 18.0 and prominence < 25.0 then
+        return {
+            risk_level = "BENIGN",
+            diagnosis_type = "BENIGN",
+            recommendation = "Physiologische Gewebesymmetrie / normaler Muskelbefund (Armstrong Asymmetrie Delta T < 1.8 K).",
+            score = 1.0
+        }
+    end
+
+    -- 1. Kritisches Kriterium nach Armstrong (Delta T >= 2.2 K, ca. >= 22 Einheiten):
+    if contra_delta >= 22.0 or (contra_delta >= 18.0 and prominence >= 30.0) then
         if is_sharp_edge and not has_halo then
-            -- Steile Hornhautgrenze + extreme Hitze = Entzündete Druckstelle unter isolierender Hyperkeratose
+            -- Steile Hornhautgrenze + Asymmetrie = Entzündete Druckstelle unter isolierender Hyperkeratose
             return {
                 risk_level = "CRITICAL",
                 diagnosis_type = "INFLAMED_PRESSURE_POINT",
                 recommendation = "AKUT GEFÄHRDET: Entzündete Druckstelle / Prä-Ulkus unter Hyperkeratose (Armstrong Delta T >= 2.2 K). Hohes Ulzerationsrisiko! Sofortige Entlastung (Total Contact Cast / orthopädischer Entlastungsschuh) und podologisches Debridement der Hornhautplatte indiziert.",
                 score = 9.8
             }
-        elseif circularity >= 0.12 then
+        elseif circularity >= 0.08 then
             -- Weicher Diffusions-Gradient oder perifokaler Halo = Echte Weichteilentzündung
             return {
                 risk_level = "CRITICAL",
@@ -48,10 +61,9 @@ function evaluate_hotspot(hotspot, stats)
             }
         end
 
-    -- 2. Grenzbefund / Moderate Hyperthermie (1.2 K bis 2.1 K, ca. 12 bis 21 Einheiten)
-    elseif delta_t >= 12.0 then
+    -- 2. Grenzbefund / Moderate Hyperthermie (1.2 K bis 2.1 K):
+    elseif (contra_delta >= 12.0 or prominence >= 25.0) and area >= 200 then
         if is_sharp_edge and not has_halo then
-            -- Typische mechanische Druckstelle ohne floride Weichteilinfektion
             return {
                 risk_level = "MODERATE",
                 diagnosis_type = "PRESSURE_POINT",
@@ -74,23 +86,13 @@ function evaluate_hotspot(hotspot, stats)
             }
         end
 
-    -- 3. Geringgradige Erwärmung / Physiologisch (Delta T < 1.2 K)
+    -- 3. Geringgradige Erwärmung / Physiologisch:
     else
-        if is_sharp_edge then
-            return {
-                risk_level = "LOW",
-                diagnosis_type = "PRESSURE_POINT",
-                recommendation = "Oberflächliche Verhornung / milde Druckstelle ohne akute Entzündungszeichen. Regelmäßige podologische Pflege ausreichend.",
-                score = 2.0
-            }
-        else
-            return {
-                risk_level = "BENIGN",
-                diagnosis_type = "BENIGN",
-                recommendation = "Physiologische Normaltemperatur / unkritischer Gewebebefund. Keine Intervention erforderlich.",
-                score = 1.0
-            }
-        end
+        return {
+            risk_level = "BENIGN",
+            diagnosis_type = "BENIGN",
+            recommendation = "Physiologische Normaltemperatur / unkritischer Gewebebefund. Keine Intervention erforderlich.",
+            score = 1.0
+        }
     end
 end
-
