@@ -241,3 +241,90 @@ func TestInspectDistMap(t *testing.T) {
 			distCenter, h.Region.EdgeGradient, h.Region.HaloDelta, h.Assessment.RiskLevel, h.Assessment.Score)
 	}
 }
+
+func TestEvaluateAllImages(t *testing.T) {
+	for i := 1; i <= 21; i++ {
+		imgPath := filepath.Join("..", "..", "..", "test-data", fmt.Sprintf("bild (%d).jpeg", i))
+		gray, err := imageutil.LoadImageAsGray(imgPath)
+		if err != nil {
+			t.Logf("Skip bild (%d): %v", i, err)
+			continue
+		}
+		cfg := pipeline.DefaultPipelineConfig()
+		res := pipeline.Run(gray, cfg)
+		t.Logf("=== BILD %d (%dx%d, Med=%.1f) -> Hotspots: %d ===", i, gray.Width, gray.Height, res.Stats.OrigMedian, len(res.Hotspots))
+		for j, h := range res.Hotspots {
+			r := h.Region
+			a := h.Assessment
+			t.Logf("  [%d] Box=[%d,%d..%d,%d] Center=(%d,%d) Max=%d ContraDelta=%.1f Prom=%.1f EdgeGrad=%.1f Area=%d Risk=%s Label=%s",
+				j, r.BoundingBox[0], r.BoundingBox[1], r.BoundingBox[2], r.BoundingBox[3],
+				r.CenterX, r.CenterY, r.MaxVal, r.ContraDelta, r.LocalProminence, r.EdgeGradient, r.AreaPixels,
+				a.RiskLevel, a.DiagnosisType)
+		}
+	}
+}
+
+func TestInspectBild20(t *testing.T) {
+	imgPath := filepath.Join("..", "..", "..", "test-data", "bild (20).jpeg")
+	gray, err := imageutil.LoadImageAsGray(imgPath)
+	if err != nil {
+		t.Fatalf("Failed to load bild (20): %v", err)
+	}
+	cfg := pipeline.DefaultPipelineConfig()
+	res := pipeline.Run(gray, cfg)
+
+	t.Logf("Bild 20 Result: %d hotspots, stats: origMedian=%.1f",
+		len(res.Hotspots), res.Stats.OrigMedian)
+
+	// Find X bounding range of bodyMask
+	minX, maxX, minY, maxY := 1440, 0, 1080, 0
+	for y := 0; y < gray.Height; y++ {
+		for x := 0; x < gray.Width; x++ {
+			if res.BodyMask.At(x, y) > 0 {
+				if x < minX { minX = x }
+				if x > maxX { maxX = x }
+				if y < minY { minY = y }
+				if y > maxY { maxY = y }
+			}
+		}
+	}
+	t.Logf("Total BodyMask bounding box: [%d, %d .. %d, %d]", minX, minY, maxX, maxY)
+
+	// Sample column sums every 50 pixels
+	var colSummary string
+	for x := 0; x < gray.Width; x += 100 {
+		sum := 0
+		for y := 0; y < gray.Height; y++ {
+			if res.BodyMask.At(x, y) > 0 {
+				sum++
+			}
+		}
+		colSummary += fmt.Sprintf("X%d:%d ", x, sum)
+	}
+	t.Logf("Col density: %s", colSummary)
+
+
+
+	for j, h := range res.Hotspots {
+		r := h.Region
+		a := h.Assessment
+		t.Logf("Spot %d: Box=%v Center=(%d,%d) Max=%d ContraDelta=%.1f Prom=%.1f EdgeGrad=%.1f Area=%d Status=%s Risk=%s Label=%s",
+			j, r.BoundingBox, r.CenterX, r.CenterY, r.MaxVal, r.ContraDelta, r.LocalProminence, r.EdgeGradient, r.AreaPixels,
+			r.Status, a.RiskLevel, a.DiagnosisType)
+
+		// Check what is at mirrored coordinates
+		contraX := gray.Width - 1 - r.CenterX
+		contraY := r.CenterY
+		maskVal := uint8(0)
+		rawVal := uint8(0)
+		if res.BodyMask != nil && contraX >= 0 && contraX < gray.Width && contraY >= 0 && contraY < gray.Height {
+			maskVal = res.BodyMask.At(contraX, contraY)
+			rawVal = gray.At(contraX, contraY)
+		}
+		t.Logf("  Mirrored coords across W/2: (%d,%d), MaskVal=%d, RawVal=%d",
+			contraX, contraY, maskVal, rawVal)
+	}
+}
+
+
+

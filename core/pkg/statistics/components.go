@@ -375,7 +375,7 @@ func ExtractHotspots(binaryMask *imageutil.GrayMatrix, original *imageutil.GrayM
 			if margin < 25 {
 				margin = 25
 			}
-			bottomMargin := margin + 10 // Limbs entering bottom of FOV
+			bottomMargin := margin + 30 // Limbs entering bottom of FOV (55 px margin)
 			if minX <= margin || minY <= margin || maxX >= (w-margin) || maxY >= (h-bottomMargin) {
 				hr.Status = "REJECTED_BORDER"
 			} else if opts.AnatomicalCutoffY > 0 && float64(minY) > float64(h)*opts.AnatomicalCutoffY {
@@ -386,10 +386,10 @@ func ExtractHotspots(binaryMask *imageutil.GrayMatrix, original *imageutil.GrayM
 				hr.Status = "REJECTED_SMALL"
 			} else if circularity < opts.MinCircularity {
 				hr.Status = "REJECTED_LINEAR"
-			} else if localProminence < 18.0 && area > 800 && maxDist > 20.0 {
-				// Rejection: Diffuse warm anatomical plateau (e.g. calf/thigh) without focal elevation
+			} else if (localProminence < 32.0 && edgeGradient < 4.5) || (localProminence < 20.0 && area > 600) {
+				// Rejection: Diffuse warm anatomical plateau (e.g. calf/thigh/heel) without steep focal gradient
 				hr.Status = "REJECTED_DIFFUSE_PLATEAU"
-			} else if opts.OrigMedian > 0 && maxVal < uint8(opts.OrigMedian) && edgeGradient < 10.0 && haloDelta < 5.0 {
+			} else if opts.OrigMedian > 0 && float64(maxVal) <= opts.OrigMedian {
 				hr.Status = "REJECTED_COLD"
 			} else {
 				hr.Status = "CONFIRMED_HOTSPOT"
@@ -471,7 +471,16 @@ func ConsolidateAndMergeHotspots(regions []HotspotRegion, original *imageutil.Gr
 				shouldMerge := false
 
 				// Merge adjacent clusters on the same anatomical foot/limb
-				if sameFoot && ((gapX <= 55 && gapY <= 55) || distCenters <= 165.0) {
+				// Forefoot digit clusters (Y < 0.55*H) often span across interdigital clefts (150-240 px distance)
+				isForefoot := float64(rA.CenterY) < float64(original.Height)*0.55 && float64(rB.CenterY) < float64(original.Height)*0.55
+				maxMergeDist := 175.0
+				maxGap := 65
+				if isForefoot {
+					maxMergeDist = 240.0
+					maxGap = 100
+				}
+
+				if sameFoot && ((gapX <= maxGap && gapY <= maxGap) || distCenters <= maxMergeDist) {
 					shouldMerge = true
 				}
 

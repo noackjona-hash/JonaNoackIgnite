@@ -677,15 +677,16 @@ func Run(src *imageutil.GrayMatrix, cfg PipelineConfig) AnalysisResult {
 		"2D-Laplace-Operator nabla^2 T am Fokus-Kern zur Bestätigung aktiver endogener Entzündungswärmequellen.", s39Start)
 
 	// Stage 40: Armstrong Contralateral / Baseline Hyperthermia Assessment
-	// Stage 40: Armstrong Contralateral / Baseline Hyperthermia Assessment
 	s40Start := time.Now()
+	leftFoot, rightFoot, hasTwoFeet := detectBilateralFeet(bodyMask)
+
 	for idx := range regions {
 		r := &regions[idx]
-		contraX := w - 1 - r.CenterX
-		contraY := r.CenterY
+		contraX, contraY := mapHomologousContralateral(r.CenterX, r.CenterY, w, h, leftFoot, rightFoot, hasTwoFeet)
 		var contraMax uint8
-		for dy := -35; dy <= 35; dy++ {
-			for dx := -35; dx <= 35; dx++ {
+		searchRadius := 45
+		for dy := -searchRadius; dy <= searchRadius; dy++ {
+			for dx := -searchRadius; dx <= searchRadius; dx++ {
 				nx := contraX + dx
 				ny := contraY + dy
 				if nx >= 0 && nx < w && ny >= 0 && ny < h {
@@ -701,11 +702,11 @@ func Run(src *imageutil.GrayMatrix, cfg PipelineConfig) AnalysisResult {
 		if contraMax > 0 {
 			r.ContraDelta = math.Round(float64(int(r.MaxVal)-int(contraMax))*10) / 10
 		} else {
-			r.ContraDelta = float64(r.MaxVal) - stats.OrigMedian
+			r.ContraDelta = r.LocalProminence
 		}
 	}
 	addStage(40, 7, phase7Name, "Armstrong Contralateral / Baseline Hyperthermia Assessment",
-		"Internationale Armstrong-Klassifikation (Delta T >= 2.2 K) zur Bestimmung des akuten Ulzerationsrisikos.", s40Start)
+		"Internationale Armstrong-Klassifikation (Delta T >= 2.2 K) via homologer anatomischer Fußregistrierung.", s40Start)
 
 	// Stage 41: Local Focal Prominence & Diffuse Plateau Suppression
 	s41Start := time.Now()
@@ -717,12 +718,15 @@ func Run(src *imageutil.GrayMatrix, cfg PipelineConfig) AnalysisResult {
 		}
 
 		// Biophysical Criterion for Bilateral Muscular/Physiological Plateaus:
-		// Symmetrical bilateral warmth (< 1.8 K difference between limbs) on broad proximal muscle tissue
+		// 1. Symmetrische bilaterale Wärme (< 1.8 K Unterschied am homologen Referenzort) im proximalen Gewebe
 		isSymmetric := r.ContraDelta < 18.0
-		isProximalMuscleZone := float64(r.CenterY) > float64(h)*0.55 || r.AreaPixels > 1000
+		isProximalZone := float64(r.CenterY) > float64(h)*0.55 || r.AreaPixels > 1200
 		isFlatLaplacian := r.ThermalLaplacian > -2.5 || r.LocalProminence < 25.0
 
-		if isSymmetric && (isProximalMuscleZone || isFlatLaplacian) {
+		// 2. Diffuse physiologische Fersen-/Muskel-Belastungszone ohne fokale Überhöhung
+		isDiffuseHeel := float64(r.CenterY) > float64(h)*0.65 && r.LocalProminence < 45.0 && r.ThermalLaplacian > -3.0
+
+		if (isSymmetric && (isProximalZone || isFlatLaplacian)) || isDiffuseHeel {
 			r.Status = "REJECTED_DIFFUSE_PLATEAU"
 			suppressedPlateaus++
 		}
@@ -866,3 +870,172 @@ func Run(src *imageutil.GrayMatrix, cfg PipelineConfig) AnalysisResult {
 		Corrected3DImage: corrected3D,
 	}
 }
+
+// FootCompartment represents an anatomically segmented foot limb compartment.
+type FootCompartment struct {
+	MinX, MaxX int
+	MinY, MaxY int
+	CenterX, CenterY int
+	PixelCount int
+}
+
+// detectBilateralFeet locates the left and right foot by analyzing inter-pedal sagittal density profile.
+func detectBilateralFeet(bodyMask *imageutil.GrayMatrix) (lf, rf *FootCompartment, hasTwoFeet bool) {
+	if bodyMask == nil {
+		return nil, nil, false
+	}
+	w, h := bodyMask.Width, bodyMask.Height
+	colSums := make([]int, w)
+	totalTissue := 0
+	firstX, lastX := -1, -1
+	for x := 0; x < w; x++ {
+		for y := 0; y < h; y++ {
+			if bodyMask.At(x, y) > 0 {
+				colSums[x]++
+				totalTissue++
+			}
+		}
+		if colSums[x] > 0 {
+			if firstX == -1 {
+				firstX = x
+			}
+			lastX = x
+		}
+	}
+	if totalTissue < 5000 || firstX == -1 || (lastX-firstX) < 250 {
+		return nil, nil, false
+	}
+
+	// Moving-average smoothing of column profile (window 31)
+	smoothed := make([]float64, w)
+	radius := 15
+	for x := firstX; x <= lastX; x++ {
+		sum := 0
+		cnt := 0
+		for dx := -radius; dx <= radius; dx++ {
+			nx := x + dx
+			if nx >= 0 && nx < w {
+				sum += colSums[nx]
+				cnt++
+			}
+		}
+		smoothed[x] = float64(sum) / float64(cnt)
+	}
+
+	// Search for inter-pedal sagittal valley within the central 60% of foot span
+	spanStart := firstX + int(float64(lastX-firstX)*0.20)
+	spanEnd := firstX + int(float64(lastX-firstX)*0.80)
+
+	minVal := 1e9
+	valleyX := -1
+	for x := spanStart; x <= spanEnd; x++ {
+		if smoothed[x] < minVal {
+			minVal = smoothed[x]
+			valleyX = x
+		}
+	}
+
+	peakLeft := 0.0
+	for x := firstX; x < valleyX; x++ {
+		if smoothed[x] > peakLeft {
+			peakLeft = smoothed[x]
+		}
+	}
+	peakRight := 0.0
+	for x := valleyX + 1; x <= lastX; x++ {
+		if smoothed[x] > peakRight {
+			peakRight = smoothed[x]
+		}
+	}
+
+	lowerPeak := peakLeft
+	if peakRight < lowerPeak {
+		lowerPeak = peakRight
+	}
+	if lowerPeak < 50.0 || (minVal > lowerPeak*0.60 && minVal > 50.0) {
+		return nil, nil, false
+	}
+
+	lf = &FootCompartment{MinX: w, MaxX: 0, MinY: h, MaxY: 0}
+	rf = &FootCompartment{MinX: w, MaxX: 0, MinY: h, MaxY: 0}
+
+	for y := 0; y < h; y++ {
+		for x := firstX; x <= lastX; x++ {
+			if bodyMask.At(x, y) > 0 {
+				if x <= valleyX {
+					lf.PixelCount++
+					if x < lf.MinX { lf.MinX = x }
+					if x > lf.MaxX { lf.MaxX = x }
+					if y < lf.MinY { lf.MinY = y }
+					if y > lf.MaxY { lf.MaxY = y }
+					lf.CenterX += x
+					lf.CenterY += y
+				} else {
+					rf.PixelCount++
+					if x < rf.MinX { rf.MinX = x }
+					if x > rf.MaxX { rf.MaxX = x }
+					if y < rf.MinY { rf.MinY = y }
+					if y > rf.MaxY { rf.MaxY = y }
+					rf.CenterX += x
+					rf.CenterY += y
+				}
+			}
+		}
+	}
+
+	if lf.PixelCount > 1000 && rf.PixelCount > 1000 {
+		lf.CenterX /= lf.PixelCount
+		lf.CenterY /= lf.PixelCount
+		rf.CenterX /= rf.PixelCount
+		rf.CenterY /= rf.PixelCount
+		return lf, rf, true
+	}
+	return nil, nil, false
+}
+
+// mapHomologousContralateral maps a point (x, y) on one foot to its homologous anatomical counterpart on the opposite foot.
+func mapHomologousContralateral(x, y, w, h int, lf, rf *FootCompartment, hasTwoFeet bool) (int, int) {
+	if !hasTwoFeet || lf == nil || rf == nil {
+		return w - 1 - x, y
+	}
+
+	wL := lf.MaxX - lf.MinX + 1
+	hL := lf.MaxY - lf.MinY + 1
+	wR := rf.MaxX - rf.MinX + 1
+	hR := rf.MaxY - rf.MinY + 1
+
+	if wL <= 0 || hL <= 0 || wR <= 0 || hR <= 0 {
+		return w - 1 - x, y
+	}
+
+	if x <= lf.MaxX {
+		// Point is on Left Foot.
+		// Medial edge of left foot is at lf.MaxX (facing the sagittal valley).
+		u := float64(lf.MaxX - x) / float64(wL)
+		if u < 0 { u = 0 }
+		if u > 1 { u = 1 }
+		v := float64(y - lf.MinY) / float64(hL)
+		if v < 0 { v = 0 }
+		if v > 1 { v = 1 }
+
+		// Map to Right Foot: medial edge is at rf.MinX.
+		contraX := rf.MinX + int(math.Round(u * float64(wR)))
+		contraY := rf.MinY + int(math.Round(v * float64(hR)))
+		return contraX, contraY
+	} else {
+		// Point is on Right Foot.
+		// Medial edge of right foot is at rf.MinX.
+		u := float64(x - rf.MinX) / float64(wR)
+		if u < 0 { u = 0 }
+		if u > 1 { u = 1 }
+		v := float64(y - rf.MinY) / float64(hR)
+		if v < 0 { v = 0 }
+		if v > 1 { v = 1 }
+
+		// Map to Left Foot: medial edge is at lf.MaxX.
+		contraX := lf.MaxX - int(math.Round(u * float64(wL)))
+		contraY := lf.MinY + int(math.Round(v * float64(hL)))
+		return contraX, contraY
+	}
+}
+
