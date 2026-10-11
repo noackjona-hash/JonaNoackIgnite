@@ -89,7 +89,7 @@ const en = {
 const links = [['/', 'nav.home', 'Start', 'home'], ['/technik.html', 'nav.tech', 'Technik', 'tech'], ['/pipeline.html', 'nav.pipeline', 'Pipeline', 'pipeline'], ['/klinik.html', 'nav.clinic', 'Klinik', 'clinic'], ['/team.html', 'nav.team', 'Team', 'team']];
 const page = document.body.dataset.page;
 
-const logo = id => `<span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="ignCore${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#fde047"/><stop offset="100%" stop-color="#ea580c"/></linearGradient></defs><path d="M12 2.2C13.5 4.2 18.8 9.8 18.8 14.6C18.8 18.5 15.8 21.6 12 21.6C8.2 21.6 5.2 18.5 5.2 14.6C5.2 11.2 7.6 7.6 9.8 5.2C10.2 6.8 10.9 8.2 12.4 8.2C11.5 6.0 11.7 4.2 12 2.2Z" fill="#ffffff"/><path d="M12 11.4C13.6 13.0 14.5 14.5 14.5 16.0C14.5 17.5 13.4 18.6 12 18.6C10.6 18.6 9.5 17.5 9.5 16.0C9.5 14.5 10.4 13.0 12 11.4Z" fill="url(#ignCore${id})"/></svg></span>`;
+const logo = id => `<span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.2C13.5 4.2 18.8 9.8 18.8 14.6C18.8 18.5 15.8 21.6 12 21.6C8.2 21.6 5.2 18.5 5.2 14.6C5.2 11.2 7.6 7.6 9.8 5.2C10.2 6.8 10.9 8.2 12.4 8.2C11.5 6.0 11.7 4.2 12 2.2Z" fill="#ffffff"/><path d="M12 11.4C13.6 13.0 14.5 14.5 14.5 16.0C14.5 17.5 13.4 18.6 12 18.6C10.6 18.6 9.5 17.5 9.5 16.0C9.5 14.5 10.4 13.0 12 11.4Z" fill="#dc2626"/></svg></span>`;
 
 document.getElementById('site-header').innerHTML = `
 <div class="progress" id="progress"></div>
