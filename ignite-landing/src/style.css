@@ -51,12 +51,24 @@ h3 { font-size: 1.28rem; letter-spacing: -.015em; }
 .nav { position: sticky; top: 0; z-index: 60; background: rgba(250,250,248,.94); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
 .nav-in { display: flex; align-items: center; justify-content: space-between; height: var(--nav-h); gap: 12px; }
 .brand { display: flex; align-items: center; gap: 12px; color: var(--ink); position: relative; z-index: 3; }
-.brand-mark { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: #0b1220; flex: none; }
-.brand-mark svg { width: 32px; height: 32px; }
-.brand-mark .lg-ring { fill: none; stroke: #22d3ee; stroke-width: 1.2; opacity: .55; stroke-dasharray: 3 2.4; }
-.brand-mark .lg-tick { fill: none; stroke: #67e8f9; stroke-width: 1.6; stroke-linecap: round; }
-.brand-word { display: grid; line-height: 1; font-weight: 700; font-size: 1.2rem; letter-spacing: .14em; color: var(--ink); }
-.brand-word small { font: 500 .54rem var(--font); letter-spacing: .2em; text-transform: uppercase; color: var(--muted); margin-top: 5px; display: none; }
+.brand-mark {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(140deg, #0284c7 0%, #0369a1 100%);
+  box-shadow: 0 4px 14px -2px rgba(2, 132, 199, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  flex: none;
+  transition: transform .25s ease, box-shadow .25s ease;
+}
+.brand:hover .brand-mark {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px -2px rgba(2, 132, 199, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+.brand-mark svg { width: 24px; height: 24px; }
+.brand-word { display: grid; line-height: 1.1; font-weight: 700; font-size: 1.25rem; letter-spacing: .08em; color: var(--ink); }
+.brand-word small { font: 600 .55rem var(--font); letter-spacing: .16em; text-transform: uppercase; color: var(--muted); margin-top: 3px; display: none; }
 .nav-actions { display: flex; align-items: center; gap: 10px; position: relative; z-index: 3; }
 .lang { display: flex; border: 1px solid var(--line); border-radius: 10px; padding: 3px; background: #fff; }
 .lang button { border: 0; background: none; font: 600 .78rem var(--font); min-width: 40px; min-height: 36px; border-radius: 7px; cursor: pointer; color: var(--muted); }
