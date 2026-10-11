@@ -1,218 +1,135 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IGNITE – Automatische Entzündungsdetektion (Jugend forscht 2026)</title>
-  <meta name="description" content="IGNITE ist ein Jugend forscht Projekt von Jona Noack zur Erkennung thermischer Anomalien an Füßen mittels FLIR-Wärmebildern.">
-  
-  <!-- Google Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
-  
-  <link rel="icon" type="image/png" href="/images/logo.png">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IGNITE – Früherkennung diabetischer Fußulzera per Infrarot-Thermografie</title>
+  <meta name="description" content="IGNITE ist eine deterministische Infrarot-Thermografie-Workstation zur automatisierten Früherkennung subklinischer Gewebeentzündungen und diabetischer Fußulzera. Jugend forscht 2026." />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 </head>
-<body>
-  <!-- Ambient background glow elements -->
-  <div class="glow-circle glow-circle-1"></div>
-  <div class="glow-circle glow-circle-2"></div>
+<body data-page="home">
+  <div id="site-header"></div>
 
-  <!-- Navigation -->
-  <nav class="navbar" id="navbar">
-    <div class="nav-container">
-      <a href="#" class="logo-area">
-        <img src="/images/logo.png" alt="IGNITE Logo" class="nav-logo">
-        <span class="nav-brand">IGNITE</span>
-      </a>
-      <ul class="nav-links">
-        <li><a href="#showcase" id="link-showcase">Pipeline-Schritte</a></li>
-        <li><a href="#features" id="link-features">Funktionsweise</a></li>
-        <li><a href="#download" class="nav-cta" id="link-download">Download</a></li>
-      </ul>
-    </div>
-  </nav>
-
-  <!-- Hero Section -->
-  <header class="hero-section">
-    <div class="hero-bg-overlay"></div>
-    <div class="hero-container">
-      <div class="hero-content">
-        <div class="badge">Jugend forscht 2026</div>
-        <h1>Automatische <span class="highlight">Entzündungsdetektion</span> auf Wärmebildern</h1>
-        <p class="hero-desc">
-          Ein Forschungsprojekt zur frühzeitigen, berührungslosen Erkennung thermischer Anomalien an Füßen und Gelenken. Entwickelt mit Rust und PyTorch.
-        </p>
-        <div class="hero-buttons">
-          <a href="/IGNITE_Setup_v5.0.0.exe" class="btn-primary" id="btn-hero-download" download>
-            <span class="btn-icon">📥</span> Setup herunterladen
-          </a>
-          <a href="#showcase" class="btn-secondary" id="btn-hero-showcase">
-            Pipeline ansehen
-          </a>
-        </div>
-      </div>
-      <div class="hero-image-wrapper">
-        <img src="/images/step4.png" alt="IGNITE Auswertungsoverlay" class="hero-mockup">
-        <div class="glow-effect"></div>
-      </div>
-    </div>
-  </header>
-
-  <!-- Interactive Pipeline Showcase -->
-  <section id="showcase" class="showcase-section">
-    <div class="container">
-      <div class="section-header reveal">
-        <h2>Die Bildanalyse-Pipeline</h2>
-        <p class="section-subtitle">
-          Vom rohen Infrarotbild bis zur fertigen Hotspot-Lokalisierung – Schritt für Schritt.
-        </p>
-      </div>
-
-      <!-- Tabs Navigation -->
-      <div class="showcase-tabs reveal" role="tablist">
-        <button class="tab-btn active" data-step="1" id="tab-btn-1" role="tab" aria-selected="true">
-          1. Originalbild
-        </button>
-        <button class="tab-btn" data-step="2" id="tab-btn-2" role="tab" aria-selected="false">
-          2. Rumpf-Maske
-        </button>
-        <button class="tab-btn" data-step="3" id="tab-btn-3" role="tab" aria-selected="false">
-          3. Hitze-Differenz
-        </button>
-        <button class="tab-btn" data-step="4" id="tab-btn-4" role="tab" aria-selected="false">
-          4. Hotspots (Rust)
-        </button>
-      </div>
-
-      <!-- Showcase Display Box -->
-      <div class="showcase-display reveal">
-        <div class="display-image-container">
-          <img src="/images/step1.png" alt="Originales Infrarotbild" id="showcase-image" class="showcase-img">
-        </div>
-        <div class="display-info">
-          <h3 id="showcase-title">Schritt 1: Infrarot-Originalbild</h3>
-          <p id="showcase-description">
-            Das rohe Infrarotbild direkt aus der Wärmebildkamera. Die Farbskalierung bildet die ungefilterte Oberflächentemperatur des Fußes ab. Zu diesem Zeitpunkt sind Rauschen, Hosenbeine und Raum-Hintergrundreflexionen noch voll vorhanden.
-          </p>
-          <ul class="showcase-bullets" id="showcase-bullets">
-            <li>Kalibrierung über anpassbaren Temperatur-Offset</li>
-            <li>Präzise Pixel-Temperatur-Konvertierung</li>
-          </ul>
-        </div>
-      </div>
-
-      <!-- Interactive Before/After Comparison Slider -->
-      <div class="comparison-title-row reveal">
-        <h3>Interaktiver Vorher-Nachher-Vergleich</h3>
-        <p>Ziehe den Regler nach links und rechts, um das originale Wärmebild direkt mit den segmentierten Hotspots der IGNITE-Pipeline zu vergleichen.</p>
-      </div>
-
-      <div class="comparison-slider-wrapper reveal">
-        <div class="slider-container">
-          <!-- Vorher (Original) -->
-          <div class="image-before">
-            <img src="/images/step1.png" alt="Original Infrarotbild">
-            <span class="image-label label-before">1. Originales Wärmebild</span>
+  <main>
+    <section class="hero">
+      <div class="container hero-grid">
+        <div class="hero-copy">
+          <span class="eyebrow" data-i18n="home.eyebrow">Jugend forscht 2026 · Arbeitswelt / Informatik</span>
+          <h1><span data-i18n="home.h1a">Entzündung sehen,</span><br /><span class="grad" data-i18n="home.h1b">bevor sie zum Ulkus wird.</span></h1>
+          <p class="lead" data-i18n="home.lead">IGNITE analysiert Infrarot-Thermogramme vollautomatisch, deterministisch und berührungslos – zur Früherkennung subklinischer Gewebeentzündungen, diabetischer Fußulzera und vaskulärer Durchblutungsstörungen.</p>
+          <div class="cta-row">
+            <a class="btn btn-primary" data-download href="#">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 21h16"/></svg>
+              <span data-i18n="common.download">Für Windows herunterladen</span>
+            </a>
+            <a class="btn btn-ghost" href="/pipeline.html"><span data-i18n="home.cta2">Pipeline ansehen</span> →</a>
           </div>
-          <!-- Nachher (Hotspots) -->
-          <div class="image-after">
-            <img src="/images/step4.png" alt="Detektierte Hotspots">
-            <span class="image-label label-after">4. Segmentierte Hotspots (IGNITE)</span>
+          <div class="hero-meta">
+            <span data-i18n="home.meta1">Lokal &amp; DSGVO-orientiert</span>
+            <span data-i18n="home.meta2">Reproduzierbar (bit-identisch)</span>
+            <span data-i18n="home.meta3">Regeln ohne Neukompilierung anpassbar</span>
           </div>
-          <!-- Slider-Handle -->
-          <div class="slider-handle" id="slider-handle"></div>
+        </div>
+
+        <div class="reveal">
+          <div class="curtain" id="curtain" style="--pos:50%">
+            <img src="/images/pap_stage7_final_diagnosis_overlay.png" alt="Thermogramm mit diagnostischem Befund-Overlay" />
+            <img class="top" src="/images/pap_stage0_raw_thermal.png" alt="Roh-Thermogramm" />
+            <div class="line"></div>
+            <div class="handle">◀ ▶</div>
+            <span class="tag l" data-i18n="home.tagL">ROH-INFRAROT</span>
+            <span class="tag r" data-i18n="home.tagR">DIAGNOSE</span>
+            <input type="range" min="2" max="98" value="50" aria-label="Vorhang-Wipe" />
+          </div>
+          <p class="curtain-note" data-i18n="home.curtainNote">Wie in der Workstation: Vorhang ziehen und Roh-Thermogramm mit Befund vergleichen.</p>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- Technical Features Grid -->
-  <section id="features" class="features-section">
-    <div class="container">
-      <div class="section-header reveal">
-        <h2>Technische Kernkomponenten des Projekts</h2>
-        <p class="section-subtitle">
-          Entwickelt für eine zuverlässige und wiederholbare Segmentierung auf handelsüblichen Computern.
-        </p>
+    <section class="stats">
+      <div class="container stats-grid">
+        <div class="stat reveal"><b>42</b><span data-i18n="home.s1">deterministische Pipeline-Stufen</span></div>
+        <div class="stat reveal"><b>6</b><span data-i18n="home.s2">handgeschriebene AVX2-Assembler-Kernels</span></div>
+        <div class="stat reveal"><b>~169,5&nbsp;ms</b><span data-i18n="home.s3">Gesamtlaufzeit bei 1440×1080 (gemessen)</span></div>
+        <div class="stat reveal"><b>ΔT ≥ 2,2&nbsp;K</b><span data-i18n="home.s4">Armstrong-Kriterium für den Seitenvergleich</span></div>
       </div>
+    </section>
 
-      <div class="features-grid">
-        <!-- Feature 1 -->
-        <div class="feature-card reveal reveal-delay-1">
-          <div class="feature-icon">⚡</div>
-          <h3>Rust & PyTorch Hybrid-Pipeline</h3>
-          <p>
-            Für eine verzögerungsfreie Berechnung wurde der Binarisierungs- und Filteralgorithmus nativ in Rust geschrieben. Auf Systemen mit Grafikkarte beschleunigt PyTorch die Segmentierung.
-          </p>
+    <section>
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="eyebrow" data-i18n="home.pEyebrow">Das Problem</span>
+          <h2 data-i18n="home.pH">Ein Ulkus kündigt sich durch Wärme an – lange bevor man es sieht.</h2>
+          <p class="lead" data-i18n="home.pLead">Beim diabetischen Fußsyndrom gilt eine Temperaturdifferenz von ≥ 2,2 K zwischen kontralateralen Stellen als signifikanter Prädiktor für ein bevorstehendes neuropathisches Ulkus (Armstrong et al., 2007). IGNITE macht diese Auswertung automatisch, nachvollziehbar und schnell.</p>
         </div>
-
-        <!-- Feature 2 -->
-        <div class="feature-card reveal reveal-delay-2">
-          <div class="feature-icon">🩺</div>
-          <h3>Podologische Symmetrieanalyse</h3>
-          <p>
-            Teilt die Fußmasken automatisch in Vorfuß, Mittelfuß und Rückfuß auf, um den linken und rechten Fuß miteinander zu vergleichen. Das System warnt bei einer Abweichung von über 1.0 Kelvin.
-          </p>
-        </div>
-
-        <!-- Feature 3 -->
-        <div class="feature-card reveal reveal-delay-3">
-          <div class="feature-icon">🎯</div>
-          <h3>Interaktive ROI-Messung</h3>
-          <p>
-            Ermöglicht das freie Zeichnen eines Analysefensters (Region of Interest) per Maus. Die Software ermittelt in Echtzeit Maximal-, Minimal- und Durchschnittswerte für diesen Bildausschnitt.
-          </p>
-        </div>
-
-        <!-- Feature 4 -->
-        <div class="feature-card reveal reveal-delay-4">
-          <div class="feature-icon">📁</div>
-          <h3>Lokaler Audit-Trail</h3>
-          <p>
-            Zur Nachvollziehbarkeit speichert die Anwendung alle Zwischenbilder und Messwerte in ein lokales Protokollverzeichnis ab und exportiert auf Wunsch einen interaktiven HTML-Bericht.
-          </p>
+        <div class="grid-3">
+          <article class="card reveal">
+            <div class="icon"><svg viewBox="0 0 24 24"><path d="M14 4v10.5a4 4 0 1 1-4 0V4a2 2 0 1 1 4 0Z"/></svg></div>
+            <h3 data-i18n="home.f1h">Berührungslose Thermografie</h3>
+            <p data-i18n="home.f1p">Langwelliges Infrarot (LWIR, 8–14 µm) macht Hyperthermien sichtbar – ohne Kontakt, ohne Strahlung.</p>
+          </article>
+          <article class="card reveal">
+            <div class="icon"><svg viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg></div>
+            <h3 data-i18n="home.f2h">Deterministisch &amp; erklärbar</h3>
+            <p data-i18n="home.f2p">Keine Zufallswerte, keine Black Box: Derselbe Rohdatensatz liefert immer denselben Befund – jede der 42 Stufen ist einsehbar.</p>
+          </article>
+          <article class="card reveal">
+            <div class="icon"><svg viewBox="0 0 24 24"><path d="m13 2-9 12h7l-1 8 9-12h-7l1-8Z"/></svg></div>
+            <h3 data-i18n="home.f3h">Hardware-nah schnell</h3>
+            <p data-i18n="home.f3p">Go-Pipeline mit AVX2-SIMD-Kernels verarbeitet 32 Pixel pro Takt – ohne C-Compiler, direkt im Go-Assembler.</p>
+          </article>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- Download & Action Section -->
-  <section id="download" class="download-section">
-    <div class="container">
-      <div class="download-card reveal">
-        <div class="download-badge">Jugend forscht Projektdatei</div>
-        <h2>Desktop-Anwendung herunterladen</h2>
-        <p>
-          Lade das fertige Windows-Setup herunter, um die Software direkt auszuprobieren. Im Installationsverzeichnis sind passende Infrarot-Testbilder enthalten.
-        </p>
-        <div class="download-cta-row">
-          <a href="/IGNITE_Setup_v5.0.0.exe" class="btn-primary btn-large" id="btn-download-win" download>
-            💾 Windows-Installer laden (.exe)
-          </a>
+    <section>
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="eyebrow" data-i18n="home.wEyebrow">So funktioniert es</span>
+          <h2 data-i18n="home.wH">Vier Phasen vom Rohbild zum Befund</h2>
         </div>
-        <div class="download-meta">
-          <span>Version 5.0.0</span> • 
-          <span>Größe: ~70 MB (inkl. PyTorch / C++ Runtimes)</span> • 
-          <span>System: Windows 10/11 (64-Bit)</span>
+        <div class="phases-wrap reveal">
+          <div class="phases">
+            <div class="phase"><small data-i18n="home.ph1s">Stufen 1–10</small><h3 data-i18n="home.ph1h">Vorverarbeitung</h3><p data-i18n="home.ph1p">Otsu-Segmentierung trennt Gewebe vom Hintergrund; Chamfer-Distanzerosion unterdrückt Randartefakte.</p></div>
+            <div class="phase"><small data-i18n="home.ph2s">Stufen 11–20</small><h3 data-i18n="home.ph2h">Hotspot-Detektion</h3><p data-i18n="home.ph2p">Morphologischer White Top-Hat isoliert fokale Temperaturspitzen von großflächigen Gradienten.</p></div>
+            <div class="phase"><small data-i18n="home.ph3s">Stufen 21–30</small><h3 data-i18n="home.ph3h">Robuste Schwelle</h3><p data-i18n="home.ph3p">MAD-basierte Outlier-Erkennung (Median + k·1,4826·MAD) statt anfälliger Mittelwerte.</p></div>
+            <div class="phase"><small data-i18n="home.ph4s">Stufen 31–42</small><h3 data-i18n="home.ph4h">Klassifikation</h3><p data-i18n="home.ph4p">Frangi-Gefäßfilter, bilateraler Seitenvergleich und Lua-Regeln liefern den klinischen Befund.</p></div>
+          </div>
+        </div>
+        <div class="cta-row reveal" style="margin-top:32px"><a class="btn btn-ghost" href="/pipeline.html"><span data-i18n="home.wMore">Alle Stufen mit Bildern</span> →</a></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <div class="band reveal">
+          <div class="section-head" style="margin-bottom:36px">
+            <span class="eyebrow" style="background:rgba(34,211,238,.12);border-color:rgba(34,211,238,.3);color:#67e8f9" data-i18n="home.aEyebrow">Architektur</span>
+            <h2 data-i18n="home.aH">Fünf Technologien, ein Ziel.</h2>
+            <p class="lead" data-i18n="home.aLead">C# für die klinische Oberfläche, Go für die Pipeline, Assembler für den Hotspot-Inner-Loop, Lua für austauschbare Medizinlogik und SQLite für das revisionssichere Audit-Log.</p>
+          </div>
+          <div class="chips">
+            <span class="chip">C# · .NET 10 · WPF</span><span class="chip">Go 1.24+</span><span class="chip">x86_64 AVX2</span><span class="chip">Lua 5.1 (GopherLua)</span><span class="chip">SQLite · SHA-256</span>
+          </div>
+          <div class="cta-row" style="margin-top:32px"><a class="btn btn-primary" href="/technik.html"><span data-i18n="home.aMore">Technik im Detail</span> →</a></div>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- Footer -->
-  <footer class="main-footer">
-    <div class="container footer-container">
-      <div class="footer-left">
-        <span class="footer-logo">IGNITE</span>
-        <p class="footer-text">Entzündungsdetektion für Jugend forscht 2026 — Jona Noack</p>
+    <section>
+      <div class="container cta reveal">
+        <span class="eyebrow" data-i18n="home.cEyebrow">Ausprobieren</span>
+        <h2 data-i18n="home.cH">IGNITE Medical Suite v5.0.0</h2>
+        <p class="lead" data-i18n="home.cLead">Windows-Installer mit Workstation, Rechenkern, Lua-Regeln und Testdaten – oder direkt den Quellcode auf GitHub ansehen.</p>
+        <div class="cta-row">
+          <a class="btn btn-primary" data-download href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 21h16"/></svg><span data-i18n="common.download">Für Windows herunterladen</span></a>
+          <a class="btn btn-ghost" data-repo href="#" target="_blank" rel="noopener"><span data-i18n="common.github">Quellcode auf GitHub</span> ↗</a>
+        </div>
       </div>
-      <div class="footer-right">
-        <p class="copyright">&copy; 2026 Jona Noack.</p>
-      </div>
-    </div>
-  </footer>
+    </section>
+  </main>
 
+  <div id="site-footer"></div>
   <script type="module" src="/src/main.js"></script>
 </body>
 </html>

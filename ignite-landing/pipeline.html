@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pipeline – 42 Stufen vom Thermogramm zum Befund | IGNITE</title>
+  <meta name="description" content="Die deterministische 42-stufige Bildverarbeitungs-Pipeline von IGNITE: Otsu, Chamfer, Top-Hat, MAD-Schwelle, Frangi-Gefäßfilter – mit echten Zwischenergebnissen." />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+</head>
+<body data-page="pipeline">
+  <div id="site-header"></div>
+  <main>
+    <section class="page-head" style="padding-bottom:0">
+      <div class="container" style="display:grid;gap:22px">
+        <span class="eyebrow" data-i18n="pipe.eyebrow">Pipeline</span>
+        <h1 data-i18n-html="pipe.h1">42 Stufen.<br /><span class="grad">Jede nachvollziehbar.</span></h1>
+        <p class="lead" data-i18n="pipe.lead">Von der Rohaufnahme bis zum klinischen Befund – mit realen Zwischenergebnissen der Pipeline an einem Beispiel-Thermogramm.</p>
+      </div>
+    </section>
+
+    <section>
+      <div class="container steps">
+        <article class="step reveal">
+          <div class="step-img"><img loading="lazy" src="/images/pap_stage0_raw_thermal.png" alt="Stufe 0: Roh-Thermogramm" /></div>
+          <div class="step-copy"><span class="chip">Phase 1</span><h2 style="font-size:2rem" data-i18n="pipe.s0h">Roh-Thermogramm</h2><p data-i18n="pipe.s0p">Die radiometrische Aufnahme (LWIR) als Ausgangsdaten. Alle weiteren Stufen arbeiten deterministisch auf diesen Werten.</p></div>
+        </article>
+        <article class="step reveal">
+          <div class="step-img"><img loading="lazy" src="/images/pap_stage1_body_mask.png" alt="Stufe 1: Körpermaske" /></div>
+          <div class="step-copy"><span class="chip">Phase 1</span><h2 style="font-size:2rem" data-i18n="pipe.s1h">Körpermaske</h2><p data-i18n="pipe.s1p">Otsu-Schwellenwertfilterung trennt Gewebe vom Raumhintergrund. Eine 2-Pass-Chamfer-L2-Distanztransformation erodiert den Rand kontrolliert und unterdrückt Reflexionsartefakte.</p></div>
+        </article>
+        <article class="step reveal">
+          <div class="step-img"><img loading="lazy" src="/images/pap_stage2_3d_depth_map.png" alt="Stufe 2: 3D-Tiefenkarte" /></div>
+          <div class="step-copy"><span class="chip">3D</span><h2 style="font-size:2rem" data-i18n="pipe.s2h">3D-Tiefenkarte</h2><p data-i18n="pipe.s2p">Aus der Maske wird eine Oberflächen-Tiefenkarte rekonstruiert – Grundlage der Lambert-Winkelkompensation.</p></div>
+        </article>
+        <article class="step reveal">
+          <div class="step-img"><img loading="lazy" src="/images/pap_stage3_corrected_thermal.png" alt="Stufe 3: Korrigiertes Thermogramm" /></div>
+          <div class="step-copy"><span class="chip">3D</span><h2 style="font-size:2rem" data-i18n="pipe.s3h">Kantenkorrigiertes Thermogramm</h2><p data-i18n="pipe.s3p">Die Lambertian-3D-Kantenkorrektur gleicht winkelbedingte Abstrahlungsverluste an gekrümmten Rändern aus – Entzündungsherde an Zehenkuppen bleiben erhalten.</p></div>
+        </article>
+        <article class="step reveal">
+          <div class="step-img"><img loading="lazy" src="/images/pap_stage4_tophat_diff.png" alt="Stufe 4: Top-Hat-Differenz" /></div>
+          <div class="step-copy"><span class="chip">Phase 2</span><h2 style="font-size:2rem" data-i18n="pipe.s4h">Top-Hat-Differenz</h2><p data-i18n="pipe.s4p">Der morphologische White Top-Hat isoliert fokale Temperaturspitzen von großflächigen Hintergrundgradienten:</p>
+            <div class="formula">WTH(I) = I − (I ∘ B)<br /><em>B: flaches, kreisförmiges Strukturelement</em></div></div>
+        </article>
+        <article class="step reveal">
+          <div class="step-img"><img loading="lazy" src="/images/pap_stage5_hotspot_mask.png" alt="Stufe 5: Hotspot-Maske" /></div>
+          <div class="step-copy"><span class="chip">Phase 3</span><h2 style="font-size:2rem" data-i18n="pipe.s5h">Hotspot-Maske</h2><p data-i18n="pipe.s5p">Robustes MAD-Thresholding nach Hampel trennt pathologische Ausreißer vom Normalgewebe (Standard k = 3,0):</p>
+            <div class="formula">MAD = median(|xᵢ − median(X)|)<br />τ = Median + k · 1,4826 · MAD</div></div>
+        </article>
+        <article class="step reveal">
+          <div class="step-img"><img loading="lazy" src="/images/pap_stage6_vascular_tree.png" alt="Stufe 6: Gefäßbaum" /></div>
+          <div class="step-copy"><span class="chip">Phase 4</span><h2 style="font-size:2rem" data-i18n="pipe.s6h">Vaskulärer Gefäßbaum</h2><p data-i18n="pipe.s6p">Der multiskalige Frangi-Filter wertet die Eigenwerte λ₁, λ₂ der Hesse-Matrix aus und unterscheidet röhrenförmige Gefäße von runden Entzündungsherden.</p></div>
+        </article>
+        <article class="step reveal">
+          <div class="step-img"><img loading="lazy" src="/images/pap_stage7_final_diagnosis_overlay.png" alt="Stufe 7: Diagnose-Overlay" /></div>
+          <div class="step-copy"><span class="chip">Phase 4</span><h2 style="font-size:2rem" data-i18n="pipe.s7h">Diagnose-Overlay</h2><p data-i18n="pipe.s7p">Herde werden nach Risikoscore und ΔT priorisiert; die Lua-Regeln liefern die klinische Einstufung (Armstrong-Kriterium ΔT ≥ 2,2 K).</p></div>
+        </article>
+      </div>
+    </section>
+
+    <section>
+      <div class="container cta reveal">
+        <h2 data-i18n="pipe.cH">Die Stufen selbst erkunden</h2>
+        <p class="lead" data-i18n="pipe.cLead">In der Workstation zeigt der Reiter „42 Stufen“ jede Stufe mit Laufzeit und Beschreibung.</p>
+        <div class="cta-row"><a class="btn btn-primary" data-download href="#"><span data-i18n="common.download">Für Windows herunterladen</span></a><a class="btn btn-ghost" href="/technik.html"><span data-i18n="pipe.cMore">Zur Technik</span> →</a></div>
+      </div>
+    </section>
+  </main>
+  <div id="site-footer"></div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

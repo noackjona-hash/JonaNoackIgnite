@@ -1,196 +1,147 @@
-import './style.css'
+import './style.css';
 
-// Pipeline Steps Data
-const pipelineSteps = {
-  1: {
-    image: '/images/step1.png',
-    title: 'Schritt 1: Infrarot-Originalbild',
-    description: 'Das rohe Infrarotbild direkt aus der Wärmebildkamera. Die Farbskalierung bildet die ungefilterte Oberflächentemperatur des Fußes ab. Zu diesem Zeitpunkt sind Rauschen, Hosenbeine und Raum-Hintergrundreflexionen noch voll vorhanden.',
-    bullets: [
-      'Kalibrierung über anpassbaren Temperatur-Offset',
-      'Präzise Pixel-Temperatur-Konvertierung'
-    ]
-  },
-  2: {
-    image: '/images/step2.png',
-    title: 'Schritt 2: Anatomische Rumpf-Maske',
-    description: 'Ein adaptiver Otsu-Schwellwertalgorithmus detektiert den Fußkontakt und extrahiert eine präzise anatomische Maske (Body Mask). Hintergrund-Rauschen sowie Hosenbeine und Raumeinflüsse werden hierdurch geometrisch ausgeblendet.',
-    bullets: [
-      'Automatischer Konturausschluss',
-      'Denoising über morphologisches Closing'
-    ]
-  },
-  3: {
-    image: '/images/step3.png',
-    title: 'Schritt 3: Lokale Hitze-Differenz',
-    description: 'Ein morphologischer Top-Hat-Filter vergleicht die Intensitäten und ermittelt die lokale Hitze-Differenz. Lokale Temperaturspitzen werden gegenüber dem umgebenden Gewebe des restlichen Fußes stark hervorgehoben.',
-    bullets: [
-      'Top-Hat Kernel zur Gewebedifferenzierung',
-      'Eliminierung globaler Raumtemperaturdrifts'
-    ]
-  },
-  4: {
-    image: '/images/step4.png',
-    title: 'Schritt 4: Detektierte Hotspots',
-    description: 'Die finalen Hotspots werden über das CPU- (Rust) oder GPU-Backend (PyTorch) segmentiert. Mittels anatomischer Y-Achsen-Einschränkung werden Knöchel- und Ferseneinflüsse ignoriert, sodass nur echte Entzündungsherde (z.B. am großen Zeh) verbleiben.',
-    bullets: [
-      'Natives Rust-Multi-Threading & GPU-Backend',
-      'Anatomischer Y-Einschränkungsfilter für hohe Spezifität'
-    ]
-  }
+const REPO = 'https://github.com/noackjona-hash/JonaNoackIgnite';
+// Download-Ziel: Releases-Seite des Repos (bitte anpassen, falls es eine direkte Installer-URL gibt)
+const DOWNLOAD_URL = `${REPO}/releases`;
+const DOC_BASE = `${REPO}/blob/main/docs/`;
+
+const en = {
+  'common.download': 'Download for Windows', 'common.github': 'Source code on GitHub',
+  'nav.home': 'Home', 'nav.tech': 'Technology', 'nav.pipeline': 'Pipeline', 'nav.clinic': 'Clinical', 'nav.team': 'Team',
+  'foot.tag': 'Deterministic infrared thermography for early detection of diabetic foot ulcers.',
+  'foot.explore': 'Explore', 'foot.project': 'Project', 'foot.legal': 'Jugend forscht 2026 · research project, not a certified medical device',
+  'home.eyebrow': 'Jugend forscht 2026 · Working world / Computer science',
+  'home.h1a': 'See inflammation', 'home.h1b': 'before it becomes an ulcer.',
+  'home.lead': 'IGNITE analyses infrared thermograms fully automatically, deterministically and contact-free – for early detection of subclinical tissue inflammation, diabetic foot ulcers and vascular perfusion disorders.',
+  'home.cta2': 'View pipeline', 'home.meta1': 'Local & GDPR-oriented', 'home.meta2': 'Reproducible (bit-identical)', 'home.meta3': 'Rules adjustable without recompiling',
+  'home.tagL': 'RAW INFRARED', 'home.tagR': 'DIAGNOSIS', 'home.curtainNote': 'Like in the workstation: drag the curtain to compare raw thermogram and findings.',
+  'home.s1': 'deterministic pipeline stages', 'home.s2': 'hand-written AVX2 assembly kernels', 'home.s3': 'total runtime at 1440×1080 (measured)', 'home.s4': 'Armstrong criterion for side comparison',
+  'home.pEyebrow': 'The problem', 'home.pH': 'An ulcer announces itself through heat – long before you can see it.',
+  'home.pLead': 'In diabetic foot syndrome, a temperature difference of ≥ 2.2 K between contralateral sites is a significant predictor of an impending neuropathic ulcer (Armstrong et al., 2007). IGNITE automates this evaluation – traceable and fast.',
+  'home.f1h': 'Contact-free thermography', 'home.f1p': 'Long-wave infrared (LWIR, 8–14 µm) reveals hyperthermia – no contact, no radiation.',
+  'home.f2h': 'Deterministic & explainable', 'home.f2p': 'No random values, no black box: the same raw data always yields the same finding – each of the 42 stages is inspectable.',
+  'home.f3h': 'Close-to-hardware fast', 'home.f3p': 'A Go pipeline with AVX2 SIMD kernels processes 32 pixels per clock – no C compiler, directly in the Go assembler.',
+  'home.wEyebrow': 'How it works', 'home.wH': 'Four phases from raw image to finding',
+  'home.ph1s': 'Stages 1–10', 'home.ph1h': 'Preprocessing', 'home.ph1p': 'Otsu segmentation separates tissue from background; Chamfer distance erosion suppresses edge artefacts.',
+  'home.ph2s': 'Stages 11–20', 'home.ph2h': 'Hotspot detection', 'home.ph2p': 'Morphological white top-hat isolates focal temperature peaks from large-scale gradients.',
+  'home.ph3s': 'Stages 21–30', 'home.ph3h': 'Robust threshold', 'home.ph3p': 'MAD-based outlier detection (median + k·1.4826·MAD) instead of fragile means.',
+  'home.ph4s': 'Stages 31–42', 'home.ph4h': 'Classification', 'home.ph4p': 'Frangi vessel filter, bilateral comparison and Lua rules deliver the clinical finding.',
+  'home.wMore': 'All stages with images',
+  'home.aEyebrow': 'Architecture', 'home.aH': 'Five technologies, one goal.',
+  'home.aLead': 'C# for the clinical UI, Go for the pipeline, assembly for the hotspot inner loop, Lua for swappable medical logic and SQLite for the tamper-evident audit log.',
+  'home.aMore': 'Technology in detail',
+  'home.cEyebrow': 'Try it', 'home.cH': 'IGNITE Medical Suite v5.0.0', 'home.cLead': 'Windows installer with workstation, compute core, Lua rules and test data – or browse the source code on GitHub.',
+  'tech.eyebrow': 'Technology', 'tech.h1': 'Polyglot architecture,<br /><span class="grad">deliberately modular.</span>',
+  'tech.lead': 'IGNITE combines native hardware acceleration with an ergonomic clinical interface. Each layer has exactly one job.',
+  'tech.t1': 'Clinical PACS workstation: dual viewport with synchronised crosshair, curtain wipe, DICOM windowing (W/L), palettes, 3-point goniometer, PDF physician report and 3D export (OBJ, PLY, STL, XYZ).',
+  'tech.t2': 'Deterministic 42-stage pipeline: Otsu, Chamfer-L2 distance erosion, Frangi-Hessian filter, O(N) histogram median and MAD – parallelised via goroutines. Called from C# via CLI/JSON.',
+  'tech.t3': 'Six vector kernels in the Go assembler – no C compiler. 32 byte pixels or 8 float32 values simultaneously per clock cycle.',
+  'tech.t4': 'Decoupled medical decision logic in <code class="chip">rules/*.lua</code>. Physicians adjust thresholds – without recompiling.',
+  'tech.t5': 'Tamper-evident audit log per GDPR Art. 30 with pseudonymised patient IDs (<code class="chip">ANON-&lt;hash&gt;</code>) and hash chains for forensic immutability.',
+  'tech.kH': 'Six kernels in the inner loop', 'tech.kLead': 'Where millions of pixels per image are processed, hand-written assembly takes over.',
+  'tech.kTh1': 'Task', 'tech.kTh2': 'Instruction',
+  'tech.k1': 'Morphological erosion (32 pixels/clock)', 'tech.k2': 'Morphological dilation (32 pixels/clock)', 'tech.k3': 'Saturating subtraction for the top-hat',
+  'tech.k4': 'Vectorised difference |a − b| for side comparison', 'tech.k5': 'Binarise, threshold and tissue-mask in 256-bit registers', 'tech.k6': 'Floating-point convolution for the Frangi vessel filter',
+  'tech.pEyebrow': 'Performance', 'tech.pH': 'Measured runtime at 1440×1080', 'tech.pLead': 'Values from the project documentation (README, per-stage measurement).',
+  'tech.pTh1': 'Pipeline stage', 'tech.pTh2': 'Technology', 'tech.pTh3': 'Latency',
+  'tech.p1': 'Body masking (Otsu + Chamfer)', 'tech.p2': 'Top-hat filter (opening + difference)', 'tech.p3': 'Outlier thresholding (MAD + mask)', 'tech.p4': 'Geometry & circularity',
+  'tech.p5': 'Frangi vein mapping (3 scales)', 'tech.p6': 'Longitudinal gradient (perfusion)', 'tech.p7': 'Bilateral side comparison', 'tech.p8': 'Clinical risk assessment', 'tech.p9': 'Total pipeline (end-to-end)',
+  'tech.rH': 'Rules as text files', 'tech.rP': 'Classification lives in three Lua files in the <code>rules/</code> folder.',
+  'tech.dH': 'Deterministic by design', 'tech.dP': 'No random values, no undocumented heuristics: the same raw data yields a bit-identical finding.',
+  'pipe.eyebrow': 'Pipeline', 'pipe.h1': '42 stages.<br /><span class="grad">Each one traceable.</span>',
+  'pipe.lead': 'From raw capture to clinical finding – with real intermediate results of the pipeline on an example thermogram.',
+  'pipe.s0h': 'Raw thermogram', 'pipe.s0p': 'The radiometric capture (LWIR) as input. All further stages work deterministically on these values.',
+  'pipe.s1h': 'Body mask', 'pipe.s1p': 'Otsu thresholding separates tissue from the room background. A 2-pass Chamfer-L2 distance transform erodes the edge in a controlled way and suppresses reflection artefacts.',
+  'pipe.s2h': '3D depth map', 'pipe.s2p': 'A surface depth map is reconstructed from the mask – the basis for Lambertian angle compensation.',
+  'pipe.s3h': 'Edge-corrected thermogram', 'pipe.s3p': 'Lambertian 3D edge correction compensates angle-dependent emission loss at curved edges – inflammation at toe tips is preserved.',
+  'pipe.s4h': 'Top-hat difference', 'pipe.s4p': 'The morphological white top-hat isolates focal temperature peaks from large-scale background gradients:',
+  'pipe.s5h': 'Hotspot mask', 'pipe.s5p': 'Robust MAD thresholding after Hampel separates pathological outliers from normal tissue (default k = 3.0):',
+  'pipe.s6h': 'Vascular tree', 'pipe.s6p': 'The multi-scale Frangi filter evaluates the Hessian eigenvalues λ₁, λ₂ and distinguishes tubular vessels from round inflammation foci.',
+  'pipe.s7h': 'Diagnosis overlay', 'pipe.s7p': 'Foci are prioritised by risk score and ΔT; the Lua rules deliver the clinical grading (Armstrong criterion ΔT ≥ 2.2 K).',
+  'pipe.cH': 'Explore the stages yourself', 'pipe.cLead': 'In the workstation, the “42 Stufen” tab shows every stage with runtime and description.', 'pipe.cMore': 'To technology',
+  'cl.eyebrow': 'Clinical', 'cl.h1': 'From temperature<br /><span class="grad">to decision.</span>',
+  'cl.lead': 'IGNITE follows established guidelines and delivers structured, traceable findings for clinical practice.',
+  'cl.aH': 'The Armstrong criterion', 'cl.warn': 'CONSPICUOUS',
+  'cl.aP': 'A contralateral temperature difference of ΔT ≥ 2.2 K (≈ 2.2 °C) is a significant predictor of an impending neuropathic tissue ulcer (Armstrong et al., 2007). IGNITE compares both feet mirror-wise and raises an alarm when exceeded.',
+  'cl.fEyebrow': 'Features', 'cl.fH': 'What the workstation does clinically',
+  'cl.c1h': 'Bilateral side comparison', 'cl.c1p': 'Distinguishes harmless mechanical load from true inflammation by comparing both limbs.',
+  'cl.c2h': 'Hotspot triage', 'cl.c2p': 'Foci are sorted by risk score and ΔT – the most acute focus appears as focus #1 with a callout card.',
+  'cl.c3h': 'Perfusion & vessels', 'cl.c3p': 'Longitudinal gradient dT/dy to detect distal perfusion breaks; Frangi vein mapping.',
+  'cl.c4h': '7-day risk prediction', 'cl.c4p': 'Multivariate model based on Armstrong delta and Pennes bioheat THDI (heat-congestion index).',
+  'cl.c5h': 'Angiosomes & 5 zones', 'cl.c5p': 'Six Taylor & Palmer angiosome territories and five anatomical load zones (hallux to calcaneus).',
+  'cl.c6h': 'Structured physician report', 'cl.c6p': 'PDF findings report per IWGDF/Wagner-Armstrong criteria; plus JSON and CSV export.',
+  'cl.gEyebrow': 'Standards & privacy', 'cl.gH': 'Guideline-oriented. Local and traceable.',
+  'cl.g1': 'Quality management for medical devices – guiding principle for structure and documentation.',
+  'cl.g2': 'International Working Group on the Diabetic Foot – guidelines for prevention and treatment.',
+  'cl.g3': 'Local storage, pseudonymisation (ANON-&lt;hash&gt;) and SQLite audit trail with SHA-256 hash chains.',
+  'cl.note': 'IGNITE is a research project (Jugend forscht 2026) and does not replace a medical diagnosis. Results are supportive and must be assessed by qualified medical staff.',
+  'tm.eyebrow': 'Team & project', 'tm.h1': 'A competition project<br /><span class="grad">with clinical ambition.</span>',
+  'tm.lead': 'IGNITE was created for the German youth competition Jugend forscht 2026 in the field Working world / Computer science.',
+  'tm.role': 'Development & research · Jugend forscht 2026',
+  'tm.openH': 'Open source code', 'tm.openP': 'All code – workstation, Go core, assembly kernels and Lua rules – is on GitHub.',
+  'tm.dEyebrow': 'Documentation', 'tm.dH': 'Read up & verify',
+  'tm.d1h': 'Written paper (PDF)', 'tm.d1p': 'The print version for Jugend forscht 2026.', 'tm.d2h': 'Scientific monograph', 'tm.d2p': 'Scientific documentation v5.0.0.',
+  'tm.d3h': 'Architecture v5.0.0', 'tm.d3p': 'The multi-tier pipeline in detail.', 'tm.d4h': 'Algorithms', 'tm.d4p': 'Mathematical description of the methods.',
+  'tm.d5h': 'Optimisations & benchmarks', 'tm.d5p': 'Measurements and performance report.', 'tm.d6h': 'Optimisation guide', 'tm.d6p': 'Performance hints for developers.',
+  'tm.cH': 'Try IGNITE'
 };
 
-document.addEventListener('DOMContentLoaded', () => {
-  // DOM Elements
-  const tabButtons = document.querySelectorAll('.tab-btn');
-  const showcaseImage = document.getElementById('showcase-image');
-  const showcaseTitle = document.getElementById('showcase-title');
-  const showcaseDescription = document.getElementById('showcase-description');
-  const showcaseBullets = document.getElementById('showcase-bullets');
-  const navbar = document.getElementById('navbar');
+const links = [['/', 'nav.home', 'Start', 'home'], ['/technik.html', 'nav.tech', 'Technik', 'tech'], ['/pipeline.html', 'nav.pipeline', 'Pipeline', 'pipeline'], ['/klinik.html', 'nav.clinic', 'Klinik', 'clinic'], ['/team.html', 'nav.team', 'Team', 'team']];
+const page = document.body.dataset.page;
 
-  // Tab switcher logic
-  tabButtons.forEach(button => {
-    button.addEventListener('click', (e) => {
-      // Remove active from all
-      tabButtons.forEach(btn => {
-        btn.classList.remove('active');
-        btn.setAttribute('aria-selected', 'false');
-      });
+const logo = id => `<span class="brand-mark"><svg viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="fl${id}" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#7c3aed"/><stop offset=".35" stop-color="#ef4444"/><stop offset=".7" stop-color="#f59e0b"/><stop offset="1" stop-color="#fde047"/></linearGradient></defs><circle cx="20" cy="20" r="17" class="lg-ring"/><path class="lg-tick" d="M20 1v5M20 34v5M1 20h5M34 20h5"/><path d="M20 7c1.3 5.6 8 8 8 16 0 5.6-3.6 9.5-8 9.5S12 28.6 12 23.8c0-3.4 1.8-5.6 3.6-7.4.2 2.2 1.1 3.5 2.4 4.2-.5-5.6-1.6-9.6 2-13.6Z" fill="url(#fl${id})"/><path d="M20 20.5c1.8 2.2 3.6 3.8 3.6 6.4 0 2.2-1.6 3.6-3.6 3.6s-3.6-1.5-3.6-3.5c0-2.5 2-3.4 3.6-6.5Z" fill="#fffbe0"/></svg></span>`;
 
-      // Add active to clicked
-      button.classList.add('active');
-      button.setAttribute('aria-selected', 'true');
+document.getElementById('site-header').innerHTML = `
+<header class="nav" id="nav"><div class="container nav-in">
+  <a class="brand" href="/" aria-label="IGNITE Start">${logo('h')}<span class="brand-word">IGNITE<small>Medical Imaging Suite</small></span></a>
+  <nav class="links" id="links">${links.map(l => `<a href="${l[0]}" data-i18n="${l[1]}" class="${l[3] === page ? 'active' : ''}">${l[2]}</a>`).join('')}</nav>
+  <div class="nav-actions">
+    <div class="lang"><button data-lang="de">DE</button><button data-lang="en">EN</button></div>
+    <a class="btn btn-primary btn-sm" data-download href="#" data-i18n="nav.dl">Download</a>
+    <button class="burger" id="burger" aria-label="Menü">☰</button>
+  </div></div></header>`;
+en['nav.dl'] = 'Download';
 
-      const step = button.getAttribute('data-step');
-      const stepData = pipelineSteps[step];
+document.getElementById('site-footer').innerHTML = `
+<footer><div class="container">
+  <div class="foot">
+    <div><a class="brand" href="/" aria-label="IGNITE Start">${logo('f')}<span class="brand-word">IGNITE<small>Medical Imaging Suite</small></span></a><p data-i18n="foot.tag">Deterministische Infrarot-Thermografie zur Früherkennung diabetischer Fußulzera.</p></div>
+    <div><h4 data-i18n="foot.explore">Entdecken</h4>${links.slice(0, 3).map(l => `<a href="${l[0]}" data-i18n="${l[1]}">${l[2]}</a>`).join('')}</div>
+    <div><h4 data-i18n="foot.project">Projekt</h4>${links.slice(3).map(l => `<a href="${l[0]}" data-i18n="${l[1]}">${l[2]}</a>`).join('')}<a data-repo href="#" target="_blank" rel="noopener">GitHub ↗</a></div>
+    <div><h4>Stack</h4><a>C# · .NET 10</a><a>Go 1.24+</a><a>AVX2 · Lua · SQLite</a></div>
+  </div>
+  <div class="legal"><span>© 2026 Jona Noack</span><span data-i18n="foot.legal">Jugend forscht 2026 · Forschungsprojekt, kein zertifiziertes Medizinprodukt</span></div>
+</div></footer>`;
 
-      if (stepData) {
-        // Fade effect transition
-        showcaseImage.style.opacity = 0;
-        
-        setTimeout(() => {
-          showcaseImage.src = stepData.image;
-          showcaseImage.alt = stepData.title;
-          showcaseTitle.textContent = stepData.title;
-          showcaseDescription.textContent = stepData.description;
+document.querySelectorAll('[data-download]').forEach(a => { a.href = DOWNLOAD_URL; a.target = '_blank'; a.rel = 'noopener'; });
+document.querySelectorAll('[data-repo]').forEach(a => { a.href = REPO; });
+document.querySelectorAll('[data-doc]').forEach(a => { a.href = DOC_BASE + a.dataset.doc; });
 
-          // Clear and recreate bullets
-          showcaseBullets.innerHTML = '';
-          stepData.bullets.forEach(bulletText => {
-            const li = document.createElement('li');
-            li.textContent = bulletText;
-            showcaseBullets.appendChild(li);
-          });
-          
-          showcaseImage.style.opacity = 1;
-        }, 150);
-      }
-    });
+// i18n: Deutsch ist der HTML-Standardtext, Englisch kommt aus dem Wörterbuch
+const nodes = [...document.querySelectorAll('[data-i18n],[data-i18n-html]')];
+nodes.forEach(n => { n.dataset.de = n.innerHTML; });
+function setLang(l) {
+  localStorage.setItem('ignite-lang', l);
+  document.documentElement.lang = l;
+  nodes.forEach(n => {
+    const key = n.dataset.i18n || n.dataset.i18nHtml;
+    const v = l === 'en' && en[key] ? en[key] : n.dataset.de;
+    n.innerHTML = v;
   });
+  document.querySelectorAll('.lang button').forEach(b => b.classList.toggle('on', b.dataset.lang === l));
+}
+document.querySelectorAll('.lang button').forEach(b => b.addEventListener('click', () => setLang(b.dataset.lang)));
+setLang(localStorage.getItem('ignite-lang') || (navigator.language.startsWith('de') ? 'de' : 'en'));
 
-  // Simple fade transition initialization
-  if (showcaseImage) {
-    showcaseImage.style.transition = 'opacity 0.15s ease-in-out';
-  }
+// Navigation
+const nav = document.getElementById('nav');
+addEventListener('scroll', () => nav.classList.toggle('scrolled', scrollY > 8), { passive: true });
+document.getElementById('burger').addEventListener('click', () => document.getElementById('links').classList.toggle('open'));
 
-  // Header scroll shadow effect
-  window.addEventListener('scroll', () => {
-    if (window.scrollY > 50) {
-      navbar.style.backgroundColor = 'rgba(9, 9, 11, 0.95)';
-      navbar.style.boxShadow = '0 4px 20px rgba(0,0,0,0.4)';
-    } else {
-      navbar.style.backgroundColor = 'rgba(9, 9, 11, 0.8)';
-      navbar.style.boxShadow = 'none';
-    }
-  });
+// Reveal on scroll
+const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { threshold: .12 });
+document.querySelectorAll('.reveal').forEach(el => io.observe(el));
 
-  // Interactive Before/After Slider Logic
-  const sliderContainer = document.querySelector('.slider-container');
-  if (sliderContainer) {
-    const afterImage = sliderContainer.querySelector('.image-after');
-    const handle = sliderContainer.querySelector('.slider-handle');
-    let isDragging = false;
-
-    const moveSlider = (clientX) => {
-      const rect = sliderContainer.getBoundingClientRect();
-      const x = clientX - rect.left;
-      let percentage = (x / rect.width) * 100;
-      
-      // Keep boundary limits
-      if (percentage < 0) percentage = 0;
-      if (percentage > 100) percentage = 100;
-
-      // Update layout width and handle position
-      afterImage.style.width = `${percentage}%`;
-      handle.style.left = `${percentage}%`;
-    };
-
-    const startDrag = (e) => {
-      isDragging = true;
-      e.preventDefault();
-    };
-
-    const stopDrag = () => {
-      isDragging = false;
-    };
-
-    // Desktop Mouse Events
-    handle.addEventListener('mousedown', startDrag);
-    window.addEventListener('mouseup', stopDrag);
-    window.addEventListener('mousemove', (e) => {
-      if (!isDragging) return;
-      moveSlider(e.clientX);
-    });
-
-    // Mobile/Tablet Touch Events
-    handle.addEventListener('touchstart', startDrag);
-    window.addEventListener('touchend', stopDrag);
-    window.addEventListener('touchmove', (e) => {
-      if (!isDragging) return;
-      if (e.touches && e.touches.length > 0) {
-        moveSlider(e.touches[0].clientX);
-      }
-    });
-
-    // Clicking the container to jump to position
-    sliderContainer.addEventListener('click', (e) => {
-      if (e.target === handle) return;
-      moveSlider(e.clientX);
-    });
-  }
-
-  // Feature Cards Mouse Tracking Glow Effect
-  const featureCards = document.querySelectorAll('.feature-card');
-  featureCards.forEach(card => {
-    card.addEventListener('mousemove', (e) => {
-      const rect = card.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      card.style.setProperty('--mouse-x', `${x}px`);
-      card.style.setProperty('--mouse-y', `${y}px`);
-    });
-  });
-
-  // IntersectionObserver for Scroll Reveal
-  const reveals = document.querySelectorAll('.reveal');
-  if ('IntersectionObserver' in window) {
-    const revealObserver = new IntersectionObserver((entries, observer) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('visible');
-          observer.unobserve(entry.target);
-        }
-      });
-    }, {
-      root: null,
-      threshold: 0.15,
-      rootMargin: '0px 0px -60px 0px'
-    });
-
-    reveals.forEach(el => revealObserver.observe(el));
-  } else {
-    // Fallback if IntersectionObserver is not supported
-    reveals.forEach(el => el.classList.add('visible'));
-  }
-});
+// Curtain wipe
+const c = document.getElementById('curtain');
+if (c) c.querySelector('input').addEventListener('input', e => c.style.setProperty('--pos', e.target.value + '%'));

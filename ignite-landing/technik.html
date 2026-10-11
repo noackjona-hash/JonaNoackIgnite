@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Technik – IGNITE Multi-Tier-Architektur (C#, Go, AVX2, Lua, SQLite)</title>
+  <meta name="description" content="Die polyglotte Architektur von IGNITE: WPF-Workstation, Go-Pipeline, sechs AVX2-Assembler-Kernels, Lua-Regel-Engine und SQLite-Audit-Trail." />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+</head>
+<body data-page="tech">
+  <div id="site-header"></div>
+  <main>
+    <section class="page-head" style="padding-bottom:0">
+      <div class="container" style="display:grid;gap:22px">
+        <span class="eyebrow" data-i18n="tech.eyebrow">Technik</span>
+        <h1 data-i18n-html="tech.h1">Polyglotte Architektur,<br /><span class="grad">bewusst modular.</span></h1>
+        <p class="lead" data-i18n="tech.lead">IGNITE verbindet native Hardware-Beschleunigung mit einer ergonomischen klinischen Oberfläche. Jede Schicht hat genau eine Aufgabe.</p>
+      </div>
+    </section>
+
+    <section>
+      <div class="container stack">
+        <div class="tier reveal"><div class="n">01</div><div><h3>C# · .NET 10 · WPF</h3><p data-i18n="tech.t1">Klinische PACS-Workstation: Dual-Viewport mit synchronisiertem Fadenkreuz, Vorhang-Wipe, DICOM-Fensterung (W/L), Paletten, 3-Punkt-Goniometer, PDF-Arztbrief und 3D-Export (OBJ, PLY, STL, XYZ).</p></div></div>
+        <div class="tier reveal"><div class="n">02</div><div><h3>Go 1.24+</h3><p data-i18n="tech.t2">Deterministische 42-Stufen-Pipeline: Otsu, Chamfer-L2-Distanzerosion, Frangi-Hesse-Filter, O(N)-Histogramm-Median und MAD – parallelisiert über Goroutinen. Aufruf aus C# per CLI/JSON.</p></div></div>
+        <div class="tier reveal"><div class="n">03</div><div><h3>x86_64 AVX2 · Plan-9-Assembler</h3><p data-i18n="tech.t3">Sechs Vektorkerne im Go-Assembler – ohne C-Compiler. 32 Byte-Pixel bzw. 8 Float32-Werte gleichzeitig pro Taktzyklus.</p></div></div>
+        <div class="tier reveal"><div class="n">04</div><div><h3>Lua 5.1 · GopherLua</h3><p data-i18n="tech.t4">Entkoppelte medizinische Entscheidungslogik in <code class="chip">rules/*.lua</code>. Ärzte passen Schwellenwerte an – ohne Neukompilierung.</p></div></div>
+        <div class="tier reveal"><div class="n">05</div><div><h3>SQLite · SHA-256</h3><p data-i18n="tech.t5">Revisionssicheres Audit-Log nach DSGVO Art. 30 mit pseudonymisierten Patienten-IDs (<code class="chip">ANON-&lt;hash&gt;</code>) und Hash-Ketten für forensische Unveränderbarkeit.</p></div></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="eyebrow">AVX2 / SIMD</span>
+          <h2 data-i18n="tech.kH">Sechs Kernels im Inner-Loop</h2>
+          <p class="lead" data-i18n="tech.kLead">Dort, wo Millionen Pixel pro Bild verarbeitet werden, übernimmt handgeschriebener Assembler.</p>
+        </div>
+        <div class="table-wrap reveal">
+          <table>
+            <thead><tr><th>Kernel</th><th data-i18n="tech.kTh1">Aufgabe</th><th data-i18n="tech.kTh2">Befehl</th></tr></thead>
+            <tbody>
+              <tr><td class="num">minVectorAVX2</td><td data-i18n="tech.k1">Morphologische Erosion (32 Pixel/Takt)</td><td class="num">VPMINUB</td></tr>
+              <tr><td class="num">maxVectorAVX2</td><td data-i18n="tech.k2">Morphologische Dilation (32 Pixel/Takt)</td><td class="num">VPMAXUB</td></tr>
+              <tr><td class="num">subVectorAVX2</td><td data-i18n="tech.k3">Sättigende Subtraktion für den Top-Hat</td><td class="num">VPSUBUSB</td></tr>
+              <tr><td class="num">absDiffVectorAVX2</td><td data-i18n="tech.k4">Vektorisierte Differenz |a − b| für den Seitenvergleich</td><td class="num">|a − b|</td></tr>
+              <tr><td class="num">thresholdMaskAVX2</td><td data-i18n="tech.k5">Binarisieren, Schwellwertabgleich &amp; Gewebemaskierung in 256-Bit-Registern</td><td class="num">256-bit</td></tr>
+              <tr><td class="num">fmaVectorFloat32AVX2</td><td data-i18n="tech.k6">Gleitkomma-Faltung für den Frangi-Gefäßfilter</td><td class="num">VMULPS · VADDPS</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="eyebrow" data-i18n="tech.pEyebrow">Performance</span>
+          <h2 data-i18n="tech.pH">Gemessene Laufzeit bei 1440×1080</h2>
+          <p class="lead" data-i18n="tech.pLead">Werte aus der Projekt-Dokumentation (README, Messung der Pipeline-Stufen).</p>
+        </div>
+        <div class="table-wrap reveal">
+          <table>
+            <thead><tr><th data-i18n="tech.pTh1">Pipeline-Stufe</th><th data-i18n="tech.pTh2">Technologie</th><th data-i18n="tech.pTh3">Latenz</th></tr></thead>
+            <tbody>
+              <tr><td data-i18n="tech.p1">Körper-Maskierung (Otsu + Chamfer)</td><td>Go (Goroutinen)</td><td class="num">19,6 ms</td></tr>
+              <tr><td data-i18n="tech.p2">Top-Hat-Filter (Opening + Differenz)</td><td>AVX2</td><td class="num">37,8 ms</td></tr>
+              <tr><td data-i18n="tech.p3">Outlier-Thresholding (MAD + Maske)</td><td>AVX2</td><td class="num">4,2 ms</td></tr>
+              <tr><td data-i18n="tech.p4">Geometrie &amp; Zirkularität</td><td>Go (4-Connected BFS)</td><td class="num">3,5 ms</td></tr>
+              <tr><td data-i18n="tech.p5">Frangi-Venenkartierung (3 Skalen)</td><td>AVX2 Float32 FMA</td><td class="num">88,6 ms</td></tr>
+              <tr><td data-i18n="tech.p6">Longitudinaler Gradient (Perfusion)</td><td>Go</td><td class="num">2,0 ms</td></tr>
+              <tr><td data-i18n="tech.p7">Bilateraler Seitenvergleich</td><td>AVX2</td><td class="num">5,8 ms</td></tr>
+              <tr><td data-i18n="tech.p8">Klinische Risikobewertung</td><td>Lua</td><td class="num">&lt; 0,1 ms</td></tr>
+              <tr class="total"><td data-i18n="tech.p9">Gesamte Pipeline (Ende-zu-Ende)</td><td></td><td class="num">~169,5 ms</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="container grid-2">
+        <article class="card reveal">
+          <div class="icon"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div>
+          <h3 data-i18n="tech.rH">Regeln als Textdateien</h3>
+          <p data-i18n="tech.rP">Die Klassifikation liegt in drei Lua-Dateien im Ordner <code>rules/</code>.</p>
+          <div class="chips"><span class="chip">armstrong_criteria.lua</span><span class="chip">vein_detection.lua</span><span class="chip">perfusion_eval.lua</span></div>
+        </article>
+        <article class="card reveal">
+          <div class="icon"><svg viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6l-8-3Z"/></svg></div>
+          <h3 data-i18n="tech.dH">Deterministisch by design</h3>
+          <p data-i18n="tech.dP">Keine Zufallswerte, keine undokumentierten Heuristiken: Derselbe Rohdatensatz ergibt einen bit-identischen Befund.</p>
+        </article>
+      </div>
+    </section>
+  </main>
+  <div id="site-footer"></div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
