@@ -465,6 +465,7 @@
                                             <!-- Watermark FLIR Logo (Matching Screenshot) -->
                                             <TextBlock Text="❖ FLIR" FontWeight="Black" FontSize="20" Foreground="#283548" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="14,12,0,0" IsHitTestVisible="False" Opacity="0.85"/>
                                             <Canvas x:Name="OverlayOriginalCanvas" IsHitTestVisible="False"/>
+                                            <Canvas x:Name="CrosshairOriginalCanvas" IsHitTestVisible="False"/>
                                         </Grid>
                                     </ScrollViewer>
 
@@ -530,15 +531,22 @@
                                             </Image>
 
                                             <Canvas x:Name="OverlayResultCanvas" IsHitTestVisible="False"/>
+                                            <Canvas x:Name="CrosshairResultCanvas" IsHitTestVisible="False"/>
 
-                                            <!-- Curtain Handle (Matching Screenshot) -->
-                                            <Canvas x:Name="CanvasCurtain" Visibility="Collapsed" IsHitTestVisible="True">
-                                                <Line x:Name="LineCurtain" Stroke="{StaticResource CyanBrush}" StrokeThickness="1.5" StrokeDashArray="3,2"/>
-                                                <Border x:Name="BorderCurtainHandle" Width="36" Height="28" Background="#FFFFFF" BorderBrush="{StaticResource CyanBrush}" BorderThickness="1.5" CornerRadius="6" Cursor="SizeWE" MouseDown="CurtainHandle_MouseDown">
+                                            <!-- Modern Ergonomic Curtain Wipe Overlay with Floating Tags -->
+                                            <Canvas x:Name="CanvasCurtain" Visibility="Collapsed" IsHitTestVisible="True" MouseDown="CurtainHandle_MouseDown">
+                                                <Line x:Name="LineCurtain" Stroke="{StaticResource CyanBrush}" StrokeThickness="2"/>
+                                                <Border x:Name="CurtainLabelLeft" Background="#D90F172A" CornerRadius="4" Padding="6,2" IsHitTestVisible="False">
+                                                    <TextBlock Text="◀ ROH-INFRAROT" FontSize="8.5" FontWeight="Bold" Foreground="#94A3B8"/>
+                                                </Border>
+                                                <Border x:Name="CurtainLabelRight" Background="{StaticResource CyanBrush}" CornerRadius="4" Padding="6,2" IsHitTestVisible="False">
+                                                    <TextBlock Text="DIAGNOSE ▶" FontSize="8.5" FontWeight="Bold" Foreground="#FFFFFF"/>
+                                                </Border>
+                                                <Border x:Name="BorderCurtainHandle" Width="46" Height="30" Background="#FFFFFF" BorderBrush="{StaticResource CyanBrush}" BorderThickness="2" CornerRadius="15" Cursor="SizeWE" MouseDown="CurtainHandle_MouseDown">
                                                     <Border.Effect>
-                                                        <DropShadowEffect BlurRadius="4" ShadowDepth="1" Opacity="0.2" Color="#000000"/>
+                                                        <DropShadowEffect BlurRadius="8" Direction="270" ShadowDepth="2" Opacity="0.25" Color="#0284C7"/>
                                                     </Border.Effect>
-                                                    <TextBlock Text="◀ ◐ ▶" FontSize="9.5" FontWeight="Bold" Foreground="{StaticResource CyanBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="◀ 🌓 ▶" FontSize="9.5" FontWeight="Bold" Foreground="{StaticResource CyanBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
                                             </Canvas>
                                         </Grid>
@@ -690,12 +698,13 @@
                 <Border Grid.Column="2" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="16">
                     <Grid>
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/> <!-- Active Profile / Examination Card -->
-                            <RowDefinition Height="*"/>    <!-- Inspector Tabs -->
+                            <RowDefinition Height="Auto"/> <!-- Row 0: Active Case Demographics Card -->
+                            <RowDefinition Height="Auto"/> <!-- Row 1: Thematic Category Segmented Bar -->
+                            <RowDefinition Height="*"/>    <!-- Row 2: Inspector Tabs -->
                         </Grid.RowDefinitions>
 
-                        <!-- Top Active Case Header Card (Matching Screenshot) -->
-                        <Border Grid.Row="0" Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" CornerRadius="15,15,0,0" Padding="14,12">
+                        <!-- Top Active Case Header Card (Matching Clinical PACS Design) -->
+                        <Border Grid.Row="0" Background="{StaticResource SurfaceCardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" CornerRadius="15,15,0,0" Padding="14,10">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
@@ -704,49 +713,64 @@
                                 </Grid.ColumnDefinitions>
 
                                 <!-- Case Thumbnail Squircle -->
-                                <Border Grid.Column="0" Width="46" Height="46" CornerRadius="12" Background="#F1F5F9" BorderBrush="{StaticResource BorderBrightBrush}" BorderThickness="1" Margin="0,0,12,0">
-                                    <Path Data="{StaticResource IconDicom}" Fill="{StaticResource CyanBrush}" Width="22" Height="22" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <Border Grid.Column="0" Width="44" Height="44" CornerRadius="12" Background="#F1F5F9" BorderBrush="{StaticResource BorderBrightBrush}" BorderThickness="1" Margin="0,0,10,0">
+                                    <Path Data="{StaticResource IconDicom}" Fill="{StaticResource CyanBrush}" Width="20" Height="20" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
 
-                                <!-- Demographics & Subtitle -->
+                                <!-- Demographics & Dynamic Case Subtitle -->
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Patient ID" FontWeight="Bold" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}"/>
-                                    <TextBlock Text="6110502 20.77 - 61.14()" FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,1,0,0"/>
-                                    <TextBlock Text="ASNC75050 27900K 6" FontSize="10" Foreground="{StaticResource TextMutedBrush}" Margin="0,1,0,0"/>
-                                    <Border HorizontalAlignment="Left" Background="#E0F2FE" CornerRadius="4" Padding="6,1" Margin="0,3,0,0">
-                                        <TextBlock Text="ARMSTRONG STADIUM 0" FontSize="9" FontWeight="Bold" Foreground="{StaticResource CyanBrush}"/>
+                                    <TextBlock x:Name="TxtInspectorPatientTitle" Text="Patient: Mustern, Gerhard · 68 J. (M)" FontWeight="Bold" FontSize="12.5" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                    <TextBlock x:Name="TxtInspectorSensorSubtitle" Text="FLIR LWIR 17µm · DIN EN ISO 13485" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,1,0,0"/>
+                                    <Border HorizontalAlignment="Left" Background="#E0F2FE" BorderBrush="#BAE6FD" BorderThickness="1" CornerRadius="4" Padding="6,1" Margin="0,2,0,0">
+                                        <TextBlock x:Name="TxtInspectorCaseRisk" Text="ARMSTRONG STADIUM 0" FontSize="9" FontWeight="Bold" Foreground="{StaticResource CyanBrush}"/>
                                     </Border>
                                 </StackPanel>
 
                                 <!-- Quick Action Buttons -->
                                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Button Click="BtnCopyDoctorText_Click" Padding="8,4" Margin="0,0,4,0" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrightBrush}" Foreground="{StaticResource CyanBrush}" FontWeight="SemiBold" ToolTip="Kopiert strukturierten Arztbrief-Befundtext in die Zwischenablage für Praxis-EDV">
+                                    <Button Click="BtnCopyDoctorText_Click" Padding="7,4" Margin="0,0,3,0" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrightBrush}" Foreground="{StaticResource CyanBrush}" FontWeight="SemiBold" ToolTip="Kopiert strukturierten Arztbrief-Befundtext in die Zwischenablage für Praxis-EDV">
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                            <Path Data="{StaticResource IconCopy}" Fill="{StaticResource CyanBrush}" Width="11" Height="11" Stretch="Uniform" Margin="0,0,5,0"/>
-                                            <TextBlock Text="Befund" VerticalAlignment="Center"/>
+                                            <Path Data="{StaticResource IconCopy}" Fill="{StaticResource CyanBrush}" Width="10" Height="10" Stretch="Uniform" Margin="0,0,4,0"/>
+                                            <TextBlock Text="Befund" FontSize="10.5" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Button>
-                                    <Button Click="BtnExportCsv_Click" Padding="8,4" Margin="0,0,4,0" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrightBrush}" Foreground="{StaticResource CyanBrush}" FontWeight="SemiBold" ToolTip="Exportiert die 2D-Temperaturmatrix als wissenschaftliche CSV-Tabelle">
+                                    <Button Click="BtnExportCsv_Click" Padding="7,4" Margin="0,0,3,0" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrightBrush}" Foreground="{StaticResource CyanBrush}" FontWeight="SemiBold" ToolTip="Exportiert die 2D-Temperaturmatrix als wissenschaftliche CSV-Tabelle">
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                            <Path Data="{StaticResource IconRadiometry}" Fill="{StaticResource CyanBrush}" Width="11" Height="11" Stretch="Uniform" Margin="0,0,5,0"/>
-                                            <TextBlock Text="CSV" VerticalAlignment="Center"/>
+                                            <Path Data="{StaticResource IconRadiometry}" Fill="{StaticResource CyanBrush}" Width="10" Height="10" Stretch="Uniform" Margin="0,0,4,0"/>
+                                            <TextBlock Text="CSV" FontSize="10.5" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Button>
-                                    <Button Click="MenuExportReport_Click" Padding="8,4" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrightBrush}" Foreground="{StaticResource CyanBrush}" FontWeight="SemiBold" ToolTip="Vollständigen Befundbericht generieren &amp; drucken">
+                                    <Button Click="MenuExportReport_Click" Padding="7,4" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrightBrush}" Foreground="{StaticResource CyanBrush}" FontWeight="SemiBold" ToolTip="Vollständigen Befundbericht generieren &amp; drucken">
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                            <Path Data="{StaticResource IconDownload}" Fill="{StaticResource CyanBrush}" Width="11" Height="11" Stretch="Uniform" Margin="0,0,5,0"/>
-                                            <TextBlock Text="Export" VerticalAlignment="Center"/>
+                                            <Path Data="{StaticResource IconDownload}" Fill="{StaticResource CyanBrush}" Width="10" Height="10" Stretch="Uniform" Margin="0,0,4,0"/>
+                                            <TextBlock Text="Export" FontSize="10.5" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Button>
                                 </StackPanel>
                             </Grid>
                         </Border>
 
-                        <!-- Inspector Tabs (Pill Tab Style Matching Screenshot) -->
-                        <TabControl Grid.Row="1" x:Name="InspectorTabs" Background="Transparent" BorderThickness="0">
+                        <!-- Row 1: THEMATIC CATEGORY SEGMENTED BAR (4 Clinical Groups) -->
+                        <Border Grid.Row="1" Background="#F1F5F9" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="10,6">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <RadioButton x:Name="CatBtnDiagnostics" Grid.Column="0" Content="Diagnose" Style="{StaticResource InspectorCategoryRadioStyle}" IsChecked="True" Checked="InspectorCategory_Checked" ToolTip="Klinische Diagnostik &amp; Triage (Herde, Bericht, Ulkus-Prädiktion, Bilateral)"/>
+                                <RadioButton x:Name="CatBtnAnatomy" Grid.Column="1" Content="Anatomie" Style="{StaticResource InspectorCategoryRadioStyle}" Checked="InspectorCategory_Checked" ToolTip="Anatomische Zonen, Angiosome, Biomechanik &amp; 3D"/>
+                                <RadioButton x:Name="CatBtnSignals" Grid.Column="2" Content="Signale" Style="{StaticResource InspectorCategoryRadioStyle}" Checked="InspectorCategory_Checked" ToolTip="Venen/DSA, Histogramm, Schnittprofil &amp; Punktsonden"/>
+                                <RadioButton x:Name="CatBtnSystem" Grid.Column="3" Content="System" Style="{StaticResource InspectorCategoryRadioStyle}" Checked="InspectorCategory_Checked" ToolTip="Parameter, W/L, 42 Stufen, Lua &amp; DSGVO Audit"/>
+                            </Grid>
+                        </Border>
+
+                        <!-- Row 2: Inspector Tabs (Filtered by Category) -->
+                        <TabControl Grid.Row="2" x:Name="InspectorTabs" Background="Transparent" BorderThickness="0">
 
                             <!-- TAB 0: PARAMETERS & WINDOW/LEVEL (Matching Screenshot) -->
-                            <TabItem x:Name="TabParams" IsSelected="True">
+                            <TabItem x:Name="TabParams" Tag="System">
                                 <TabItem.Header>
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                         <Path Data="{StaticResource IconParams}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=TabItem}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0"/>
@@ -867,7 +891,7 @@
 
 
                             <!-- TAB 2: DETECTED HOTSPOTS TABLE -->
-                            <TabItem>
+                            <TabItem x:Name="TabHotspots" Tag="Diagnostics" IsSelected="True">
                                 <TabItem.Header>
                                     <StackPanel Orientation="Horizontal">
                                         <Path Data="{StaticResource IconMicroscope}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=TabItem}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0" SnapsToDevicePixels="True"/>
@@ -913,7 +937,7 @@
                             </TabItem>
 
                             <!-- TAB 3: 256-BIN RADIOMETRIC HISTOGRAM -->
-                            <TabItem x:Name="TabHistogram">
+                            <TabItem x:Name="TabHistogram" Tag="Signals">
                                 <TabItem.Header>
                                     <StackPanel Orientation="Horizontal">
                                         <Path Data="{StaticResource IconRadiometry}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=TabItem}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0" SnapsToDevicePixels="True"/>
@@ -961,7 +985,7 @@
                             </TabItem>
 
                             <!-- TAB 4: THERMAL LINE PROFILE T(s) -->
-                            <TabItem x:Name="TabProfile">
+                            <TabItem x:Name="TabProfile" Tag="Signals">
                                 <TabItem.Header>
                                     <StackPanel Orientation="Horizontal">
                                         <Path Data="{StaticResource IconProfile}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=TabItem}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0" SnapsToDevicePixels="True"/>
@@ -1024,7 +1048,7 @@
                             </TabItem>
 
                             <!-- TAB 5: POINT TEMPERATURE PROBES -->
-                            <TabItem x:Name="TabProbes">
+                            <TabItem x:Name="TabProbes" Tag="Signals">
                                 <TabItem.Header>
                                     <StackPanel Orientation="Horizontal">
                                         <Path Data="{StaticResource IconProbe}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=TabItem}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0" SnapsToDevicePixels="True"/>
@@ -1106,7 +1130,7 @@
                             </TabItem>
 
                             <!-- TAB 6: ANATOMISCHE FUSS-ZONEN MATRIX -->
-                            <TabItem x:Name="TabAnatomy">
+                            <TabItem x:Name="TabAnatomy" Tag="Anatomy">
                                 <TabItem.Header>
                                     <StackPanel Orientation="Horizontal">
                                         <Path Data="{StaticResource IconAnatomy}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=TabItem}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0" SnapsToDevicePixels="True"/>
@@ -1142,7 +1166,7 @@
                             </TabItem>
 
                             <!-- TAB 7: 6 TAYLOR-PALMER ANGIOSOMES -->
-                            <TabItem x:Name="TabAngiosomes">
+                            <TabItem x:Name="TabAngiosomes" Tag="Anatomy">
                                 <TabItem.Header>
                                     <StackPanel Orientation="Horizontal">
                                         <Path Data="{StaticResource IconStethoscope}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=TabItem}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0" SnapsToDevicePixels="True"/>
@@ -1171,7 +1195,7 @@
                             </TabItem>
 
                             <!-- TAB 8: PREDICTIVE 7-DAY ULCER RISK FORECASTER -->
-                            <TabItem x:Name="TabPrediction">
+                            <TabItem x:Name="TabPrediction" Tag="Diagnostics">
                                 <TabItem.Header>
                                     <StackPanel Orientation="Horizontal">
                                         <Path Data="{StaticResource IconShield}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=TabItem}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0" SnapsToDevicePixels="True"/>
@@ -1237,7 +1261,7 @@
                             </TabItem>
 
                             <!-- TAB: BIOMECHANICS & PENNES BIOHEAT PRESSURE PROXY -->
-                            <TabItem x:Name="TabBiomechanics">
+                            <TabItem x:Name="TabBiomechanics" Tag="Anatomy">
                                 <TabItem.Header>
                                     <StackPanel Orientation="Horizontal">
                                         <Path Data="{StaticResource IconPressure}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=TabItem}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0" SnapsToDevicePixels="True"/>
@@ -1411,7 +1435,7 @@
                             </TabItem>
 
                             <!-- TAB: 3D-OBERFLÄCHEN-REKONSTRUKTION & LAMBERT-KANTENKORREKTUR -->
-                            <TabItem x:Name="Tab3DReconstruction">
+                            <TabItem x:Name="Tab3DReconstruction" Tag="Anatomy">
                                 <TabItem.Header>
                                     <StackPanel Orientation="Horizontal">
                                         <Path Data="{StaticResource IconRelief}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=TabItem}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0" SnapsToDevicePixels="True"/>
@@ -1548,7 +1572,7 @@
                             </TabItem>
 
                             <!-- TAB 9: ISOTHERMEN & DIGITAL SUBTRACTION (DST) -->
-                            <TabItem x:Name="TabIsotherms">
+                            <TabItem x:Name="TabIsotherms" Tag="Signals">
                                 <TabItem.Header>
                                     <StackPanel Orientation="Horizontal">
                                         <Path Data="{StaticResource IconIsotherm}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=TabItem}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0" SnapsToDevicePixels="True"/>
@@ -1593,7 +1617,7 @@
                             </TabItem>
 
                             <!-- TAB 10: BILATERAL SYMMETRY (ARMSTRONG) -->
-                            <TabItem>
+                            <TabItem x:Name="TabSymmetry" Tag="Diagnostics">
                                 <TabItem.Header>
                                     <StackPanel Orientation="Horizontal">
                                         <Path Data="{StaticResource IconScale}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=TabItem}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0" SnapsToDevicePixels="True"/>
@@ -1629,7 +1653,7 @@
                             </TabItem>
 
                             <!-- TAB 11: PERFUSION ANALYSIS -->
-                            <TabItem>
+                            <TabItem x:Name="TabPerfusion" Tag="Signals">
                                 <TabItem.Header>
                                     <StackPanel Orientation="Horizontal">
                                         <Path Data="{StaticResource IconPerfusion}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=TabItem}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0" SnapsToDevicePixels="True"/>
@@ -1655,7 +1679,7 @@
                             </TabItem>
 
                             <!-- TAB 12: LUA CLINICAL RULE ENGINE -->
-                            <TabItem>
+                            <TabItem x:Name="TabLua" Tag="System">
                                 <TabItem.Header>
                                     <StackPanel Orientation="Horizontal">
                                         <Path Data="{StaticResource IconCode}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=TabItem}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0" SnapsToDevicePixels="True"/>
@@ -1684,7 +1708,7 @@
                             </TabItem>
 
                             <!-- TAB 13: AUDIT TRAIL (SQLITE) -->
-                            <TabItem>
+                            <TabItem x:Name="TabAudit" Tag="System">
                                 <TabItem.Header>
                                     <StackPanel Orientation="Horizontal">
                                         <Path Data="{StaticResource IconAudit}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=TabItem}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0" SnapsToDevicePixels="True"/>
@@ -1715,7 +1739,7 @@
                             </TabItem>
 
                             <!-- TAB 14: VASCULAR & VEIN ANGIOGRAPHY -->
-                            <TabItem x:Name="TabVascular">
+                            <TabItem x:Name="TabVascular" Tag="Signals">
                                 <TabItem.Header>
                                     <StackPanel Orientation="Horizontal">
                                         <Path Data="{StaticResource IconVascular}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=TabItem}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0" SnapsToDevicePixels="True"/>
@@ -1784,7 +1808,7 @@
                             </TabItem>
 
                             <!-- TAB 15: STRUCTURED CLINICAL FINDINGS (ARZTBERICHT) -->
-                            <TabItem>
+                            <TabItem x:Name="TabReport" Tag="Diagnostics">
                                 <TabItem.Header>
                                     <StackPanel Orientation="Horizontal">
                                         <Path Data="{StaticResource IconReport}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=TabItem}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0" SnapsToDevicePixels="True"/>
@@ -1859,7 +1883,7 @@
                             </TabItem>
 
                             <!-- TAB 16: 42-STUFIGE DIAGNOSTISCHE PIPELINE -->
-                            <TabItem x:Name="TabStages">
+                            <TabItem x:Name="TabStages" Tag="System">
                                 <TabItem.Header>
                                     <StackPanel Orientation="Horizontal">
                                         <Path Data="{StaticResource IconCode}" Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=TabItem}}" Width="12" Height="12" Stretch="Uniform" Margin="0,0,5,0" SnapsToDevicePixels="True"/>

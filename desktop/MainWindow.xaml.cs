@@ -156,6 +156,7 @@ namespace Ignite.Desktop
             RefreshAuditGrid();
             InitializeFilmstripGallery();
             UpdateToolInstructions();
+            FilterInspectorTabsByCategory("Diagnostics");
 
             // Load initial demo image from test-data if available
             TryLoadInitialDemoImage();
@@ -233,7 +234,7 @@ namespace Ignite.Desktop
                             Text = $"Fall #{caseIndex + 1:D2}",
                             FontSize = 9.5,
                             FontWeight = FontWeights.Bold,
-                            Foreground = Brushes.White,
+                            Foreground = (Brush)FindResource("TextPrimaryBrush"),
                             HorizontalAlignment = HorizontalAlignment.Center,
                             Margin = new Thickness(0, 3, 0, 0)
                         };
@@ -290,7 +291,7 @@ namespace Ignite.Desktop
                     {
                         card.BorderBrush = (Brush)FindResource("CyanBrush");
                         card.BorderThickness = new Thickness(2);
-                        card.Background = new SolidColorBrush(Color.FromArgb(50, 0, 240, 255));
+                        card.Background = new SolidColorBrush(Color.FromRgb(0xE0, 0xF2, 0xFE));
                     }
                     else
                     {
@@ -436,7 +437,10 @@ end";
                 UpdateAnatomicalZonesData();
                 UpdateBiomechanicsUI();
 
-                StatusText.Text = $"Thermogramm geladen: {System.IO.Path.GetFileName(path)} ({_rawWidth}x{_rawHeight} Radiometrie-Matrix).";
+                string fileName = System.IO.Path.GetFileName(path);
+                StatusText.Text = $"Thermogramm geladen: {fileName} ({_rawWidth}x{_rawHeight} Radiometrie-Matrix).";
+                if (TxtInspectorPatientTitle != null) TxtInspectorPatientTitle.Text = $"Fall: {fileName} · ID: {_activePatientId}";
+                if (TxtInspectorSensorSubtitle != null) TxtInspectorSensorSubtitle.Text = $"FLIR LWIR 17µm · {_rawWidth}×{_rawHeight} px · DIN EN ISO 13485";
 
                 UpdateHudReadouts();
                 UpdateCurtainGeometry();
@@ -557,20 +561,52 @@ end";
                 _cachedDepth3DPixels = null;
                 _cachedCorrected3DPixels = null;
 
-                // Update Clinical Header Status Chip
+                // Update Clinical Header Status Chip & Inspector Risk Badge
                 bool isCrit = (result.HighestRisk == "CRITICAL");
                 double maxVal = result.Hotspots.Count > 0 ? (result.Hotspots.Max(h => (h?.Region?.MaxVal ?? 0)) - result.Stats.OrigMedian) * 0.1 : 0;
                 if (isCrit)
                 {
-                    BadgeAiStatusDot.Background = (Brush)FindResource("CriticalBrush");
-                    TxtHeaderAiStatus.Text = $"KLINISCHER BEFUND: PATHOLOGISCHES RISIKO (ΔT = +{maxVal:F1} K)";
-                    TxtHeaderAiStatus.Foreground = (Brush)FindResource("CriticalBrush");
+                    if (BorderTriageBadge != null)
+                    {
+                        BorderTriageBadge.Background = (Brush)FindResource("CriticalBgBrush");
+                        BorderTriageBadge.BorderBrush = new SolidColorBrush(Color.FromRgb(0xFC, 0xA5, 0xA5));
+                    }
+                    if (BadgeAiStatusDot != null) BadgeAiStatusDot.Background = (Brush)FindResource("CriticalBrush");
+                    if (TxtHeaderAiStatus != null)
+                    {
+                        TxtHeaderAiStatus.Text = $"KRITISCH (ΔT = +{maxVal:F1} K)";
+                        TxtHeaderAiStatus.Foreground = (Brush)FindResource("CriticalBrush");
+                    }
+                    if (TxtInspectorCaseRisk != null)
+                    {
+                        TxtInspectorCaseRisk.Text = $"ARMSTRONG RISIKO: CRITICAL (ΔT = +{maxVal:F1} K)";
+                        TxtInspectorCaseRisk.Foreground = (Brush)FindResource("CriticalBrush");
+                    }
+                    if (FloatingArmstrongBanner != null)
+                    {
+                        FloatingArmstrongBanner.Visibility = Visibility.Visible;
+                        TxtFloatingArmstrong.Text = $"ARMSTRONG-WARNUNG: ΔT = {maxVal:F1} K (≥ 2.2 K) — Hohes Ulkusrisiko!";
+                    }
                 }
                 else
                 {
-                    BadgeAiStatusDot.Background = (Brush)FindResource("SuccessBrush");
-                    TxtHeaderAiStatus.Text = "KLINISCHER BEFUND: PHYSIOLOGISCH NORMAL";
-                    TxtHeaderAiStatus.Foreground = (Brush)FindResource("SuccessBrush");
+                    if (BorderTriageBadge != null)
+                    {
+                        BorderTriageBadge.Background = (Brush)FindResource("SuccessBgBrush");
+                        BorderTriageBadge.BorderBrush = new SolidColorBrush(Color.FromRgb(0x86, 0xEF, 0xAC));
+                    }
+                    if (BadgeAiStatusDot != null) BadgeAiStatusDot.Background = (Brush)FindResource("SuccessBrush");
+                    if (TxtHeaderAiStatus != null)
+                    {
+                        TxtHeaderAiStatus.Text = "STABIL / PHYSIOLOGISCH";
+                        TxtHeaderAiStatus.Foreground = new SolidColorBrush(Color.FromRgb(0x15, 0x80, 0x3D));
+                    }
+                    if (TxtInspectorCaseRisk != null)
+                    {
+                        TxtInspectorCaseRisk.Text = "ARMSTRONG STADIUM 0 (PHYSIOLOGISCH)";
+                        TxtInspectorCaseRisk.Foreground = (Brush)FindResource("CyanBrush");
+                    }
+                    if (FloatingArmstrongBanner != null) FloatingArmstrongBanner.Visibility = Visibility.Collapsed;
                 }
 
                 // Update Perfusion Tab
@@ -897,7 +933,7 @@ end";
                 ColViewport2.Width = new GridLength(1, GridUnitType.Star);
                 ImgCurtainRaw.Visibility = Visibility.Collapsed;
                 CanvasCurtain.Visibility = Visibility.Collapsed;
-                if (InspectorTabs != null && TabBiomechanics != null) InspectorTabs.SelectedItem = TabBiomechanics;
+                SelectInspectorTab(TabBiomechanics);
                 TxtVp2Title.Text = "BIOMECHANISCHER PLANTARDRUCK- & SCHERSPANNUNGS-PROXY (PENNES BIOHEAT in kPa)";
             }
             else if (RbViewLaplace != null && RbViewLaplace.IsChecked == true)
@@ -908,7 +944,7 @@ end";
                 ColViewport2.Width = new GridLength(1, GridUnitType.Star);
                 ImgCurtainRaw.Visibility = Visibility.Collapsed;
                 CanvasCurtain.Visibility = Visibility.Collapsed;
-                if (InspectorTabs != null && TabBiomechanics != null) InspectorTabs.SelectedItem = TabBiomechanics;
+                SelectInspectorTab(TabBiomechanics);
                 TxtVp2Title.Text = "DISCRETE 2D-LAPLACE (∇²T) WÄRMESTAU- & TIEFENGEWEBE-ABSZESSFILTER";
             }
             else if (RbView3DAnatomy != null && RbView3DAnatomy.IsChecked == true)
@@ -919,7 +955,7 @@ end";
                 ColViewport2.Width = new GridLength(1, GridUnitType.Star);
                 ImgCurtainRaw.Visibility = Visibility.Collapsed;
                 CanvasCurtain.Visibility = Visibility.Collapsed;
-                if (InspectorTabs != null && Tab3DReconstruction != null) InspectorTabs.SelectedItem = Tab3DReconstruction;
+                SelectInspectorTab(Tab3DReconstruction);
                 TxtVp2Title.Text = "3D-ANATOMISCHE OBERFLÄCHEN-REKONSTRUKTION & LAMBERT-KANTENKORREKTUR";
             }
             else if (RbViewBioheat != null && RbViewBioheat.IsChecked == true)
@@ -930,7 +966,7 @@ end";
                 ColViewport2.Width = new GridLength(1, GridUnitType.Star);
                 ImgCurtainRaw.Visibility = Visibility.Collapsed;
                 CanvasCurtain.Visibility = Visibility.Collapsed;
-                if (InspectorTabs != null && TabBiomechanics != null) InspectorTabs.SelectedItem = TabBiomechanics;
+                SelectInspectorTab(TabBiomechanics);
                 TxtVp2Title.Text = "PENNES 2D BIOHEAT MIKROVASKULÄRE PERFUSIONSMAP (ω_b in ml / 100g / min)";
             }
 
@@ -963,8 +999,90 @@ end";
             LineCurtain.X2 = curtainX;
             LineCurtain.Y2 = _rawHeight;
 
-            Canvas.SetLeft(BorderCurtainHandle, curtainX - 17);
-            Canvas.SetTop(BorderCurtainHandle, (_rawHeight / 2.0) - 17);
+            if (CurtainLabelLeft != null)
+            {
+                Canvas.SetLeft(CurtainLabelLeft, Math.Max(8, curtainX - 96));
+                Canvas.SetTop(CurtainLabelLeft, 12);
+            }
+            if (CurtainLabelRight != null)
+            {
+                Canvas.SetLeft(CurtainLabelRight, Math.Min(_rawWidth - 92, curtainX + 12));
+                Canvas.SetTop(CurtainLabelRight, 12);
+            }
+
+            if (BorderCurtainHandle != null)
+            {
+                Canvas.SetLeft(BorderCurtainHandle, curtainX - 23);
+                Canvas.SetTop(BorderCurtainHandle, (_rawHeight / 2.0) - 15);
+            }
+        }
+
+        // --- Synchronized Live Dual-Viewport Crosshair Reticle ---
+        private void UpdateSynchronizedCrosshair(int x, int y)
+        {
+            if (_rawWidth <= 0 || _rawHeight <= 0) return;
+
+            DrawCrosshairOnCanvas(CrosshairOriginalCanvas, x, y);
+            DrawCrosshairOnCanvas(CrosshairResultCanvas, x, y);
+        }
+
+        private void DrawCrosshairOnCanvas(Canvas canvas, int x, int y)
+        {
+            if (canvas == null) return;
+            canvas.Children.Clear();
+
+            // Subtle dashed DICOM guidelines
+            var hLine = new System.Windows.Shapes.Line
+            {
+                X1 = 0, Y1 = y,
+                X2 = _rawWidth, Y2 = y,
+                Stroke = (Brush)FindResource("CyanBrush"),
+                StrokeThickness = 1,
+                Opacity = 0.4,
+                StrokeDashArray = new DoubleCollection { 4, 3 }
+            };
+            var vLine = new System.Windows.Shapes.Line
+            {
+                X1 = x, Y1 = 0,
+                X2 = x, Y2 = _rawHeight,
+                Stroke = (Brush)FindResource("CyanBrush"),
+                StrokeThickness = 1,
+                Opacity = 0.4,
+                StrokeDashArray = new DoubleCollection { 4, 3 }
+            };
+
+            // Medical circular reticle
+            var ring = new System.Windows.Shapes.Ellipse
+            {
+                Width = 14,
+                Height = 14,
+                Stroke = (Brush)FindResource("CyanBrush"),
+                StrokeThickness = 1.5,
+                Fill = Brushes.Transparent
+            };
+            Canvas.SetLeft(ring, x - 7);
+            Canvas.SetTop(ring, y - 7);
+
+            // Center target dot
+            var dot = new System.Windows.Shapes.Ellipse
+            {
+                Width = 2,
+                Height = 2,
+                Fill = (Brush)FindResource("CyanBrush")
+            };
+            Canvas.SetLeft(dot, x - 1);
+            Canvas.SetTop(dot, y - 1);
+
+            canvas.Children.Add(hLine);
+            canvas.Children.Add(vLine);
+            canvas.Children.Add(ring);
+            canvas.Children.Add(dot);
+        }
+
+        private void HideSynchronizedCrosshairs()
+        {
+            CrosshairOriginalCanvas?.Children.Clear();
+            CrosshairResultCanvas?.Children.Clear();
         }
 
         // --- Interactive Overlays (Hotspots, Min/Max, Probes, Profile, ROI) ---
@@ -1349,6 +1467,80 @@ end";
             }
         }
 
+        // --- Thematic Clinical Category Switcher & Tab Filtering ---
+        private void InspectorCategory_Checked(object sender, RoutedEventArgs e)
+        {
+            if (!_isInitialized || InspectorTabs == null) return;
+
+            string targetCategory = "Diagnostics";
+            if (sender == CatBtnAnatomy) targetCategory = "Anatomy";
+            else if (sender == CatBtnSignals) targetCategory = "Signals";
+            else if (sender == CatBtnSystem) targetCategory = "System";
+
+            FilterInspectorTabsByCategory(targetCategory);
+        }
+
+        private void FilterInspectorTabsByCategory(string category)
+        {
+            if (InspectorTabs == null) return;
+
+            TabItem? firstMatchingTab = null;
+            TabItem? currentlySelectedTab = InspectorTabs.SelectedItem as TabItem;
+            bool currentStillVisible = false;
+
+            foreach (var item in InspectorTabs.Items)
+            {
+                if (item is TabItem tab)
+                {
+                    string tabTag = tab.Tag as string ?? string.Empty;
+                    if (string.Equals(tabTag, category, StringComparison.OrdinalIgnoreCase))
+                    {
+                        tab.Visibility = Visibility.Visible;
+                        firstMatchingTab ??= tab;
+                        if (tab == currentlySelectedTab) currentStillVisible = true;
+                    }
+                    else
+                    {
+                        tab.Visibility = Visibility.Collapsed;
+                    }
+                }
+            }
+
+            if (!currentStillVisible && firstMatchingTab != null)
+            {
+                InspectorTabs.SelectedItem = firstMatchingTab;
+                firstMatchingTab.IsSelected = true;
+            }
+        }
+
+        public void SelectInspectorTab(TabItem? targetTab)
+        {
+            if (targetTab == null || InspectorTabs == null) return;
+
+            string category = targetTab.Tag as string ?? "Diagnostics";
+
+            if (category == "Anatomy")
+            {
+                if (CatBtnAnatomy != null && CatBtnAnatomy.IsChecked != true) CatBtnAnatomy.IsChecked = true;
+            }
+            else if (category == "Signals")
+            {
+                if (CatBtnSignals != null && CatBtnSignals.IsChecked != true) CatBtnSignals.IsChecked = true;
+            }
+            else if (category == "System")
+            {
+                if (CatBtnSystem != null && CatBtnSystem.IsChecked != true) CatBtnSystem.IsChecked = true;
+            }
+            else
+            {
+                if (CatBtnDiagnostics != null && CatBtnDiagnostics.IsChecked != true) CatBtnDiagnostics.IsChecked = true;
+            }
+
+            FilterInspectorTabsByCategory(category);
+            InspectorTabs.SelectedItem = targetTab;
+            targetTab.IsSelected = true;
+        }
+
         // --- Voicemod Left Navigation Rail Handler ---
         private void NavRail_Checked(object sender, RoutedEventArgs e)
         {
@@ -1359,31 +1551,31 @@ end";
             }
             else if (sender == RailBtnVascular)
             {
-                if (TabVascular != null) InspectorTabs.SelectedItem = TabVascular;
+                SelectInspectorTab(TabVascular);
             }
             else if (sender == RailBtnHotspots)
             {
-                InspectorTabs.SelectedIndex = 2; // Herde
+                SelectInspectorTab(TabHotspots);
             }
             else if (sender == RailBtnAnatomy)
             {
-                if (TabAnatomy != null) InspectorTabs.SelectedItem = TabAnatomy;
+                SelectInspectorTab(TabAnatomy);
             }
             else if (sender == RailBtnRadiometry)
             {
-                if (TabHistogram != null) InspectorTabs.SelectedItem = TabHistogram;
+                SelectInspectorTab(TabHistogram);
             }
             else if (sender == RailBtnReport)
             {
-                InspectorTabs.SelectedIndex = 0; // Arztbericht
+                SelectInspectorTab(TabReport);
             }
             else if (sender == RailBtnParams)
             {
-                InspectorTabs.SelectedIndex = 1; // Parameter
+                SelectInspectorTab(TabParams);
             }
             else if (sender == RailBtnAudit)
             {
-                InspectorTabs.SelectedIndex = 11; // Audit
+                SelectInspectorTab(TabAudit);
             }
         }
 
@@ -1551,12 +1743,13 @@ end";
                 return;
             }
 
-            // Radiometric Cursor Readout
+            // Radiometric Cursor Readout & Synchronized Reticle
             if (_rawGrayPixels != null && x >= 0 && x < _rawWidth && y >= 0 && y < _rawHeight)
             {
                 byte val = _rawGrayPixels[y * _rawWidth + x];
                 double temp = ThermalAnalysisHelper.RawToTemperature(val);
                 CursorCoordsText.Text = $"X: {x}, Y: {y} | Radiometrie: T = {temp:F1}°C (Raw: {val})";
+                UpdateSynchronizedCrosshair(x, y);
             }
 
             // Panning
@@ -1671,7 +1864,7 @@ end";
 
                 if (_activeProfileStats != null && _activeProfileStats.Samples.Count >= 2)
                 {
-                    if (InspectorTabs != null && TabProfile != null) InspectorTabs.SelectedItem = TabProfile;
+                    SelectInspectorTab(TabProfile);
                     RenderProfileGraph(_activeProfileStats);
                     StatusText.Text = $"Schnittprofil erstellt: Pfadlänge {_activeProfileStats.TotalLengthPx:F0} px | T={_activeProfileStats.MinTemp:F1}°C bis {_activeProfileStats.MaxTemp:F1}°C.";
                 }
@@ -1679,8 +1872,17 @@ end";
 
         }
 
-        private void ViewportOriginal_MouseLeave(object sender, MouseEventArgs e) => CursorCoordsText.Text = "X: --, Y: -- | Temp: --";
-        private void Viewport_MouseLeave(object sender, MouseEventArgs e) => CursorCoordsText.Text = "X: --, Y: -- | Temp: --";
+        private void ViewportOriginal_MouseLeave(object sender, MouseEventArgs e)
+        {
+            CursorCoordsText.Text = "X: --, Y: -- | Temp: --";
+            HideSynchronizedCrosshairs();
+        }
+
+        private void Viewport_MouseLeave(object sender, MouseEventArgs e)
+        {
+            CursorCoordsText.Text = "X: --, Y: -- | Temp: --";
+            HideSynchronizedCrosshairs();
+        }
 
         // --- Probes Management ---
         private void PlaceProbePoint(Point pos)
@@ -1714,7 +1916,7 @@ end";
 
             if (_probePoints.Count >= 2)
             {
-                InspectorTabs.SelectedItem = TabProbes;
+                SelectInspectorTab(TabProbes);
             }
         }
 
@@ -2116,14 +2318,14 @@ end";
                 case 1: // Diabetischer Fuß (Armstrong)
                     ComboPalette.SelectedIndex = 0; // Ironbow
                     RbToolProbe.IsChecked = true;
-                    InspectorTabs.SelectedItem = TabProbes;
+                    SelectInspectorTab(TabProbes);
                     StatusText.Text = "Preset aktiv: Diabetischer Fuß. Setzen Sie Sonden P₁/P₂ oder klicken Sie 'Füße trennen'.";
                     break;
 
                 case 2: // Gefäßstatus / DSA (Frangi)
                     ComboPalette.SelectedIndex = 0;
                     RbViewDSA.IsChecked = true;
-                    InspectorTabs.SelectedItem = TabVascular;
+                    SelectInspectorTab(TabVascular);
                     RefreshResultImageOnly();
                     StatusText.Text = "Preset aktiv: Reiner Gefäßbaum DSA (Digital Subtraction Angiography).";
                     break;
@@ -2132,13 +2334,13 @@ end";
                     ComboPalette.SelectedIndex = 0;
                     SliderK.Value = 3.0;
                     RbToolRoi.IsChecked = true;
-                    InspectorTabs.SelectedIndex = 1; // Herde & Befunde
+                    SelectInspectorTab(TabHotspots);
                     StatusText.Text = "Preset aktiv: Fokale Entzündungsdetektion (Top-Hat MAD k=3.0).";
                     break;
 
                 case 4: // Ischämie-Verdacht (Perfusion)
                     ComboPalette.SelectedIndex = 2; // Inferno
-                    InspectorTabs.SelectedIndex = 8; // Perfusion
+                    SelectInspectorTab(TabPerfusion);
                     StatusText.Text = "Preset aktiv: Longitudinale Perfusion & Temperaturgradient dT/dy.";
                     break;
             }
@@ -2177,7 +2379,7 @@ end";
                     symRes.Zones ??= new();
                     GridSymmetry.ItemsSource = symRes.Zones;
                     TxtSymmetryAssessment.Text = $"{symRes.OverallStatus ?? "NORMAL"}: {symRes.ClinicalAssessment ?? string.Empty} (Max ΔT = {symRes.MaxDeltaT:F1} K)";
-                    InspectorTabs.SelectedIndex = 7; // Switch to bilateral tab
+                    SelectInspectorTab(TabSymmetry); // Switch to bilateral tab
                     StatusText.Text = $"Beide Füße erfolgreich verglichen: Max ΔT = {symRes.MaxDeltaT:F1} K.";
                 }
             }
@@ -2196,7 +2398,7 @@ end";
             ChkFrangi.IsChecked = true;
             _enableVeinOverlay = true;
             if (ChkEnableVeinOverlay != null) ChkEnableVeinOverlay.IsChecked = true;
-            InspectorTabs.SelectedItem = TabVascular;
+            SelectInspectorTab(TabVascular);
 
             if (_cachedVeinPixels == null)
             {
@@ -2370,10 +2572,7 @@ end";
 
         private void BtnViewStages_Click(object sender, RoutedEventArgs e)
         {
-            if (TabStages != null && InspectorTabs != null)
-            {
-                InspectorTabs.SelectedItem = TabStages;
-            }
+            SelectInspectorTab(TabStages);
         }
 
         private void GridStages_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -2462,7 +2661,7 @@ end";
                     symRes.Zones ??= new();
                     GridSymmetry.ItemsSource = symRes.Zones;
                     TxtSymmetryAssessment.Text = $"{symRes.OverallStatus ?? "NORMAL"}: {symRes.ClinicalAssessment ?? string.Empty} (Max ΔT = {symRes.MaxDeltaT:F1} K)";
-                    InspectorTabs.SelectedIndex = 7;
+                    SelectInspectorTab(TabSymmetry);
                     StatusText.Text = $"Seitenvergleich abgeschlossen: Max ΔT = {symRes.MaxDeltaT:F1} K";
                 }
             }
@@ -2476,14 +2675,14 @@ end";
 
         private void ModeInflammation_Click(object sender, RoutedEventArgs e)
         {
-            InspectorTabs.SelectedIndex = 1;
+            SelectInspectorTab(TabHotspots);
             _ = RunPipelineAsync();
         }
 
         private void ModeVascular_Click(object sender, RoutedEventArgs e) => BtnToggleVascular_Click(sender, e);
         private void ModePerfusion_Click(object sender, RoutedEventArgs e)
         {
-            InspectorTabs.SelectedIndex = 8;
+            SelectInspectorTab(TabPerfusion);
             _ = RunPipelineAsync();
         }
         private void ModeBilateral_Click(object sender, RoutedEventArgs e) => BtnAutoSplitFeet_Click(sender, e);
@@ -2493,8 +2692,8 @@ end";
         private void PaletteInferno_Click(object sender, RoutedEventArgs e) => ComboPalette.SelectedIndex = 2;
         private void PaletteGray_Click(object sender, RoutedEventArgs e) => ComboPalette.SelectedIndex = 3;
 
-        private void MenuAuditLog_Click(object sender, RoutedEventArgs e) => InspectorTabs.SelectedIndex = 10;
-        private void MenuLuaEditor_Click(object sender, RoutedEventArgs e) => InspectorTabs.SelectedIndex = 9;
+        private void MenuAuditLog_Click(object sender, RoutedEventArgs e) => SelectInspectorTab(TabAudit);
+        private void MenuLuaEditor_Click(object sender, RoutedEventArgs e) => SelectInspectorTab(TabLua);
 
         private void MenuBenchmark_Click(object sender, RoutedEventArgs e)
         {
@@ -2839,7 +3038,7 @@ end";
 
         private void MenuOpenOptions_Click(object sender, RoutedEventArgs e)
         {
-            if (InspectorTabs != null) InspectorTabs.SelectedIndex = 1;
+            SelectInspectorTab(TabParams);
         }
 
         private void ChkShowZonesOverlay_Click(object sender, RoutedEventArgs e)
@@ -2866,10 +3065,7 @@ end";
                 _goniometerMeasurement = OrthopedicGoniometerService.CalculateGoniometer(
                     _goniometerPoints[0], _goniometerPoints[1], _goniometerPoints[2]);
                 UpdateGoniometerUI();
-                if (InspectorTabs != null && TabBiomechanics != null)
-                {
-                    InspectorTabs.SelectedItem = TabBiomechanics;
-                }
+                SelectInspectorTab(TabBiomechanics);
             }
             else
             {
