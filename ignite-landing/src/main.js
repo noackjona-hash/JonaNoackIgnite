@@ -92,6 +92,7 @@ const page = document.body.dataset.page;
 const logo = id => `<span class="brand-mark"><svg viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="fl${id}" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#7c3aed"/><stop offset=".35" stop-color="#ef4444"/><stop offset=".7" stop-color="#f59e0b"/><stop offset="1" stop-color="#fde047"/></linearGradient></defs><circle cx="20" cy="20" r="17" class="lg-ring"/><path class="lg-tick" d="M20 1v5M20 34v5M1 20h5M34 20h5"/><path d="M20 7c1.3 5.6 8 8 8 16 0 5.6-3.6 9.5-8 9.5S12 28.6 12 23.8c0-3.4 1.8-5.6 3.6-7.4.2 2.2 1.1 3.5 2.4 4.2-.5-5.6-1.6-9.6 2-13.6Z" fill="url(#fl${id})"/><path d="M20 20.5c1.8 2.2 3.6 3.8 3.6 6.4 0 2.2-1.6 3.6-3.6 3.6s-3.6-1.5-3.6-3.5c0-2.5 2-3.4 3.6-6.5Z" fill="#fffbe0"/></svg></span>`;
 
 document.getElementById('site-header').innerHTML = `
+<div class="progress" id="progress"></div>
 <header class="nav" id="nav"><div class="container nav-in">
   <a class="brand" href="/" aria-label="IGNITE Start">${logo('h')}<span class="brand-word">IGNITE<small>Medical Imaging Suite</small></span></a>
   <nav class="links" id="links">${links.map(l => `<a href="${l[0]}" data-i18n="${l[1]}" class="${l[3] === page ? 'active' : ''}">${l[2]}</a>`).join('')}</nav>
@@ -111,7 +112,8 @@ document.getElementById('site-footer').innerHTML = `
     <div><h4>Stack</h4><a>C# · .NET 10</a><a>Go 1.24+</a><a>AVX2 · Lua · SQLite</a></div>
   </div>
   <div class="legal"><span>© 2026 Jona Noack</span><span data-i18n="foot.legal">Jugend forscht 2026 · Forschungsprojekt, kein zertifiziertes Medizinprodukt</span></div>
-</div></footer>`;
+</div></footer>
+<div class="dock" id="dock"><a class="btn btn-primary" data-download href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 21h16"/></svg><span data-i18n="common.download">Für Windows herunterladen</span></a><a class="btn btn-ghost" data-repo href="#" target="_blank" rel="noopener" aria-label="GitHub">↗</a></div>`;
 
 document.querySelectorAll('[data-download]').forEach(a => { a.href = DOWNLOAD_URL; a.target = '_blank'; a.rel = 'noopener'; });
 document.querySelectorAll('[data-repo]').forEach(a => { a.href = REPO; });
@@ -135,8 +137,26 @@ setLang(localStorage.getItem('ignite-lang') || (navigator.language.startsWith('d
 
 // Navigation
 const nav = document.getElementById('nav');
-addEventListener('scroll', () => nav.classList.toggle('scrolled', scrollY > 8), { passive: true });
-document.getElementById('burger').addEventListener('click', () => document.getElementById('links').classList.toggle('open'));
+const bar = document.getElementById('progress');
+const dock = document.getElementById('dock');
+const menu = document.getElementById('links');
+const burger = document.getElementById('burger');
+function onScroll() {
+  nav.classList.toggle('scrolled', scrollY > 8);
+  const max = document.documentElement.scrollHeight - innerHeight;
+  bar.style.transform = `scaleX(${max > 0 ? Math.min(scrollY / max, 1) : 0})`;
+  dock.classList.toggle('show', scrollY > 420 && scrollY < max - 500);
+}
+addEventListener('scroll', onScroll, { passive: true });
+onScroll();
+function toggleMenu(open) {
+  menu.classList.toggle('open', open);
+  document.body.classList.toggle('lock', open);
+  burger.textContent = open ? '✕' : '☰';
+}
+burger.addEventListener('click', () => toggleMenu(!menu.classList.contains('open')));
+menu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => toggleMenu(false)));
+addEventListener('resize', () => { if (innerWidth >= 980) toggleMenu(false); });
 
 // Reveal on scroll
 const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { threshold: .12 });
