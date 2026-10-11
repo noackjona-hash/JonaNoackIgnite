@@ -67,9 +67,8 @@ h3 { font-size: 1.25rem; letter-spacing: -.02em; }
 .brand-word { display: grid; line-height: 1.05; font-weight: 800; font-size: 1.25rem; letter-spacing: .08em; color: var(--ink); }
 .brand-word small { font: 600 .54rem var(--font); letter-spacing: .18em; text-transform: uppercase; color: var(--muted); margin-top: 3px; display: none; }
 .nav-actions { display: flex; align-items: center; gap: 10px; position: relative; z-index: 3; }
-.lang { display: flex; border: 1px solid var(--line); border-radius: 9px; padding: 2px; background: #fff; }
-.lang button { border: 0; background: none; font: 600 .78rem var(--font); min-width: 38px; min-height: 34px; border-radius: 7px; cursor: pointer; color: var(--muted); }
-.lang button.on { background: var(--ink); color: #fff; }
+.lang { display: flex; align-items: center; border: 1px solid var(--line); border-radius: 9px; padding: 2px 4px; background: #fff; }
+.lang select { border: 0; background: transparent; font: 700 .78rem var(--mono); color: var(--ink); cursor: pointer; padding: 6px 4px; outline: none; }
 .nav-actions .btn { display: none; }
 .burger { display: grid; place-items: center; border: 1px solid var(--line); background: #fff; color: var(--ink); border-radius: 10px; width: 44px; height: 44px; cursor: pointer; font-size: 1.2rem; }
 
@@ -255,3 +254,96 @@ footer { border-top: 1px solid var(--line); background: var(--bg2); padding: 56p
   .dock { display: none; }
   footer { padding-bottom: 40px; }
 }
+
+/* ============ INTERACTIVE CLINICAL CALCULATOR ============ */
+.calc-card {
+  background: #ffffff;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 16px;
+  padding: clamp(24px, 5vw, 44px);
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 32px;
+  box-shadow: 0 4px 20px rgba(0,0,0,.05);
+}
+@media (min-width: 860px) {
+  .calc-card { grid-template-columns: 1.1fr 1fr; gap: 44px; }
+}
+.calc-controls { display: grid; gap: 20px; }
+.calc-field { display: grid; gap: 8px; }
+.calc-field label { font: 600 .82rem var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .06em; display: flex; justify-content: space-between; align-items: center; }
+.calc-field label b { color: var(--ink); font-size: 1rem; font-family: var(--mono); }
+.calc-field input[type="range"] {
+  width: 100%;
+  accent-color: #000000;
+  cursor: pointer;
+  height: 6px;
+  background: #e4e4e7;
+  border-radius: 3px;
+}
+.calc-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.calc-chips button {
+  border: 1px solid var(--line);
+  background: var(--bg2);
+  color: var(--ink);
+  font: 600 .78rem var(--font);
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: .15s ease;
+}
+.calc-chips button.active, .calc-chips button:hover {
+  background: #000000;
+  color: #ffffff;
+  border-color: #000000;
+}
+.calc-presets { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 6px; }
+
+.calc-results {
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 28px;
+  display: grid;
+  gap: 18px;
+  align-content: start;
+}
+.calc-metric { display: grid; gap: 4px; }
+.calc-metric span { font: 600 .76rem var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.calc-metric b { font-size: clamp(2.4rem, 6vw, 3.4rem); font-family: var(--display); line-height: 1; letter-spacing: -.03em; color: var(--ink); }
+.calc-results .pill { font-size: .85rem; width: fit-content; }
+.calc-action-desc { font-size: .94rem; color: #3f3f46; line-height: 1.55; }
+.calc-details {
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+  display: grid;
+  gap: 6px;
+  font-size: .82rem;
+  color: var(--muted);
+}
+.calc-details strong { color: var(--ink); font-family: var(--mono); }
+
+/* ============ CURTAIN PROBE HUD ============ */
+.curtain-probe {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  background: rgba(0, 0, 0, .88);
+  backdrop-filter: blur(8px);
+  color: #ffffff;
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,.2);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font: 600 .72rem var(--mono);
+  letter-spacing: .04em;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.curtain-probe .probe-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--red); animation: pulse 1.8s infinite; }
+@keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(220,38,38,.6) } 50% { box-shadow: 0 0 0 6px rgba(220,38,38,0) } }
+

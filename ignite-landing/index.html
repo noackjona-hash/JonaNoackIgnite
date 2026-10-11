@@ -39,6 +39,12 @@
             <div class="handle">◀ ▶</div>
             <span class="tag l" data-i18n="home.tagL">ROH-INFRAROT</span>
             <span class="tag r" data-i18n="home.tagR">DIAGNOSE</span>
+            <div class="curtain-probe" id="curtainProbe">
+              <span class="probe-dot"></span>
+              <span id="probeCoords">X: 538 px Y: 342 px</span>
+              <span id="probeTemp">34,8 °C</span>
+              <span id="probeZone">Hallux L (ΔT = +2,7 K)</span>
+            </div>
             <input type="range" min="2" max="98" value="50" aria-label="Vorhang-Wipe" />
           </div>
           <p class="curtain-note" data-i18n="home.curtainNote">Wie in der Workstation: Vorhang ziehen und Roh-Thermogramm mit Befund vergleichen.</p>
@@ -78,6 +84,69 @@
             <h3 data-i18n="home.f3h">Hardware-nah schnell</h3>
             <p data-i18n="home.f3p">Go-Pipeline mit AVX2-SIMD-Kernels verarbeitet 32 Pixel pro Takt – ohne C-Compiler, direkt im Go-Assembler.</p>
           </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="simulator">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="eyebrow" data-i18n="calc.eyebrow">Diagnose-Simulator</span>
+          <h2 data-i18n="calc.h">Interaktiver Armstrong-Klinikrechner</h2>
+          <p class="lead" data-i18n="calc.lead">Simulieren Sie in Echtzeit die kontralaterale Temperaturdifferenz (ΔT) zwischen linkem und rechtem Fuß und bewerten Sie das Ulkusrisiko nach IWGDF-Standards.</p>
+        </div>
+
+        <div class="calc-card reveal">
+          <div class="calc-controls">
+            <div class="calc-field">
+              <label><span data-i18n="calc.zone">Anatomische Zone</span></label>
+              <div class="calc-chips" id="calcZoneChips">
+                <button type="button" class="active" data-zone="hallux" data-i18n="calc.z1">Hallux (Großer Zeh)</button>
+                <button type="button" data-zone="meta" data-i18n="calc.z2">Metatarsale I</button>
+                <button type="button" data-zone="heel" data-i18n="calc.z3">Calcaneus (Ferse)</button>
+                <button type="button" data-zone="arch" data-i18n="calc.z4">Plantare Wölbung</button>
+              </div>
+            </div>
+
+            <div class="calc-field">
+              <label><span data-i18n="calc.tL">Temperatur Links (TL)</span><b id="valTL">34,8 °C</b></label>
+              <input type="range" id="sliderTL" min="28.0" max="38.0" step="0.1" value="34.8" />
+            </div>
+
+            <div class="calc-field">
+              <label><span data-i18n="calc.tR">Temperatur Rechts (TR)</span><b id="valTR">32,1 °C</b></label>
+              <input type="range" id="sliderTR" min="28.0" max="38.0" step="0.1" value="32.1" />
+            </div>
+
+            <div class="calc-presets">
+              <button type="button" id="btnDemoCase" class="btn btn-sm btn-ghost" data-i18n="calc.btnDemo">Reales Fallbeispiel (Hallux ΔT=2,7 K)</button>
+              <button type="button" id="btnNormalCase" class="btn btn-sm btn-ghost" data-i18n="calc.btnNorm">Physiologischer Normalbefund</button>
+            </div>
+          </div>
+
+          <div class="calc-results">
+            <div class="calc-metric">
+              <span data-i18n="calc.delta">Kontralaterale Differenz (ΔT)</span>
+              <b id="calcDeltaVal">+2,7 K</b>
+            </div>
+
+            <div>
+              <div id="calcStatusBadge" class="pill crit">
+                <i></i>
+                <span id="calcStatusText">ARMSTRONG-ALARM (SIGNIFIKANT)</span>
+              </div>
+            </div>
+
+            <p id="calcActionText" class="calc-action-desc">
+              Signifikanter Entzündungsherd mit hohem Ulkusrisiko (ΔT ≥ 2,2 K nach Armstrong et al., 2007). Sofortige Druckentlastung und radiometrische Verlaufskontrolle innerhalb von 48 Stunden indiziert.
+            </p>
+
+            <div class="calc-details">
+              <span>Pennes Bioheat THDI: <strong id="calcThdi">1.84 W/(m²·K)</strong></span>
+              <span>7-Tage-Ulkuswahrscheinlichkeit: <strong id="calcRiskPct">82%</strong></span>
+              <span>Klinische Leitlinie: <strong>IWGDF Prevention Protocol 2023</strong></span>
+            </div>
+          </div>
         </div>
       </div>
     </section>
