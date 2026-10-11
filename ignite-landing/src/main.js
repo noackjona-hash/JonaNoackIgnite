@@ -41,10 +41,10 @@ document.getElementById('site-footer').innerHTML = `
   <div class="foot">
     <div><a class="brand" href="/" aria-label="IGNITE Start">${logo('f')}<span class="brand-word">IGNITE<small>Medical Imaging Suite</small></span></a><p data-i18n="foot.tag">Deterministische Infrarot-Thermografie zur Früherkennung diabetischer Fußulzera.</p></div>
     <div><h4 data-i18n="foot.explore">Entdecken</h4>${links.slice(0, 3).map(l => `<a href="${l[0]}" data-i18n="${l[1]}">${l[2]}</a>`).join('')}</div>
-    <div><h4 data-i18n="foot.project">Projekt</h4>${links.slice(3).map(l => `<a href="${l[0]}" data-i18n="${l[1]}">${l[2]}</a>`).join('')}<a data-repo href="#" target="_blank" rel="noopener">GitHub ↗</a></div>
+    <div><h4 data-i18n="foot.project">Projekt</h4>${links.slice(3).map(l => `<a href="${l[0]}" data-i18n="${l[1]}">${l[2]}</a>`).join('')}<a data-repo href="#" target="_blank" rel="noopener">GitHub ↗</a><a href="/impressum.html" data-i18n="nav.imprint">Impressum</a></div>
     <div><h4>Stack</h4><a>C# · .NET 10</a><a>Go 1.24+</a><a>AVX2 · Lua · SQLite</a></div>
   </div>
-  <div class="legal"><span>© 2026 Jona Noack</span><span data-i18n="foot.legal">Jugend forscht 2026 · Forschungsprojekt, kein zertifiziertes Medizinprodukt</span></div>
+  <div class="legal"><span>© 2026 Jona Noack</span><span data-i18n="foot.legal">Jugend forscht 2026 · Forschungsprojekt, kein zertifiziertes Medizinprodukt</span><a href="/impressum.html" data-i18n="nav.imprint" style="text-decoration:underline">Impressum</a></div>
 </div></footer>
 <div class="dock" id="dock"><a class="btn btn-primary" data-download href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 21h16"/></svg><span data-i18n="common.download">Für Windows herunterladen</span></a><a class="btn btn-ghost" data-repo href="#" target="_blank" rel="noopener" aria-label="GitHub">↗</a></div>`;
 

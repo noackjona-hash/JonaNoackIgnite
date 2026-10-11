@@ -10,6 +10,7 @@ export default defineConfig({
         pipeline: resolve(__dirname, 'pipeline.html'),
         klinik: resolve(__dirname, 'klinik.html'),
         team: resolve(__dirname, 'team.html'),
+        impressum: resolve(__dirname, 'impressum.html'),
       },
     },
   },

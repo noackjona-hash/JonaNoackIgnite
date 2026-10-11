@@ -82,7 +82,20 @@ export const dictionaries = {
     'tm.d1h': 'Written paper (PDF)', 'tm.d1p': 'The print version for Jugend forscht 2026.', 'tm.d2h': 'Scientific monograph', 'tm.d2p': 'Scientific documentation v5.0.0.',
     'tm.d3h': 'Architecture v5.0.0', 'tm.d3p': 'The multi-tier pipeline in detail.', 'tm.d4h': 'Algorithms', 'tm.d4p': 'Mathematical description of the methods.',
     'tm.d5h': 'Optimisations & benchmarks', 'tm.d5p': 'Measurements and performance report.', 'tm.d6h': 'Optimisation guide', 'tm.d6p': 'Performance hints for developers.',
-    'tm.cH': 'Try IGNITE'
+    'tm.cH': 'Try IGNITE',
+    'nav.imprint': 'Legal Notice',
+    'imp.eyebrow': 'Legal Notice', 'imp.h1': 'Legal Notice &amp;<br /><span class="grad">Research Disclaimer.</span>',
+    'imp.lead': 'Information pursuant to § 5 Digitale-Dienste-Gesetz (DDG) as well as clinical classification for the IGNITE Medical Imaging Suite.',
+    'imp.p1h': 'Information pursuant to § 5 DDG',
+    'imp.p2h': 'Medical Research Disclaimer (Not a Certified Medical Device)',
+    'imp.p2p1': 'The IGNITE Medical Imaging Suite is a purely scientific research project developed for the German youth competition Jugend forscht 2026. The software is not a certified medical device under the European Medical Device Regulation (EU-MDR 2017/745) or the German MPDG.',
+    'imp.p2p2': 'All calculated values (including Armstrong contralateral temperature delta ΔT ≥ 2.2 K, Frangi-Hessian filters, Pennes bioheat indices and tissue risk scores) are exclusively for academic exploration. They do not constitute a medical diagnosis.',
+    'imp.p3h': 'Liability for Content & Links',
+    'imp.p3p1': 'As a service provider, we are responsible for our own content under general German law pursuant to § 7 (1) DDG.',
+    'imp.p3p2': 'Our website contains links to external websites of third parties over whose content we have no influence.',
+    'imp.p4h': 'Copyright & Data Privacy (GDPR)',
+    'imp.p4p1': 'Content and works published on this website are subject to German copyright law.',
+    'imp.p4p2': 'This website is statically hosted and sets no tracking cookies or analytics. The offline IGNITE workstation pseudonymises all patient data (ANON-<hash>) according to GDPR Art. 25 and 30 with an SHA-256 audit trail.'
   },
   fr: {
     'common.download': 'Télécharger pour Windows', 'common.github': 'Code source sur GitHub',
@@ -167,7 +180,20 @@ export const dictionaries = {
     'tm.d1h': 'Mémoire officiel (PDF)', 'tm.d1p': 'Version imprimée pour Jugend forscht 2026.', 'tm.d2h': 'Monographie scientifique', 'tm.d2p': 'Rapport exhaustif v5.0.0.',
     'tm.d3h': 'Architecture v5.0.0', 'tm.d3p': 'Détail de la pipeline multicouche.', 'tm.d4h': 'Algorithmes', 'tm.d4p': 'Formulation mathématique complète.',
     'tm.d5h': 'Optimisations & benchmarks', 'tm.d5p': 'Relevés de performances chronométrés.', 'tm.d6h': 'Guide d’optimisation', 'tm.d6p': 'Recommandations pour développeurs.',
-    'tm.cH': 'Découvrir IGNITE'
+    'tm.cH': 'Découvrir IGNITE',
+    'nav.imprint': 'Mentions légales',
+    'imp.eyebrow': 'Mentions légales', 'imp.h1': 'Mentions légales &amp;<br /><span class="grad">Avertissement de recherche.</span>',
+    'imp.lead': 'Informations conformément à l’article 5 de la loi sur les services numériques (DDG) et qualification clinique de la suite IGNITE Medical Imaging.',
+    'imp.p1h': 'Informations conformément au § 5 DDG',
+    'imp.p2h': 'Avertissement de recherche médicale (Dispositif non certifié)',
+    'imp.p2p1': 'La suite logicielle IGNITE Medical Imaging est un projet de recherche purement scientifique réalisé dans le cadre du concours Jugend forscht 2026. Ce logiciel n’est pas un dispositif médical certifié au sens du règlement européen MDR (UE 2017/745) ou de la législation allemande MPDG.',
+    'imp.p2p2': 'Toutes les valeurs calculées (notamment le différentiel thermique controlatéral selon Armstrong ΔT ≥ 2,2 K, les filtres de Frangi, les indices bio-thermiques de Pennes et les scores de risque tissulaire) sont réservées à l’exploration académique. Elles ne constituent en aucun cas un diagnostic médical.',
+    'imp.p3h': 'Responsabilité quant aux contenus et liens',
+    'imp.p3p1': 'En tant que fournisseur de services, nous sommes responsables de nos propres contenus sur ce site conformément au § 7 al. 1 DDG selon les lois générales.',
+    'imp.p3p2': 'Notre offre contient des liens vers des sites Web externes de tiers sur le contenu desquels nous n’avons aucune influence.',
+    'imp.p4h': 'Droits d’auteur et protection des données (RGPD)',
+    'imp.p4p1': 'Les contenus, codes sources et documentations créés sur ces pages sont soumis au droit d’auteur allemand.',
+    'imp.p4p2': 'Ce site Web est hébergé de façon statique et n’utilise aucun cookie de traçage ni outil d’analyse. La station locale IGNITE traite les données de manière strictement hors ligne et pseudonymisée (ANON-<hash>) conformément aux art. 25 et 30 du RGPD avec une chaîne d’audit SHA-256.'
   },
   es: {
     'common.download': 'Descargar para Windows', 'common.github': 'Código fuente en GitHub',
@@ -252,7 +278,20 @@ export const dictionaries = {
     'tm.d1h': 'Memoria oficial (PDF)', 'tm.d1p': 'Versión impresa para Jugend forscht 2026.', 'tm.d2h': 'Monografía científica', 'tm.d2p': 'Documento exhaustivo v5.0.0.',
     'tm.d3h': 'Arquitectura v5.0.0', 'tm.d3p': 'Pipeline multicapa en detalle.', 'tm.d4h': 'Algoritmos', 'tm.d4p': 'Formulación matemática completa.',
     'tm.d5h': 'Optimizaciones y pruebas', 'tm.d5p': 'Métricas de rendimiento comprobadas.', 'tm.d6h': 'Guía de optimización', 'tm.d6p': 'Pautas de ingeniería de software.',
-    'tm.cH': 'Probar IGNITE'
+    'tm.cH': 'Probar IGNITE',
+    'nav.imprint': 'Aviso legal',
+    'imp.eyebrow': 'Aviso legal', 'imp.h1': 'Aviso legal y<br /><span class="grad">descargo de investigación.</span>',
+    'imp.lead': 'Información conforme al § 5 de la Ley de Servicios Digitales (DDG) y clasificación clínica de la suite IGNITE Medical Imaging.',
+    'imp.p1h': 'Información conforme al § 5 DDG',
+    'imp.p2h': 'Exención de responsabilidad médica (Sin certificación sanitaria)',
+    'imp.p2p1': 'La suite IGNITE Medical Imaging es un proyecto de investigación estrictamente científico en el marco del certamen Jugend forscht 2026. El software no es un producto sanitario certificado según el Reglamento europeo sobre productos sanitarios (UE-MDR 2017/745) ni la ley MPDG alemana.',
+    'imp.p2p2': 'Todos los valores calculados (incluyendo la asimetría térmica según Armstrong ΔT ≥ 2,2 K, los filtros de Frangi, los modelos biológicos de Pennes y las puntuaciones de riesgo tisular) se limitan a la exploración metodológica. No constituyen un diagnóstico médico clínico.',
+    'imp.p3h': 'Responsabilidad por contenidos y enlaces',
+    'imp.p3p1': 'Como prestador de servicios, somos responsables de nuestros propios contenidos en estas páginas de conformidad con el § 7 apdo. 1 DDG según las leyes generales.',
+    'imp.p3p2': 'Nuestro sitio contiene enlaces a sitios web externos de terceros sobre cuyos contenidos no ejercemos control alguno.',
+    'imp.p4h': 'Propiedad intelectual y privacidad (RGPD)',
+    'imp.p4p1': 'Los contenidos, código fuente y documentación publicados en este sitio están sujetos a la legislación de propiedad intelectual.',
+    'imp.p4p2': 'Este sitio web se sirve de forma estática y no utiliza cookies de rastreo ni servicios de análisis. La aplicación local IGNITE procesa todos los datos estrictamente fuera de línea y de forma seudonimizada (ANON-<hash>) conforme a los artículos 25 y 30 del RGPD mediante auditoría SHA-256.'
   },
   zh: {
     'common.download': '下载 Windows 版', 'common.github': 'GitHub 源代码',
@@ -337,6 +376,19 @@ export const dictionaries = {
     'tm.d1h': '参赛正式申报论文 (PDF)', 'tm.d1p': 'Jugend forscht 2026 最终提交纸质版完整论文。', 'tm.d2h': '系统科学专著', 'tm.d2p': 'v5.0.0 完整学术专著与理论推导。',
     'tm.d3h': '系统架构设计白皮书', 'tm.d3p': '多层混合异构架构设计全景。', 'tm.d4h': '算法数学推导', 'tm.d4p': '42 级算法严格数学论证与证明。',
     'tm.d5h': '实测基准性能测试', 'tm.d5p': '多核与 SIMD 吞吐实测数据。', 'tm.d6h': '开发者工程指南', 'tm.d6p': '底层高性能系统开发指南。',
-    'tm.cH': '体验 IGNITE'
+    'tm.cH': '体验 IGNITE',
+    'nav.imprint': '法律声明与版权',
+    'imp.eyebrow': '法律声明', 'imp.h1': '法律声明与<br /><span class="grad">医学科研免责。</span>',
+    'imp.lead': '根据德国《数字服务法》（DDG）第 5 条提供的信息，以及 IGNITE 医疗热成像套件的学术定位说明。',
+    'imp.p1h': '根据 DDG 第 5 条的法定信息',
+    'imp.p2h': '医学科研免责声明（非认证医疗器械）',
+    'imp.p2p1': 'IGNITE Medical Imaging Suite 是专为 2026 年德国青年科学竞赛（Jugend forscht）独立研发的纯学术科学研究项目。本软件不属于欧盟医疗器械法规（EU-MDR 2017/745）或德国《医疗器械法》（MPDG）所定义的认证医疗器械。',
+    'imp.p2p2': '系统输出的所有计算结果（包括阿姆斯特朗双侧温差 ΔT ≥ 2.2 K、Frangi 血管 Hessian 特征、Pennes 生物热传导指数及组织溃疡风险评分）仅用于学术算法探索与科研评估，绝不构成执业医师诊断或临床治疗依据。',
+    'imp.p3h': '内容与外部链接责任',
+    'imp.p3p1': '根据德国 DDG 第 7 条第 1 款的一般法律规定，作为服务提供者，我们对本网站上的自有内容承担责任。',
+    'imp.p3p2': '本网站包含指向第三方外部网站的链接，我们对第三方网站的内容没有控制权与约束力。',
+    'imp.p4h': '知识产权与数据隐私保护（GDPR）',
+    'imp.p4p1': '本网站发表的全部原创内容、算法源代码与技术文档均受德国著作权法保护。',
+    'imp.p4p2': '本网站为完全静态化托管，不植入任何追踪 Cookie、数据分析套件或广告插件。本地桌面工作站严格离线运行，依照 GDPR 第 25 条和第 30 条对患者进行假名化（ANON-<hash>）与 SHA-256 不可篡改审计追踪。'
   }
 };
