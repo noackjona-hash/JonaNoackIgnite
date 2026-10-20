@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IGNITE Medical Workstation · ThermoAI Vision v5.0.0</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app-container">
+        <!-- TOP WORKSTATION HEADER -->
+        <header id="workstation-header">
+            <div class="header-left">
+                <div class="logo-box">
+                    <span class="logo-flame">⚡</span>
+                </div>
+                <div class="title-box">
+                    <div class="title-row">
+                        <span class="app-title">IGNITE</span>
+                        <span class="badge badge-version">v5.0.0 · Go Core</span>
+                        <span class="badge badge-simd">AVX2 SIMD</span>
+                        <span class="badge badge-iso">DIN EN ISO 13485</span>
+                    </div>
+                    <div class="app-subtitle">THERMOAI VISION · CLINICAL MEDICAL PACS WORKSTATION</div>
+                </div>
+            </div>
+
+            <div class="header-center">
+                <!-- VIEWPORT MODE SELECTOR -->
+                <div class="segmented-control" id="viewport-mode-selector">
+                    <button class="seg-btn active" data-mode="dual" id="btn-mode-dual">
+                        <span>◫ Dual-Viewport</span>
+                    </button>
+                    <button class="seg-btn" data-mode="curtain" id="btn-mode-curtain">
+                        <span>◧ Vorhang-Split</span>
+                    </button>
+                    <button class="seg-btn" data-mode="overlay" id="btn-mode-overlay">
+                        <span>▣ Vollbild Befund</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="header-right">
+                <button class="action-btn btn-secondary" id="btn-open-file" title="Wärmebild von Festplatte laden">
+                    <span>📂 Bild laden</span>
+                </button>
+                <button class="action-btn btn-primary" id="btn-quick-demo" title="Kalibriertes Demobild auswerten">
+                    <span>⚡ Schnelltest</span>
+                </button>
+                <button class="action-btn btn-ghost" id="btn-open-pap" title="42-Stufen Programmablaufplan ansehen">
+                    <span>📊 PAP Stufen</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- MAIN WORKSPACE -->
+        <main id="workstation-main">
+            <!-- LEFT VIEWPORT SECTION -->
+            <section id="viewport-section">
+                <div id="viewports-wrapper" class="mode-dual">
+                    <!-- VIEWPORT 1: RAW THERMAL -->
+                    <div class="viewport-box" id="viewport-left">
+                        <div class="viewport-badge-bar">
+                            <span class="vp-badge">1. ROH-THERMOGRAMM (LWIR 8–14 µm)</span>
+                            <span class="vp-telemetry" id="telemetry-left">1440 × 1080 px</span>
+                        </div>
+                        <div class="canvas-container" id="container-orig">
+                            <canvas id="canvas-orig"></canvas>
+                            <canvas id="canvas-crosshair-orig" class="overlay-crosshair"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- CURTAIN DIVIDER (CURTAIN MODE ONLY) -->
+                    <div id="curtain-divider" class="hidden">
+                        <div class="curtain-line"></div>
+                        <div class="curtain-handle" id="curtain-handle">
+                            <span class="handle-icon">↔</span>
+                        </div>
+                    </div>
+
+                    <!-- VIEWPORT 2: RESULT OVERLAY -->
+                    <div class="viewport-box" id="viewport-right">
+                        <div class="viewport-badge-bar">
+                            <span class="vp-badge vp-badge-accent">2. BEFUND & HOTSPOT-DIAGNOSTIK</span>
+                            <span class="vp-telemetry" id="telemetry-right">Armstrong ΔT ≥ 2,2 K</span>
+                        </div>
+                        <div class="canvas-container" id="container-result">
+                            <canvas id="canvas-result"></canvas>
+                            <canvas id="canvas-crosshair-result" class="overlay-crosshair"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BOTTOM SYNCHRONIZED TELEMETRY BAR -->
+                <footer id="live-telemetry-bar">
+                    <div class="telem-item">
+                        <span class="telem-label">FOKUS:</span>
+                        <span class="telem-val" id="val-coords">X: --- , Y: ---</span>
+                    </div>
+                    <div class="telem-divider"></div>
+                    <div class="telem-item">
+                        <span class="telem-label">TEMPERATUR T:</span>
+                        <span class="telem-val telem-highlight" id="val-temp">--.- °C</span>
+                    </div>
+                    <div class="telem-divider"></div>
+                    <div class="telem-item">
+                        <span class="telem-label">KONTRALATERAL:</span>
+                        <span class="telem-val" id="val-contra">--.- °C</span>
+                    </div>
+                    <div class="telem-divider"></div>
+                    <div class="telem-item">
+                        <span class="telem-label">ARMSTRONG ΔT:</span>
+                        <span class="telem-val telem-delta" id="val-delta">±-.-- K</span>
+                    </div>
+                    <div class="telem-divider"></div>
+                    <div class="telem-item">
+                        <span class="telem-label">ANATOMIE:</span>
+                        <span class="telem-val" id="val-anatomy">Gewebe nicht fokussiert</span>
+                    </div>
+                    <div class="telem-status" id="triage-status-pill">
+                        <span class="status-dot"></span>
+                        <span id="triage-text">STANDBY</span>
+                    </div>
+                </footer>
+            </section>
+
+            <!-- RIGHT CLINICAL INSPECTOR PANEL -->
+            <aside id="inspector-panel">
+                <!-- CATEGORY PILLS BAR -->
+                <div id="inspector-category-bar">
+                    <button class="cat-pill active" data-cat="diagnostics" id="cat-diagnostics">
+                        <span>Diagnose</span>
+                    </button>
+                    <button class="cat-pill" data-cat="anatomy" id="cat-anatomy">
+                        <span>Anatomie</span>
+                    </button>
+                    <button class="cat-pill" data-cat="signals" id="cat-signals">
+                        <span>Signale</span>
+                    </button>
+                    <button class="cat-pill" data-cat="system" id="cat-system">
+                        <span>System</span>
+                    </button>
+                </div>
+
+                <!-- CATEGORY CONTENTS -->
+                <div id="inspector-content">
+                    <!-- CATEGORY: DIAGNOSTICS -->
+                    <div class="cat-page active" id="page-diagnostics">
+                        <div class="panel-section">
+                            <div class="section-title">
+                                <span>HERDE & HOTSPOT-KLASSIFIKATION</span>
+                                <span class="counter-badge" id="hotspot-count-badge">0 HERDE</span>
+                            </div>
+                            <div id="hotspot-list-container">
+                                <div class="empty-state">
+                                    <div class="empty-icon">🔍</div>
+                                    <div class="empty-text">Keine Untersuchung geladen. Klicken Sie auf "Schnelltest" oder "Bild laden".</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="panel-section">
+                            <div class="section-title">ARMSTRONG / IWGDF RISIKOSTUFE</div>
+                            <div class="score-card" id="risk-score-card">
+                                <div class="score-row">
+                                    <span class="score-label">Klinischer Status:</span>
+                                    <span class="score-val" id="risk-tier-title">Physiologische Normaltemperatur</span>
+                                </div>
+                                <div class="score-progress-bar">
+                                    <div class="score-fill" id="risk-score-fill" style="width: 15%;"></div>
+                                </div>
+                                <div class="score-detail" id="risk-recommendation">
+                                    Keine signifikante thermische Asymmetrie nachweisbar (ΔT < 1.2 K).
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CATEGORY: ANATOMY -->
+                    <div class="cat-page" id="page-anatomy">
+                        <div class="panel-section">
+                            <div class="section-title">5-ZONEN ANATOMISCHE TEMPERATUREN</div>
+                            <div class="zone-grid">
+                                <div class="zone-card">
+                                    <span class="zone-name">Hallux & Digiti</span>
+                                    <span class="zone-temp" id="zone-temp-toes">--.- °C</span>
+                                    <span class="zone-delta" id="zone-delta-toes">ΔT: 0.2 K</span>
+                                </div>
+                                <div class="zone-card">
+                                    <span class="zone-name">Metatarsale I (Ballen)</span>
+                                    <span class="zone-temp" id="zone-temp-meta1">--.- °C</span>
+                                    <span class="zone-delta" id="zone-delta-meta1">ΔT: 0.1 K</span>
+                                </div>
+                                <div class="zone-card">
+                                    <span class="zone-name">Metatarsale II–V</span>
+                                    <span class="zone-temp" id="zone-temp-meta2">--.- °C</span>
+                                    <span class="zone-delta" id="zone-delta-meta2">ΔT: 0.3 K</span>
+                                </div>
+                                <div class="zone-card">
+                                    <span class="zone-name">Mittelfuß & Gewölbe</span>
+                                    <span class="zone-temp" id="zone-temp-mid">--.- °C</span>
+                                    <span class="zone-delta" id="zone-delta-mid">ΔT: 0.1 K</span>
+                                </div>
+                                <div class="zone-card">
+                                    <span class="zone-name">Calcaneus (Ferse)</span>
+                                    <span class="zone-temp" id="zone-temp-heel">--.- °C</span>
+                                    <span class="zone-delta" id="zone-delta-heel">ΔT: 0.2 K</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="panel-section">
+                            <div class="section-title">3D-LAMBERTIAN KANTENKORREKTUR</div>
+                            <div class="metric-card">
+                                <div class="metric-row">
+                                    <span>Max. Rekonstruktionstiefe Z:</span>
+                                    <span class="metric-val" id="recon-max-depth">35.0 mm</span>
+                                </div>
+                                <div class="metric-row">
+                                    <span>Mittlere Rand-Kompensation:</span>
+                                    <span class="metric-val" id="recon-edge-comp">+2.45 K</span>
+                                </div>
+                                <div class="metric-row">
+                                    <span>Winkelkompensierte Pixel:</span>
+                                    <span class="metric-val" id="recon-comp-px">83.125 px</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CATEGORY: SIGNALS -->
+                    <div class="cat-page" id="page-signals">
+                        <div class="panel-section">
+                            <div class="section-title">FRANGI-HESSIAN VESSELNESS (VASKULÄR)</div>
+                            <div class="signal-info-box">
+                                <span class="signal-desc">Unterdrückt oberflächliche Venenstränge und tubuläre Gefäßbäume über Eigenwerte λ1, λ2 der Hesse-Matrix.</span>
+                                <div class="metric-row" style="margin-top: 8px;">
+                                    <span>Gefäßfilter-Status:</span>
+                                    <span class="status-badge-inline" id="frangi-status">Aktiv (AVX2 FMA)</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="panel-section">
+                            <div class="section-title">PENNES 2D-BIOHEAT PERFUSION</div>
+                            <div class="metric-card">
+                                <div class="metric-row">
+                                    <span>Mittlere Perfusion w_b:</span>
+                                    <span class="metric-val" id="bioheat-mean">28.6 ml/min/100g</span>
+                                </div>
+                                <div class="metric-row">
+                                    <span>Hyperämische Gewebefläche:</span>
+                                    <span class="metric-val" id="bioheat-hyper">60.2 %</span>
+                                </div>
+                                <div class="metric-row">
+                                    <span>Mikrovaskulärer Status:</span>
+                                    <span class="metric-val status-accent" id="bioheat-status">Hyperämie</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CATEGORY: SYSTEM -->
+                    <div class="cat-page" id="page-system">
+                        <div class="panel-section">
+                            <div class="section-title">42-STUFIGE DIAGNOSE-PIPELINE</div>
+                            <div class="timing-header">
+                                <span>Gesamtlaufzeit Go-Pipeline:</span>
+                                <span class="timing-highlight" id="timing-total-val">-- ms</span>
+                            </div>
+                            <div id="stages-list-container" class="stages-scrollbox">
+                                <!-- Stages rendered dynamically -->
+                            </div>
+                        </div>
+
+                        <div class="panel-section">
+                            <div class="section-title">PIPELINE-PARAMETER</div>
+                            <div class="param-control">
+                                <div class="param-header">
+                                    <span>MAD-Schwellenwert (k):</span>
+                                    <span class="param-val" id="param-k-val">3.0</span>
+                                </div>
+                                <input type="range" min="1.5" max="4.5" step="0.1" value="3.0" id="slider-k" class="slider-input">
+                            </div>
+                            <div class="param-control">
+                                <div class="param-header">
+                                    <span>Top-Hat Kernfaktor (R):</span>
+                                    <span class="param-val" id="param-r-val">0.05</span>
+                                </div>
+                                <input type="range" min="0.02" max="0.10" step="0.005" value="0.05" id="slider-r" class="slider-input">
+                            </div>
+                            <div class="param-control">
+                                <div class="param-header">
+                                    <span>Rand-Erosionsfaktor:</span>
+                                    <span class="param-val" id="param-m-val">0.005</span>
+                                </div>
+                                <input type="range" min="0.001" max="0.02" step="0.001" value="0.005" id="slider-m" class="slider-input">
+                            </div>
+                        </div>
+
+                        <div class="panel-section">
+                            <div class="section-title">DSGVO ART. 30 AUDIT-TRAIL</div>
+                            <div id="audit-list-container" class="audit-scrollbox">
+                                <!-- Audit entries rendered dynamically -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </main>
+    </div>
+
+    <!-- SCRIPT INJECTION -->
+    <script src="app.js"></script>
+</body>
+</html>

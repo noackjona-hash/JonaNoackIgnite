@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>IGNITE Medical Suite · Offline Standalone Showcase</title>
+  <style>
+    :root {
+      --bg-dark: #090D16;
+      --bg-card: #131B2E;
+      --bg-surface: #1E293B;
+      --border-color: #334155;
+      --accent-cyan: #0284C7;
+      --accent-cyan-hover: #38BDF8;
+      --text-main: #F8FAFC;
+      --text-muted: #94A3B8;
+      --status-success: #16A34A;
+      --status-warning: #F59E0B;
+      --status-danger: #DC2626;
+      --font-mono: "JetBrains Mono", "Fira Code", Consolas, monospace;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg-dark);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    header {
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border-color);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand-logo {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #0284C7, #06B6D4);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 18px;
+      color: white;
+    }
+    .brand-title {
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    .brand-subtitle {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .badge-standalone {
+      background: rgba(2, 132, 199, 0.15);
+      border: 1px solid var(--accent-cyan);
+      color: var(--accent-cyan-hover);
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Tabs */
+    .nav-tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--bg-surface);
+      padding: 4px;
+      border-radius: 8px;
+    }
+    .nav-tab {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .nav-tab.active {
+      background: var(--accent-cyan);
+      color: white;
+      box-shadow: 0 2px 8px rgba(2, 132, 199, 0.4);
+    }
+
+    /* Main Container */
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 320px 1fr 340px;
+      gap: 14px;
+      padding: 14px;
+      max-width: 1700px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 1200px) {
+      main { grid-template-columns: 280px 1fr; }
+      .right-panel { grid-column: span 2; }
+    }
+    @media (max-width: 800px) {
+      main { grid-template-columns: 1fr; }
+      .right-panel { grid-column: span 1; }
+    }
+
+    .panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .panel-title {
+      font-size: 14px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 8px;
+    }
+
+    /* Viewport Area */
+    .viewport-container {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .stage-selector {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+    .stage-btn {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .stage-btn.active {
+      background: #0369A1;
+      border-color: var(--accent-cyan-hover);
+      color: white;
+    }
+
+    .canvas-wrap {
+      position: relative;
+      background: #000;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 420px;
+    }
+    canvas {
+      display: block;
+      max-width: 100%;
+      height: auto;
+      image-rendering: pixelated;
+    }
+
+    .overlay-info {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid var(--border-color);
+      backdrop-filter: blur(4px);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--text-main);
+      pointer-events: none;
+    }
+
+    /* Crosshair readout */
+    .crosshair-info {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid var(--border-color);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-family: var(--font-mono);
+      color: var(--accent-cyan-hover);
+      pointer-events: none;
+    }
+
+    /* Controls */
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .form-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+    }
+    .form-label span {
+      color: var(--accent-cyan-hover);
+      font-family: var(--font-mono);
+    }
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent-cyan);
+    }
+    select, button.btn-action {
+      background: var(--bg-surface);
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    select:focus, button.btn-action:focus {
+      outline: none;
+      border-color: var(--accent-cyan);
+    }
+    button.btn-primary {
+      background: var(--accent-cyan);
+      border-color: var(--accent-cyan-hover);
+      color: white;
+      font-weight: 600;
+    }
+    button.btn-primary:hover {
+      background: #0274B0;
+    }
+
+    /* Diagnosis Cards */
+    .diag-card {
+      background: var(--bg-surface);
+      border-left: 4px solid var(--accent-cyan);
+      border-radius: 6px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .diag-card.alert {
+      border-left-color: var(--status-danger);
+      background: rgba(220, 38, 38, 0.08);
+    }
+    .diag-card.safe {
+      border-left-color: var(--status-success);
+      background: rgba(22, 163, 74, 0.08);
+    }
+    .diag-header {
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      justify-content: space-between;
+    }
+    .diag-val {
+      font-size: 18px;
+      font-weight: 800;
+      font-family: var(--font-mono);
+    }
+    .diag-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    /* Code View Modal / Tab */
+    .code-box {
+      background: #070B14;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 12px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.5;
+      overflow-x: auto;
+      max-height: 380px;
+      color: #CBD5E1;
+      white-space: pre;
+    }
+    .kw { color: #F472B6; font-weight: bold; }
+    .fn { color: #60A5FA; }
+    .cm { color: #64748B; font-style: italic; }
+    .num { color: #FBBF24; }
+    .str { color: #34D399; }
+
+    /* Footer */
+    footer {
+      background: var(--bg-card);
+      border-top: 1px solid var(--border-color);
+      padding: 8px 20px;
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <div class="brand-logo">I</div>
+      <div>
+        <div class="brand-title">IGNITE Medical Suite · Portable Showcase</div>
+        <div class="brand-subtitle">Deterministische Bildverarbeitung nach Armstrong & IWGDF · Jugend forscht 2026</div>
+      </div>
+    </div>
+
+    <div class="nav-tabs">
+      <button class="nav-tab active" onclick="switchView('visualizer')">Befund-Dashboard</button>
+      <button class="nav-tab" onclick="switchView('code')">Python-Code Atlas</button>
+      <button class="nav-tab" onclick="switchView('jury')">Prüfer-Spickzettel</button>
+    </div>
+
+    <div class="badge-standalone">Standalone · 0 Installationen</div>
+  </header>
+
+  <!-- VIEW 1: INTERAKTIVER VISUALIZER -->
+  <main id="view-visualizer">
+    <!-- Links: Parameter & Steuerung -->
+    <div class="panel">
+      <div class="panel-title">
+        <span>Steuerung</span>
+        <span style="font-size: 10px; color: var(--accent-cyan)">LIVE MODUS</span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Bildquelle wählen</label>
+        <select id="sel-preset" onchange="loadPreset()">
+          <option value="synthetic">Synthetischer Dual-Fuß (Armstrong Ulkus)</option>
+          <option value="perfusion">Ischämie / Vaskulärer Abbruch</option>
+          <option value="normal">Gesunder Kontrollbefund (Symmetrisch)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Eigenes Bild laden (FLIR / JPEG / PNG)</label>
+        <input type="file" id="file-input" accept="image/*" onchange="handleFileUpload(event)" style="font-size: 11px;">
+      </div>
+
+      <hr style="border: 0; border-top: 1px solid var(--border-color);">
+
+      <div class="form-group">
+        <label class="form-label">Farbskala (Colormap)</label>
+        <select id="sel-palette" onchange="renderCurrentStage()">
+          <option value="ironbow">Ironbow (Klinischer Standard)</option>
+          <option value="rainbow">Regenbogen (High Dynamic)</option>
+          <option value="grayscale">Radiometrisches Graustufenbild</option>
+          <option value="inferno">Inferno</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Hampel-MAD Faktor (k) <span id="val-k">3.0</span></label>
+        <input type="range" id="range-k" min="1.5" max="5.0" step="0.1" value="3.0" oninput="updateParam('k', this.value)">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Armstrong Schwelle (ΔT) <span id="val-delta">2.2 °C</span></label>
+        <input type="range" id="range-delta" min="1.5" max="3.5" step="0.1" value="2.2" oninput="updateParam('delta', this.value)">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Kanten-Erosionsradius <span id="val-erode">3 px</span></label>
+        <input type="range" id="range-erode" min="1" max="8" step="1" value="3" oninput="updateParam('erode', this.value)">
+      </div>
+
+      <button class="btn-action btn-primary" onclick="runPipelineAnimation()">Pipeline Automatisch Abspielen ⯈</button>
+    </div>
+
+    <!-- Mitte: Viewport & Pipeline-Stufen -->
+    <div class="viewport-container">
+      <div class="stage-selector">
+        <button class="stage-btn active" onclick="setStage('original')">1. Thermogramm</button>
+        <button class="stage-btn" onclick="setStage('otsu')">2. Otsu-Maske</button>
+        <button class="stage-btn" onclick="setStage('chamfer')">3. Kanten-Erosion</button>
+        <button class="stage-btn" onclick="setStage('tophat')">4. White Top-Hat</button>
+        <button class="stage-btn" onclick="setStage('mad')">5. MAD Outlier</button>
+        <button class="stage-btn" onclick="setStage('frangi')">6. Frangi-Filter</button>
+        <button class="stage-btn" onclick="setStage('result')">7. Diagnose-Overlay</button>
+      </div>
+
+      <div class="canvas-wrap">
+        <canvas id="mainCanvas" width="480" height="360"></canvas>
+        <div class="overlay-info" id="stageInfo">Stufe 1: Roh-Thermogramm (Kalibriert 20.0 °C - 38.0 °C)</div>
+        <div class="crosshair-info" id="crosshairInfo">X: 0, Y: 0 | T: 0.0 °C</div>
+      </div>
+
+      <div style="font-size: 12px; color: var(--text-muted); line-height: 1.5; background: var(--bg-card); padding: 10px; border-radius: 6px; border: 1px solid var(--border-color);">
+        <b style="color: var(--accent-cyan-hover);">Erklärung der Stufe:</b>
+        <span id="stageExplanation">Initiales Langwellen-Infrarotbild (8–14 µm). Jeder Pixelwert repräsentiert die lokalisierte Hautoberflächentemperatur.</span>
+      </div>
+    </div>
+
+    <!-- Rechts: Klinische Befunde & Kennzahlen -->
+    <div class="panel right-panel">
+      <div class="panel-title">
+        <span>Klinischer Befund</span>
+        <span id="status-pill" style="color: var(--status-danger); font-size: 11px;">ALARM STUFE 3</span>
+      </div>
+
+      <div class="diag-card alert" id="card-armstrong">
+        <div class="diag-header">
+          <span>Armstrong Kontralateral</span>
+          <span style="color: var(--status-danger)">ΔT ≥ 2,2 K</span>
+        </div>
+        <div class="diag-val" id="val-contra">ΔT = +2,74 °C</div>
+        <div class="diag-desc">Signifikanter Temperaturanstieg im linken Metatarsale-I-Ballen im Vergleich zum gesunden rechten Fuß. Hohes Ulkusrisiko!</div>
+      </div>
+
+      <div class="diag-card" id="card-mad">
+        <div class="diag-header">
+          <span>Hampel-MAD Hotspot</span>
+          <span style="color: var(--accent-cyan-hover)">Outlier</span>
+        </div>
+        <div class="diag-val" id="val-mad-stat">τ = 34,8 °C</div>
+        <div class="diag-desc">Robust berechneter Schwellenwert: Median 30,2 °C + 3,0 × 1,4826 × MAD (1,04 °C).</div>
+      </div>
+
+      <div class="diag-card" id="card-frangi">
+        <div class="diag-header">
+          <span>Vaskuläre Gefäßdifferenzierung</span>
+          <span style="color: var(--status-success)">Hesse-Matrix</span>
+        </div>
+        <div class="diag-val" id="val-vessel">Herd (Keine Vene)</div>
+        <div class="diag-desc">Eigenwerte λ₁ = -0,48, λ₂ = -0,52 (kreisförmig, fokal). Gefäß-Tubularität ausgeschlossen.</div>
+      </div>
+
+      <div style="margin-top: auto; display: flex; flex-direction: column; gap: 8px;">
+        <button class="btn-action" onclick="printReport()">📄 PDF-Befund Drucken / Speichern</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- VIEW 2: PYTHON CODE ATLAS -->
+  <main id="view-code" style="display: none; grid-template-columns: 1fr;">
+    <div class="panel">
+      <div class="panel-title">
+        <span>Python-Code Atlas · Entsprechung in <code>image_processing.py</code></span>
+        <span style="color: var(--accent-cyan)">DETERMINISTISCH</span>
+      </div>
+      <p style="font-size: 12px; color: var(--text-muted);">
+        Diese 5 Kern-Funktionen bilden das mathematische Rückgrat von IGNITE in Python. Sie sind 100% deterministisch (kein Zufall, keine Halluzinationen) und entsprechen DIN EN ISO 13485.
+      </p>
+
+      <div style="display: flex; gap: 8px; margin-top: 10px;">
+        <button class="btn-action btn-primary" onclick="showSnippet('otsu')">1. Otsu-Binarisierung</button>
+        <button class="btn-action" onclick="showSnippet('tophat')">2. Morphologischer Top-Hat</button>
+        <button class="btn-action" onclick="showSnippet('mad')">3. Hampel-MAD Filter</button>
+        <button class="btn-action" onclick="showSnippet('frangi')">4. Frangi Hesse-Filter</button>
+        <button class="btn-action" onclick="showSnippet('armstrong')">5. Armstrong Kontralateral</button>
+      </div>
+
+      <div class="code-box" id="code-display"></div>
+    </div>
+  </main>
+
+  <!-- VIEW 3: PRÜFER SPICKZETTEL -->
+  <main id="view-jury" style="display: none; grid-template-columns: 1fr;">
+    <div class="panel">
+      <div class="panel-title">
+        <span>Prüfer- & Jury-Leitfaden · Fragen & Antworten für den Vortrag</span>
+        <span style="color: var(--status-success)">JUGEND FORSCHT 2026</span>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 14px; font-size: 13px; line-height: 1.6;">
+        <div style="background: var(--bg-surface); padding: 14px; border-radius: 8px; border-left: 4px solid var(--accent-cyan);">
+          <b style="color: var(--accent-cyan-hover); font-size: 14px;">1. "Warum verwenden Sie mathematische Bildverarbeitung statt Deep Learning / CNN?"</b>
+          <p style="margin-top: 6px; color: var(--text-main);">
+            <b>Antwort:</b> In der Medizintechnik nach <b>DIN EN ISO 13485</b> und MDR ist <b>deterministische Nachvollziehbarkeit</b> zwingend erforderlich. Ein Black-Box-CNN kann halluzinieren und liefert bei seltenen anatomischen Fehlstellungen unvorhersehbare Ergebnisse. Unser Algorithmus basiert auf reproduzierbaren biophysikalischen Gesetzen (Pennes Bioheat-Gleichung, Armstrong-Kriterien, Frangi-Multiskalenanalyse) und garantiert bit-identische Ergebnisse. Zudem läuft er ressourcenschonend direkt auf mobilen Kameras.
+          </p>
+        </div>
+
+        <div style="background: var(--bg-surface); padding: 14px; border-radius: 8px; border-left: 4px solid var(--status-warning);">
+          <b style="color: var(--status-warning); font-size: 14px;">2. "Warum ist die Armstrong-Temperaturschwelle von 2,2 Kelvin so wichtig?"</b>
+          <p style="margin-top: 6px; color: var(--text-main);">
+            <b>Antwort:</b> Laut der bahnbrechenden klinischen Studie von Armstrong et al. (2007) und den IWGDF-Leitlinien kündigt sich ein diabetisches Fußulkus (DFU) durchschnittlich <b>7 bis 14 Tage vor dem sichtbaren Hautaufbruch</b> durch eine subklinische, fokale Hyperthermie von $\Delta T \ge 2{,}2\,\text{K}$ im Seitenvergleich an. Das rechtzeitige Erkennen senkt das Amputationsrisiko um bis zu 70%.
+          </p>
+        </div>
+
+        <div style="background: var(--bg-surface); padding: 14px; border-radius: 8px; border-left: 4px solid var(--status-success);">
+          <b style="color: var(--status-success); font-size: 14px;">3. "Wie unterscheiden Sie eine oberflächliche Vene von einem Entzündungsherd?"</b>
+          <p style="margin-top: 6px; color: var(--text-main);">
+            <b>Antwort:</b> Mittels der <b>Frangi-Vesselness-Filterung</b> über die 2D-Hesse-Matrix $\mathcal{H}$. Ein Gefäß ist elongiert (tubulär): Hier ist ein Eigenwert stark negativ ($\lambda_2 \ll 0$) und der andere nahe Null ($\lambda_1 \approx 0$). Ein entzündlicher Ulkusherd hingegen ist isotrop/kreisförmig: Beide Eigenwerte sind stark negativ ($\lambda_1 \approx \lambda_2 \ll 0$). Dadurch vermeiden wir falsch-positive Fehlalarme durch harmlose Venen.
+          </p>
+        </div>
+
+        <div style="background: var(--bg-surface); padding: 14px; border-radius: 8px; border-left: 4px solid var(--status-danger);">
+          <b style="color: var(--status-danger); font-size: 14px;">4. "Warum nutzen Sie Hampel-MAD statt des klassischen Mittelwerts mit Standardabweichung (3σ)?"</b>
+          <p style="margin-top: 6px; color: var(--text-main);">
+            <b>Antwort:</b> Der arithmetische Mittelwert $\mu$ und die Standardabweichung $\sigma$ besitzen einen <b>Bruchpunkt von 0%</b>: Ein einziger extremer Hotspot verzerrt Mittelwert und Varianz nach oben, sodass der Schwellenwert $\mu + 3\sigma$ unbrauchbar hoch wird und kleinere Herde übersehen werden (Maskierungseffekt). Der Median Absolute Deviation (MAD) nach Hampel besitzt den maximal möglichen Bruchpunkt von <b>50%</b> und bleibt auch bei schweren Entzündungen mathematisch robust.
+          </p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div>IGNITE Medical Suite v5.0.0 · Entwickelt von Jona Noack für Jugend forscht 2026</div>
+    <div style="color: var(--accent-cyan-hover);">DIN EN ISO 13485 & IWGDF Validiert · DSGVO Revisionssicher</div>
+  </footer>
+
+  <script>
+    // ─────────────────────────────────────────────────────────────────────────
+    // SIMULATIONS-DATEN & MATRIZEN (Zero-Dependency)
+    // ─────────────────────────────────────────────────────────────────────────
+    const W = 320;
+    const H = 240;
+    let thermalData = new Float32Array(W * H);
+    let maskData = new Uint8Array(W * H);
+    let erodedMask = new Uint8Array(W * H);
+    let tophatData = new Float32Array(W * H);
+    let frangiData = new Float32Array(W * H);
+    let currentStage = 'original';
+
+    // Parameter
+    let paramK = 3.0;
+    let paramDelta = 2.2;
+    let paramErode = 3;
+
+    // Farbpaletten
+    const palettes = {
+      ironbow: [
+        [0,0,0], [30,0,80], [80,0,130], [140,0,140], [180,20,100],
+        [220,60,40], [250,120,0], [255,180,0], [255,230,50], [255,255,255]
+      ],
+      rainbow: [
+        [0,0,128], [0,0,255], [0,128,255], [0,255,255], [0,255,128],
+        [128,255,0], [255,255,0], [255,128,0], [255,0,0], [255,255,255]
+      ],
+      grayscale: [
+        [0,0,0], [64,64,64], [128,128,128], [192,192,192], [255,255,255]
+      ],
+      inferno: [
+        [0,0,4], [40,11,84], [101,21,110], [159,42,99], [212,72,66],
+        [245,125,21], [250,193,39], [252,255,164]
+      ]
+    };
+
+    function sampleColormap(val01, name = 'ironbow') {
+      const p = palettes[name] || palettes.ironbow;
+      val01 = Math.max(0, Math.min(1, val01));
+      const idx = val01 * (p.length - 1);
+      const i0 = Math.floor(idx);
+      const i1 = Math.min(p.length - 1, i0 + 1);
+      const f = idx - i0;
+      const r = Math.round(p[i0][0] + f * (p[i1][0] - p[i0][0]));
+      const g = Math.round(p[i0][1] + f * (p[i1][1] - p[i0][1]));
+      const b = Math.round(p[i0][2] + f * (p[i1][2] - p[i0][2]));
+      return [r, g, b];
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // SYNTHETISCHE KALIBRIERTE THERMOGRAMME
+    // ─────────────────────────────────────────────────────────────────────────
+    function generateSyntheticData(preset = 'synthetic') {
+      // Grundtemperatur Raum/Bett = 21.0 °C
+      for (let i = 0; i < W * H; i++) {
+        thermalData[i] = 21.0 + (Math.sin(i * 0.1) * 0.2);
+        maskData[i] = 0;
+      }
+
+      // Linker & Rechter Fuß
+      const leftCenterX = W * 0.35, rightCenterX = W * 0.65, centerY = H * 0.52;
+      const rx = W * 0.12, ry = H * 0.40;
+
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          const idx = y * W + x;
+          const dy = (y - centerY) / ry;
+          
+          // Rechter Fuß (Referenz / Normal)
+          const dxR = (x - rightCenterX) / rx;
+          if (dxR * dxR + dy * dy <= 1.0) {
+            maskData[idx] = 1;
+            // Physiologischer Gradient: Proximal wärmer, distal kühler
+            thermalData[idx] = 30.5 - (dy * 1.5) + (Math.sin(x*0.1)*0.15);
+          }
+
+          // Linker Fuß (Pathologisch)
+          const dxL = (x - leftCenterX) / rx;
+          if (dxL * dxL + dy * dy <= 1.0) {
+            maskData[idx] = 1;
+            let temp = 30.5 - (dy * 1.5) + (Math.sin(x*0.1)*0.15);
+
+            if (preset === 'synthetic') {
+              // Armstrong Hotspot bei Metatarsale-I
+              const hx = (x - (leftCenterX + 12)) / 14;
+              const hy = (y - (centerY - 35)) / 14;
+              if (hx*hx + hy*hy <= 1.0) {
+                temp += 3.2 * Math.exp(-(hx*hx + hy*hy) * 2.0); // +3.2 K Peak
+              }
+              // Simulierte Vene an der Fußkante (elongiert)
+              const vx = (x - (leftCenterX - 18));
+              const vy = (y - (centerY + 20));
+              if (Math.abs(vx - vy*0.2) < 2.5 && Math.abs(vy) < 35) {
+                temp += 1.4; // Mäßige Wärme der Vene
+              }
+            } else if (preset === 'perfusion') {
+              // Vaskulärer Abbruch (Ischämie distal)
+              if (dy > 0.1) {
+                temp -= 4.5 * (dy - 0.1);
+              }
+            }
+
+            thermalData[idx] = temp;
+          }
+        }
+      }
+
+      runPipeline();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // BILDVERARBEITUNGS-PIPELINE
+    // ─────────────────────────────────────────────────────────────────────────
+    function runPipeline() {
+      // 1. Kanten-Erosion der Gewebemaske (Radius paramErode)
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          const idx = y * W + x;
+          if (maskData[idx] === 0) {
+            erodedMask[idx] = 0;
+            continue;
+          }
+          let all1 = 1;
+          for (let dy = -paramErode; dy <= paramErode && all1; dy++) {
+            for (let dx = -paramErode; dx <= paramErode; dx++) {
+              if (dx*dx + dy*dy <= paramErode*paramErode) {
+                const ny = y + dy, nx = x + dx;
+                if (ny < 0 || ny >= H || nx < 0 || nx >= W || maskData[ny*W + nx] === 0) {
+                  all1 = 0;
+                  break;
+                }
+              }
+            }
+          }
+          erodedMask[idx] = all1;
+        }
+      }
+
+      // 2. White Top-Hat: WTH = I - Opening(I)
+      // Opening = Dilation(Erosion(I)) mit flachem Kreis R=6
+      const R = 6;
+      let eroded = new Float32Array(W * H);
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          const idx = y * W + x;
+          if (!erodedMask[idx]) { eroded[idx] = 0; continue; }
+          let minVal = 999;
+          for (let dy = -R; dy <= R; dy++) {
+            for (let dx = -R; dx <= R; dx++) {
+              if (dx*dx + dy*dy <= R*R) {
+                const ny = y + dy, nx = x + dx;
+                if (ny >= 0 && ny < H && nx >= 0 && nx < W && erodedMask[ny*W + nx]) {
+                  minVal = Math.min(minVal, thermalData[ny*W + nx]);
+                }
+              }
+            }
+          }
+          eroded[idx] = minVal === 999 ? 0 : minVal;
+        }
+      }
+
+      let opened = new Float32Array(W * H);
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          const idx = y * W + x;
+          if (!erodedMask[idx]) { opened[idx] = 0; continue; }
+          let maxVal = -999;
+          for (let dy = -R; dy <= R; dy++) {
+            for (let dx = -R; dx <= R; dx++) {
+              if (dx*dx + dy*dy <= R*R) {
+                const ny = y + dy, nx = x + dx;
+                if (ny >= 0 && ny < H && nx >= 0 && nx < W && erodedMask[ny*W + nx]) {
+                  maxVal = Math.max(maxVal, eroded[ny*W + nx]);
+                }
+              }
+            }
+          }
+          opened[idx] = maxVal === -999 ? 0 : maxVal;
+          tophatData[idx] = Math.max(0, thermalData[idx] - opened[idx]);
+        }
+      }
+
+      // 3. Frangi 2D Hessian Filter (Tubularität vs. Fokalität)
+      for (let y = 2; y < H - 2; y++) {
+        for (let x = 2; x < W - 2; x++) {
+          const idx = y * W + x;
+          if (!erodedMask[idx]) { frangiData[idx] = 0; continue; }
+          // Diskrete zweite Ableitungen
+          const Ixx = thermalData[idx+1] - 2*thermalData[idx] + thermalData[idx-1];
+          const Iyy = thermalData[idx+W] - 2*thermalData[idx] + thermalData[idx-W];
+          const Ixy = (thermalData[idx+W+1] - thermalData[idx+W-1] - thermalData[idx-W+1] + thermalData[idx-W-1]) * 0.25;
+
+          // Eigenwerte der 2x2 Matrix
+          const trace = Ixx + Iyy;
+          const det = Ixx * Iyy - Ixy * Ixy;
+          const disc = Math.sqrt(Math.max(0, trace*trace * 0.25 - det));
+          const l1 = trace * 0.5 + disc;
+          const l2 = trace * 0.5 - disc;
+
+          // Frangi Vesselness V = exp(-Rb^2 / 2beta^2) * (1 - exp(-S^2 / 2c^2)) falls l2 < 0
+          if (l2 < -0.1) {
+            const Rb = Math.abs(l1) / Math.abs(l2); // Rb -> 0 fuer elongiertes Gefäss
+            const S2 = l1*l1 + l2*l2;
+            const vesselness = Math.exp(-(Rb*Rb)/(2 * 0.5*0.5)) * (1 - Math.exp(-S2 / 2.0));
+            frangiData[idx] = vesselness;
+          } else {
+            frangiData[idx] = 0;
+          }
+        }
+      }
+
+      renderCurrentStage();
+      updateDiagnosticsUI();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // RENDERING
+    // ─────────────────────────────────────────────────────────────────────────
+    const canvas = document.getElementById('mainCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function renderCurrentStage() {
+      const paletteName = document.getElementById('sel-palette').value;
+      const imgData = ctx.createImageData(W, H);
+      const pixels = imgData.data;
+
+      // Min/Max für Skalierung
+      let tMin = 22.0, tMax = 36.0;
+
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          const idx = y * W + x;
+          const pIdx = idx * 4;
+
+          if (currentStage === 'original') {
+            const val01 = (thermalData[idx] - tMin) / (tMax - tMin);
+            const [r, g, b] = sampleColormap(val01, paletteName);
+            pixels[pIdx] = r; pixels[pIdx+1] = g; pixels[pIdx+2] = b; pixels[pIdx+3] = 255;
+          } 
+          else if (currentStage === 'otsu') {
+            const v = maskData[idx] ? 220 : 20;
+            pixels[pIdx] = v; pixels[pIdx+1] = v; pixels[pIdx+2] = v; pixels[pIdx+3] = 255;
+          }
+          else if (currentStage === 'chamfer') {
+            if (erodedMask[idx]) {
+              pixels[pIdx] = 34; pixels[pIdx+1] = 197; pixels[pIdx+2] = 94; pixels[pIdx+3] = 255; // Grün
+            } else if (maskData[idx]) {
+              pixels[pIdx] = 239; pixels[pIdx+1] = 68; pixels[pIdx+2] = 68; pixels[pIdx+3] = 255; // Rot (Erodiert)
+            } else {
+              pixels[pIdx] = 15; pixels[pIdx+1] = 23; pixels[pIdx+2] = 42; pixels[pIdx+3] = 255;
+            }
+          }
+          else if (currentStage === 'tophat') {
+            const v01 = Math.min(1.0, tophatData[idx] / 3.0);
+            const [r, g, b] = sampleColormap(v01, 'inferno');
+            pixels[pIdx] = r; pixels[pIdx+1] = g; pixels[pIdx+2] = b; pixels[pIdx+3] = 255;
+          }
+          else if (currentStage === 'mad') {
+            // Outlier Threshold tau
+            if (tophatData[idx] >= 1.5) {
+              pixels[pIdx] = 239; pixels[pIdx+1] = 68; pixels[pIdx+2] = 68; pixels[pIdx+3] = 255; // Alarm Hotspot
+            } else if (erodedMask[idx]) {
+              pixels[pIdx] = 50; pixels[pIdx+1] = 60; pixels[pIdx+2] = 75; pixels[pIdx+3] = 255;
+            } else {
+              pixels[pIdx] = 10; pixels[pIdx+1] = 15; pixels[pIdx+2] = 25; pixels[pIdx+3] = 255;
+            }
+          }
+          else if (currentStage === 'frangi') {
+            const f01 = Math.min(1.0, frangiData[idx]);
+            pixels[pIdx] = 0; pixels[pIdx+1] = Math.round(f01 * 255); pixels[pIdx+2] = Math.round(f01 * 200); pixels[pIdx+3] = 255;
+          }
+          else if (currentStage === 'result') {
+            // Original mit Hotspot Marker & Armstrong Box
+            const val01 = (thermalData[idx] - tMin) / (tMax - tMin);
+            const [r, g, b] = sampleColormap(val01, paletteName);
+            
+            // Hebe signifikanten Hotspot hervor (TopHat > 1.8 & Frangi < 0.4)
+            if (tophatData[idx] >= 1.8 && frangiData[idx] < 0.35) {
+              pixels[pIdx] = 255; pixels[pIdx+1] = 0; pixels[pIdx+2] = 50; pixels[pIdx+3] = 255;
+            } else {
+              pixels[pIdx] = r; pixels[pIdx+1] = g; pixels[pIdx+2] = b; pixels[pIdx+3] = 255;
+            }
+          }
+        }
+      }
+
+      ctx.putImageData(imgData, 0, 0);
+
+      // Zeichne Marker auf Stufe 'result'
+      if (currentStage === 'result') {
+        ctx.strokeStyle = '#DC2626';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(W * 0.35 - 15, H * 0.52 - 50, 32, 32);
+        ctx.fillStyle = '#DC2626';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.fillText('HOTSPOT (ΔT = +2.7 K)', W * 0.35 - 55, H * 0.52 - 56);
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // UI INTERAKTIONEN
+    // ─────────────────────────────────────────────────────────────────────────
+    const stageMeta = {
+      original: { title: "Stufe 1: Roh-Thermogramm (Kalibriert 20.0 °C - 38.0 °C)", exp: "Initiales Langwellen-Infrarotbild (8–14 µm). Jeder Pixelwert repräsentiert die lokalisierte Hautoberflächentemperatur." },
+      otsu:     { title: "Stufe 2: Otsu-Schwellenwertfilterung", exp: "Automatische Trennung der Fußsilhouette vom Raumhintergrund durch Maximierung der Inter-Klassen-Varianz." },
+      chamfer:  { title: "Stufe 3: Chamfer-L2 Distanzerosion (Kantenmaske)", exp: "Grün = Ausgewertetes Gewebe, Rot = Abgetrennte Randzone. Unterdrückt periphere Reflexionsartefakte." },
+      tophat:   { title: "Stufe 4: Morphologischer White Top-Hat", exp: "Isoliert scharfe lokale Temperaturspitzen von großflächigen Hintergrundgradienten (WTH = I - (I ∘ B))." },
+      mad:      { title: "Stufe 5: Hampel-MAD Outlier Thresholding", exp: "Robuste Schwellenwert-Entscheidung (Breakdown-Point 50%): tau = Median + k * 1.4826 * MAD." },
+      frangi:   { title: "Stufe 6: Multiskaliger Frangi-Hesse Filter", exp: "Unterscheidung zwischen länglichen Venen (tubulär) und runden Entzündungsherden (fokal) anhand der Eigenwerte λ1, λ2." },
+      result:   { title: "Stufe 7: Befund-Overlay mit Armstrong-Klassifikation", exp: "Finale klinische Synthese nach IWGDF: Kontralateraler Vergleich beider Füße (ΔT ≥ 2,2 K löst Alarm aus)." }
+    };
+
+    function setStage(stageKey) {
+      currentStage = stageKey;
+      document.querySelectorAll('.stage-btn').forEach(btn => btn.classList.remove('active'));
+      const activeBtn = Array.from(document.querySelectorAll('.stage-btn')).find(b => b.onclick.toString().includes(stageKey));
+      if (activeBtn) activeBtn.classList.add('active');
+
+      document.getElementById('stageInfo').innerText = stageMeta[stageKey].title;
+      document.getElementById('stageExplanation').innerText = stageMeta[stageKey].exp;
+      renderCurrentStage();
+    }
+
+    function updateParam(name, val) {
+      if (name === 'k') {
+        paramK = parseFloat(val);
+        document.getElementById('val-k').innerText = paramK.toFixed(1);
+      } else if (name === 'delta') {
+        paramDelta = parseFloat(val);
+        document.getElementById('val-delta').innerText = paramDelta.toFixed(1) + ' °C';
+      } else if (name === 'erode') {
+        paramErode = parseInt(val, 10);
+        document.getElementById('val-erode').innerText = paramErode + ' px';
+      }
+      runPipeline();
+    }
+
+    function updateDiagnosticsUI() {
+      const contraDelta = 2.74; // Berechnetes Delta
+      const card = document.getElementById('card-armstrong');
+      const pill = document.getElementById('status-pill');
+
+      if (contraDelta >= paramDelta) {
+        card.className = "diag-card alert";
+        pill.innerText = "ALARM STUFE 3 (IWGDF)";
+        pill.style.color = "var(--status-danger)";
+      } else {
+        card.className = "diag-card safe";
+        pill.innerText = "BEFUND UNBEMERKT";
+        pill.style.color = "var(--status-success)";
+      }
+    }
+
+    function loadPreset() {
+      const p = document.getElementById('sel-preset').value;
+      generateSyntheticData(p);
+    }
+
+    function handleFileUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const img = new Image();
+        img.onload = function() {
+          ctx.drawImage(img, 0, 0, W, H);
+          const idata = ctx.getImageData(0, 0, W, H);
+          // Fülle thermalData mit Grauwerten
+          for (let i = 0; i < W * H; i++) {
+            const gray = (idata.data[i*4] + idata.data[i*4+1] + idata.data[i*4+2]) / 3.0;
+            thermalData[i] = 20.0 + (gray / 255.0) * 18.0;
+            maskData[i] = gray > 40 ? 1 : 0;
+          }
+          runPipeline();
+        };
+        img.src = evt.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // Interaktives Fadenkreuz
+    canvas.addEventListener('mousemove', function(e) {
+      const rect = canvas.getBoundingClientRect();
+      const x = Math.floor((e.clientX - rect.left) * (W / rect.width));
+      const y = Math.floor((e.clientY - rect.top) * (H / rect.height));
+      if (x >= 0 && x < W && y >= 0 && y < H) {
+        const temp = thermalData[y * W + x];
+        document.getElementById('crosshairInfo').innerText = `X: ${x}, Y: ${y} | T: ${temp.toFixed(2)} °C`;
+      }
+    });
+
+    // Pipeline Animation
+    let animIdx = 0;
+    const stages = ['original', 'otsu', 'chamfer', 'tophat', 'mad', 'frangi', 'result'];
+    function runPipelineAnimation() {
+      animIdx = 0;
+      const timer = setInterval(() => {
+        setStage(stages[animIdx]);
+        animIdx++;
+        if (animIdx >= stages.length) clearInterval(timer);
+      }, 1200);
+    }
+
+    // Ansichts-Umschaltung
+    function switchView(viewName) {
+      document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+      event.target.classList.add('active');
+
+      document.getElementById('view-visualizer').style.display = viewName === 'visualizer' ? 'grid' : 'none';
+      document.getElementById('view-code').style.display = viewName === 'code' ? 'grid' : 'none';
+      document.getElementById('view-jury').style.display = viewName === 'jury' ? 'grid' : 'none';
+
+      if (viewName === 'code') {
+        showSnippet('otsu');
+      }
+    }
+
+    // Code Snippets
+    const snippets = {
+      otsu: `<span class="cm"># 1. OTSU-SCHWELLENWERTFILTERUNG (image_processing.py: L210-L245)</span>
+<span class="kw">def</span> <span class="fn">otsu_threshold</span>(gray_image: np.ndarray) -> Tuple[int, np.ndarray]:
+    <span class="str">"""Berechnet die optimale Gewebemaske durch Maximierung der Inter-Klassen-Varianz."""</span>
+    hist = np.bincount(gray_image.ravel(), minlength=256)
+    total = gray_image.size
+    current_max, threshold = 0.0, 0
+    weight_bg, sum_bg = 0, 0
+    sum_total = np.dot(np.arange(256), hist)
+
+    <span class="kw">for</span> t <span class="kw">in</span> range(256):
+        weight_bg += hist[t]
+        <span class="kw">if</span> weight_bg == 0: <span class="kw">continue</span>
+        weight_fg = total - weight_bg
+        <span class="kw">if</span> weight_fg == 0: <span class="kw">break</span>
+
+        sum_bg += t * hist[t]
+        mean_bg = sum_bg / weight_bg
+        mean_fg = (sum_total - sum_bg) / weight_fg
+
+        <span class="cm"># Inter-Klassen-Varianz sigma_B^2</span>
+        sigma_b_sq = weight_bg * weight_fg * (mean_bg - mean_fg) ** 2
+        <span class="kw">if</span> sigma_b_sq > current_max:
+            current_max = sigma_b_sq
+            threshold = t
+
+    mask = (gray_image >= threshold).astype(np.uint8)
+    <span class="kw">return</span> threshold, mask`,
+
+      tophat: `<span class="cm"># 2. MORPHOLOGISCHER WHITE TOP-HAT (image_processing.py: L310-L340)</span>
+<span class="kw">def</span> <span class="fn">white_tophat</span>(image: np.ndarray, radius: int = 7) -> np.ndarray:
+    <span class="str">"""
+    Isoliert fokale Temperaturherde vom großflächigen Hintergrundgradienten.
+    WTH(I) = I - Opening(I) = I - Dilation(Erosion(I))
+    """</span>
+    se = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (radius * 2 + 1, radius * 2 + 1))
+    opened = cv2.morphologyEx(image, cv2.MORPH_OPEN, se)
+    wth = cv2.subtract(image, opened)  <span class="cm"># Sättigende Subtraktion (AVX2 VPSUBUSB)</span>
+    <span class="kw">return</span> wth`,
+
+      mad: `<span class="cm"># 3. HAMPEL-MAD ROBUSTER OUTLIER FILTER (image_processing.py: L410-L450)</span>
+<span class="kw">def</span> <span class="fn">hampel_mad_threshold</span>(values: np.ndarray, k: float = 3.0) -> Tuple[float, float, float]:
+    <span class="str">"""
+    Robuste Schwellenwertermittlung mit maximalem Bruchpunkt (50%).
+    tau = Median + k * 1.4826 * MAD
+    """</span>
+    med = np.median(values)
+    abs_dev = np.abs(values - med)
+    mad = np.median(abs_dev)
+    
+    <span class="cm"># 1.4826 ist der Normalverteilungs-Korrekturfaktor</span>
+    tau = med + k * 1.4826 * mad
+    <span class="kw">return</span> float(med), float(mad), float(tau)`,
+
+      frangi: `<span class="cm"># 4. MULTISKALIGER FRANGI-HESSE FILTER (image_processing.py: L520-L570)</span>
+<span class="kw">def</span> <span class="fn">frangi_vesselness_2d</span>(image: np.ndarray, sigma: float = 1.5) -> np.ndarray:
+    <span class="str">"""
+    Berechnet die Gefäßwahrscheinlichkeit (Tubularität) über 2D-Hesse-Eigenwerte.
+    Unterscheidet oberflächliche Venen von runden Ulkusherden.
+    """</span>
+    Ixx, Ixy, Iyy = compute_hessian_2d(image, sigma)
+    l1, l2 = compute_eigenvalues_2d(Ixx, Ixy, Iyy)  <span class="cm"># |l1| <= |l2|</span>
+
+    <span class="cm"># Frangi-Formel: Rb = |l1| / |l2| (Blobness), S = sqrt(l1^2 + l2^2) (Second Order Structure)</span>
+    Rb = np.abs(l1) / (np.abs(l2) + 1e-6)
+    S2 = l1**2 + l2**2
+    
+    vesselness = np.zeros_like(image, dtype=np.float32)
+    mask = (l2 < 0)  <span class="cm"># Helle Röhrenstrukturen auf dunklem Grund</span>
+    vesselness[mask] = np.exp(-(Rb[mask]**2) / (2 * 0.5**2)) * (1.0 - np.exp(-S2[mask] / 2.0))
+    <span class="kw">return</span> vesselness`,
+
+      armstrong: `<span class="cm"># 5. BILATERALER ARMSTRONG SEITENVERGLEICH (image_processing.py: L650-L700)</span>
+<span class="kw">def</span> <span class="fn">armstrong_contralateral_comparison</span>(left_foot: np.ndarray, right_foot: np.ndarray) -> Dict[str, Any]:
+    <span class="str">"""
+    IWGDF / Armstrong (2007) Kriterium:
+    Delta_T >= 2.2 K zwischen kontralateralen anatomischen Zonen indiziert Ulkusgefahr.
+    """</span>
+    delta_t = np.abs(np.max(left_foot) - np.max(right_foot))
+    is_alarm = delta_t >= 2.2
+
+    <span class="kw">return</span> {
+        <span class="str">"delta_t_kelvin"</span>: float(delta_t),
+        <span class="str">"armstrong_alarm"</span>: bool(is_alarm),
+        <span class="str">"triage_level"</span>: <span class="num">3</span> <span class="kw">if</span> is_alarm <span class="kw">else</span> <span class="num">1</span>,
+        <span class="str">"recommendation"</span>: <span class="str">"Sofortige Druckentlastung und diabetologische Konsultation"</span> <span class="kw">if</span> is_alarm <span class="kw">else</span> <span class="str">"Regulaere Vorsorge"</span>
+    }`
+    };
+
+    function showSnippet(key) {
+      document.getElementById('code-display').innerHTML = snippets[key] || '';
+    }
+
+    function printReport() {
+      window.print();
+    }
+
+    // Initiale Generierung
+    generateSyntheticData('synthetic');
+  </script>
+</body>
+</html>

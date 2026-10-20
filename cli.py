@@ -1185,8 +1185,14 @@ def handle_info(args: argparse.Namespace) -> int:
         except Exception:
             gpu_status = "CUDA aktiv"
 
-    # Rust-Details
-    rust_status = "Nicht verfügbar (nutze Python-Fallback)"
+    # Go-Core Details
+    go_status = "Nicht verfügbar"
+    if getattr(image_processing, "_GO_CORE_AVAILABLE", False):
+        go_path = getattr(image_processing, "_GO_CORE_PATH", "ignite-core.exe")
+        go_status = f"Aktiv (Golang 1.24+ / AVX2 SIMD, 42 Stufen, {os.path.basename(go_path)})"
+
+    # Rust-Details (Legacy Fallback)
+    rust_status = "Nicht aktiv (Standard: Go-Core)"
     if getattr(image_processing, "_RUST_BACKEND_AVAILABLE", False):
         core = getattr(image_processing, "_ignite_core", None)
         v = getattr(core, "__version__", "aktiv")
@@ -1200,8 +1206,9 @@ def handle_info(args: argparse.Namespace) -> int:
 
         table.add_row("IGNITE Version", f"v{config.APP_VERSION} (Jugend forscht 2026)")
         table.add_row("Aktives Rechen-Backend", f"[bold green]{backend_active}[/bold green]")
+        table.add_row("Go Native Core (AVX2/SIMD)", go_status)
         table.add_row("GPU-Beschleunigung (CUDA)", gpu_status)
-        table.add_row("Rust Native Core (AVX2/Rayon)", rust_status)
+        table.add_row("Rust Fallback Core", rust_status)
         table.add_row("CPU-Threads", f"{os.cpu_count() or 4} Kerne ({platform.machine()})")
         table.add_row("Betriebssystem", f"{platform.system()} {platform.release()} ({platform.version()})")
         table.add_row("Python-Laufzeit", f"{platform.python_version()} ({sys.executable})")
@@ -1216,8 +1223,9 @@ def handle_info(args: argparse.Namespace) -> int:
         print("IGNITE SYSTEM- UND HARDWARE-STATUS")
         print(f"IGNITE Version:          v{config.APP_VERSION}")
         print(f"Aktives Rechen-Backend:  {backend_active}")
+        print(f"Go Core (AVX2 SIMD):     {go_status}")
         print(f"GPU (CUDA):              {gpu_status}")
-        print(f"Rust Core:               {rust_status}")
+        print(f"Rust Core (Legacy):      {rust_status}")
         print(f"CPU-Threads:             {os.cpu_count() or 4} Kerne ({platform.machine()})")
         print(f"Betriebssystem:          {platform.system()} {platform.release()}")
         print(f"Python:                  {platform.python_version()} ({sys.executable})")

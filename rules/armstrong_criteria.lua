@@ -6,7 +6,7 @@
 
 function evaluate_hotspot(hotspot, stats)
     local contra_delta = hotspot.contra_delta
-    if contra_delta == nil then
+    if contra_delta == nil or contra_delta <= 0 then
         local baseline = stats.orig_median or stats.median or 120.0
         contra_delta = hotspot.max_val - baseline
     end
@@ -24,8 +24,8 @@ function evaluate_hotspot(hotspot, stats)
     local is_focal_metabolic = laplacian <= -3.5 or peak_to_mean >= 1.25
 
     -- 0. Deeskalation bilateral symmetrischer Muskelphysiologie (Waden / Oberschenkel):
-    -- Wenn kontralaterale Asymmetrie unter dem Armstrong-Schwellenwert (1.8 K) liegt und keine fokale Überhöhung vorliegt:
-    if contra_delta < 18.0 and prominence < 25.0 then
+    -- Wenn kontralaterale Asymmetrie unter dem Armstrong-Schwellenwert (1.8 K) liegt und keine fokale Überhöhung oder scharfe Kante vorliegt:
+    if contra_delta < 18.0 and prominence < 25.0 and not is_sharp_edge and not has_halo and not is_focal_metabolic then
         return {
             risk_level = "BENIGN",
             diagnosis_type = "BENIGN",
@@ -62,7 +62,7 @@ function evaluate_hotspot(hotspot, stats)
         end
 
     -- 2. Grenzbefund / Moderate Hyperthermie (1.2 K bis 2.1 K):
-    elseif (contra_delta >= 12.0 or prominence >= 25.0) and area >= 200 then
+    elseif (contra_delta >= 12.0 or prominence >= 25.0) and (area >= 200 or is_sharp_edge or has_halo) then
         if is_sharp_edge and not has_halo then
             return {
                 risk_level = "MODERATE",

@@ -23,6 +23,7 @@ matplotlib>=3.8.0           # Diagnostik-Visualisierung (kann durch custom-rende
 # torch>=2.0.0              # GPU-beschleunigte Tensoroperationen (optional, via .[gpu])
 
 
-# RUST-DEVELOPMENT (optional – nur für native Core-Kompilierung)
+# GO-RECHENKERN & HARDWARE-BESCHLEUNIGUNG (core/)
 # ───────────────────────────────────────────────────────────────────────────────
-#maturin>=1.4,<2.0         # Rust-PyO3 Compiler (wird durch cargo/maturin verwaltet)
+# Die deterministische 42-stufige Diagnose-Pipeline wird nativ in Go 1.24+ (AVX2-SIMD)
+# ausgeführt: Kompilierung via 'go build -o ignite-core.exe ./cmd/ignite-core' in core/

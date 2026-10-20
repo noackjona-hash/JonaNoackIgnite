@@ -26,21 +26,29 @@ IGNITE ist bewusst modular als Hochleistungs-Pipeline aufgebaut, die native Hard
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│ 1. C# (.NET 10 / WPF) — Workstation Desktop GUI (`desktop/`)                     │
+│ 1a. Go (Wails v2) — Native Go Desktop Workstation (`desktop-go/`)               │
+│    - Reines Go-Frontend mit embedded HTML5/CSS3/JS PACS-Benutzeroberfläche       │
+│    - Direkte In-Process Anbindung an den Go-Kern (Zero-IPC / Zero-Copy)          │
+│    - Synchronisiertes Dual-Canvas Fadenkreuz & Vorhang-Split (Curtain Wipe)      │
+│    - 4-Kategorien-Inspector (Diagnose, Anatomie, Signale, System)                │
+│    - Vorkompilierte Windows x86_64 Binärdatei: `desktop-go/ignite-workstation-go.exe`│
+├─────────────────────────────────────────────────────────────────────────────────┤
+│ 1b. C# (.NET 10 / WPF) — Workstation Desktop GUI (`desktop/`)                   │
 │    - Klinische PACS-Benutzeroberfläche (DIN EN ISO 13485 konform)                │
 │    - Dual-Viewport mit synchronisiertem Live-Fadenkreuz & Pan/Zoom               │
-│    - Interaktiver Vorhang-Wipe (Curtain Split) mit Floating-Badges & Handle      │
-│    - 4-stufiger Thematischer Inspector (Diagnose, Anatomie, Signale, System)     │
-│    - Radiometrische DICOM-Fensterung (Window/Level W/L), Paletten (Ironbow etc.) │
 │    - Orthopädisches 3-Punkt Goniometer (Hallux Valgus Winkel HVA/IMA)            │
 │    - Strukturierter PDF-Arztbriefexport nach IWGDF/Armstrong-Kriterien           │
-│    - 3D-CAD-Export (OBJ, PLY, STL, XYZ-Punktwolke)                               │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│ 1c. Python Suite (3.10+ / CLI & Fallback) (`cli.py`, `image_processing.py`)      │
+│    - Automatisierte Go-Core-Anbindung (`run_go_core_pipeline`), Fallback-Pipeline │
+│    - CLI-Befehle: analyze, batch, compare, eval, info, audit                     │
 └────────────────────────────────────────┬────────────────────────────────────────┘
-                                         │ Lokaler IPC-Aufruf via CLI / JSON
+                                         │ In-Process Call / IPC-Aufruf via CLI
                                          ▼
 ┌─────────────────────────────────────────────────────────────────────────────────┐
 │ 2. Go (Golang 1.24+) — Bildverarbeitung & Pipeline-Kern (`core/`)              │
 │    - 42-stufige deterministische Bildverarbeitungs-Pipeline (`pkg/pipeline`)     │
+│    - Siehe vollständiger PAP: `docs/PROGRAMMABLAUFPLAN_42_STUFEN.md`             │
 │    - Otsu-Schwellenwert-Segmentierung & 2-Pass Chamfer-L2 Distanzerosion         │
 │    - Multiskaliger Frangi-Vesselness-Filter (Hesse-Matrix-Eigenwerte λ1, λ2)     │
 │    - O(N) Histogramm-basierter Median & MAD-Statistik (Median Absolute Deviation)│
@@ -93,6 +101,13 @@ JonaNoackIgnite/
 │   ├── pkg/symmetry/                   # Bilateraler Armstrong-Seitenvergleich
 │   ├── pkg/vascular/                   # Frangi-Hesse Vesselness-Filter + AVX2 FMA
 │   └── ignite-core.exe                 # Vorkompilierte Windows x86_64 Binärdatei
+│
+├── desktop-go/                         # GO WAILS v2 CLINICAL WORKSTATION
+│   ├── app.go                          # Go Backend-Bindings & In-Process Pipeline-Bridge
+│   ├── main.go                         # Wails v2 Applikations-Einstiegspunkt
+│   ├── wails.json                      # Wails Projektkonfiguration
+│   ├── frontend/dist/                  # PACS Web-UI (HTML5, Vanilla CSS, JS, Dual-Canvas)
+│   └── ignite-workstation-go.exe       # Vorkompilierte Windows x86_64 Desktop-App
 │
 ├── desktop/                            # C# .NET 10 / WPF WORKSTATION
 │   ├── App.xaml / App.xaml.cs          # Globale Styles (Dark/Light Slate, Segment Radios)

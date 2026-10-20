@@ -436,7 +436,7 @@ def test_single_view_line_profile_transect(app_root):
 
 def test_export_service_dicom_generation(tmp_path):
     """Testet die Erzeugung von standardkonformen DICOM-Thermografie-Dateien (.dcm) für PACS."""
-    import pydicom
+    pydicom = pytest.importorskip("pydicom")
     from gui.services.export_service import ExportService
     from utils import pseudonymize_patient
 
