@@ -235,3 +235,6 @@ go build -ldflags="-H windowsgui -s -w" -o Ignite.exe .
    * Triage: `Success` (`#16A34A`), `Warning` (`#F59E0B`), `Critical` (`#DC2626`)
 4. **Zero-IPC In-Process Anbindung:**  
    Die Desktop-Suite bindet `core` direkt als Go-Bibliothek ein. Diagnostische Aufrufe erfolgen in-process via `pipeline.Run(...)` ohne IPC-Latenz.
+5. **Kontinuierliche Git-Commits & Push:**  
+   Nach jeder erfolgreichen Code-Änderung, Feature-Implementierung oder Fehlerbehebung **muss immer zwingend ein präziser, aussagekräftiger Git-Commit erstellt und zu GitHub gepusht werden** (`git add ...`, `git commit -m ...`, `git push origin main`). Niemals ungesicherte Änderungen im Arbeitsverzeichnis belassen!
+
