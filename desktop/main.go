@@ -150,10 +150,11 @@ func showNativeSplashScreen() {
 func main() {
 	showNativeSplashScreen()
 	initViewportGraphics()
+	initFluentGraphics()
 
 	err := MainWindow{
 		AssignTo: &mw,
-		Title:    "IGNITE Medical Workstation · ThermoAI Vision v12.3.4.81 (DIN EN ISO 13485 / C++ Workstation Flair)",
+		Title:    "IGNITE Medical PACS · Fluent Clinical Workstation (v12.3.4.81)",
 		MinSize:  Size{Width: 1200, Height: 750},
 		Size:     Size{Width: 1600, Height: 950},
 		Layout:   VBox{MarginsZero: true, Spacing: 0},
@@ -451,109 +452,122 @@ func main() {
 			},
 		},
 		Children: []Widget{
-			// ── 1. Top Clinical Command & Quick-Action Bar (Helles Workstation Banner) ──
+			// ── 1. Top Clinical Command & Quick-Action Bar (Fluent Elevated Header) ──
 			Composite{
-				Layout: HBox{Margins: Margins{Left: 10, Top: 6, Right: 10, Bottom: 4}, Spacing: 6},
+				Layout: HBox{Margins: Margins{Left: 12, Top: 8, Right: 12, Bottom: 6}, Spacing: 8},
 				Children: []Widget{
 					Label{
 						AssignTo: &patientBadge,
 						Text:     "👤 Patient: ANON-7F4C82  |  64 J. (m)  |  Studie: DFS-Prävention  |  FLIR LWIR 8–14 µm (NETD < 40 mK)",
-						Font:     Font{Family: "Segoe UI", PointSize: 9, Bold: true},
+						Font:     Font{Family: "Segoe UI Variable Text", PointSize: 9, Bold: true},
 					},
 					HSpacer{},
 					PushButton{
-						Text:        "📂 Bild öffnen",
-						OnClicked:   onOpenFile,
+						Text:      "📂 Bild öffnen",
+						Font:      Font{Family: "Segoe UI Variable Text", PointSize: 9},
+						OnClicked: onOpenFile,
 					},
 					PushButton{
-						Text:        "⚡ Schnelltest",
-						OnClicked:   onQuickDemo,
+						Text:      "⚡ Schnelltest",
+						Font:      Font{Family: "Segoe UI Variable Text", PointSize: 9},
+						OnClicked: onQuickDemo,
 					},
 					PushButton{
-						Text:        "✍️ Freigeben",
-						OnClicked:   SignCurrentReport,
+						Text:      "✍️ Freigeben",
+						Font:      Font{Family: "Segoe UI Variable Text", PointSize: 9},
+						OnClicked: SignCurrentReport,
 					},
 					PushButton{
-						Text:        "📑 Bericht (HTML)",
-						OnClicked:   onExportReportHtml,
+						Text:      "📑 Bericht (HTML)",
+						Font:      Font{Family: "Segoe UI Variable Text", PointSize: 9},
+						OnClicked: onExportReportHtml,
 					},
 					PushButton{
-						Text:        "🔍 1:1 Pixel",
-						OnClicked:   onZoom100,
+						Text:      "🔍 1:1 Pixel",
+						Font:      Font{Family: "Segoe UI Variable Text", PointSize: 9},
+						OnClicked: onZoom100,
 					},
 					PushButton{
-						Text:        "📐 Einpassen",
-						OnClicked:   onZoomFit,
+						Text:      "📐 Einpassen",
+						Font:      Font{Family: "Segoe UI Variable Text", PointSize: 9},
+						OnClicked: onZoomFit,
 					},
 				},
 			},
 
-			// ── 2. Prominenter Triage- & Handlungs-Banner ──
+			// ── 2. WinUI 3 Fluent InfoBar Notification Card ──
 			Composite{
-				Layout: VBox{Margins: Margins{Left: 10, Top: 0, Right: 10, Bottom: 4}, Spacing: 2},
+				Layout: VBox{Margins: Margins{Left: 12, Top: 0, Right: 12, Bottom: 6}, Spacing: 0},
 				Children: []Widget{
-					Label{
-						AssignTo: &triageLabel,
-						Text:     "STANDBY / KEIN BEFUND GELADEN",
-						Font:     Font{Family: "Segoe UI", PointSize: 11, Bold: true},
-					},
-					Label{
-						AssignTo: &triageSub,
-						Text:     "Bitte laden Sie ein Wärmebild oder starten Sie den Schnelltest zur automatisierten Triage.",
-						Font:     Font{Family: "Segoe UI", PointSize: 9},
+					CustomWidget{
+						AssignTo:            &fluentInfoBarCanvas,
+						MinSize:             Size{Height: 48},
+						ClearsBackground:    false,
+						DoubleBuffering:     true,
+						InvalidatesOnResize: true,
+						PaintPixels:         PaintFluentInfoBar,
 					},
 				},
 			},
 
-			// ── 2b. Klinische Messwerkzeug-Leiste (Caliper, ROI, Goniometer, Isotherme) ──
+			// ── 2b. Klinische Messwerkzeug-Leiste (Fluent CommandBar) ──
 			Composite{
-				Layout: HBox{Margins: Margins{Left: 10, Top: 0, Right: 10, Bottom: 6}, Spacing: 5},
+				Layout: HBox{Margins: Margins{Left: 12, Top: 0, Right: 12, Bottom: 8}, Spacing: 5},
 				Children: []Widget{
 					Label{
-						Text: "📐 Messwerkzeuge:",
-						Font: Font{Family: "Segoe UI", PointSize: 9, Bold: true},
+						Text: "📐 Werkzeuge:",
+						Font: Font{Family: "Segoe UI Variable Text", PointSize: 9, Bold: true},
 					},
 					PushButton{
 						Text:      "⌖ Retikel",
+						Font:      Font{Family: "Segoe UI Variable Text", PointSize: 8},
 						OnClicked: func() { setToolMode(ToolReticle) },
 					},
 					PushButton{
-						Text:      "📏 Lineal (mm / Grad)",
+						Text:      "📏 Lineal",
+						Font:      Font{Family: "Segoe UI Variable Text", PointSize: 8},
 						OnClicked: func() { setToolMode(ToolRuler) },
 					},
 					PushButton{
-						Text:      "⬛ Rechteck-ROI (L/R)",
+						Text:      "⬛ Rechteck (L/R)",
+						Font:      Font{Family: "Segoe UI Variable Text", PointSize: 8},
 						OnClicked: func() { setToolMode(ToolRectROI) },
 					},
 					PushButton{
-						Text:      "⭕ Kreis-ROI (Halo)",
+						Text:      "⭕ Kreis (Halo)",
+						Font:      Font{Family: "Segoe UI Variable Text", PointSize: 8},
 						OnClicked: func() { setToolMode(ToolCircleROI) },
 					},
 					PushButton{
-						Text:      "📐 Goniometer (Winkel)",
+						Text:      "📐 Goniometer",
+						Font:      Font{Family: "Segoe UI Variable Text", PointSize: 8},
 						OnClicked: func() { setToolMode(ToolGoniometer) },
 					},
 					PushButton{
-						Text:      "📈 Schnittlinie A–B",
+						Text:      "📈 Profil A–B",
+						Font:      Font{Family: "Segoe UI Variable Text", PointSize: 8},
 						OnClicked: func() { setToolMode(ToolProfileLine) },
 					},
 					PushButton{
 						Text:      "➕ Kreuz & σ",
+						Font:      Font{Family: "Segoe UI Variable Text", PointSize: 8},
 						OnClicked: func() { setToolMode(ToolCrosshairSigma) },
 					},
 					PushButton{
 						Text:      "🔥 Isotherme ≥34°",
+						Font:      Font{Family: "Segoe UI Variable Text", PointSize: 8},
 						OnClicked: onToggleIsotherm,
 					},
 					PushButton{
 						Text:      "🧹 Löschen",
+						Font:      Font{Family: "Segoe UI Variable Text", PointSize: 8},
 						OnClicked: onClearMeasurements,
 					},
 					HSpacer{},
 					Label{
 						AssignTo: &toolStatusLabel,
 						Text:     "Modus: ⌖ Fadenkreuz (Spot-Probe)",
-						Font:     Font{Family: "Segoe UI", PointSize: 9, Bold: true},
+						Font:     Font{Family: "Segoe UI Variable Text", PointSize: 9, Bold: true},
 					},
 				},
 			},
@@ -614,37 +628,14 @@ func main() {
 								},
 							},
 
-							// Live-Inspektorleiste direkt unter den Bildern (Vitaldaten-Monitor)
-							GroupBox{
-								Title:  "Live-Fokus & Bilaterale Thermometrie (Cursor)",
-								Layout: HBox{Margins: Margins{Left: 8, Top: 4, Right: 8, Bottom: 4}, Spacing: 12},
-								Children: []Widget{
-									Label{
-										AssignTo: &lblLiveFocus,
-										Text:     "📍 Fokus: X: -- , Y: --",
-										Font:     Font{Family: "Segoe UI", PointSize: 9},
-									},
-									Label{
-										AssignTo: &lblLiveTemp,
-										Text:     "🌡️ T: --.- °C",
-										Font:     Font{Family: "Segoe UI", PointSize: 9, Bold: true},
-									},
-									Label{
-										AssignTo: &lblLiveContra,
-										Text:     "⚖️ Kontra: --.- °C",
-										Font:     Font{Family: "Segoe UI", PointSize: 9},
-									},
-									Label{
-										AssignTo: &lblLiveDelta,
-										Text:     "🔺 ΔT: ±-.-- K",
-										Font:     Font{Family: "Segoe UI", PointSize: 9, Bold: true},
-									},
-									Label{
-										AssignTo: &lblLiveAnat,
-										Text:     "🗺️ Zone: Standby",
-										Font:     Font{Family: "Segoe UI", PointSize: 9},
-									},
-								},
+							// WinUI 3 Fluent Telemetrie-Kartenband (Segmentierte Vitaldaten)
+							CustomWidget{
+								AssignTo:            &fluentInspectorCanvas,
+								MinSize:             Size{Height: 34},
+								ClearsBackground:    false,
+								DoubleBuffering:     true,
+								InvalidatesOnResize: true,
+								PaintPixels:         PaintFluentInspectorStrip,
 							},
 						},
 					},
@@ -1062,17 +1053,33 @@ func updateStatusBar(res *pipeline.AnalysisResult) {
 		return
 	}
 	if res.HighestRisk == "CRITICAL" {
-		triageLabel.SetText("🚨 ARMSTRONG-ALARM: AKUTES PRÄ-ULKUS (ΔT ≥ 2,2 K)")
-		triageSub.SetText("Pathologische Hyperthermie festgestellt. Sofortige Druckentlastung (Total-Contact-Cast) indiziert.")
+		if triageLabel != nil {
+			triageLabel.SetText("🚨 ARMSTRONG-ALARM: AKUTES PRÄ-ULKUS (ΔT ≥ 2,2 K)")
+		}
+		if triageSub != nil {
+			triageSub.SetText("Pathologische Hyperthermie festgestellt. Sofortige Druckentlastung (Total-Contact-Cast) indiziert.")
+		}
 		sbStatus.SetText("ALARM: AKUTES PRÄ-ULKUS (ΔT ≥ 2,2 K) · SOFORTIGE INSPEKTION")
 	} else if res.HighestRisk == "MODERATE" {
-		triageLabel.SetText("⚠️ MÄSSIGES RISIKO: BIOMECHANISCHE DRUCKSTELLE")
-		triageSub.SetText("Erhöhte thermische Asymmetrie (ΔT ≥ 1.2 K). Orthopädische Schuhzurichtung prüfen.")
+		if triageLabel != nil {
+			triageLabel.SetText("⚠️ MÄSSIGES RISIKO: BIOMECHANISCHE DRUCKSTELLE")
+		}
+		if triageSub != nil {
+			triageSub.SetText("Erhöhte thermische Asymmetrie (ΔT ≥ 1.2 K). Orthopädische Schuhzurichtung prüfen.")
+		}
 		sbStatus.SetText("MODERATES RISIKO: DRUCKSTELLE")
 	} else {
-		triageLabel.SetText("✅ PHYSIOLOGISCHER NORMALBEFUND")
-		triageSub.SetText("Keine signifikanten thermischen Asymmetrien (ΔT < 1.2 K).")
+		if triageLabel != nil {
+			triageLabel.SetText("✅ PHYSIOLOGISCHER NORMALBEFUND")
+		}
+		if triageSub != nil {
+			triageSub.SetText("Keine signifikanten thermischen Asymmetrien (ΔT < 1.2 K).")
+		}
 		sbStatus.SetText("NORMALBEFUND: PHYSIOLOGISCH")
+	}
+
+	if fluentInfoBarCanvas != nil {
+		fluentInfoBarCanvas.Invalidate()
 	}
 
 	if patientBadge != nil {
@@ -1173,6 +1180,9 @@ func onViewportMouseMove(x, y int, button walk.MouseButton) {
 				if vpRight != nil {
 					vpRight.Invalidate()
 				}
+				if fluentInspectorCanvas != nil {
+					fluentInspectorCanvas.Invalidate()
+				}
 			}
 			return
 		}
@@ -1186,6 +1196,9 @@ func onViewportMouseMove(x, y int, button walk.MouseButton) {
 		}
 		if vpRight != nil {
 			vpRight.Invalidate()
+		}
+		if fluentInspectorCanvas != nil {
+			fluentInspectorCanvas.Invalidate()
 		}
 	}
 }

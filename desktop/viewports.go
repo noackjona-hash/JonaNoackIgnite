@@ -208,8 +208,7 @@ func drawDicomHUD(canvas *walk.Canvas, b walk.Rectangle, isResult bool) {
 
 	// Top-Left Card
 	tlCard := walk.Rectangle{X: b.X + pad, Y: b.Y + pad, Width: 260, Height: 52}
-	canvas.FillRectanglePixels(cardBrush, tlCard)
-	canvas.DrawRectanglePixels(cardBorderPen, tlCard)
+	drawFluentRoundRect(canvas, tlCard, cardBrush, cardBorderPen, 6)
 
 	if !isResult {
 		canvas.DrawTextPixels(fmt.Sprintf("%s · (%s/%s J.)", GState.PatientID, GState.PatientSex, GState.PatientAge), hudBoldFont, walk.RGB(2, 132, 199), walk.Rectangle{X: tlCard.X + 8, Y: tlCard.Y + 6, Width: tlCard.Width - 16, Height: 14}, walk.TextLeft)
@@ -229,8 +228,7 @@ func drawDicomHUD(canvas *walk.Canvas, b walk.Rectangle, isResult bool) {
 
 	// Top-Right Card
 	trCard := walk.Rectangle{X: b.Width - 270, Y: b.Y + pad, Width: 260, Height: 52}
-	canvas.FillRectanglePixels(cardBrush, trCard)
-	canvas.DrawRectanglePixels(cardBorderPen, trCard)
+	drawFluentRoundRect(canvas, trCard, cardBrush, cardBorderPen, 6)
 
 	if !isResult {
 		canvas.DrawTextPixels("UNIVERSITÄTSKLINIKUM", hudBoldFont, walk.RGB(2, 132, 199), walk.Rectangle{X: trCard.X + 8, Y: trCard.Y + 6, Width: trCard.Width - 16, Height: 14}, walk.TextRight)
@@ -248,15 +246,13 @@ func drawDicomHUD(canvas *walk.Canvas, b walk.Rectangle, isResult bool) {
 
 	// Bottom-Left Card
 	blCard := walk.Rectangle{X: b.X + pad, Y: b.Height - 50, Width: 230, Height: 40}
-	canvas.FillRectanglePixels(cardBrush, blCard)
-	canvas.DrawRectanglePixels(cardBorderPen, blCard)
+	drawFluentRoundRect(canvas, blCard, cardBrush, cardBorderPen, 6)
 	canvas.DrawTextPixels(fmt.Sprintf("W: %d · L: %d (%.1f °C)", GState.WindowVal, GState.LevelVal, TempOf(byte(GState.LevelVal))), hudFont, walk.RGB(71, 85, 105), walk.Rectangle{X: blCard.X + 8, Y: blCard.Y + 4, Width: blCard.Width - 16, Height: 14}, walk.TextLeft)
 	canvas.DrawTextPixels(fmt.Sprintf("ZOOM: %d%% · %s", int(GState.Zoom*100), GState.ActivePalette), hudFont, walk.RGB(100, 116, 139), walk.Rectangle{X: blCard.X + 8, Y: blCard.Y + 20, Width: blCard.Width - 16, Height: 14}, walk.TextLeft)
 
 	// Bottom-Right Card
 	brCard := walk.Rectangle{X: b.Width - 240, Y: b.Height - 50, Width: 230, Height: 40}
-	canvas.FillRectanglePixels(cardBrush, brCard)
-	canvas.DrawRectanglePixels(cardBorderPen, brCard)
+	drawFluentRoundRect(canvas, brCard, cardBrush, cardBorderPen, 6)
 	canvas.DrawTextPixels("DIN EN ISO 13485 · MDR SaMD IIa", hudFont, walk.RGB(100, 116, 139), walk.Rectangle{X: brCard.X + 8, Y: brCard.Y + 4, Width: brCard.Width - 16, Height: 14}, walk.TextRight)
 	canvas.DrawTextPixels("NUC KALIBRIERT · ε = 0.98", hudBoldFont, walk.RGB(2, 132, 199), walk.Rectangle{X: brCard.X + 8, Y: brCard.Y + 20, Width: brCard.Width - 16, Height: 14}, walk.TextRight)
 }
@@ -269,25 +265,21 @@ func drawAnatomicalTags(canvas *walk.Canvas, dest walk.Rectangle) {
 
 	// D (Distal) - oben mit dezentem Badge-Hintergrund
 	dBadge := walk.Rectangle{X: dest.X + dest.Width/2 - 45, Y: dest.Y + 6, Width: 90, Height: 18}
-	canvas.FillRectanglePixels(badgeBrush, dBadge)
-	canvas.DrawRectanglePixels(cardBorderPen, dBadge)
+	drawFluentRoundRect(canvas, dBadge, badgeBrush, cardBorderPen, 6)
 	canvas.DrawTextPixels("D (DISTAL)", anatFont, tagColor, dBadge, walk.TextCenter|walk.TextVCenter)
 
 	// P (Proximal) - unten am Fersenrand, ausreichend breit damit kein Abschneiden erfolgt
 	pBadge := walk.Rectangle{X: dest.X + dest.Width/2 - 55, Y: dest.Y + dest.Height - 24, Width: 110, Height: 18}
-	canvas.FillRectanglePixels(badgeBrush, pBadge)
-	canvas.DrawRectanglePixels(cardBorderPen, pBadge)
+	drawFluentRoundRect(canvas, pBadge, badgeBrush, cardBorderPen, 6)
 	canvas.DrawTextPixels("P (PROXIMAL)", anatFont, tagColor, pBadge, walk.TextCenter|walk.TextVCenter)
 
 	// R (Rechts) / L (Links)
 	rBadge := walk.Rectangle{X: dest.X + 8, Y: dest.Y + dest.Height/2 - 10, Width: 22, Height: 20}
-	canvas.FillRectanglePixels(badgeBrush, rBadge)
-	canvas.DrawRectanglePixels(cardBorderPen, rBadge)
+	drawFluentRoundRect(canvas, rBadge, badgeBrush, cardBorderPen, 6)
 	canvas.DrawTextPixels("R", anatFont, tagColor, rBadge, walk.TextCenter|walk.TextVCenter)
 
 	lBadge := walk.Rectangle{X: dest.X + dest.Width - 30, Y: dest.Y + dest.Height/2 - 10, Width: 22, Height: 20}
-	canvas.FillRectanglePixels(badgeBrush, lBadge)
-	canvas.DrawRectanglePixels(cardBorderPen, lBadge)
+	drawFluentRoundRect(canvas, lBadge, badgeBrush, cardBorderPen, 6)
 	canvas.DrawTextPixels("L", anatFont, tagColor, lBadge, walk.TextCenter|walk.TextVCenter)
 
 	// Calibrated Metric Scale (50 mm)
@@ -365,8 +357,7 @@ func drawReticle(canvas *walk.Canvas, bounds, dest walk.Rectangle) {
 	if isArmAlarm {
 		br = badgeAlarmBr
 	}
-	canvas.FillRectanglePixels(br, badgeRect)
-	canvas.DrawRectanglePixels(pen, badgeRect)
+	drawFluentRoundRect(canvas, badgeRect, br, pen, 6)
 
 	line1 := fmt.Sprintf("%.1f °C  ·  ΔT %+.2f K", tempCur, deltaT)
 	textColor := walk.RGB(2, 132, 199)
@@ -518,8 +509,7 @@ func drawMeasurements(canvas *walk.Canvas, bounds, dest walk.Rectangle) {
 				badgeW := 160
 				badgeH := 32
 				bRect := walk.Rectangle{X: midX - badgeW/2, Y: midY - badgeH - 6, Width: badgeW, Height: badgeH}
-				canvas.FillRectanglePixels(br, bRect)
-				canvas.DrawRectanglePixels(pen, bRect)
+				drawFluentRoundRect(canvas, bRect, br, pen, 6)
 				canvas.DrawTextPixels(fmt.Sprintf("%s: %s", m.Label, m.ValueStr), hudBoldFont, textCol, walk.Rectangle{X: bRect.X + 4, Y: bRect.Y + 2, Width: badgeW - 8, Height: 14}, walk.TextCenter)
 				canvas.DrawTextPixels(m.DetailsStr, hudFont, walk.RGB(71, 85, 105), walk.Rectangle{X: bRect.X + 4, Y: bRect.Y + 16, Width: badgeW - 8, Height: 14}, walk.TextCenter)
 			}
@@ -550,8 +540,7 @@ func drawMeasurements(canvas *walk.Canvas, bounds, dest walk.Rectangle) {
 				if bRect.Y < bounds.Y {
 					bRect.Y = maxY + 4
 				}
-				canvas.FillRectanglePixels(br, bRect)
-				canvas.DrawRectanglePixels(pen, bRect)
+				drawFluentRoundRect(canvas, bRect, br, pen, 6)
 				canvas.DrawTextPixels(fmt.Sprintf("%s · %s", m.Label, m.ValueStr), hudBoldFont, textCol, walk.Rectangle{X: bRect.X + 6, Y: bRect.Y + 2, Width: badgeW - 12, Height: 15}, walk.TextLeft)
 				canvas.DrawTextPixels(m.DetailsStr, hudFont, walk.RGB(71, 85, 105), walk.Rectangle{X: bRect.X + 6, Y: bRect.Y + 18, Width: badgeW - 12, Height: 15}, walk.TextLeft)
 			}
@@ -579,8 +568,7 @@ func drawMeasurements(canvas *walk.Canvas, bounds, dest walk.Rectangle) {
 				if bRect.X+badgeW > bounds.X+bounds.Width {
 					bRect.X = sc.X - radPx - 4 - badgeW
 				}
-				canvas.FillRectanglePixels(br, bRect)
-				canvas.DrawRectanglePixels(pen, bRect)
+				drawFluentRoundRect(canvas, bRect, br, pen, 6)
 				canvas.DrawTextPixels(fmt.Sprintf("%s: %s", m.Label, m.ValueStr), hudBoldFont, textCol, walk.Rectangle{X: bRect.X + 6, Y: bRect.Y + 2, Width: badgeW - 12, Height: 15}, walk.TextLeft)
 				canvas.DrawTextPixels(m.DetailsStr, hudFont, walk.RGB(71, 85, 105), walk.Rectangle{X: bRect.X + 6, Y: bRect.Y + 18, Width: badgeW - 12, Height: 15}, walk.TextLeft)
 			}
@@ -601,8 +589,7 @@ func drawMeasurements(canvas *walk.Canvas, bounds, dest walk.Rectangle) {
 				if bRect.X+badgeW > bounds.X+bounds.Width {
 					bRect.X = sv.X - 16 - badgeW
 				}
-				canvas.FillRectanglePixels(br, bRect)
-				canvas.DrawRectanglePixels(pen, bRect)
+				drawFluentRoundRect(canvas, bRect, br, pen, 6)
 				canvas.DrawTextPixels(fmt.Sprintf("%s: %s", m.Label, m.ValueStr), hudBoldFont, textCol, walk.Rectangle{X: bRect.X + 6, Y: bRect.Y + 2, Width: badgeW - 12, Height: 14}, walk.TextLeft)
 				canvas.DrawTextPixels(m.DetailsStr, hudFont, walk.RGB(71, 85, 105), walk.Rectangle{X: bRect.X + 6, Y: bRect.Y + 16, Width: badgeW - 12, Height: 14}, walk.TextLeft)
 			}
@@ -617,8 +604,7 @@ func drawMeasurements(canvas *walk.Canvas, bounds, dest walk.Rectangle) {
 				badgeW := 130
 				badgeH := 24
 				bRect := walk.Rectangle{X: sc.X + 12, Y: sc.Y - 12, Width: badgeW, Height: badgeH}
-				canvas.FillRectanglePixels(br, bRect)
-				canvas.DrawRectanglePixels(pen, bRect)
+				drawFluentRoundRect(canvas, bRect, br, pen, 6)
 				canvas.DrawTextPixels(fmt.Sprintf("%s · %s", m.Label, m.ValueStr), hudBoldFont, textCol, walk.Rectangle{X: bRect.X + 4, Y: bRect.Y + 4, Width: badgeW - 8, Height: 16}, walk.TextCenter)
 			}
 
@@ -640,8 +626,7 @@ func drawMeasurements(canvas *walk.Canvas, bounds, dest walk.Rectangle) {
 				badgeW := 195
 				badgeH := 36
 				bRect := walk.Rectangle{X: sc.X + 12, Y: sc.Y - 18, Width: badgeW, Height: badgeH}
-				canvas.FillRectanglePixels(br, bRect)
-				canvas.DrawRectanglePixels(pen, bRect)
+				drawFluentRoundRect(canvas, bRect, br, pen, 6)
 				canvas.DrawTextPixels(fmt.Sprintf("%s · %s", m.Label, m.ValueStr), hudBoldFont, textCol, walk.Rectangle{X: bRect.X + 6, Y: bRect.Y + 2, Width: badgeW - 12, Height: 15}, walk.TextLeft)
 				canvas.DrawTextPixels(m.DetailsStr, hudFont, walk.RGB(71, 85, 105), walk.Rectangle{X: bRect.X + 6, Y: bRect.Y + 18, Width: badgeW - 12, Height: 15}, walk.TextLeft)
 			}
@@ -802,8 +787,7 @@ func drawActiveCrosshair(canvas *walk.Canvas, bounds, dest walk.Rectangle) {
 		bx = sc.X - badgeW - 12
 	}
 	bRect := walk.Rectangle{X: bx, Y: by, Width: badgeW, Height: badgeH}
-	canvas.FillRectanglePixels(badgeBrush, bRect)
-	canvas.DrawRectanglePixels(measurePen, bRect)
+	drawFluentRoundRect(canvas, bRect, badgeBrush, measurePen, 6)
 	badgeCol := walk.RGB(2, 132, 199)
 	if cm.Risk == "CRITICAL" {
 		badgeCol = walk.RGB(220, 38, 38)
