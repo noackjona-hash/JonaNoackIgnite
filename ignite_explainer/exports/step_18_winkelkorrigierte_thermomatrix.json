@@ -1,0 +1,15 @@
+{
+  "step_number": 18,
+  "phase_number": 3,
+  "phase_name": "Phase III: 3D Anatomical Inflation & Angle Compensation",
+  "name": "Winkelkorrigierte Thermomatrix",
+  "description": "Liefert die physikalisch bereinigte Temperaturverteilung, bei der die durch 3D-Körperkrümmung bedingte Scheinkühlung eliminiert ist.",
+  "formula": "T_{\\text{corr}}(x,y) = T_{\\text{apparent}}(x,y) + \\Delta T_{\\text{corr}}(x,y)",
+  "duration_ms": 1.9494000002850953,
+  "metrics": {
+    "T_Mittel Vorher": "32.72 °C",
+    "T_Mittel Nachher": "33.92 °C",
+    "Status": "Optimal"
+  },
+  "image_filename": "step_18_winkelkorrigierte_thermomatrix.png"
+}

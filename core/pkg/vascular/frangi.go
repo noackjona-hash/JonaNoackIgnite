@@ -75,7 +75,36 @@ func convolve1DHorizontal(src *imageutil.FloatMatrix, kernel []float32, radius i
 			defer wg.Done()
 			for y := start; y < end; y++ {
 				row := y * w
-				for x := 0; x < w; x++ {
+				// Left border clamp
+				leftEnd := radius
+				if leftEnd > w {
+					leftEnd = w
+				}
+				for x := 0; x < leftEnd; x++ {
+					var sum float32
+					for k := -radius; k <= radius; k++ {
+						px := x + k
+						if px < 0 {
+							px = 0
+						} else if px >= w {
+							px = w - 1
+						}
+						sum += src.Data[row+px] * kernel[k+radius]
+					}
+					dst.Data[row+x] = sum
+				}
+				// Vectorized AVX2 interior
+				kLen := 2*radius + 1
+				rightStart := w - radius
+				if rightStart < leftEnd {
+					rightStart = leftEnd
+				}
+				for x := leftEnd; x < rightStart; x++ {
+					window := src.Data[row+x-radius : row+x-radius+kLen]
+					dst.Data[row+x] = morphology.DotProductFloat32(window, kernel)
+				}
+				// Right border clamp
+				for x := rightStart; x < w; x++ {
 					var sum float32
 					for k := -radius; k <= radius; k++ {
 						px := x + k

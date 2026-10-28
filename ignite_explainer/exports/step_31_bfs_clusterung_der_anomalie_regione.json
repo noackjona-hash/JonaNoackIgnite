@@ -1,0 +1,15 @@
+{
+  "step_number": 31,
+  "phase_number": 6,
+  "phase_name": "Phase VI: Geometric Morphology & Artifact Rejection",
+  "name": "BFS-Clusterung der Anomalie-Regionen",
+  "description": "Fasst zusammenhängende Hyperthermie-Pixel mittels 4-Wege BFS in diskrete anatomische Befund-Kandidaten zusammen.",
+  "formula": "\\mathcal{R}_k = \\{ p \\mid \\text{Labels}(p) = k \\}, \\quad \\text{Centroid} = \\frac{1}{|\\mathcal{R}_k|} \\sum_{p \\in \\mathcal{R}_k} p",
+  "duration_ms": 127.6108000001841,
+  "metrics": {
+    "Kandidaten": 37,
+    "Konnektivität": "4-fach vernetzt",
+    "Status": "Initial erfasst"
+  },
+  "image_filename": "step_31_bfs_clusterung_der_anomalie_regione.png"
+}

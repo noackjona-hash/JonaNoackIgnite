@@ -104,3 +104,64 @@ func ThresholdMaskAVX2(diff, orig, mask, dst []uint8, threshold, origMedian uint
 		}
 	}
 }
+
+// DotProductFloat32 scalar fallback
+func DotProductFloat32(a, b []float32) float32 {
+	n := len(a)
+	if len(b) < n {
+		n = len(b)
+	}
+	var res float32
+	for i := 0; i < n; i++ {
+		res += a[i] * b[i]
+	}
+	return res
+}
+
+// AddVectorFloat32 scalar fallback
+func AddVectorFloat32(a, b, dst []float32) {
+	n := len(a)
+	if len(b) < n { n = len(b) }
+	if len(dst) < n { n = len(dst) }
+	for i := 0; i < n; i++ {
+		dst[i] = a[i] + b[i]
+	}
+}
+
+// ScaleOffsetFloat32 scalar fallback
+func ScaleOffsetFloat32(src, dst []float32, scale, offset float32) {
+	n := len(src)
+	if len(dst) < n { n = len(dst) }
+	for i := 0; i < n; i++ {
+		dst[i] = src[i]*scale + offset
+	}
+}
+
+// Laplacian2DVectorFloat32 scalar fallback
+func Laplacian2DVectorFloat32(center, left, right, up, down, dst []float32) {
+	n := len(center)
+	if len(left) < n { n = len(left) }
+	if len(right) < n { n = len(right) }
+	if len(up) < n { n = len(up) }
+	if len(down) < n { n = len(down) }
+	if len(dst) < n { n = len(dst) }
+	for i := 0; i < n; i++ {
+		dst[i] = left[i] + right[i] + up[i] + down[i] - 4.0*center[i]
+	}
+}
+
+// SumAndSumSqUint8 scalar fallback
+func SumAndSumSqUint8(src, mask []uint8) (sum uint64, sumSq uint64, validCount uint64) {
+	n := len(src)
+	for i := 0; i < n; i++ {
+		if mask != nil && mask[i] == 0 {
+			continue
+		}
+		v := uint64(src[i])
+		sum += v
+		sumSq += v * v
+		validCount++
+	}
+	return sum, sumSq, validCount
+}
+

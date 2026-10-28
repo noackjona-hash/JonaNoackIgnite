@@ -1,0 +1,15 @@
+{
+  "step_number": 5,
+  "phase_number": 1,
+  "phase_name": "Phase I: Sensor & Radiometric Calibration",
+  "name": "Stefan-Boltzmann Drift-Kompensation",
+  "description": "Kompensiert thermische Sensor-Eigenerwärmung und langwellige Hintergrundstrahlung basierend auf dem Stefan-Boltzmann-Gesetz.",
+  "formula": "P = \\varepsilon \\cdot \\sigma \\cdot T^4, \\quad T_{\\text{drift-corr}} = T - \\alpha \\cdot (T - T_{\\text{amb}})",
+  "duration_ms": 41.72660000040196,
+  "metrics": {
+    "T_Umgebung": "19.26 °C",
+    "Drift-Korrektur": "0.0216 K",
+    "Status": "Stabilisiert"
+  },
+  "image_filename": "step_05_stefan_boltzmann_drift_kompensation.png"
+}

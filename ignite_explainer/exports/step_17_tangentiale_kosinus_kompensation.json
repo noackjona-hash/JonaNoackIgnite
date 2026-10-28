@@ -1,0 +1,15 @@
+{
+  "step_number": 17,
+  "phase_number": 3,
+  "phase_name": "Phase III: 3D Anatomical Inflation & Angle Compensation",
+  "name": "Tangentiale Kosinus-Kompensation",
+  "description": "Berechnet den mathematischen Temperaturzuschlag für schräg geneigte Randbezirke mit Sicherheitsdeckelung auf maximal 1.2 K.",
+  "formula": "\\Delta T_{\\text{corr}} = \\min\\left(1{,}2\\,\\text{K},\\, (T + 273{,}15) \\cdot \\left(\\frac{1}{\\sqrt[4]{\\varepsilon(\\theta)}} - 1\\right)\\right)",
+  "duration_ms": 42.348999999830994,
+  "metrics": {
+    "Max Zuschlag": "+1.20 K",
+    "Sicherheitsgrenze": "1.2 K",
+    "Schutz": "Keine Überhitzung"
+  },
+  "image_filename": "step_17_tangentiale_kosinus_kompensation.png"
+}

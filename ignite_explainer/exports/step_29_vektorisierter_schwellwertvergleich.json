@@ -1,0 +1,15 @@
+{
+  "step_number": 29,
+  "phase_number": 5,
+  "phase_name": "Phase V: Statistical Outlier Profiling & Thresholding",
+  "name": "Vektorisierter Schwellwertvergleich",
+  "description": "Extrahiert statistisch signifikante Hyperthermiepunkte mit k=3.0 (99.7% Konfidenzniveau nach Gauß / Hampel).",
+  "formula": "\\tau = \\text{Median} + k \\cdot \\hat{\\sigma}, \\quad \\mathcal{A}_{\\text{raw}} = \\{ (x,y) \\mid \\text{WTH}(x,y) \\ge \\tau \\}",
+  "duration_ms": 9.987999999793828,
+  "metrics": {
+    "Schwelle τ": "70.37",
+    "k-Faktor": "3.0",
+    "Anomaliepixel": 9075
+  },
+  "image_filename": "step_29_vektorisierter_schwellwertvergleich.png"
+}

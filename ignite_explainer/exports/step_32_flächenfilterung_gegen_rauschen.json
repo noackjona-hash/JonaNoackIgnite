@@ -1,0 +1,15 @@
+{
+  "step_number": 32,
+  "phase_number": 6,
+  "phase_name": "Phase VI: Geometric Morphology & Artifact Rejection",
+  "name": "Flächenfilterung gegen Rauschen",
+  "description": "Filtert mikroskopische Einzelpixel-Artefakte unterhalb von 0.03% der Fußgewebefläche aus.",
+  "formula": "\\text{Keep}(\\mathcal{R}_k) \\iff \\text{Area}(\\mathcal{R}_k) \\ge 0{,}0003 \\cdot N_{\\text{tissue}}",
+  "duration_ms": 0.023800000235496555,
+  "metrics": {
+    "Mindestgröße": "113 px",
+    "Beibehalten": 6,
+    "Rauschpunkte eliminiert": 31
+  },
+  "image_filename": "step_32_flächenfilterung_gegen_rauschen.png"
+}

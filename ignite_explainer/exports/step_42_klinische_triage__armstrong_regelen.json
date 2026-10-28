@@ -1,0 +1,15 @@
+{
+  "step_number": 42,
+  "phase_number": 7,
+  "phase_name": "Phase VII: Biophysical Differential Diagnosis & Triage",
+  "name": "Klinische Triage & Armstrong-Regelengine",
+  "description": "Synthese aller 41 Vorstufen zu einer evidenzbasierten ärztlichen Diagnose nach den internationalen IWGDF-Leitlinien und Armstrong-Kriterien.",
+  "formula": "\\text{Triage} = \\begin{cases} \\text{CRITICAL (Rot)} & \\text{falls } \\Delta T_{\\text{contra}} \\ge 2{,}2\\,\\text{K} \\\\ \\text{MODERATE (Gelb)} & \\text{falls } 1{,}2\\,\\text{K} \\le \\Delta T_{\\text{contra}} < 2{,}2\\,\\text{K} \\\\ \\text{BENIGN (Grün)} & \\text{falls } \\Delta T_{\\text{contra}} < 1{,}2\\,\\text{K} \\end{cases}",
+  "duration_ms": 0.02080000012938399,
+  "metrics": {
+    "Triage": "CRITICAL",
+    "Befund": "Akute Entzündung: Großer Zeh (Hallux) • ΔT = +11.4 K",
+    "ΔT Armstrong": "14.64 K"
+  },
+  "image_filename": "step_42_klinische_triage__armstrong_regelen.png"
+}

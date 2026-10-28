@@ -1,0 +1,1282 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IGNITE v5.0 — 42-Stufige Diagnostik-Pipeline (Jugend forscht 2026)</title>
+    <style>
+        :root {
+            --bg-dark: #07090E;
+            --surface: #0F172A;
+            --surface-card: #131D31;
+            --border: #1E293B;
+            --text-main: #F8FAFC;
+            --text-muted: #94A3B8;
+            --cyan: #0284C7;
+            --cyan-light: #38BDF8;
+            --green: #16A34A;
+            --yellow: #F59E0B;
+            --red: #DC2626;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: var(--bg-dark);
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.5;
+            padding: 24px;
+        }
+        .header {
+            max-width: 1400px;
+            margin: 0 auto 32px auto;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+        .header h1 {
+            font-size: 28px;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .header h1 span { color: var(--cyan-light); }
+        .header p { color: var(--text-muted); font-size: 15px; margin-top: 8px; }
+        
+        .triage-banner {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 20px;
+            padding: 10px 20px;
+            background: #DC262622;
+            border: 1px solid #DC2626;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 16px;
+            color: #DC2626;
+        }
+        
+        .benchmark-banner {
+            margin-top: 24px;
+            padding: 18px 24px;
+            background: #0B1120;
+            border: 1px solid #1E293B;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        .bench-col { display: flex; flex-direction: column; }
+        .bench-col.highlight { background: #0369A122; padding: 6px 14px; border-radius: 8px; border: 1px solid #0284C7; }
+        .bench-label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; font-weight: bold; }
+        .bench-val { font-size: 18px; font-weight: bold; font-family: monospace; }
+        .bench-val.red { color: var(--red); }
+        .bench-val.yellow { color: var(--yellow); }
+        .bench-val.green { color: #4ADE80; }
+        .bench-arrow { color: var(--text-muted); font-size: 20px; }
+        .speedup-badge { background: #0284C7; color: #FFF; padding: 6px 14px; border-radius: 20px; font-weight: bold; font-size: 14px; }
+        
+        /* Filterleiste */
+        .filter-bar {
+            max-width: 1400px;
+            margin: 0 auto 24px auto;
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 8px;
+        }
+        .filter-btn {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .filter-btn:hover, .filter-btn.active {
+            background: var(--cyan);
+            color: #FFFFFF;
+            border-color: var(--cyan-light);
+        }
+        
+        /* Grid */
+        .pipeline-grid {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+            gap: 24px;
+        }
+        
+        /* Karten */
+        .step-card {
+            background: var(--surface-card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .step-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--cyan-light);
+        }
+        .card-header {
+            padding: 14px 18px 8px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        .step-badge { font-size: 11px; font-weight: bold; color: var(--cyan-light); background: #0284C722; padding: 4px 8px; border-radius: 6px; }
+        .phase-badge { font-size: 11px; font-weight: bold; color: var(--text-muted); }
+        .timing-badge { font-size: 11px; color: #4ADE80; font-family: monospace; }
+        
+        .step-title {
+            font-size: 16px;
+            font-weight: bold;
+            padding: 0 18px 12px 18px;
+            color: var(--text-main);
+        }
+        
+        .image-container {
+            background: #000;
+            width: 100%;
+            height: 250px;
+            overflow: hidden;
+            position: relative;
+            cursor: zoom-in;
+        }
+        .image-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s;
+        }
+        .image-container:hover img {
+            transform: scale(1.03);
+        }
+        
+        .card-body {
+            padding: 16px 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            flex: 1;
+        }
+        
+        .formula-box {
+            background: #0B1120;
+            border-left: 3px solid var(--cyan-light);
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            overflow-x: auto;
+            color: #E2E8F0;
+        }
+        .description {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.45;
+        }
+        .metrics-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: auto;
+            padding-top: 8px;
+            border-top: 1px solid #1E293B;
+        }
+        .metric-pill {
+            background: #1E293B;
+            color: #CBD5E1;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+        }
+        
+        /* Lightbox */
+        .lightbox {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        .lightbox img {
+            max-width: 90%;
+            max-height: 80%;
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(0,0,0,0.8);
+        }
+        .lightbox-title {
+            color: #FFF;
+            font-size: 18px;
+            margin-top: 16px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <header class="header">
+        <h1><span>IGNITE v5.0</span> — Vollständige 42-Stufen Diagnostik-Pipeline</h1>
+        <p><strong>Jugend forscht 2026</strong> • Fachgebiet Arbeitswelt / Informatik • Autor: <strong>Jona Noack</strong></p>
+        <p>Deterministische, berührungslose Früherkennung diabetischer Fußulzera (DFS) & Gewebeentzündungen mittels LWIR-Thermografie.</p>
+        
+        <div class="triage-banner">
+            <span>Diagnostische End-Triage:</span>
+            <strong>Akute Entzündung: Großer Zeh (Hallux) • ΔT = +11.4 K</strong>
+            <span>(Gesamtdauer aller 42 Stufen: 1329.9 ms)</span>
+        </div>
+        
+        
+        <div class="benchmark-banner">
+            <div class="bench-col">
+                <span class="bench-label">Naiver Python-Loop</span>
+                <span class="bench-val red">230.1 ms</span>
+            </div>
+            <div class="bench-arrow">➔</div>
+            <div class="bench-col">
+                <span class="bench-label">NumPy Vektorisierung</span>
+                <span class="bench-val yellow">0.99 ms</span>
+            </div>
+            <div class="bench-arrow">➔</div>
+            <div class="bench-col highlight">
+                <span class="bench-label">x86_64 SIMD Assembler (AVX2/SSE2)</span>
+                <span class="bench-val green">0.041 ms</span>
+            </div>
+            <div class="bench-col badge-col">
+                <span class="speedup-badge">🚀 5,671× schneller</span>
+            </div>
+        </div>
+        
+    </header>
+
+    <div class="filter-bar">
+        <button class="filter-btn active" onclick="filterPhase('all')">Alle 42 Stufen</button>
+        <button class="filter-btn" onclick="filterPhase('1')">Phase I: Sensor (1–6)</button>
+        <button class="filter-btn" onclick="filterPhase('2')">Phase II: Segmentierung (7–12)</button>
+        <button class="filter-btn" onclick="filterPhase('3')">Phase III: 3D-Kompensation (13–18)</button>
+        <button class="filter-btn" onclick="filterPhase('4')">Phase IV: Morphologie & SIMD (19–24)</button>
+        <button class="filter-btn" onclick="filterPhase('5')">Phase V: Statistik & MAD (25–30)</button>
+        <button class="filter-btn" onclick="filterPhase('6')">Phase VI: Geometrie & Frangi (31–36)</button>
+        <button class="filter-btn" onclick="filterPhase('7')">Phase VII: Triage & Armstrong (37–42)</button>
+    </div>
+
+    <main class="pipeline-grid" id="pipelineGrid">
+        
+        <div class="step-card phase-1" data-phase="1">
+            <div class="card-header">
+                <span class="step-badge">STUFE 01 / 42</span>
+                <span class="phase-badge">Phase I</span>
+                <span class="timing-badge">⚡ 31.13 ms</span>
+            </div>
+            <h3 class="step-title">Radiometrische Sensorkalibrierung</h3>
+            
+            <div class="image-container">
+                <img src="step_01_radiometrische_sensorkalibrierung.png" alt="Radiometrische Sensorkalibrierung" loading="lazy" onclick="openLightbox('step_01_radiometrische_sensorkalibrierung.png', 'Radiometrische Sensorkalibrierung')">
+            </div>
+            
+            <div class="card-body">
+                <div class="formula-box">
+                    <code>T(x,y) = T_{\text{min}} + \frac{I(x,y)}{255} \cdot (T_{\text{max}} - T_{\text{min}})</code>
+                </div>
+                <p class="description">Konvertiert die unkalibrierten Roh-Sensorpixel in physikalische Absoluttemperaturen (°C) gemäß Kalibrierkurve des LWIR-Sensors.</p>
+                <div class="metrics-grid">
+                    <span class="metric-pill"><strong>T_Min:</strong> 18.47 °C</span><span class="metric-pill"><strong>T_Max:</strong> 36.75 °C</span><span class="metric-pill"><strong>T_Mittel:</strong> 23.58 °C</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step-card phase-1" data-phase="1">
+            <div class="card-header">
+                <span class="step-badge">STUFE 02 / 42</span>
+                <span class="phase-badge">Phase I</span>
+                <span class="timing-badge">⚡ 28.55 ms</span>
+            </div>
+            <h3 class="step-title">Dead-Pixel-Erkennung & Interpolation</h3>
+            
+            <div class="image-container">
+                <img src="step_02_dead_pixel_erkennung__interpolation.png" alt="Dead-Pixel-Erkennung & Interpolation" loading="lazy" onclick="openLightbox('step_02_dead_pixel_erkennung__interpolation.png', 'Dead-Pixel-Erkennung & Interpolation')">
+            </div>
+            
+            <div class="card-body">
+                <div class="formula-box">
+                    <code>\text{BadPixel} = (I == 0) \lor (I == 255), \quad T_{\text{clean}} = \text{Median}_{3\times 3}(T)</code>
+                </div>
+                <p class="description">Detektiert Sensor-Ausfälle (Dead Pixels bei 0 oder 255) und korrigiert diese durch lokale 3x3-Nachbarschafts-Interpolation.</p>
+                <div class="metrics-grid">
+                    <span class="metric-pill"><strong>Defekte Pixel:</strong> 0</span><span class="metric-pill"><strong>Anteil:</strong> 0.0000 %</span><span class="metric-pill"><strong>Status:</strong> Bereinigt</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step-card phase-1" data-phase="1">
+            <div class="card-header">
+                <span class="step-badge">STUFE 03 / 42</span>
+                <span class="phase-badge">Phase I</span>
+                <span class="timing-badge">⚡ 139.55 ms</span>
+            </div>
+            <h3 class="step-title">Anisotrope Bilaterale Rauschfilterung</h3>
+            
+            <div class="image-container">
+                <img src="step_03_anisotrope_bilaterale_rauschfilteru.png" alt="Anisotrope Bilaterale Rauschfilterung" loading="lazy" onclick="openLightbox('step_03_anisotrope_bilaterale_rauschfilteru.png', 'Anisotrope Bilaterale Rauschfilterung')">
+            </div>
+            
+            <div class="card-body">
+                <div class="formula-box">
+                    <code>I_{\text{filt}}(p) = \frac{1}{W_p} \sum_{q} I(q) \cdot \exp\left(-\frac{\|p-q\|^2}{2\sigma_s^2}\right) \cdot \exp\left(-\frac{\|I_p - I_q\|^2}{2\sigma_r^2}\right)</code>
+                </div>
+                <p class="description">Unterdrückt stochastisches NETD-Sensorrauschen (Noise Equivalent Temp Difference), ohne pathologische Temperaturkanten zu verwischen.</p>
+                <div class="metrics-grid">
+                    <span class="metric-pill"><strong>Sigma Raum:</strong> 3.0 px</span><span class="metric-pill"><strong>Sigma Farbe:</strong> 0.5 °C</span><span class="metric-pill"><strong>Rauschminderung:</strong> 0.085 K</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step-card phase-1" data-phase="1">
+            <div class="card-header">
+                <span class="step-badge">STUFE 04 / 42</span>
+                <span class="phase-badge">Phase I</span>
+                <span class="timing-badge">⚡ 0.00 ms</span>
+            </div>
+            <h3 class="step-title">Räumliche Gitterstandardisierung</h3>
+            
+            <div class="image-container">
+                <img src="step_04_räumliche_gitterstandardisierung.png" alt="Räumliche Gitterstandardisierung" loading="lazy" onclick="openLightbox('step_04_räumliche_gitterstandardisierung.png', 'Räumliche Gitterstandardisierung')">
+            </div>
+            
+            <div class="card-body">
+                <div class="formula-box">
+                    <code>\text{Pitch} = 0{,}6\,\text{mm/px}, \quad \text{Fläche}(A) = \text{Pixelanzahl} \cdot \text{Pitch}^2</code>
+                </div>
+                <p class="description">Kalibriert das Pixelkoordinatensystem auf metrische Einheiten (0.6 mm/Pixel) für normgerechte Wundflächenvermessung nach DIN EN ISO 13485.</p>
+                <div class="metrics-grid">
+                    <span class="metric-pill"><strong>Sensor-Pitch:</strong> 0.6 mm/px</span><span class="metric-pill"><strong>Breite:</strong> 864.0 mm</span><span class="metric-pill"><strong>Höhe:</strong> 648.0 mm</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step-card phase-1" data-phase="1">
+            <div class="card-header">
+                <span class="step-badge">STUFE 05 / 42</span>
+                <span class="phase-badge">Phase I</span>
+                <span class="timing-badge">⚡ 41.73 ms</span>
+            </div>
+            <h3 class="step-title">Stefan-Boltzmann Drift-Kompensation</h3>
+            
+            <div class="image-container">
+                <img src="step_05_stefan_boltzmann_drift_kompensation.png" alt="Stefan-Boltzmann Drift-Kompensation" loading="lazy" onclick="openLightbox('step_05_stefan_boltzmann_drift_kompensation.png', 'Stefan-Boltzmann Drift-Kompensation')">
+            </div>
+            
+            <div class="card-body">
+                <div class="formula-box">
+                    <code>P = \varepsilon \cdot \sigma \cdot T^4, \quad T_{\text{drift-corr}} = T - \alpha \cdot (T - T_{\text{amb}})</code>
+                </div>
+                <p class="description">Kompensiert thermische Sensor-Eigenerwärmung und langwellige Hintergrundstrahlung basierend auf dem Stefan-Boltzmann-Gesetz.</p>
+                <div class="metrics-grid">
+                    <span class="metric-pill"><strong>T_Umgebung:</strong> 19.26 °C</span><span class="metric-pill"><strong>Drift-Korrektur:</strong> 0.0216 K</span><span class="metric-pill"><strong>Status:</strong> Stabilisiert</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step-card phase-1" data-phase="1">
+            <div class="card-header">
+                <span class="step-badge">STUFE 06 / 42</span>
+                <span class="phase-badge">Phase I</span>
+                <span class="timing-badge">⚡ 12.19 ms</span>
+            </div>
+            <h3 class="step-title">Dynamisches Kontrast-Stretching</h3>
+            
+            <div class="image-container">
+                <img src="step_06_dynamisches_kontrast_stretching.png" alt="Dynamisches Kontrast-Stretching" loading="lazy" onclick="openLightbox('step_06_dynamisches_kontrast_stretching.png', 'Dynamisches Kontrast-Stretching')">
+            </div>
+            
+            <div class="card-body">
+                <div class="formula-box">
+                    <code>I_{\text{stretch}} = \text{clip}\left(\frac{T - T_{\text{low}}}{T_{\text{high}} - T_{\text{low}}} \cdot 255,\, 0,\, 255\right)</code>
+                </div>
+                <p class="description">Spreizt den 8-Bit Dynamikbereich exakt über das biologisch relevante Gewebeband (22–36 °C), um subtilste Entzündungsgradienten sichtbar zu machen.</p>
+                <div class="metrics-grid">
+                    <span class="metric-pill"><strong>Fenster Min:</strong> 22.0 °C</span><span class="metric-pill"><strong>Fenster Max:</strong> 36.0 °C</span><span class="metric-pill"><strong>Dynamik:</strong> 256 Stufen</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step-card phase-2" data-phase="2">
+            <div class="card-header">
+                <span class="step-badge">STUFE 07 / 42</span>
+                <span class="phase-badge">Phase II</span>
+                <span class="timing-badge">⚡ 3.66 ms</span>
+            </div>
+            <h3 class="step-title">Multi-Otsu Binarisierung</h3>
+            
+            <div class="image-container">
+                <img src="step_07_multi_otsu_binarisierung.png" alt="Multi-Otsu Binarisierung" loading="lazy" onclick="openLightbox('step_07_multi_otsu_binarisierung.png', 'Multi-Otsu Binarisierung')">
+            </div>
+            
+            <div class="card-body">
+                <div class="formula-box">
+                    <code>\sigma_B^2(t) = \omega_0(t)\omega_1(t)[\mu_0(t) - \mu_1(t)]^2, \quad t^* = \arg\max_t \sigma_B^2(t)</code>
+                </div>
+                <p class="description">Deterministische Trennung von biologischem Gewebe und Raumhintergrund durch Maximierung der Inter-Klassen-Varianz σ_B².</p>
+                <div class="metrics-grid">
+                    <span class="metric-pill"><strong>Otsu-Schwelle:</strong> 97</span><span class="metric-pill"><strong>Gewebeanteil:</strong> 24.3 %</span><span class="metric-pill"><strong>Pixelanzahl:</strong> 378525</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step-card phase-2" data-phase="2">
+            <div class="card-header">
+                <span class="step-badge">STUFE 08 / 42</span>
+                <span class="phase-badge">Phase II</span>
+                <span class="timing-badge">⚡ 0.00 ms</span>
+            </div>
+            <h3 class="step-title">Adaptiver Hypothermie-Fallback</h3>
+            
+            <div class="image-container">
+                <img src="step_08_adaptiver_hypothermie_fallback.png" alt="Adaptiver Hypothermie-Fallback" loading="lazy" onclick="openLightbox('step_08_adaptiver_hypothermie_fallback.png', 'Adaptiver Hypothermie-Fallback')">
+            </div>
+            
+            <div class="card-body">
+                <div class="formula-box">
+                    <code>t_{\text{adapt}} = \begin{cases} 0{,}75 \cdot t^* & \text{falls } \frac{A_{\text{tissue}}}{A_{\text{total}}} < 0{,}15 \\ t^* & \text{sonst} \end{cases}</code>
+                </div>
+                <p class="description">Prüft, ob periphere Zehenbereiche durch extreme Abkühlung verloren gehen, und passt den Schwellwert dynamisch an.</p>
+                <div class="metrics-grid">
+                    <span class="metric-pill"><strong>Effektive Schwelle:</strong> 97</span><span class="metric-pill"><strong>Fallback aktiv:</strong> False</span><span class="metric-pill"><strong>Zehenschutz:</strong> Garantiert</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step-card phase-2" data-phase="2">
+            <div class="card-header">
+                <span class="step-badge">STUFE 09 / 42</span>
+                <span class="phase-badge">Phase II</span>
+                <span class="timing-badge">⚡ 5.31 ms</span>
+            </div>
+            <h3 class="step-title">Connected Components Analyse</h3>
+            
+            <div class="image-container">
+                <img src="step_09_connected_components_analyse.png" alt="Connected Components Analyse" loading="lazy" onclick="openLightbox('step_09_connected_components_analyse.png', 'Connected Components Analyse')">
+            </div>
+            
+            <div class="card-body">
+                <div class="formula-box">
+                    <code>\mathcal{C}_k = \{ p \in \Omega \mid \exists\,\text{4-Weg-Pfad zu } q \in \mathcal{C}_k \}</code>
+                </div>
+                <p class="description">Isoliert alle anatomischen Gewebestrukturen mittels 4-Wege Breiten-Graphsuche (BFS) in diskrete Zusammenhangskomponenten.</p>
+                <div class="metrics-grid">
+                    <span class="metric-pill"><strong>Komponenten:</strong> 171</span><span class="metric-pill"><strong>Konnektivität:</strong> 4-fach vernetzt</span><span class="metric-pill"><strong>Methode:</strong> BFS Traversierung</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step-card phase-2" data-phase="2">
+            <div class="card-header">
+                <span class="step-badge">STUFE 10 / 42</span>
+                <span class="phase-badge">Phase II</span>
+                <span class="timing-badge">⚡ 83.55 ms</span>
+            </div>
+            <h3 class="step-title">Bedding & Clutter Purge</h3>
+            
+            <div class="image-container">
+                <img src="step_10_bedding__clutter_purge.png" alt="Bedding & Clutter Purge" loading="lazy" onclick="openLightbox('step_10_bedding__clutter_purge.png', 'Bedding & Clutter Purge')">
+            </div>
+            
+            <div class="card-body">
+                <div class="formula-box">
+                    <code>\text{Purge}(\mathcal{C}_k) \iff \text{Area}(\mathcal{C}_k) < 0{,}02 \cdot (W \times H)</code>
+                </div>
+                <p class="description">Filtert Untersuchungsliegen, Tücher und Sensorartefakte aus, die weniger als 2% des Bildes einnehmen.</p>
+                <div class="metrics-grid">
+                    <span class="metric-pill"><strong>Mindestgröße:</strong> 31104 px</span><span class="metric-pill"><strong>Behalten:</strong> 3</span><span class="metric-pill"><strong>Gewebe-Pixel:</strong> 379476</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step-card phase-2" data-phase="2">
+            <div class="card-header">
+                <span class="step-badge">STUFE 11 / 42</span>
+                <span class="phase-badge">Phase II</span>
+                <span class="timing-badge">⚡ 184.82 ms</span>
+            </div>
+            <h3 class="step-title">Chamfer-L2 Distanzfeld</h3>
+            
+            <div class="image-container">
+                <img src="step_11_chamfer_l2_distanzfeld.png" alt="Chamfer-L2 Distanzfeld" loading="lazy" onclick="openLightbox('step_11_chamfer_l2_distanzfeld.png', 'Chamfer-L2 Distanzfeld')">
+            </div>
+            
+            <div class="card-body">
+                <div class="formula-box">
+                    <code>D(x,y) = \min_{(x',y') \in \partial \Omega} \sqrt{(x - x')^2 + (y - y')^2}</code>
+                </div>
+                <p class="description">Berechnet das exakte euklidische Distanzfeld vom Gewebeinneren zu den Hauträndern für geodätische Erosion und 3D-Rekonstruktion.</p>
+                <div class="metrics-grid">
+                    <span class="metric-pill"><strong>Max Distanz:</strong> 162.2 px</span><span class="metric-pill"><strong>Max Tiefe (mm):</strong> 97.3 mm</span><span class="metric-pill"><strong>Norm:</strong> Euklidisch L2</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step-card phase-2" data-phase="2">
+            <div class="card-header">
+                <span class="step-badge">STUFE 12 / 42</span>
+                <span class="phase-badge">Phase II</span>
+                <span class="timing-badge">⚡ 4.29 ms</span>
+            </div>
+            <h3 class="step-title">Sub-Prozent Kanten-Erosion</h3>
+            
+            <div class="image-container">
+                <img src="step_12_sub_prozent_kanten_erosion.png" alt="Sub-Prozent Kanten-Erosion" loading="lazy" onclick="openLightbox('step_12_sub_prozent_kanten_erosion.png', 'Sub-Prozent Kanten-Erosion')">
+            </div>
+            
+            <div class="card-body">
+                <div class="formula-box">
+                    <code>\mathcal{M}_{\text{eroded}} = \{ (x,y) \mid D(x,y) \ge \alpha \cdot \min(W, H) \}, \quad \alpha = 0{,}005</code>
+                </div>
+                <p class="description">Schneidet eine mikroskopische Randzone (0.5% = Randreflexionen) ab, ohne dabei die filigranen Zehenspitzen zu verlieren.</p>
+                <div class="metrics-grid">
+                    <span class="metric-pill"><strong>Marge:</strong> 5.4 px</span><span class="metric-pill"><strong>Eliminiert:</strong> 33315 px</span><span class="metric-pill"><strong>Rest-Gewebe:</strong> 346161 px</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step-card phase-3" data-phase="3">
+            <div class="card-header">
+                <span class="step-badge">STUFE 13 / 42</span>
+                <span class="phase-badge">Phase III</span>
+                <span class="timing-badge">⚡ 20.94 ms</span>
+            </div>
+            <h3 class="step-title">Shape-from-Silhouette 3D-Tiefenmodell</h3>
+            
+            <div class="image-container">
+                <img src="step_13_shape_from_silhouette_3d_tiefenmode.png" alt="Shape-from-Silhouette 3D-Tiefenmodell" loading="lazy" onclick="openLightbox('step_13_shape_from_silhouette_3d_tiefenmode.png', 'Shape-from-Silhouette 3D-Tiefenmodell')">
+            </div>
+            
+            <div class="card-body">
+                <div class="formula-box">
+                    <code>Z(x,y) = R_{\max} \cdot \sqrt{1 - \left(1 - \frac{D(x,y)}{R_{\max}}\right)^2}</code>
+                </div>
+                <p class="description">Rekonstruiert die dreidimensionale anatomische Wölbung Z(x, y) des Fußes anhand der euklidischen Randgeodäten.</p>
+                <div class="metrics-grid">
+                    <span class="metric-pill"><strong>Max Höhe:</strong> 162.2 px</span><span class="metric-pill"><strong>Geodäte R_max:</strong> 162.2 px</span><span class="metric-pill"><strong>Körpermodell:</strong> Elliptisch</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step-card phase-3" data-phase="3">
+            <div class="card-header">
+                <span class="step-badge">STUFE 14 / 42</span>
+                <span class="phase-badge">Phase III</span>
+                <span class="timing-badge">⚡ 122.86 ms</span>
+            </div>
+            <h3 class="step-title">3D-Oberflächennormalen</h3>
+            
+            <div class="image-container">
+                <img src="step_14_3d_oberflächennormalen.png" alt="3D-Oberflächennormalen" loading="lazy" onclick="openLightbox('step_14_3d_oberflächennormalen.png', '3D-Oberflächennormalen')">
+            </div>
+            
+            <div class="card-body">
+                <div class="formula-box">
+                    <code>\vec{n}(x,y) = \frac{\left( -\frac{\partial Z}{\partial x}, -\frac{\partial Z}{\partial y}, 1 \right)^T}{\sqrt{\left(\frac{\partial Z}{\partial x}\right)^2 + \left(\frac{\partial Z}{\partial y}\right)^2 + 1}}</code>
+                </div>
+                <p class="description">Ermittelt die Ausrichtung jedes mikroskopischen Hautareals im 3D-Raum mittels partieller Ableitungen der Tiefenfunktion.</p>
+                <div class="metrics-grid">
+                    <span class="metric-pill"><strong>Gradienten:</strong> Sobel 3x3</span><span class="metric-pill"><strong>Normalisierung:</strong> Unit Sphere</span><span class="metric-pill"><strong>Status:</strong> Berechnet</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step-card phase-3" data-phase="3">
+            <div class="card-header">
+                <span class="step-badge">STUFE 15 / 42</span>
+                <span class="phase-badge">Phase III</span>
+                <span class="timing-badge">⚡ 4.31 ms</span>
+            </div>
+            <h3 class="step-title">Kosinus-Blickwinkelfeld</h3>
+            
+            <div class="image-container">
+                <img src="step_15_kosinus_blickwinkelfeld.png" alt="Kosinus-Blickwinkelfeld" loading="lazy" onclick="openLightbox('step_15_kosinus_blickwinkelfeld.png', 'Kosinus-Blickwinkelfeld')">
+            </div>
+            
+            <div class="card-body">
+                <div class="formula-box">
+                    <code>\cos\theta = \frac{\vec{n} \cdot \vec{v}}{\|\vec{n}\| \|\vec{v}\|} = n_z(x,y)</code>
+                </div>
+                <p class="description">Quantifiziert den optischen Einfallswinkel θ zwischen Kameraachse und gekrümmter Hautoberfläche nach dem Lambert'schen Gesetz.</p>
+                <div class="metrics-grid">
+                    <span class="metric-pill"><strong>Min cos(θ):</strong> 0.100</span><span class="metric-pill"><strong>Max Neigung:</strong> 84.3°</span><span class="metric-pill"><strong>Blickvektor:</strong> (0, 0, 1)</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step-card phase-3" data-phase="3">
+            <div class="card-header">
+                <span class="step-badge">STUFE 16 / 42</span>
+                <span class="phase-badge">Phase III</span>
+                <span class="timing-badge">⚡ 34.98 ms</span>
+            </div>
+            <h3 class="step-title">LWIR Fresnel-Emissivitätsmodellierung</h3>
+            
+            <div class="image-container">
+                <img src="step_16_lwir_fresnel_emissivitätsmodellieru.png" alt="LWIR Fresnel-Emissivitätsmodellierung" loading="lazy" onclick="openLightbox('step_16_lwir_fresnel_emissivitätsmodellieru.png', 'LWIR Fresnel-Emissivitätsmodellierung')">
+            </div>
+            
+            <div class="card-body">
+                <div class="formula-box">
+                    <code>\varepsilon(\theta) = \varepsilon_0 \cdot \cos^p(\theta), \quad \varepsilon_0 = 0{,}98, \quad p = 0{,}2</code>
+                </div>
+                <p class="description">Modelliert den physikalischen Abfall der Wärmeabstrahlung an gekrümmten Körpergrenzen nach den elektrodynamischen Fresnel-Formeln.</p>
+                <div class="metrics-grid">
+                    <span class="metric-pill"><strong>ε_0 (Normale):</strong> 0.98</span><span class="metric-pill"><strong>Min ε(θ):</strong> 0.618</span><span class="metric-pill"><strong>Exponent p:</strong> 0.2</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step-card phase-3" data-phase="3">
+            <div class="card-header">
+                <span class="step-badge">STUFE 17 / 42</span>
+                <span class="phase-badge">Phase III</span>
+                <span class="timing-badge">⚡ 42.35 ms</span>
+            </div>
+            <h3 class="step-title">Tangentiale Kosinus-Kompensation</h3>
+            
+            <div class="image-container">
+                <img src="step_17_tangentiale_kosinus_kompensation.png" alt="Tangentiale Kosinus-Kompensation" loading="lazy" onclick="openLightbox('step_17_tangentiale_kosinus_kompensation.png', 'Tangentiale Kosinus-Kompensation')">
+            </div>
+            
+            <div class="card-body">
+                <div class="formula-box">
+                    <code>\Delta T_{\text{corr}} = \min\left(1{,}2\,\text{K},\, (T + 273{,}15) \cdot \left(\frac{1}{\sqrt[4]{\varepsilon(\theta)}} - 1\right)\right)</code>
+                </div>
+                <p class="description">Berechnet den mathematischen Temperaturzuschlag für schräg geneigte Randbezirke mit Sicherheitsdeckelung auf maximal 1.2 K.</p>
+                <div class="metrics-grid">
+                    <span class="metric-pill"><strong>Max Zuschlag:</strong> +1.20 K</span><span class="metric-pill"><strong>Sicherheitsgrenze:</strong> 1.2 K</span><span class="metric-pill"><strong>Schutz:</strong> Keine Überhitzung</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step-card phase-3" data-phase="3">
+            <div class="card-header">
+                <span class="step-badge">STUFE 18 / 42</span>
+                <span class="phase-badge">Phase III</span>
+                <span class="timing-badge">⚡ 1.95 ms</span>
+            </div>
+            <h3 class="step-title">Winkelkorrigierte Thermomatrix</h3>
+            
+            <div class="image-container">
+                <img src="step_18_winkelkorrigierte_thermomatrix.png" alt="Winkelkorrigierte Thermomatrix" loading="lazy" onclick="openLightbox('step_18_winkelkorrigierte_thermomatrix.png', 'Winkelkorrigierte Thermomatrix')">
+            </div>
+            
+            <div class="card-body">
+                <div class="formula-box">
+                    <code>T_{\text{corr}}(x,y) = T_{\text{apparent}}(x,y) + \Delta T_{\text{corr}}(x,y)</code>
+                </div>
+                <p class="description">Liefert die physikalisch bereinigte Temperaturverteilung, bei der die durch 3D-Körperkrümmung bedingte Scheinkühlung eliminiert ist.</p>
+                <div class="metrics-grid">
+                    <span class="metric-pill"><strong>T_Mittel Vorher:</strong> 32.72 °C</span><span class="metric-pill"><strong>T_Mittel Nachher:</strong> 33.92 °C</span><span class="metric-pill"><strong>Status:</strong> Optimal</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step-card phase-4" data-phase="4">
+            <div class="card-header">
+                <span class="step-badge">STUFE 19 / 42</span>
+                <span class="phase-badge">Phase IV</span>
+                <span class="timing-badge">⚡ 0.04 ms</span>
+            </div>
+            <h3 class="step-title">Dynamische Kerngrößen-Berechnung</h3>
+            
+            <div class="image-container">
+                <img src="step_19_dynamische_kerngrößen_berechnung.png" alt="Dynamische Kerngrößen-Berechnung" loading="lazy" onclick="openLightbox('step_19_dynamische_kerngrößen_berechnung.png', 'Dynamische Kerngrößen-Berechnung')">
+            </div>
+            
+            <div class="card-body">
+                <div class="formula-box">
+                    <code>R = \max\left(15,\, \lfloor 0{,}05 \cdot \min(W, H) \rfloor\right), \quad B = \mathcal{B}_{R}(0)</code>
+                </div>
+                <p class="description">Skaliert das morphologische Strukturelement B proportional zur Auflösung, um physiologische Hintergrundgradienten sauber zu erfassen.</p>
+                <div class="metrics-grid">
+                    <span class="metric-pill"><strong>Radius R:</strong> 54 px</span><span class="metric-pill"><strong>Metrisch:</strong> 32.4 mm</span><span class="metric-pill"><strong>Durchmesser:</strong> 109 px</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step-card phase-4" data-phase="4">
+            <div class="card-header">
+                <span class="step-badge">STUFE 20 / 42</span>
+                <span class="phase-badge">Phase IV</span>
+                <span class="timing-badge">⚡ 2.38 ms</span>
+            </div>
+            <h3 class="step-title">1D Horizontale Minkowski Erosion</h3>
+            
+            <div class="image-container">
+                <img src="step_20_1d_horizontale_minkowski_erosion.png" alt="1D Horizontale Minkowski Erosion" loading="lazy" onclick="openLightbox('step_20_1d_horizontale_minkowski_erosion.png', '1D Horizontale Minkowski Erosion')">
+            </div>
+            
+            <div class="card-body">
+                <div class="formula-box">
+                    <code>\mathcal{E}_H(I)(x,y) = \min_{-R \le k \le R} I(x+k, y)</code>
+                </div>
+                <p class="description">Erste Stufe der separablen morphologischen Erosion: Findet das horizontale lokale Minimum über 2R+1 Pixel.</p>
+                <div class="metrics-grid">
+                    <span class="metric-pill"><strong>Kernel-Typ:</strong> 1D Horizontal</span><span class="metric-pill"><strong>Länge:</strong> 109 px</span><span class="metric-pill"><strong>Komplexität:</strong> O(R)</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step-card phase-4" data-phase="4">
+            <div class="card-header">
+                <span class="step-badge">STUFE 21 / 42</span>
+                <span class="phase-badge">Phase IV</span>
+                <span class="timing-badge">⚡ 1.13 ms</span>
+            </div>
+            <h3 class="step-title">1D Vertikale Minkowski Erosion</h3>
+            
+            <div class="image-container">
+                <img src="step_21_1d_vertikale_minkowski_erosion.png" alt="1D Vertikale Minkowski Erosion" loading="lazy" onclick="openLightbox('step_21_1d_vertikale_minkowski_erosion.png', '1D Vertikale Minkowski Erosion')">
+            </div>
+            
+            <div class="card-body">
+                <div class="formula-box">
+                    <code>\mathcal{E}_B(I)(x,y) = \mathcal{E}_V(\mathcal{E}_H(I))(x,y) = \min_{(u,v) \in B} I(x+u, y+v)</code>
+                </div>
+                <p class="description">Zweite Stufe der separablen Erosion: Liefert die vollständige zweidimensionale morphologische Talsohle.</p>
+                <div class="metrics-grid">
+                    <span class="metric-pill"><strong>Kernel-Typ:</strong> 1D Vertikal</span><span class="metric-pill"><strong>Status:</strong> 2D-Erosion komplett</span><span class="metric-pill"><strong>Operationen:</strong> 2x 1D statt 2D</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step-card phase-4" data-phase="4">
+            <div class="card-header">
+                <span class="step-badge">STUFE 22 / 42</span>
+                <span class="phase-badge">Phase IV</span>
+                <span class="timing-badge">⚡ 16.57 ms</span>
+            </div>
+            <h3 class="step-title">1D Horizontale Minkowski Dilation</h3>
+            
+            <div class="image-container">
+                <img src="step_22_1d_horizontale_minkowski_dilation.png" alt="1D Horizontale Minkowski Dilation" loading="lazy" onclick="openLightbox('step_22_1d_horizontale_minkowski_dilation.png', '1D Horizontale Minkowski Dilation')">
+            </div>
+            
+            <div class="card-body">
+                <div class="formula-box">
+                    <code>\mathcal{D}_H(\mathcal{E}_B(I))(x,y) = \max_{-R \le k \le R} \mathcal{E}_B(I)(x+k, y)</code>
+                </div>
+                <p class="description">Erste Stufe der Dilation auf dem erodierten Bild zur Rekonstruktion der großflächigen thermischen Grundlast.</p>
+                <div class="metrics-grid">
+                    <span class="metric-pill"><strong>Kernel-Typ:</strong> 1D Horizontal</span><span class="metric-pill"><strong>Länge:</strong> 109 px</span><span class="metric-pill"><strong>Phase:</strong> Opening Schritt 1</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step-card phase-4" data-phase="4">
+            <div class="card-header">
+                <span class="step-badge">STUFE 23 / 42</span>
+                <span class="phase-badge">Phase IV</span>
+                <span class="timing-badge">⚡ 1.21 ms</span>
+            </div>
+            <h3 class="step-title">1D Vertikale Minkowski Dilation</h3>
+            
+            <div class="image-container">
+                <img src="step_23_1d_vertikale_minkowski_dilation.png" alt="1D Vertikale Minkowski Dilation" loading="lazy" onclick="openLightbox('step_23_1d_vertikale_minkowski_dilation.png', '1D Vertikale Minkowski Dilation')">
+            </div>
+            
+            <div class="card-body">
+                <div class="formula-box">
+                    <code>(I \circ B)(x,y) = \mathcal{D}_B(\mathcal{E}_B(I))(x,y)</code>
+                </div>
+                <p class="description">Schließt das morphologische Opening ab: Glattes Hintergrund-Temperaturfeld ohne fokale Hotspots.</p>
+                <div class="metrics-grid">
+                    <span class="metric-pill"><strong>Status:</strong> Opening fertiggestellt</span><span class="metric-pill"><strong>Hintergrund:</strong> Glatt</span><span class="metric-pill"><strong>Fokale Peaks:</strong> Entfernt</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step-card phase-4" data-phase="4">
+            <div class="card-header">
+                <span class="step-badge">STUFE 24 / 42</span>
+                <span class="phase-badge">Phase IV</span>
+                <span class="timing-badge">⚡ 4.00 ms</span>
+            </div>
+            <h3 class="step-title">Morphologischer White Top-Hat</h3>
+            
+            <div class="image-container">
+                <img src="step_24_morphologischer_white_top_hat.png" alt="Morphologischer White Top-Hat" loading="lazy" onclick="openLightbox('step_24_morphologischer_white_top_hat.png', 'Morphologischer White Top-Hat')">
+            </div>
+            
+            <div class="card-body">
+                <div class="formula-box">
+                    <code>\text{WTH}(I) = I - (I \circ B) = \text{VPSUBUSB}(I,\, I \circ B)</code>
+                </div>
+                <p class="description">Subtrahiert das Opening vom Original mittels x86-64 SIMD Assembler (VPSUBUSB / PSUBUSB): Isoliert alle fokalen Entzündungsherde bit-identisch!</p>
+                <div class="metrics-grid">
+                    <span class="metric-pill"><strong>Rechenkern:</strong> x86_64 SIMD Assembler (SSE2/AVX2)</span><span class="metric-pill"><strong>Max Überhöhung:</strong> 254 Stufen</span><span class="metric-pill"><strong>SIMD-Instruktion:</strong> PSUBUSB (16 B/Takt)</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step-card phase-5" data-phase="5">
+            <div class="card-header">
+                <span class="step-badge">STUFE 25 / 42</span>
+                <span class="phase-badge">Phase V</span>
+                <span class="timing-badge">⚡ 7.79 ms</span>
+            </div>
+            <h3 class="step-title">256-Bin Gewebe-Histogramm</h3>
+            
+            <div class="image-container">
+                <img src="step_25_256_bin_gewebe_histogramm.png" alt="256-Bin Gewebe-Histogramm" loading="lazy" onclick="openLightbox('step_25_256_bin_gewebe_histogramm.png', '256-Bin Gewebe-Histogramm')">
+            </div>
+            
+            <div class="card-body">
+                <div class="formula-box">
+                    <code>h(v) = \sum_{(x,y) \in \mathcal{M}} \delta(\text{WTH}(x,y) - v), \quad v \in [0, 255]</code>
+                </div>
+                <p class="description">Erfasst die diskrete Verteilung aller Top-Hat Überhöhungen ausschließlich über physiologischem Gewebe (ohne Hintergrundverzerrung).</p>
+                <div class="metrics-grid">
+                    <span class="metric-pill"><strong>Gewebe-Pixel:</strong> 346,161</span><span class="metric-pill"><strong>Bins:</strong> 256</span><span class="metric-pill"><strong>Max Frequenz:</strong> 48092</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step-card phase-5" data-phase="5">
+            <div class="card-header">
+                <span class="step-badge">STUFE 26 / 42</span>
+                <span class="phase-badge">Phase V</span>
+                <span class="timing-badge">⚡ 0.04 ms</span>
+            </div>
+            <h3 class="step-title">Exakter O(N) Median</h3>
+            
+            <div class="image-container">
+                <img src="step_26_exakter_on_median.png" alt="Exakter O(N) Median" loading="lazy" onclick="openLightbox('step_26_exakter_on_median.png', 'Exakter O(N) Median')">
+            </div>
+            
+            <div class="card-body">
+                <div class="formula-box">
+                    <code>\text{Median} = \min \left\{ v \ \middle|\ \sum_{i=0}^v h(i) \ge \frac{N}{2} \right\}</code>
+                </div>
+                <p class="description">Ermittelt das 50%-Quantil in O(N)-Zeit über die kumulative Verteilungsfunktion — immun gegen einzelne extreme Entzündungsherde.</p>
+                <div class="metrics-grid">
+                    <span class="metric-pill"><strong>Median:</strong> 17</span><span class="metric-pill"><strong>Laufzeit:</strong> 0.045 ms</span><span class="metric-pill"><strong>Komplexität:</strong> O(N) deterministisch</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step-card phase-5" data-phase="5">
+            <div class="card-header">
+                <span class="step-badge">STUFE 27 / 42</span>
+                <span class="phase-badge">Phase V</span>
+                <span class="timing-badge">⚡ 5.51 ms</span>
+            </div>
+            <h3 class="step-title">Hampel-MAD Skalenschätzung</h3>
+            
+            <div class="image-container">
+                <img src="step_27_hampel_mad_skalenschätzung.png" alt="Hampel-MAD Skalenschätzung" loading="lazy" onclick="openLightbox('step_27_hampel_mad_skalenschätzung.png', 'Hampel-MAD Skalenschätzung')">
+            </div>
+            
+            <div class="card-body">
+                <div class="formula-box">
+                    <code>\text{MAD} = \text{median}(|x_i - \text{Median}|), \quad \hat{\sigma} = 1{,}4826 \cdot \text{MAD}</code>
+                </div>
+                <p class="description">Berechnet die Median Absolute Deviation (MAD): Verhindert Maskierungsfehler (Swamping & Masking) durch floride Entzündungsareale.</p>
+                <div class="metrics-grid">
+                    <span class="metric-pill"><strong>MAD:</strong> 12.00</span><span class="metric-pill"><strong>Sigma σ̂:</strong> 17.79</span><span class="metric-pill"><strong>Konsistenzfaktor:</strong> 1.4826</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step-card phase-5" data-phase="5">
+            <div class="card-header">
+                <span class="step-badge">STUFE 28 / 42</span>
+                <span class="phase-badge">Phase V</span>
+                <span class="timing-badge">⚡ 3.73 ms</span>
+            </div>
+            <h3 class="step-title">Biologischer Temperaturboden</h3>
+            
+            <div class="image-container">
+                <img src="step_28_biologischer_temperaturboden.png" alt="Biologischer Temperaturboden" loading="lazy" onclick="openLightbox('step_28_biologischer_temperaturboden.png', 'Biologischer Temperaturboden')">
+            </div>
+            
+            <div class="card-body">
+                <div class="formula-box">
+                    <code>\mathcal{M}_{\text{valid}} = \mathcal{M}_{\text{tissue}} \cap \{ (x,y) \mid T(x,y) \ge T_{\text{floor}} \}, \quad T_{\text{floor}} = 20{,}0\,^\circ\text{C}</code>
+                </div>
+                <p class="description">Schließt kalte Randzonen und ischämisch abgestorbene Randartefakte unterhalb von 20 °C vor der Schwellwertbildung aus.</p>
+                <div class="metrics-grid">
+                    <span class="metric-pill"><strong>T_Floor:</strong> 20.0 °C</span><span class="metric-pill"><strong>Ausgeschlossen:</strong> 0</span><span class="metric-pill"><strong>Status:</strong> Validiert</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step-card phase-5" data-phase="5">
+            <div class="card-header">
+                <span class="step-badge">STUFE 29 / 42</span>
+                <span class="phase-badge">Phase V</span>
+                <span class="timing-badge">⚡ 9.99 ms</span>
+            </div>
+            <h3 class="step-title">Vektorisierter Schwellwertvergleich</h3>
+            
+            <div class="image-container">
+                <img src="step_29_vektorisierter_schwellwertvergleich.png" alt="Vektorisierter Schwellwertvergleich" loading="lazy" onclick="openLightbox('step_29_vektorisierter_schwellwertvergleich.png', 'Vektorisierter Schwellwertvergleich')">
+            </div>
+            
+            <div class="card-body">
+                <div class="formula-box">
+                    <code>\tau = \text{Median} + k \cdot \hat{\sigma}, \quad \mathcal{A}_{\text{raw}} = \{ (x,y) \mid \text{WTH}(x,y) \ge \tau \}</code>
+                </div>
+                <p class="description">Extrahiert statistisch signifikante Hyperthermiepunkte mit k=3.0 (99.7% Konfidenzniveau nach Gauß / Hampel).</p>
+                <div class="metrics-grid">
+                    <span class="metric-pill"><strong>Schwelle τ:</strong> 70.37</span><span class="metric-pill"><strong>k-Faktor:</strong> 3.0</span><span class="metric-pill"><strong>Anomaliepixel:</strong> 9075</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step-card phase-5" data-phase="5">
+            <div class="card-header">
+                <span class="step-badge">STUFE 30 / 42</span>
+                <span class="phase-badge">Phase V</span>
+                <span class="timing-badge">⚡ 159.74 ms</span>
+            </div>
+            <h3 class="step-title">Geodätische Hysterese-Rekonstruktion</h3>
+            
+            <div class="image-container">
+                <img src="step_30_geodätische_hysterese_rekonstruktio.png" alt="Geodätische Hysterese-Rekonstruktion" loading="lazy" onclick="openLightbox('step_30_geodätische_hysterese_rekonstruktio.png', 'Geodätische Hysterese-Rekonstruktion')">
+            </div>
+            
+            <div class="card-body">
+                <div class="formula-box">
+                    <code>\mathcal{A}_{\text{hyst}} = \mathcal{R}_{\mathcal{A}_{\text{low}}}(\mathcal{A}_{\text{high}}), \quad \tau_{\text{low}} = \text{Med} + 1{,}5\hat{\sigma}</code>
+                </div>
+                <p class="description">Vollständige Konturerfassung durch morphologische Hysterese: Verbindet starke Entzündungskerne mit ihren subklinischen Randzonen.</p>
+                <div class="metrics-grid">
+                    <span class="metric-pill"><strong>Tau High:</strong> 70.37</span><span class="metric-pill"><strong>Tau Low:</strong> 43.69</span><span class="metric-pill"><strong>Pixel nach Hysterese:</strong> 22330</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step-card phase-6" data-phase="6">
+            <div class="card-header">
+                <span class="step-badge">STUFE 31 / 42</span>
+                <span class="phase-badge">Phase VI</span>
+                <span class="timing-badge">⚡ 127.61 ms</span>
+            </div>
+            <h3 class="step-title">BFS-Clusterung der Anomalie-Regionen</h3>
+            
+            <div class="image-container">
+                <img src="step_31_bfs_clusterung_der_anomalie_regione.png" alt="BFS-Clusterung der Anomalie-Regionen" loading="lazy" onclick="openLightbox('step_31_bfs_clusterung_der_anomalie_regione.png', 'BFS-Clusterung der Anomalie-Regionen')">
+            </div>
+            
+            <div class="card-body">
+                <div class="formula-box">
+                    <code>\mathcal{R}_k = \{ p \mid \text{Labels}(p) = k \}, \quad \text{Centroid} = \frac{1}{|\mathcal{R}_k|} \sum_{p \in \mathcal{R}_k} p</code>
+                </div>
+                <p class="description">Fasst zusammenhängende Hyperthermie-Pixel mittels 4-Wege BFS in diskrete anatomische Befund-Kandidaten zusammen.</p>
+                <div class="metrics-grid">
+                    <span class="metric-pill"><strong>Kandidaten:</strong> 37</span><span class="metric-pill"><strong>Konnektivität:</strong> 4-fach vernetzt</span><span class="metric-pill"><strong>Status:</strong> Initial erfasst</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step-card phase-6" data-phase="6">
+            <div class="card-header">
+                <span class="step-badge">STUFE 32 / 42</span>
+                <span class="phase-badge">Phase VI</span>
+                <span class="timing-badge">⚡ 0.02 ms</span>
+            </div>
+            <h3 class="step-title">Flächenfilterung gegen Rauschen</h3>
+            
+            <div class="image-container">
+                <img src="step_32_flächenfilterung_gegen_rauschen.png" alt="Flächenfilterung gegen Rauschen" loading="lazy" onclick="openLightbox('step_32_flächenfilterung_gegen_rauschen.png', 'Flächenfilterung gegen Rauschen')">
+            </div>
+            
+            <div class="card-body">
+                <div class="formula-box">
+                    <code>\text{Keep}(\mathcal{R}_k) \iff \text{Area}(\mathcal{R}_k) \ge 0{,}0003 \cdot N_{\text{tissue}}</code>
+                </div>
+                <p class="description">Filtert mikroskopische Einzelpixel-Artefakte unterhalb von 0.03% der Fußgewebefläche aus.</p>
+                <div class="metrics-grid">
+                    <span class="metric-pill"><strong>Mindestgröße:</strong> 113 px</span><span class="metric-pill"><strong>Beibehalten:</strong> 6</span><span class="metric-pill"><strong>Rauschpunkte eliminiert:</strong> 31</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step-card phase-6" data-phase="6">
+            <div class="card-header">
+                <span class="step-badge">STUFE 33 / 42</span>
+                <span class="phase-badge">Phase VI</span>
+                <span class="timing-badge">⚡ 0.01 ms</span>
+            </div>
+            <h3 class="step-title">Zirkularitäts-Prüfung</h3>
+            
+            <div class="image-container">
+                <img src="step_33_zirkularitäts_prüfung.png" alt="Zirkularitäts-Prüfung" loading="lazy" onclick="openLightbox('step_33_zirkularitäts_prüfung.png', 'Zirkularitäts-Prüfung')">
+            </div>
+            
+            <div class="card-body">
+                <div class="formula-box">
+                    <code>C = \frac{4\pi \cdot \text{Area}}{\text{Perimeter}^2} \ge 0{,}08</code>
+                </div>
+                <p class="description">Unterscheidet kreisförmige pathologische Druckstellen (hohe Zirkularität) von langgestreckten Venen (niedrige Zirkularität).</p>
+                <div class="metrics-grid">
+                    <span class="metric-pill"><strong>Min Zirkularität:</strong> 0.08</span><span class="metric-pill"><strong>Kompakt/Rund:</strong> 6</span><span class="metric-pill"><strong>Langgestreckt/Vene:</strong> 0</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step-card phase-6" data-phase="6">
+            <div class="card-header">
+                <span class="step-badge">STUFE 34 / 42</span>
+                <span class="phase-badge">Phase VI</span>
+                <span class="timing-badge">⚡ 0.01 ms</span>
+            </div>
+            <h3 class="step-title">Sensorrand-Ausschluss</h3>
+            
+            <div class="image-container">
+                <img src="step_34_sensorrand_ausschluss.png" alt="Sensorrand-Ausschluss" loading="lazy" onclick="openLightbox('step_34_sensorrand_ausschluss.png', 'Sensorrand-Ausschluss')">
+            </div>
+            
+            <div class="card-body">
+                <div class="formula-box">
+                    <code>\text{Valid}(\mathcal{R}_k) \iff \text{BBox}(\mathcal{R}_k) \subset [b_{\text{px}},\, W - b_{\text{px}}] \times [b_{\text{px}},\, H - b_{\text{px}}]</code>
+                </div>
+                <p class="description">Schließt Randartefakte und Vignettierungseffekte an den Kanten des Bolometer-Sensors aus.</p>
+                <div class="metrics-grid">
+                    <span class="metric-pill"><strong>Randabstand:</strong> 15 px</span><span class="metric-pill"><strong>Sicher im Zentrum:</strong> 6</span><span class="metric-pill"><strong>Am Rand verworfen:</strong> 0</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step-card phase-6" data-phase="6">
+            <div class="card-header">
+                <span class="step-badge">STUFE 35 / 42</span>
+                <span class="phase-badge">Phase VI</span>
+                <span class="timing-badge">⚡ 89.59 ms</span>
+            </div>
+            <h3 class="step-title">2D-Hesse-Matrix-Zerlegung</h3>
+            
+            <div class="image-container">
+                <img src="step_35_2d_hesse_matrix_zerlegung.png" alt="2D-Hesse-Matrix-Zerlegung" loading="lazy" onclick="openLightbox('step_35_2d_hesse_matrix_zerlegung.png', '2D-Hesse-Matrix-Zerlegung')">
+            </div>
+            
+            <div class="card-body">
+                <div class="formula-box">
+                    <code>\mathcal{H} = \begin{bmatrix} I_{xx} & I_{xy} \\ I_{xy} & I_{yy} \end{bmatrix}, \quad \det(\mathcal{H} - \lambda \mathcal{I}) = 0</code>
+                </div>
+                <p class="description">Berechnet die lokalen Krümmungseigenwerte λ₁, λ₂ der Temperaturfunktion zur morphologischen Gefäß- und Herdklassifikation.</p>
+                <div class="metrics-grid">
+                    <span class="metric-pill"><strong>Eigenwerte:</strong> λ₁, λ₂ (|λ₁| ≤ |λ₂|)</span><span class="metric-pill"><strong>Kernel:</strong> Sobel 2. Ordnung</span><span class="metric-pill"><strong>Glättung:</strong> Gauß σ=1.0</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step-card phase-6" data-phase="6">
+            <div class="card-header">
+                <span class="step-badge">STUFE 36 / 42</span>
+                <span class="phase-badge">Phase VI</span>
+                <span class="timing-badge">⚡ 51.16 ms</span>
+            </div>
+            <h3 class="step-title">Multiskalen Frangi-Filterung</h3>
+            
+            <div class="image-container">
+                <img src="step_36_multiskalen_frangi_filterung.png" alt="Multiskalen Frangi-Filterung" loading="lazy" onclick="openLightbox('step_36_multiskalen_frangi_filterung.png', 'Multiskalen Frangi-Filterung')">
+            </div>
+            
+            <div class="card-body">
+                <div class="formula-box">
+                    <code>\mathcal{V}(\sigma) = \begin{cases} 0 & \text{falls } \lambda_2 > 0 \\ \exp\left(-\frac{R_B^2}{2\beta^2}\right) \left(1 - \exp\left(-\frac{S^2}{2c^2}\right)\right) & \text{sonst} \end{cases}</code>
+                </div>
+                <p class="description">Unterdrückt physiologische Venennetze (Vesselness) zugunsten echter zirkulärer Entzündungsherde unter Druckstellen.</p>
+                <div class="metrics-grid">
+                    <span class="metric-pill"><strong>Herde bestätigt:</strong> 6</span><span class="metric-pill"><strong>Beta-Parameter:</strong> 0.5</span><span class="metric-pill"><strong>C-Parameter:</strong> 1.0</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step-card phase-7" data-phase="7">
+            <div class="card-header">
+                <span class="step-badge">STUFE 37 / 42</span>
+                <span class="phase-badge">Phase VII</span>
+                <span class="timing-badge">⚡ 15.05 ms</span>
+            </div>
+            <h3 class="step-title">Perifokaler Randgradient</h3>
+            
+            <div class="image-container">
+                <img src="step_37_perifokaler_randgradient.png" alt="Perifokaler Randgradient" loading="lazy" onclick="openLightbox('step_37_perifokaler_randgradient.png', 'Perifokaler Randgradient')">
+            </div>
+            
+            <div class="card-body">
+                <div class="formula-box">
+                    <code>G_{\text{edge}} = \|\nabla T(x,y)\| = \sqrt{\left(\frac{\partial T}{\partial x}\right)^2 + \left(\frac{\partial T}{\partial y}\right)^2}</code>
+                </div>
+                <p class="description">Analysiert die Steilheit des thermischen Randabfalls dT/dr: Scharfe Kanten weisen auf mechanische Druckulzera hin, weiche Verläufe auf diffuse Entzündungen.</p>
+                <div class="metrics-grid">
+                    <span class="metric-pill"><strong>Max Gradient:</strong> 41.83 K/mm</span><span class="metric-pill"><strong>Bedeutung:</strong> Scharfer Rand = Druckstelle</span><span class="metric-pill"><strong>Einheit:</strong> K/mm</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step-card phase-7" data-phase="7">
+            <div class="card-header">
+                <span class="step-badge">STUFE 38 / 42</span>
+                <span class="phase-badge">Phase VII</span>
+                <span class="timing-badge">⚡ 35.42 ms</span>
+            </div>
+            <h3 class="step-title">Vasodilatations-Haloanalyse</h3>
+            
+            <div class="image-container">
+                <img src="step_38_vasodilatations_haloanalyse.png" alt="Vasodilatations-Haloanalyse" loading="lazy" onclick="openLightbox('step_38_vasodilatations_haloanalyse.png', 'Vasodilatations-Haloanalyse')">
+            </div>
+            
+            <div class="card-body">
+                <div class="formula-box">
+                    <code>\Delta T_{\text{halo}} = \bar{T}_{\text{ring}}(r_{\text{in}}, r_{\text{out}}) - T_{\text{physiol}}</code>
+                </div>
+                <p class="description">Quantifiziert den vasodilatatorischen Wärmehof (Hyperämie durch Stickstoffmonoxid / Zytokine) in der perifokalen Gewebemanschette.</p>
+                <div class="metrics-grid">
+                    <span class="metric-pill"><strong>Max Halo ΔT:</strong> 14.80 K</span><span class="metric-pill"><strong>Vaskuläre Weitung:</strong> Hyperämie nachweisbar</span><span class="metric-pill"><strong>Zytokin-Reaktion:</strong> Positiv</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step-card phase-7" data-phase="7">
+            <div class="card-header">
+                <span class="step-badge">STUFE 39 / 42</span>
+                <span class="phase-badge">Phase VII</span>
+                <span class="timing-badge">⚡ 31.51 ms</span>
+            </div>
+            <h3 class="step-title">2D-Laplace Divergenzanalyse</h3>
+            
+            <div class="image-container">
+                <img src="step_39_2d_laplace_divergenzanalyse.png" alt="2D-Laplace Divergenzanalyse" loading="lazy" onclick="openLightbox('step_39_2d_laplace_divergenzanalyse.png', '2D-Laplace Divergenzanalyse')">
+            </div>
+            
+            <div class="card-body">
+                <div class="formula-box">
+                    <code>\nabla^2 T = \frac{\partial^2 T}{\partial x^2} + \frac{\partial^2 T}{\partial y^2} < 0 \implies \text{Lokale Wärmequelle}</code>
+                </div>
+                <p class="description">Bestätigt mittels Divergenzoperator ∇²T, ob ein Herd als biophysikalische Wärmequelle (lokale Stoffwechselsteigerung) fungiert.</p>
+                <div class="metrics-grid">
+                    <span class="metric-pill"><strong>Operator:</strong> Diskreter 3x3 Laplace</span><span class="metric-pill"><strong>Quelle:</strong> ∇²T < 0 bestätigt</span><span class="metric-pill"><strong>Senke:</strong> ∇²T > 0</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step-card phase-7" data-phase="7">
+            <div class="card-header">
+                <span class="step-badge">STUFE 40 / 42</span>
+                <span class="phase-badge">Phase VII</span>
+                <span class="timing-badge">⚡ 5.19 ms</span>
+            </div>
+            <h3 class="step-title">Homologer Armstrong-Seitenvergleich</h3>
+            
+            <div class="image-container">
+                <img src="step_40_homologer_armstrong_seitenvergleich.png" alt="Homologer Armstrong-Seitenvergleich" loading="lazy" onclick="openLightbox('step_40_homologer_armstrong_seitenvergleich.png', 'Homologer Armstrong-Seitenvergleich')">
+            </div>
+            
+            <div class="card-body">
+                <div class="formula-box">
+                    <code>\Delta T_{\text{contra}} = |T_{\text{links}}(x, y) - T_{\text{rechts}}(W - x, y)| \ge 2{,}2\,\text{K}</code>
+                </div>
+                <p class="description">Berechnet die kontralaterale Temperaturdifferenz ΔT zwischen homologen Fußarealen gemäß Armstrong et al. (2007) und IWGDF (2023).</p>
+                <div class="metrics-grid">
+                    <span class="metric-pill"><strong>Max ΔT_contra:</strong> 14.64 K</span><span class="metric-pill"><strong>Schwelle:</strong> 2.2 K</span><span class="metric-pill"><strong>Prädiktion:</strong> Positiv</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step-card phase-7" data-phase="7">
+            <div class="card-header">
+                <span class="step-badge">STUFE 41 / 42</span>
+                <span class="phase-badge">Phase VII</span>
+                <span class="timing-badge">⚡ 0.02 ms</span>
+            </div>
+            <h3 class="step-title">Muskelplateau-Differenzierung</h3>
+            
+            <div class="image-container">
+                <img src="step_41_muskelplateau_differenzierung.png" alt="Muskelplateau-Differenzierung" loading="lazy" onclick="openLightbox('step_41_muskelplateau_differenzierung.png', 'Muskelplateau-Differenzierung')">
+            </div>
+            
+            <div class="card-body">
+                <div class="formula-box">
+                    <code>\text{Reject}(\mathcal{R}) \iff \Delta T_{\text{contra}} < 2{,}2\,\text{K} \lor (\text{HeelPlateau} \land \text{Bilateral})</code>
+                </div>
+                <p class="description">Schließt symmetrische, großflächige Muskelbelastungswärme nach Gehen oder Stehen aus, um falsch-positive Alarme zu verhindern.</p>
+                <div class="metrics-grid">
+                    <span class="metric-pill"><strong>Fokus bestätigt:</strong> 1</span><span class="metric-pill"><strong>Plateaus verworfen:</strong> 5</span><span class="metric-pill"><strong>Status:</strong> Fokale Pathologie</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step-card phase-7" data-phase="7">
+            <div class="card-header">
+                <span class="step-badge">STUFE 42 / 42</span>
+                <span class="phase-badge">Phase VII</span>
+                <span class="timing-badge">⚡ 0.02 ms</span>
+            </div>
+            <h3 class="step-title">Klinische Triage & Armstrong-Regelengine</h3>
+            
+            <div class="image-container">
+                <img src="step_42_klinische_triage__armstrong_regelen.png" alt="Klinische Triage & Armstrong-Regelengine" loading="lazy" onclick="openLightbox('step_42_klinische_triage__armstrong_regelen.png', 'Klinische Triage & Armstrong-Regelengine')">
+            </div>
+            
+            <div class="card-body">
+                <div class="formula-box">
+                    <code>\text{Triage} = \begin{cases} \text{CRITICAL (Rot)} & \text{falls } \Delta T_{\text{contra}} \ge 2{,}2\,\text{K} \\ \text{MODERATE (Gelb)} & \text{falls } 1{,}2\,\text{K} \le \Delta T_{\text{contra}} < 2{,}2\,\text{K} \\ \text{BENIGN (Grün)} & \text{falls } \Delta T_{\text{contra}} < 1{,}2\,\text{K} \end{cases}</code>
+                </div>
+                <p class="description">Synthese aller 41 Vorstufen zu einer evidenzbasierten ärztlichen Diagnose nach den internationalen IWGDF-Leitlinien und Armstrong-Kriterien.</p>
+                <div class="metrics-grid">
+                    <span class="metric-pill"><strong>Triage:</strong> CRITICAL</span><span class="metric-pill"><strong>Befund:</strong> Akute Entzündung: Großer Zeh (Hallux) • ΔT = +11.4 K</span><span class="metric-pill"><strong>ΔT Armstrong:</strong> 14.64 K</span>
+                </div>
+            </div>
+        </div>
+        
+    </main>
+
+    <div class="lightbox" id="lightbox" onclick="closeLightbox()">
+        <img id="lightboxImg" src="">
+        <div class="lightbox-title" id="lightboxTitle"></div>
+    </div>
+
+    <script>
+        function filterPhase(phase) {
+            const buttons = document.querySelectorAll('.filter-btn');
+            buttons.forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+
+            const cards = document.querySelectorAll('.step-card');
+            cards.forEach(card => {
+                if (phase === 'all' || card.getAttribute('data-phase') === phase) {
+                    card.style.display = 'flex';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        function openLightbox(src, title) {
+            document.getElementById('lightboxImg').src = src;
+            document.getElementById('lightboxTitle').innerText = title;
+            document.getElementById('lightbox').style.display = 'flex';
+        }
+
+        function closeLightbox() {
+            document.getElementById('lightbox').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

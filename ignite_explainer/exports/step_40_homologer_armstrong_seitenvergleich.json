@@ -1,0 +1,15 @@
+{
+  "step_number": 40,
+  "phase_number": 7,
+  "phase_name": "Phase VII: Biophysical Differential Diagnosis & Triage",
+  "name": "Homologer Armstrong-Seitenvergleich",
+  "description": "Berechnet die kontralaterale Temperaturdifferenz ΔT zwischen homologen Fußarealen gemäß Armstrong et al. (2007) und IWGDF (2023).",
+  "formula": "\\Delta T_{\\text{contra}} = |T_{\\text{links}}(x, y) - T_{\\text{rechts}}(W - x, y)| \\ge 2{,}2\\,\\text{K}",
+  "duration_ms": 5.189599999994243,
+  "metrics": {
+    "Max ΔT_contra": "14.64 K",
+    "Schwelle": "2.2 K",
+    "Prädiktion": "Positiv"
+  },
+  "image_filename": "step_40_homologer_armstrong_seitenvergleich.png"
+}

@@ -1,0 +1,15 @@
+{
+  "step_number": 30,
+  "phase_number": 5,
+  "phase_name": "Phase V: Statistical Outlier Profiling & Thresholding",
+  "name": "Geodätische Hysterese-Rekonstruktion",
+  "description": "Vollständige Konturerfassung durch morphologische Hysterese: Verbindet starke Entzündungskerne mit ihren subklinischen Randzonen.",
+  "formula": "\\mathcal{A}_{\\text{hyst}} = \\mathcal{R}_{\\mathcal{A}_{\\text{low}}}(\\mathcal{A}_{\\text{high}}), \\quad \\tau_{\\text{low}} = \\text{Med} + 1{,}5\\hat{\\sigma}",
+  "duration_ms": 159.7385000000031,
+  "metrics": {
+    "Tau High": "70.37",
+    "Tau Low": "43.69",
+    "Pixel nach Hysterese": 22330
+  },
+  "image_filename": "step_30_geodätische_hysterese_rekonstruktio.png"
+}

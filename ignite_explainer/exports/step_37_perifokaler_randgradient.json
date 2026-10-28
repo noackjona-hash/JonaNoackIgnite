@@ -1,0 +1,15 @@
+{
+  "step_number": 37,
+  "phase_number": 7,
+  "phase_name": "Phase VII: Biophysical Differential Diagnosis & Triage",
+  "name": "Perifokaler Randgradient",
+  "description": "Analysiert die Steilheit des thermischen Randabfalls dT/dr: Scharfe Kanten weisen auf mechanische Druckulzera hin, weiche Verläufe auf diffuse Entzündungen.",
+  "formula": "G_{\\text{edge}} = \\|\\nabla T(x,y)\\| = \\sqrt{\\left(\\frac{\\partial T}{\\partial x}\\right)^2 + \\left(\\frac{\\partial T}{\\partial y}\\right)^2}",
+  "duration_ms": 15.047299999878305,
+  "metrics": {
+    "Max Gradient": "41.83 K/mm",
+    "Bedeutung": "Scharfer Rand = Druckstelle",
+    "Einheit": "K/mm"
+  },
+  "image_filename": "step_37_perifokaler_randgradient.png"
+}

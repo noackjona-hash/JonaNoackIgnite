@@ -1,0 +1,15 @@
+{
+  "step_number": 38,
+  "phase_number": 7,
+  "phase_name": "Phase VII: Biophysical Differential Diagnosis & Triage",
+  "name": "Vasodilatations-Haloanalyse",
+  "description": "Quantifiziert den vasodilatatorischen Wärmehof (Hyperämie durch Stickstoffmonoxid / Zytokine) in der perifokalen Gewebemanschette.",
+  "formula": "\\Delta T_{\\text{halo}} = \\bar{T}_{\\text{ring}}(r_{\\text{in}}, r_{\\text{out}}) - T_{\\text{physiol}}",
+  "duration_ms": 35.41759999961869,
+  "metrics": {
+    "Max Halo ΔT": "14.80 K",
+    "Vaskuläre Weitung": "Hyperämie nachweisbar",
+    "Zytokin-Reaktion": "Positiv"
+  },
+  "image_filename": "step_38_vasodilatations_haloanalyse.png"
+}

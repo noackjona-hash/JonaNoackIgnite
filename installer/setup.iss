@@ -8,7 +8,7 @@
 #define MyAppVersion "5.0.0"
 #define MyAppPublisher "Jona Noack (Jugend forscht 2026)"
 #define MyAppURL "https://github.com/noackjona-hash/JonaNoackIgnite"
-#define MyAppExeName "Ignite.Desktop.exe"
+#define MyAppExeName "Ignite.exe"
 
 [Setup]
 AppId={{C78F9082-E763-4DC2-87F9-536979A46440}}
@@ -24,6 +24,7 @@ DisableProgramGroupPage=yes
 LicenseFile=..\LICENSE
 OutputDir=..\dist
 OutputBaseFilename=IGNITE_Medical_Suite_v5.0.0_Setup
+SetupIconFile=..\icon\LogoRund.ico
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
@@ -40,7 +41,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 
 [Files]
-; Main published WPF Application and bundled Go AVX2 Engine
+; Main published Go Workstation Application and bundled Go AVX2 Engine
 Source: "..\release\publish\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 ; Test Data & Radiometric Samples

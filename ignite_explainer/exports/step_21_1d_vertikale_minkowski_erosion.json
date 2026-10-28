@@ -1,0 +1,15 @@
+{
+  "step_number": 21,
+  "phase_number": 4,
+  "phase_name": "Phase IV: Multiscale Morphological Anomaly Extraction",
+  "name": "1D Vertikale Minkowski Erosion",
+  "description": "Zweite Stufe der separablen Erosion: Liefert die vollständige zweidimensionale morphologische Talsohle.",
+  "formula": "\\mathcal{E}_B(I)(x,y) = \\mathcal{E}_V(\\mathcal{E}_H(I))(x,y) = \\min_{(u,v) \\in B} I(x+u, y+v)",
+  "duration_ms": 1.1320999997224135,
+  "metrics": {
+    "Kernel-Typ": "1D Vertikal",
+    "Status": "2D-Erosion komplett",
+    "Operationen": "2x 1D statt 2D"
+  },
+  "image_filename": "step_21_1d_vertikale_minkowski_erosion.png"
+}

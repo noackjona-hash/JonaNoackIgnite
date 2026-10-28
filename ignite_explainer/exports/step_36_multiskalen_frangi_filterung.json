@@ -1,0 +1,15 @@
+{
+  "step_number": 36,
+  "phase_number": 6,
+  "phase_name": "Phase VI: Geometric Morphology & Artifact Rejection",
+  "name": "Multiskalen Frangi-Filterung",
+  "description": "Unterdrückt physiologische Venennetze (Vesselness) zugunsten echter zirkulärer Entzündungsherde unter Druckstellen.",
+  "formula": "\\mathcal{V}(\\sigma) = \\begin{cases} 0 & \\text{falls } \\lambda_2 > 0 \\\\ \\exp\\left(-\\frac{R_B^2}{2\\beta^2}\\right) \\left(1 - \\exp\\left(-\\frac{S^2}{2c^2}\\right)\\right) & \\text{sonst} \\end{cases}",
+  "duration_ms": 51.16020000014032,
+  "metrics": {
+    "Herde bestätigt": 6,
+    "Beta-Parameter": "0.5",
+    "C-Parameter": "1.0"
+  },
+  "image_filename": "step_36_multiskalen_frangi_filterung.png"
+}

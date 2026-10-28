@@ -1,0 +1,15 @@
+{
+  "step_number": 11,
+  "phase_number": 2,
+  "phase_name": "Phase II: Anatomical Body Segmentation & Geodesics",
+  "name": "Chamfer-L2 Distanzfeld",
+  "description": "Berechnet das exakte euklidische Distanzfeld vom Gewebeinneren zu den Hauträndern für geodätische Erosion und 3D-Rekonstruktion.",
+  "formula": "D(x,y) = \\min_{(x',y') \\in \\partial \\Omega} \\sqrt{(x - x')^2 + (y - y')^2}",
+  "duration_ms": 184.81930000007196,
+  "metrics": {
+    "Max Distanz": "162.2 px",
+    "Max Tiefe (mm)": "97.3 mm",
+    "Norm": "Euklidisch L2"
+  },
+  "image_filename": "step_11_chamfer_l2_distanzfeld.png"
+}

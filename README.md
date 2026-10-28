@@ -124,11 +124,11 @@ go build -o ignite-core.exe ./cmd/ignite-core
 cd ..
 ```
 
-#### 2. Desktop-Workstation kompilieren & starten (C# .NET 10)
+#### 2. Native Go Desktop-Workstation kompilieren & starten (Wails v2)
 ```bash
 cd desktop
-dotnet build -c Release
-dotnet run --no-build -c Release
+go build -tags desktop,production -ldflags="-H windowsgui -s -w" -o Ignite.exe .
+.\Ignite.exe
 ```
 
 #### 3. CLI-Analyse eines Einzelbildes

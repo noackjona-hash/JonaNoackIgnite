@@ -1,0 +1,15 @@
+{
+  "step_number": 19,
+  "phase_number": 4,
+  "phase_name": "Phase IV: Multiscale Morphological Anomaly Extraction",
+  "name": "Dynamische Kerngrößen-Berechnung",
+  "description": "Skaliert das morphologische Strukturelement B proportional zur Auflösung, um physiologische Hintergrundgradienten sauber zu erfassen.",
+  "formula": "R = \\max\\left(15,\\, \\lfloor 0{,}05 \\cdot \\min(W, H) \\rfloor\\right), \\quad B = \\mathcal{B}_{R}(0)",
+  "duration_ms": 0.03779999997277628,
+  "metrics": {
+    "Radius R": "54 px",
+    "Metrisch": "32.4 mm",
+    "Durchmesser": "109 px"
+  },
+  "image_filename": "step_19_dynamische_kerngrößen_berechnung.png"
+}

@@ -1,6 +1,7 @@
 package pipeline
 
 import (
+	"fmt"
 	"math"
 	"sort"
 	"time"
@@ -526,20 +527,53 @@ func Run(src *imageutil.GrayMatrix, cfg PipelineConfig) AnalysisResult {
 
 	// Stage 29: AVX2 Vectorized Anomaly Thresholding
 	s29Start := time.Now()
-	binaryHotspots := statistics.ApplyThreshold(topHatDiff, imgToAnalyze, bodyMask, stats.Threshold, tissueFloor)
+	minHyperthermic := uint8(math.Max(stats.OrigMedian, 100.0))
+	binaryHotspots := statistics.ApplyThreshold(topHatDiff, imgToAnalyze, bodyMask, stats.Threshold, minHyperthermic)
 	timing.ThresholdMs = float64(time.Since(s25Start).Microseconds()) / 1000.0
 	addStage(29, 5, phase5Name, "AVX2 Vectorized Anomaly Thresholding",
 		"SIMD AVX2-beschleunigter Schwellwertvergleich zur Erzeugung der binären Anomalie-Kandidatenmaske.", s29Start)
 
 	// Stage 30: Geodesic Dual-Threshold Hysteresis Reconstruction
 	s30Start := time.Now()
-	var activeHotspotPixels int
-	for _, v := range binaryHotspots.Data {
-		if v > 0 { activeHotspotPixels++ }
+	tauWeak := uint8(float64(stats.Threshold) * 0.85)
+	if tauWeak < stats.Threshold*3/4 {
+		tauWeak = stats.Threshold * 3 / 4
 	}
-	_ = activeHotspotPixels
+	reconstructedHotspots := binaryHotspots.Clone()
+	var hystQueue []int
+	for i, v := range binaryHotspots.Data {
+		if v > 0 {
+			hystQueue = append(hystQueue, i)
+		}
+	}
+	// 4-connected geodesic flood-fill from strong seeds along weak candidate pixels
+	head := 0
+	for head < len(hystQueue) {
+		curr := hystQueue[head]
+		head++
+		cx := curr % w
+
+		neighbors := [4]int{-1, 1, -w, w}
+		for _, offset := range neighbors {
+			nIdx := curr + offset
+			if nIdx < 0 || nIdx >= w*h {
+				continue
+			}
+			nx := nIdx % w
+			if nx-cx > 1 || cx-nx > 1 {
+				continue
+			}
+			if reconstructedHotspots.Data[nIdx] == 0 && bodyMask.Data[nIdx] > 0 {
+				if topHatDiff.Data[nIdx] >= tauWeak && imgToAnalyze.Data[nIdx] >= minHyperthermic {
+					reconstructedHotspots.Data[nIdx] = 255
+					hystQueue = append(hystQueue, nIdx)
+				}
+			}
+		}
+	}
+	binaryHotspots = reconstructedHotspots
 	addStage(30, 5, phase5Name, "Geodesic Dual-Threshold Hysteresis Reconstruction",
-		"Geodätische Rekonstruktion verbindet hochsignifikante Kerne (K=3.0) mit perizentralen Anomaliezellen.", s30Start)
+		fmt.Sprintf("Geodätische Rekonstruktion verbindet hochsignifikante Kerne (K=3.0) mit perizentralen Anomaliezellen (%d Pixel).", len(hystQueue)), s30Start)
 
 	// =========================================================================
 	// PHASE VI: Geometric Morphology & Multi-Scale Artifact Rejection (Stages 31–36)
@@ -600,6 +634,7 @@ func Run(src *imageutil.GrayMatrix, cfg PipelineConfig) AnalysisResult {
 
 	// Stage 35: Multiscale Hessian Matrix Decomposition
 	s35Start := time.Now()
+	var calculatedEigenCount int
 	for idx := range regions {
 		r := &regions[idx]
 		cx, cy := r.CenterX, r.CenterY
@@ -611,12 +646,17 @@ func Run(src *imageutil.GrayMatrix, cfg PipelineConfig) AnalysisResult {
 			tmp := math.Sqrt(math.Max(0.0, (hxx-hyy)*(hxx-hyy) + 4.0*hxy*hxy))
 			l1 := 0.5 * (hxx + hyy - tmp)
 			l2 := 0.5 * (hxx + hyy + tmp)
-			_ = l1
-			_ = l2
+			frobNorm := math.Sqrt(hxx*hxx + 2.0*hxy*hxy + hyy*hyy)
+			_ = frobNorm
+			// Isotropic negative eigenvalues (l1 < 0, l2 < 0) confirm true local thermal source
+			if l1 < -0.8 && l2 < -0.8 {
+				r.ConfidenceScore = math.Min(100.0, r.ConfidenceScore+10.0)
+			}
+			calculatedEigenCount++
 		}
 	}
 	addStage(35, 6, phase6Name, "Multiscale Hessian Matrix Decomposition",
-		"Berechnung der Eigenwerte lambda_1, lambda_2 der räumlichen thermischen Hesse-Matrix.", s35Start)
+		fmt.Sprintf("Berechnung der Eigenwerte lambda_1, lambda_2 der räumlichen thermischen Hesse-Matrix (%d Herde zerlegt).", calculatedEigenCount), s35Start)
 
 	// Stage 36: Frangi Vesselness Linear Vein Suppression
 	s36Start := time.Now()
@@ -743,9 +783,21 @@ func Run(src *imageutil.GrayMatrix, cfg PipelineConfig) AnalysisResult {
 	luaEngine := rules.NewLuaRuleEngine()
 	defer luaEngine.Close()
 
+	var luaLoaded bool
 	if cfg.LuaScriptPath != "" {
-		_ = luaEngine.LoadScriptFromFile(cfg.LuaScriptPath)
-	} else {
+		if err := luaEngine.LoadScriptFromFile(cfg.LuaScriptPath); err == nil {
+			luaLoaded = true
+		}
+	}
+	if !luaLoaded {
+		for _, candidate := range []string{"rules/armstrong_criteria.lua", "../rules/armstrong_criteria.lua", "../../rules/armstrong_criteria.lua"} {
+			if err := luaEngine.LoadScriptFromFile(candidate); err == nil {
+				luaLoaded = true
+				break
+			}
+		}
+	}
+	if !luaLoaded {
 		_ = luaEngine.LoadScriptFromString(`
 		function evaluate_hotspot(hotspot, stats)
 			local contra_delta = hotspot.contra_delta
@@ -755,6 +807,10 @@ func Run(src *imageutil.GrayMatrix, cfg PipelineConfig) AnalysisResult {
 			end
 			local prominence = hotspot.local_prominence or contra_delta
 			local area = hotspot.area_pixels or 0
+			local is_sharp = (hotspot.edge_gradient or 0.0) >= 3.0
+			local has_halo = (hotspot.halo_delta or 0.0) >= 5.0
+			local is_metabolic = (hotspot.thermal_laplacian or 0.0) <= -3.5 or (hotspot.peak_to_mean or 1.0) >= 1.25
+
 			-- Grundvoraussetzung für pathologische Hyperthermie:
 			-- Der Befund MUSS wärmer sein als die kontralaterale Referenz (Delta T >= 1.2 K).
 			-- Verhindert verlässliche Fehlalarme auf hypothermen/unterkühlten Zehen der gesunden Gegenseite.
@@ -855,6 +911,27 @@ func Run(src *imageutil.GrayMatrix, cfg PipelineConfig) AnalysisResult {
 	addStage(42, 7, phase7Name, "Severity Triage & Multi-Parameter Clinical Risk Scoring",
 		"Lua-Regelwerk-Evaluation, klinische Triage-Priorisierung und automatisierte Handlungsempfehlung.", s42Start)
 
+	// Build clean mask containing ONLY confirmed clinical hotspots
+	cleanHotspotMask := imageutil.NewGrayMatrix(w, h)
+	for _, hs := range summaries {
+		bb := hs.Region.BoundingBox
+		for y := bb[1]; y <= bb[3]; y++ {
+			if y < 0 || y >= h {
+				continue
+			}
+			row := y * w
+			for x := bb[0]; x <= bb[2]; x++ {
+				if x < 0 || x >= w {
+					continue
+				}
+				p := row + x
+				if filteredMask.Data[p] > 0 {
+					cleanHotspotMask.Data[p] = 255
+				}
+			}
+		}
+	}
+
 	return AnalysisResult{
 		Stages:           stages,
 		TotalStages:      len(stages),
@@ -869,7 +946,7 @@ func Run(src *imageutil.GrayMatrix, cfg PipelineConfig) AnalysisResult {
 		HighestRisk:      highestRisk,
 		BodyMask:         bodyMask,
 		TopHatDiff:       topHatDiff,
-		HotspotMask:      filteredMask,
+		HotspotMask:      cleanHotspotMask,
 		VascularMask:     vascularMask,
 		DepthMap3D:       depth3D,
 		Corrected3DImage: corrected3D,

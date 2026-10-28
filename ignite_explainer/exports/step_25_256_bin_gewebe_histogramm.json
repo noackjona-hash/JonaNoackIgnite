@@ -1,0 +1,15 @@
+{
+  "step_number": 25,
+  "phase_number": 5,
+  "phase_name": "Phase V: Statistical Outlier Profiling & Thresholding",
+  "name": "256-Bin Gewebe-Histogramm",
+  "description": "Erfasst die diskrete Verteilung aller Top-Hat Überhöhungen ausschließlich über physiologischem Gewebe (ohne Hintergrundverzerrung).",
+  "formula": "h(v) = \\sum_{(x,y) \\in \\mathcal{M}} \\delta(\\text{WTH}(x,y) - v), \\quad v \\in [0, 255]",
+  "duration_ms": 7.78779999973267,
+  "metrics": {
+    "Gewebe-Pixel": "346,161",
+    "Bins": 256,
+    "Max Frequenz": 48092
+  },
+  "image_filename": "step_25_256_bin_gewebe_histogramm.png"
+}

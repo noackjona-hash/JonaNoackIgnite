@@ -1,0 +1,15 @@
+{
+  "step_number": 12,
+  "phase_number": 2,
+  "phase_name": "Phase II: Anatomical Body Segmentation & Geodesics",
+  "name": "Sub-Prozent Kanten-Erosion",
+  "description": "Schneidet eine mikroskopische Randzone (0.5% = Randreflexionen) ab, ohne dabei die filigranen Zehenspitzen zu verlieren.",
+  "formula": "\\mathcal{M}_{\\text{eroded}} = \\{ (x,y) \\mid D(x,y) \\ge \\alpha \\cdot \\min(W, H) \\}, \\quad \\alpha = 0{,}005",
+  "duration_ms": 4.285099999833619,
+  "metrics": {
+    "Marge": "5.4 px",
+    "Eliminiert": "33315 px",
+    "Rest-Gewebe": "346161 px"
+  },
+  "image_filename": "step_12_sub_prozent_kanten_erosion.png"
+}

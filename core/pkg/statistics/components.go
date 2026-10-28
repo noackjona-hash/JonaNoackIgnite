@@ -349,17 +349,77 @@ func ExtractHotspots(binaryMask *imageutil.GrayMatrix, original *imageutil.GrayM
 				}
 			}
 
+			// Berechne den fokalen Kern der Hyperthermie (Gewebe nahe dem Temperaturmaximum):
+			// T >= maxVal - 28 und T >= origMed
+			coreMinX, coreMaxX := w, 0
+			coreMinY, coreMaxY := h, 0
+			var coreCount int
+			for _, p := range compPixels {
+				pval := original.Data[p]
+				if pval >= maxVal-28 && float64(pval) >= origMed {
+					px := p % w
+					py := p / w
+					if px < coreMinX {
+						coreMinX = px
+					}
+					if px > coreMaxX {
+						coreMaxX = px
+					}
+					if py < coreMinY {
+						coreMinY = py
+					}
+					if py > coreMaxY {
+						coreMaxY = py
+					}
+					coreCount++
+				}
+			}
+
+			finalBox := [4]int{minX, minY, maxX, maxY}
+			if coreCount >= 10 && coreMaxX >= coreMinX && coreMaxY >= coreMinY {
+				pad := 6
+				bx0 := coreMinX - pad
+				if bx0 < minX {
+					bx0 = minX
+				}
+				if bx0 < 0 {
+					bx0 = 0
+				}
+				by0 := coreMinY - pad
+				if by0 < minY {
+					by0 = minY
+				}
+				if by0 < 0 {
+					by0 = 0
+				}
+				bx1 := coreMaxX + pad
+				if bx1 > maxX {
+					bx1 = maxX
+				}
+				if bx1 >= w {
+					bx1 = w - 1
+				}
+				by1 := coreMaxY + pad
+				if by1 > maxY {
+					by1 = maxY
+				}
+				if by1 >= h {
+					by1 = h - 1
+				}
+				finalBox = [4]int{bx0, by0, bx1, by1}
+			}
+
 			hr := HotspotRegion{
 				ID:               regionID,
 				AreaPixels:       area,
 				AreaPercent:      math.Round(areaPercent*100) / 100,
 				Perimeter:        math.Round(perimeter*10) / 10,
 				Circularity:      math.Round(circularity*1000) / 1000,
-				CenterX:          (minX + maxX) / 2,
-				CenterY:          (minY + maxY) / 2,
+				CenterX:          (finalBox[0] + finalBox[2]) / 2,
+				CenterY:          (finalBox[1] + finalBox[3]) / 2,
 				MaxVal:           maxVal,
 				MeanVal:          meanVal,
-				BoundingBox:      [4]int{minX, minY, maxX, maxY},
+				BoundingBox:      finalBox,
 				EdgeGradient:     edgeGradient,
 				ThermalLaplacian: thermalLaplacian,
 				HaloDelta:        haloDelta,
@@ -375,6 +435,10 @@ func ExtractHotspots(binaryMask *imageutil.GrayMatrix, original *imageutil.GrayM
 			if margin < 25 {
 				margin = 25
 			}
+			boxW := maxX - minX + 1
+			boxH := maxY - minY + 1
+			isNarrowStreak := (boxW <= 4 && boxH >= 15) || (boxH <= 4 && boxW >= 15)
+
 			bottomMargin := margin + 30 // Limbs entering bottom of FOV (55 px margin)
 			if minX <= margin || minY <= margin || maxX >= (w-margin) || maxY >= (h-bottomMargin) {
 				hr.Status = "REJECTED_BORDER"
@@ -384,7 +448,9 @@ func ExtractHotspots(binaryMask *imageutil.GrayMatrix, original *imageutil.GrayM
 				hr.Status = "REJECTED_BORDER"
 			} else if area < minArea {
 				hr.Status = "REJECTED_SMALL"
-			} else if circularity < opts.MinCircularity {
+			} else if isNarrowStreak {
+				hr.Status = "REJECTED_LINEAR"
+			} else if circularity < opts.MinCircularity && (area < 800 || (localProminence < 25.0 && float64(maxVal)-origMed < 18.0)) {
 				hr.Status = "REJECTED_LINEAR"
 			} else if (localProminence < 32.0 && edgeGradient < 4.5) || (localProminence < 20.0 && area > 600) {
 				// Rejection: Diffuse warm anatomical plateau (e.g. calf/thigh/heel) without steep focal gradient
@@ -471,14 +537,9 @@ func ConsolidateAndMergeHotspots(regions []HotspotRegion, original *imageutil.Gr
 				shouldMerge := false
 
 				// Merge adjacent clusters on the same anatomical foot/limb
-				// Forefoot digit clusters (Y < 0.55*H) often span across interdigital clefts (150-240 px distance)
-				isForefoot := float64(rA.CenterY) < float64(original.Height)*0.55 && float64(rB.CenterY) < float64(original.Height)*0.55
-				maxMergeDist := 175.0
-				maxGap := 65
-				if isForefoot {
-					maxMergeDist = 240.0
-					maxGap = 100
-				}
+				// Clusters should only merge if they genuinely touch or are immediately contiguous (<= 15 px gap)
+				maxMergeDist := 35.0
+				maxGap := 15
 
 				if sameFoot && ((gapX <= maxGap && gapY <= maxGap) || distCenters <= maxMergeDist) {
 					shouldMerge = true
@@ -529,7 +590,7 @@ func ConsolidateAndMergeHotspots(regions []HotspotRegion, original *imageutil.Gr
 	return regions
 }
 
-// ExpandGeodesicLesionContour grows the lesion mask outward to 100% coverage using geodesic active flood fill.
+// ExpandGeodesicLesionContour grows the lesion mask outward to capture the local erythema without corrupting the tight bounding box.
 func ExpandGeodesicLesionContour(regions []HotspotRegion, original *imageutil.GrayMatrix, bodyMask *imageutil.GrayMatrix, filteredMask *imageutil.GrayMatrix) {
 	w, h := original.Width, original.Height
 	for idx := range regions {
@@ -538,20 +599,17 @@ func ExpandGeodesicLesionContour(regions []HotspotRegion, original *imageutil.Gr
 			continue
 		}
 
-		// Find local healthy threshold for this specific focus (decay to baseline)
-		thresholdCutoff := uint8(math.Max(float64(r.LocalSurroundMed)+10.0, float64(r.MaxVal)-50.0))
+		// Find local healthy threshold for this specific focus (decay to baseline, but >= origMed)
+		thresholdCutoff := uint8(math.Max(float64(r.MaxVal)-28.0, float64(r.LocalSurroundMed)+12.0))
 
 		bb := r.BoundingBox
-		expandMargin := 35
+		expandMargin := 8
 		x0 := int(math.Max(0, float64(bb[0]-expandMargin)))
 		y0 := int(math.Max(0, float64(bb[1]-expandMargin)))
 		x1 := int(math.Min(float64(w-1), float64(bb[2]+expandMargin)))
 		y1 := int(math.Min(float64(h-1), float64(bb[3]+expandMargin)))
 
-		newMinX, newMinY := bb[0], bb[1]
-		newMaxX, newMaxY := bb[2], bb[3]
 		additionalPixels := 0
-
 		for y := y0; y <= y1; y++ {
 			row := y * w
 			for x := x0; x <= x1; x++ {
@@ -563,26 +621,11 @@ func ExpandGeodesicLesionContour(regions []HotspotRegion, original *imageutil.Gr
 					if filteredMask.Data[p] == 0 {
 						filteredMask.Data[p] = 255
 						additionalPixels++
-						if x < newMinX {
-							newMinX = x
-						}
-						if x > newMaxX {
-							newMaxX = x
-						}
-						if y < newMinY {
-							newMinY = y
-						}
-						if y > newMaxY {
-							newMaxY = y
-						}
 					}
 				}
 			}
 		}
 
 		r.AreaPixels += additionalPixels
-		r.BoundingBox = [4]int{newMinX, newMinY, newMaxX, newMaxY}
-		r.CenterX = (newMinX + newMaxX) / 2
-		r.CenterY = (newMinY + newMaxY) / 2
 	}
 }

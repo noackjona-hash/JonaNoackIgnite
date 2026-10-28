@@ -26,20 +26,14 @@ IGNITE ist bewusst modular als Hochleistungs-Pipeline aufgebaut, die native Hard
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│ 1a. Go (Wails v2) — Native Go Desktop Workstation (`desktop-go/`)               │
-│    - Reines Go-Frontend mit embedded HTML5/CSS3/JS PACS-Benutzeroberfläche       │
+│ 1. Go (Walk / Win32) — Native Go Medical PACS Workstation (`desktop/`)          │
+│    - Reines Go ohne CGO/gcc mit authentischem C++ / Win32 / Qt Workstation-Look  │
 │    - Direkte In-Process Anbindung an den Go-Kern (Zero-IPC / Zero-Copy)          │
-│    - Synchronisiertes Dual-Canvas Fadenkreuz & Vorhang-Split (Curtain Wipe)      │
+│    - Resizable Dual-Viewport HSplitter mit schnellem GDI-Rendering               │
 │    - 4-Kategorien-Inspector (Diagnose, Anatomie, Signale, System)                │
-│    - Vorkompilierte Windows x86_64 Binärdatei: `desktop-go/ignite-workstation-go.exe`│
+│    - Vorkompilierte Windows x86_64 Binärdatei: `desktop/Ignite.exe` (nur 8,3 MB) │
 ├─────────────────────────────────────────────────────────────────────────────────┤
-│ 1b. C# (.NET 10 / WPF) — Workstation Desktop GUI (`desktop/`)                   │
-│    - Klinische PACS-Benutzeroberfläche (DIN EN ISO 13485 konform)                │
-│    - Dual-Viewport mit synchronisiertem Live-Fadenkreuz & Pan/Zoom               │
-│    - Orthopädisches 3-Punkt Goniometer (Hallux Valgus Winkel HVA/IMA)            │
-│    - Strukturierter PDF-Arztbriefexport nach IWGDF/Armstrong-Kriterien           │
-├─────────────────────────────────────────────────────────────────────────────────┤
-│ 1c. Python Suite (3.10+ / CLI & Fallback) (`cli.py`, `image_processing.py`)      │
+│ 2. Python Suite (3.10+ / CLI & Fallback) (`cli.py`, `image_processing.py`)      │
 │    - Automatisierte Go-Core-Anbindung (`run_go_core_pipeline`), Fallback-Pipeline │
 │    - CLI-Befehle: analyze, batch, compare, eval, info, audit                     │
 └────────────────────────────────────────┬────────────────────────────────────────┘
@@ -58,12 +52,18 @@ IGNITE ist bewusst modular als Hochleistungs-Pipeline aufgebaut, die native Hard
                                          ▼
 ┌─────────────────────────────────────────────────────────────────────────────────┐
 │ 3. x86_64 Assembler (AVX2 / SIMD — Plan 9 Syntax) (`core/pkg/morphology/*.s`)    │
-│    - 6 hardwarenahe Vektorkerne für maximale Durchsatzrate:                     │
+│    - 11 hardwarenahe Vektorkerne für maximale Durchsatzrate:                    │
 │      • minVectorAVX2 / maxVectorAVX2: Morphologische Erosion/Dilation (32 B/Takt)│
 │      • subVectorAVX2: Sättigende Subtraktion (VPSUBUSB) für Top-Hat             │
 │      • absDiffVectorAVX2: Vektorisierte Differenz |a - b| für Seitenvergleich   │
 │      • thresholdMaskAVX2: Paralleles Binarisieren & Gewebemaskierung            │
 │      • fmaVectorFloat32AVX2: Gleitkomma-Faltung (FMA) für Frangi-Gefäßfilter    │
+│      • mulScalarFloat32AVX2: Skalar-Vektor Multiplikation                       │
+│      • dotProductFloat32AVX2: 256-Bit Vektor-Skalarprodukt mit Horizon-Summe    │
+│      • addVectorFloat32AVX2: Parallele Gleitkomma-Vektoraddition                │
+│      • scaleOffsetFloat32AVX2: Lineare Radiometrietransformation T = a*x + b     │
+│      • laplacian2DVectorFloat32AVX2: 5-Punkt diskreter 2D-Laplace-Operator      │
+│      • sumAndSumSqUint8AVX2: Parallele Reduktion Sum & SumSq mit Maskierung     │
 └────────────────────────────────────────┬────────────────────────────────────────┘
                                          │ Eingebetteter Interpreter
                                          ▼
@@ -102,29 +102,13 @@ JonaNoackIgnite/
 │   ├── pkg/vascular/                   # Frangi-Hesse Vesselness-Filter + AVX2 FMA
 │   └── ignite-core.exe                 # Vorkompilierte Windows x86_64 Binärdatei
 │
-├── desktop-go/                         # GO WAILS v2 CLINICAL WORKSTATION
+├── desktop/                            # GO WAILS v2 CLINICAL WORKSTATION
 │   ├── app.go                          # Go Backend-Bindings & In-Process Pipeline-Bridge
 │   ├── main.go                         # Wails v2 Applikations-Einstiegspunkt
 │   ├── wails.json                      # Wails Projektkonfiguration
 │   ├── frontend/dist/                  # PACS Web-UI (HTML5, Vanilla CSS, JS, Dual-Canvas)
-│   └── ignite-workstation-go.exe       # Vorkompilierte Windows x86_64 Desktop-App
-│
-├── desktop/                            # C# .NET 10 / WPF WORKSTATION
-│   ├── App.xaml / App.xaml.cs          # Globale Styles (Dark/Light Slate, Segment Radios)
-│   ├── MainWindow.xaml / .xaml.cs      # Hauptfenster, Viewports, Dock, TabControl
-│   ├── Ignite.Desktop.csproj           # .NET 10 Projektdatei (WPF, C# 13, x64)
-│   ├── Models/                         # Datenmodelle (Hotspot, Stage, Probe, etc.)
-│   └── Services/                       # Klinische & Mathematische Business-Services:
-│       ├── AdvancedDiagnosticService.cs# 7-Tage Risiko-Prädiktion, Pennes Bioheat, Laplace
-│       ├── ClinicalAngiosomeService.cs # 6 Taylor & Palmer Angiosom-Territorien
-│       ├── ClinicalReportService.cs    # IWGDF/Wagner-Armstrong strukturierter Arztbericht
-│       ├── DatabaseService.cs          # SQLite DSGVO Audit-Protokoll & Hash-Signaturen
-│       ├── EngineService.cs            # IPC-Bridge zum Go-Kern (`ignite-core.exe`)
-│       ├── Mesh3DExportService.cs      # 3D-Export (OBJ, PLY, STL, XYZ, CSV)
-│       ├── OrthopedicGoniometerService.cs # 3-Punkt Goniometer (HVA & IMA Hallux-Winkel)
-│       ├── PaletteService.cs           # Farbskalen (Ironbow, Rainbow, Inferno, Gray)
-│       ├── ThermalAnalysisHelper.cs    # Radiometrische Byte-zu-Temperatur Konvertierung
-│       └── ThermalTopographyService.cs # 2.5D Höhenrelief & Hillshading
+│   ├── ignite_medical.db               # SQLite Audit-Datenbank
+│   └── Ignite.exe                      # Vorkompilierte Windows x86_64 Desktop-App
 │
 ├── rules/                              # KLINISCHE LUA-ENTSCHEIDUNGSREGELN
 │   ├── armstrong_criteria.lua          # Primäre IWGDF/Armstrong Schwellwert-Logik
@@ -169,35 +153,21 @@ Die Pipeline verarbeitet Infrarotdaten in 4 Phasen:
 ## 5. GUI-Architektur & Inspector-Tab-System
 
 ### 5.1 Inspector-Kategorisierung (WICHTIG für Agenten!)
-Der rechte Inspector (`InspectorTabs`) besitzt 18 spezialisierte Tabs. Um Überlauf und horizontales Scrollen zu verhindern, ist die Leiste in **4 klinische Hauptkategorien** unterteilt:
+Der rechte Inspector (`inspector-panel`) ist zur Vermeidung von Überlauf in **4 klinische Hauptkategorien** unterteilt:
 
-| Kategorie-Radiobutton | Tab-Tag | Enthaltene TabItems |
+| Kategorie-Button | Kategorie-ID | Enthaltene Diagnostik-Bereiche |
 | :--- | :--- | :--- |
-| **`CatBtnDiagnostics`** (Diagnose) | `Diagnostics` | `TabHotspots` (Herde), `TabReport` (Arztbericht), `TabPrediction` (Prädiktion), `TabSymmetry` (Bilateral) |
-| **`CatBtnAnatomy`** (Anatomie) | `Anatomy` | `TabAnatomy` (5-Zonen), `TabAngiosomes` (Angiosome), `TabBiomechanics` (Biomechanik & Druck), `Tab3DReconstruction` (3D-Kanten) |
-| **`CatBtnSignals`** (Signale) | `Signals` | `TabVascular` (Vaskulär Frangi), `TabHistogram` (Spektrum), `TabProfile` (Profil %), `TabProbes` (Sonden), `TabPerfusion` (Perfusion), `TabIsotherms` (Isothermen) |
-| **`CatBtnSystem`** (System) | `System` | `TabParams` (Parameter), `TabStages` (42 Stufen), `TabLua` (Leitlinien Lua), `TabAudit` (DSGVO Audit) |
+| **`cat-diagnostics`** (Diagnose) | `diagnostics` | Herde & Hotspots, Armstrong/IWGDF Risiko-Score, Triage-Einstufung |
+| **`cat-anatomy`** (Anatomie) | `anatomy` | 5-Zonen Temperaturprofil (Hallux, Ballen, Ferse), 3D-Lambertian Kantenkorrektur |
+| **`cat-signals`** (Signale) | `signals` | Frangi-Hesse Vaskulärfilter (Venenunterdrückung), Pennes 2D-Bioheat Perfusion |
+| **`cat-system`** (System) | `system` | 42-Stufen PAP Timing, Pipeline-Parameter (k, R, m), DSGVO Art. 30 Audit-Log |
 
-> [!CAUTION]
-> **VERBINDLICHE REGEL FÜR TAB-WECHSEL IN C#:**  
-> **Niemals** `InspectorTabs.SelectedIndex = <zahl>` verwenden!  
-> Da sich Tab-Reihenfolgen ändern können, ist **immer** die semantische Hilfsmethode aufzurufen:  
-> ```csharp
-> SelectInspectorTab(TabHotspots);       // Wechselt zu Herde & aktiviert Diagnose-Pill
-> SelectInspectorTab(TabBiomechanics);   // Wechselt zu Biomechanik & aktiviert Anatomie-Pill
-> SelectInspectorTab(TabVascular);       // Wechselt zu Vaskulär & aktiviert Signale-Pill
-> SelectInspectorTab(TabParams);         // Wechselt zu Parameter & aktiviert System-Pill
-> ```
-> `SelectInspectorTab` aktiviert automatisch den zugehörigen Kategorie-Radiobutton und filtert die Tabs via `FilterInspectorTabsByCategory`, sodass nur die passenden 4–6 Tabs im Tabstrip sichtbar sind.
-
-### 5.2 Viewports & Ergonomie
-* **Dual-Viewport:**
-  * Viewport 1 (links): `CanvasOriginal` mit Roh-Thermogramm.
-  * Viewport 2 (rechts): `CanvasResult` mit Befund-Overlay.
-  * Beide Viewports verfügen über `CrosshairOriginalCanvas` bzw. `CrosshairResultCanvas`. Die Methode [`UpdateSynchronizedCrosshair(x, y)`](file:///d:/Downloads/03_Programmierung%20&%20Entwicklung/05_JUFO/JonaNoackIgnite/desktop/MainWindow.xaml.cs#L1020) synchronisiert das Fadenkreuz in Echtzeit über beide Bilder.
-* **Vorhang-Wipe (Curtain Wipe):**
-  * `CanvasCurtain` steuert den Bild-Split via `CurtainClipRect`.
-  * Zwei dynamische Floating-Badges (`CurtainLabelLeft` und `CurtainLabelRight`) und ein Kapsel-Handle (`BorderCurtainHandle`) wandern mit dem Schieberegler mit.
+### 5.2 Dual-Viewport & Ergonomie
+* **Dual-Viewport & Vorhang:**
+  * Viewport 1 (links): `canvas-orig` mit Roh-Thermogramm (LWIR 8–14 µm).
+  * Viewport 2 (rechts): `canvas-result` mit Befund-Overlay und Hotspot-Konturen.
+  * Synchronisiertes Fadenkreuz über beide Viewports (`canvas-crosshair-orig` & `canvas-crosshair-result`) mit Live-Temperaturabfrage und Armstrong-Differenzanzeige.
+  * Interaktiver Vorhang-Split (`curtain-divider`) für dynamische A/B-Befundung.
 
 ---
 
@@ -212,21 +182,24 @@ cd core
 go test -v ./pkg/...
 
 # AVX2 Rechenkern für Windows kompilieren
-go build -o ignite-core.exe ./cmd/ignite-core
+go build -ldflags="-s -w" -o ignite-core.exe ./cmd/ignite-core
 ```
 
-### 6.2 C# .NET 10 WPF Desktop-Workstation (`desktop/`)
+### 6.2 Go Native Walk Medical Workstation (`desktop/`)
 ```powershell
-# Desktop-Projekt bauen
-dotnet build desktop/Ignite.Desktop.csproj
+# In das Desktop-Verzeichnis wechseln
+cd desktop
 
-# Desktop-Projekt im Release-Modus starten
-dotnet run --project desktop/Ignite.Desktop.csproj -c Release
+# Native Walk Workstation (reines Go, C++ / Win32 Flair) kompilieren
+go build -ldflags="-H windowsgui -s -w" -o Ignite.exe .
+
+# Desktop-Workstation direkt starten
+.\Ignite.exe
 ```
 
 ### 6.3 1-Klick Gesamt-Build (Inno Setup Installer)
 ```powershell
-# Baut Go-Kern, C# Desktop Suite und schnürt dist/IGNITE_Medical_Suite_v5.0.0_Setup.exe
+# Baut Go-Kern, Go Desktop Suite und schnürt dist/IGNITE_Medical_Suite_v5.0.0_Setup.exe
 .\installer\build_installer.ps1
 ```
 
@@ -243,13 +216,10 @@ dotnet run --project desktop/Ignite.Desktop.csproj -c Release
    Medizinische Algorithmen dürfen **keine** nicht-deterministischen Zufallswerte oder undokumentierte Heuristiken enthalten. Jeder Befund muss für denselben Rohdatensatz bit-identisch reproduzierbar sein.
 2. **Klinische Integrität & Kommentare:**  
    Bestehende mathematische Formeln, anatomische Bezeichnungen (z. B. Os metatarsale, Calcaneus, Hallux, Taylor & Palmer Angiosome) und Quellcode-Kommentare **müssen zwingend erhalten bleiben**.
-3. **WPF UI-Styling:**  
-   Halten Sie sich an das etablierte Designsystem in [desktop/App.xaml](file:///d:/Downloads/03_Programmierung%20&%20Entwicklung/05_JUFO/JonaNoackIgnite/desktop/App.xaml):  
-   * Primäre Akzentfarbe: `CyanBrush` (`#0284C7`)
-   * Oberflächen: `SurfaceBrush` (`#FFFFFF`), `SurfaceCardBrush` (`#FFFFFF`), `SurfaceDarkBrush` (`#0F172A`)
-   * Triage: `SuccessBrush` (`#16A34A`), `WarningBrush` (`#F59E0B`), `CriticalBrush` (`#DC2626`)
-   * Keine harten ad-hoc Styles in Controls – immer Ressourcen oder Vorlagen verwenden.
-4. **Encoding-Vorsicht:**  
-   WPF-XAML-Dateien können unter Windows mit UTF-16LE oder UTF-8 mit BOM gespeichert sein. Bei Dateiänderungen auf korrekte Zeichenkodierung achten, um Encoding-Fehler zu vermeiden.
-5. **Keine harten Indizes:**  
-   Wie in Abschnitt 5.1 beschrieben, immer semantische Elementnamen und `SelectInspectorTab` nutzen.
+3. **PACS UI-Design & Web-Styling:**  
+   Halten Sie sich an das etablierte Designsystem in `desktop/frontend/dist/style.css`:  
+   * Primäre Akzentfarbe: Cyan (`#0284C7` / `#38BDF8`)
+   * Oberflächen: Dark Slate (`#0B0F19`, `#0F172A`, `#1E293B`)
+   * Triage: `Success` (`#16A34A`), `Warning` (`#F59E0B`), `Critical` (`#DC2626`)
+4. **Zero-IPC In-Process Anbindung:**  
+   Die Desktop-Suite bindet `core` direkt als Go-Bibliothek ein. Diagnostische Aufrufe erfolgen in-process via `pipeline.Run(...)` ohne IPC-Latenz.

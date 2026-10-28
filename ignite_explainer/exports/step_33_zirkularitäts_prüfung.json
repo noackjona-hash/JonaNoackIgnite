@@ -1,0 +1,15 @@
+{
+  "step_number": 33,
+  "phase_number": 6,
+  "phase_name": "Phase VI: Geometric Morphology & Artifact Rejection",
+  "name": "Zirkularitäts-Prüfung",
+  "description": "Unterscheidet kreisförmige pathologische Druckstellen (hohe Zirkularität) von langgestreckten Venen (niedrige Zirkularität).",
+  "formula": "C = \\frac{4\\pi \\cdot \\text{Area}}{\\text{Perimeter}^2} \\ge 0{,}08",
+  "duration_ms": 0.007599999662488699,
+  "metrics": {
+    "Min Zirkularität": "0.08",
+    "Kompakt/Rund": 6,
+    "Langgestreckt/Vene": 0
+  },
+  "image_filename": "step_33_zirkularitäts_prüfung.png"
+}

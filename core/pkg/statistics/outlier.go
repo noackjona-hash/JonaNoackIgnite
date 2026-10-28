@@ -31,9 +31,17 @@ type OutlierStats struct {
 func CalculateMADThreshold(diff *imageutil.GrayMatrix, orig *imageutil.GrayMatrix, mask *imageutil.GrayMatrix, k float64) OutlierStats {
 	var hist [256]int
 	var origHist [256]int
-	var totalValid int
-	var sum float64
-	var sumSq float64
+	var maskData []uint8
+	if mask != nil {
+		maskData = mask.Data
+	}
+	sumU, sumSqU, validCountU := morphology.SumAndSumSqUint8(diff.Data, maskData)
+	totalValid := int(validCountU)
+	if totalValid == 0 {
+		return OutlierStats{Threshold: 255}
+	}
+	sum := float64(sumU)
+	sumSq := float64(sumSqU)
 
 	for i, v := range diff.Data {
 		if mask != nil && mask.Data[i] == 0 {
@@ -43,13 +51,6 @@ func CalculateMADThreshold(diff *imageutil.GrayMatrix, orig *imageutil.GrayMatri
 		if orig != nil {
 			origHist[orig.Data[i]]++
 		}
-		totalValid++
-		sum += float64(v)
-		sumSq += float64(v) * float64(v)
-	}
-
-	if totalValid == 0 {
-		return OutlierStats{Threshold: 255}
 	}
 
 	mean := sum / float64(totalValid)
@@ -127,24 +128,25 @@ func CalculateMADThreshold(diff *imageutil.GrayMatrix, orig *imageutil.GrayMatri
 // CalculateGaussianThreshold computes mean + k * stdDev.
 func CalculateGaussianThreshold(diff *imageutil.GrayMatrix, orig *imageutil.GrayMatrix, mask *imageutil.GrayMatrix, k float64) OutlierStats {
 	var origHist [256]int
-	var totalValid int
-	var sum float64
-	var sumSq float64
+	var maskData []uint8
+	if mask != nil {
+		maskData = mask.Data
+	}
+	sumU, sumSqU, validCountU := morphology.SumAndSumSqUint8(diff.Data, maskData)
+	totalValid := int(validCountU)
+	if totalValid == 0 {
+		return OutlierStats{Threshold: 255}
+	}
+	sum := float64(sumU)
+	sumSq := float64(sumSqU)
 
-	for i, v := range diff.Data {
+	for i := range diff.Data {
 		if mask != nil && mask.Data[i] == 0 {
 			continue
 		}
 		if orig != nil {
 			origHist[orig.Data[i]]++
 		}
-		totalValid++
-		sum += float64(v)
-		sumSq += float64(v) * float64(v)
-	}
-
-	if totalValid == 0 {
-		return OutlierStats{Threshold: 255}
 	}
 
 	mean := sum / float64(totalValid)

@@ -1,0 +1,15 @@
+{
+  "step_number": 26,
+  "phase_number": 5,
+  "phase_name": "Phase V: Statistical Outlier Profiling & Thresholding",
+  "name": "Exakter O(N) Median",
+  "description": "Ermittelt das 50%-Quantil in O(N)-Zeit über die kumulative Verteilungsfunktion — immun gegen einzelne extreme Entzündungsherde.",
+  "formula": "\\text{Median} = \\min \\left\\{ v \\ \\middle|\\ \\sum_{i=0}^v h(i) \\ge \\frac{N}{2} \\right\\}",
+  "duration_ms": 0.04450000005817856,
+  "metrics": {
+    "Median": 17,
+    "Laufzeit": "0.045 ms",
+    "Komplexität": "O(N) deterministisch"
+  },
+  "image_filename": "step_26_exakter_on_median.png"
+}

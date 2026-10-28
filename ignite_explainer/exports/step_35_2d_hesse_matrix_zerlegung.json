@@ -1,0 +1,15 @@
+{
+  "step_number": 35,
+  "phase_number": 6,
+  "phase_name": "Phase VI: Geometric Morphology & Artifact Rejection",
+  "name": "2D-Hesse-Matrix-Zerlegung",
+  "description": "Berechnet die lokalen Krümmungseigenwerte λ₁, λ₂ der Temperaturfunktion zur morphologischen Gefäß- und Herdklassifikation.",
+  "formula": "\\mathcal{H} = \\begin{bmatrix} I_{xx} & I_{xy} \\\\ I_{xy} & I_{yy} \\end{bmatrix}, \\quad \\det(\\mathcal{H} - \\lambda \\mathcal{I}) = 0",
+  "duration_ms": 89.59150000009686,
+  "metrics": {
+    "Eigenwerte": "λ₁, λ₂ (|λ₁| ≤ |λ₂|)",
+    "Kernel": "Sobel 2. Ordnung",
+    "Glättung": "Gauß σ=1.0"
+  },
+  "image_filename": "step_35_2d_hesse_matrix_zerlegung.png"
+}

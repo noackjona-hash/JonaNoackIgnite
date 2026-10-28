@@ -1,0 +1,15 @@
+{
+  "step_number": 15,
+  "phase_number": 3,
+  "phase_name": "Phase III: 3D Anatomical Inflation & Angle Compensation",
+  "name": "Kosinus-Blickwinkelfeld",
+  "description": "Quantifiziert den optischen Einfallswinkel θ zwischen Kameraachse und gekrümmter Hautoberfläche nach dem Lambert'schen Gesetz.",
+  "formula": "\\cos\\theta = \\frac{\\vec{n} \\cdot \\vec{v}}{\\|\\vec{n}\\| \\|\\vec{v}\\|} = n_z(x,y)",
+  "duration_ms": 4.3086000000585045,
+  "metrics": {
+    "Min cos(θ)": "0.100",
+    "Max Neigung": "84.3°",
+    "Blickvektor": "(0, 0, 1)"
+  },
+  "image_filename": "step_15_kosinus_blickwinkelfeld.png"
+}

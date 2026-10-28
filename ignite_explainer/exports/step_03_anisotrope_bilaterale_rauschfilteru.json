@@ -1,0 +1,15 @@
+{
+  "step_number": 3,
+  "phase_number": 1,
+  "phase_name": "Phase I: Sensor & Radiometric Calibration",
+  "name": "Anisotrope Bilaterale Rauschfilterung",
+  "description": "Unterdrückt stochastisches NETD-Sensorrauschen (Noise Equivalent Temp Difference), ohne pathologische Temperaturkanten zu verwischen.",
+  "formula": "I_{\\text{filt}}(p) = \\frac{1}{W_p} \\sum_{q} I(q) \\cdot \\exp\\left(-\\frac{\\|p-q\\|^2}{2\\sigma_s^2}\\right) \\cdot \\exp\\left(-\\frac{\\|I_p - I_q\\|^2}{2\\sigma_r^2}\\right)",
+  "duration_ms": 139.54770000009376,
+  "metrics": {
+    "Sigma Raum": "3.0 px",
+    "Sigma Farbe": "0.5 °C",
+    "Rauschminderung": "0.085 K"
+  },
+  "image_filename": "step_03_anisotrope_bilaterale_rauschfilteru.png"
+}

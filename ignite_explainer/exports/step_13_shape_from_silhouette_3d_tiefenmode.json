@@ -1,0 +1,15 @@
+{
+  "step_number": 13,
+  "phase_number": 3,
+  "phase_name": "Phase III: 3D Anatomical Inflation & Angle Compensation",
+  "name": "Shape-from-Silhouette 3D-Tiefenmodell",
+  "description": "Rekonstruiert die dreidimensionale anatomische Wölbung Z(x, y) des Fußes anhand der euklidischen Randgeodäten.",
+  "formula": "Z(x,y) = R_{\\max} \\cdot \\sqrt{1 - \\left(1 - \\frac{D(x,y)}{R_{\\max}}\\right)^2}",
+  "duration_ms": 20.938399999977264,
+  "metrics": {
+    "Max Höhe": "162.2 px",
+    "Geodäte R_max": "162.2 px",
+    "Körpermodell": "Elliptisch"
+  },
+  "image_filename": "step_13_shape_from_silhouette_3d_tiefenmode.png"
+}

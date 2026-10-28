@@ -1,0 +1,15 @@
+{
+  "step_number": 41,
+  "phase_number": 7,
+  "phase_name": "Phase VII: Biophysical Differential Diagnosis & Triage",
+  "name": "Muskelplateau-Differenzierung",
+  "description": "Schließt symmetrische, großflächige Muskelbelastungswärme nach Gehen oder Stehen aus, um falsch-positive Alarme zu verhindern.",
+  "formula": "\\text{Reject}(\\mathcal{R}) \\iff \\Delta T_{\\text{contra}} < 2{,}2\\,\\text{K} \\lor (\\text{HeelPlateau} \\land \\text{Bilateral})",
+  "duration_ms": 0.023399999918183312,
+  "metrics": {
+    "Fokus bestätigt": 1,
+    "Plateaus verworfen": 5,
+    "Status": "Fokale Pathologie"
+  },
+  "image_filename": "step_41_muskelplateau_differenzierung.png"
+}

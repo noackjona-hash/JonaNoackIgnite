@@ -1,0 +1,15 @@
+{
+  "step_number": 22,
+  "phase_number": 4,
+  "phase_name": "Phase IV: Multiscale Morphological Anomaly Extraction",
+  "name": "1D Horizontale Minkowski Dilation",
+  "description": "Erste Stufe der Dilation auf dem erodierten Bild zur Rekonstruktion der großflächigen thermischen Grundlast.",
+  "formula": "\\mathcal{D}_H(\\mathcal{E}_B(I))(x,y) = \\max_{-R \\le k \\le R} \\mathcal{E}_B(I)(x+k, y)",
+  "duration_ms": 16.568800000186457,
+  "metrics": {
+    "Kernel-Typ": "1D Horizontal",
+    "Länge": "109 px",
+    "Phase": "Opening Schritt 1"
+  },
+  "image_filename": "step_22_1d_horizontale_minkowski_dilation.png"
+}

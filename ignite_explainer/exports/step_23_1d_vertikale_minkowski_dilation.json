@@ -1,0 +1,15 @@
+{
+  "step_number": 23,
+  "phase_number": 4,
+  "phase_name": "Phase IV: Multiscale Morphological Anomaly Extraction",
+  "name": "1D Vertikale Minkowski Dilation",
+  "description": "Schließt das morphologische Opening ab: Glattes Hintergrund-Temperaturfeld ohne fokale Hotspots.",
+  "formula": "(I \\circ B)(x,y) = \\mathcal{D}_B(\\mathcal{E}_B(I))(x,y)",
+  "duration_ms": 1.2148999999226362,
+  "metrics": {
+    "Status": "Opening fertiggestellt",
+    "Hintergrund": "Glatt",
+    "Fokale Peaks": "Entfernt"
+  },
+  "image_filename": "step_23_1d_vertikale_minkowski_dilation.png"
+}

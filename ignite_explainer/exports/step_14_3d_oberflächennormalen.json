@@ -1,0 +1,15 @@
+{
+  "step_number": 14,
+  "phase_number": 3,
+  "phase_name": "Phase III: 3D Anatomical Inflation & Angle Compensation",
+  "name": "3D-Oberflächennormalen",
+  "description": "Ermittelt die Ausrichtung jedes mikroskopischen Hautareals im 3D-Raum mittels partieller Ableitungen der Tiefenfunktion.",
+  "formula": "\\vec{n}(x,y) = \\frac{\\left( -\\frac{\\partial Z}{\\partial x}, -\\frac{\\partial Z}{\\partial y}, 1 \\right)^T}{\\sqrt{\\left(\\frac{\\partial Z}{\\partial x}\\right)^2 + \\left(\\frac{\\partial Z}{\\partial y}\\right)^2 + 1}}",
+  "duration_ms": 122.858400000041,
+  "metrics": {
+    "Gradienten": "Sobel 3x3",
+    "Normalisierung": "Unit Sphere",
+    "Status": "Berechnet"
+  },
+  "image_filename": "step_14_3d_oberflächennormalen.png"
+}

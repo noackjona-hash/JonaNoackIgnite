@@ -1,0 +1,15 @@
+{
+  "step_number": 10,
+  "phase_number": 2,
+  "phase_name": "Phase II: Anatomical Body Segmentation & Geodesics",
+  "name": "Bedding & Clutter Purge",
+  "description": "Filtert Untersuchungsliegen, Tücher und Sensorartefakte aus, die weniger als 2% des Bildes einnehmen.",
+  "formula": "\\text{Purge}(\\mathcal{C}_k) \\iff \\text{Area}(\\mathcal{C}_k) < 0{,}02 \\cdot (W \\times H)",
+  "duration_ms": 83.5508000000118,
+  "metrics": {
+    "Mindestgröße": "31104 px",
+    "Behalten": 3,
+    "Gewebe-Pixel": 379476
+  },
+  "image_filename": "step_10_bedding__clutter_purge.png"
+}

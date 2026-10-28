@@ -1,0 +1,15 @@
+{
+  "step_number": 8,
+  "phase_number": 2,
+  "phase_name": "Phase II: Anatomical Body Segmentation & Geodesics",
+  "name": "Adaptiver Hypothermie-Fallback",
+  "description": "Prüft, ob periphere Zehenbereiche durch extreme Abkühlung verloren gehen, und passt den Schwellwert dynamisch an.",
+  "formula": "t_{\\text{adapt}} = \\begin{cases} 0{,}75 \\cdot t^* & \\text{falls } \\frac{A_{\\text{tissue}}}{A_{\\text{total}}} < 0{,}15 \\\\ t^* & \\text{sonst} \\end{cases}",
+  "duration_ms": 0.0012999998943996616,
+  "metrics": {
+    "Effektive Schwelle": 97,
+    "Fallback aktiv": false,
+    "Zehenschutz": "Garantiert"
+  },
+  "image_filename": "step_08_adaptiver_hypothermie_fallback.png"
+}

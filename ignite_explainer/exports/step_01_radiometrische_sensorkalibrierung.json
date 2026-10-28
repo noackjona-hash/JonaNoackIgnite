@@ -1,0 +1,15 @@
+{
+  "step_number": 1,
+  "phase_number": 1,
+  "phase_name": "Phase I: Sensor & Radiometric Calibration",
+  "name": "Radiometrische Sensorkalibrierung",
+  "description": "Konvertiert die unkalibrierten Roh-Sensorpixel in physikalische Absoluttemperaturen (°C) gemäß Kalibrierkurve des LWIR-Sensors.",
+  "formula": "T(x,y) = T_{\\text{min}} + \\frac{I(x,y)}{255} \\cdot (T_{\\text{max}} - T_{\\text{min}})",
+  "duration_ms": 31.134100000144826,
+  "metrics": {
+    "T_Min": "18.47 °C",
+    "T_Max": "36.75 °C",
+    "T_Mittel": "23.58 °C"
+  },
+  "image_filename": "step_01_radiometrische_sensorkalibrierung.png"
+}

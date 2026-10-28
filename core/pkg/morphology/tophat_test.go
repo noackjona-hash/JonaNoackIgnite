@@ -155,3 +155,118 @@ func TestAVX2FMAFloat32(t *testing.T) {
 		}
 	}
 }
+
+func TestAVX2DotProductFloat32(t *testing.T) {
+	n := 67 // Non-multiple of 8 to test both AVX2 loop and scalar tail
+	a := make([]float32, n)
+	b := make([]float32, n)
+	var expected float32
+	for i := 0; i < n; i++ {
+		a[i] = float32(i + 1)
+		b[i] = float32(i%5 + 1)
+		expected += a[i] * b[i]
+	}
+
+	got := DotProductFloat32(a, b)
+	diff := got - expected
+	if diff < 0 { diff = -diff }
+	if diff > 1e-3 {
+		t.Fatalf("DotProductFloat32 mismatch: expected %f, got %f (diff %f)", expected, got, diff)
+	}
+}
+
+func TestAVX2AddVectorFloat32(t *testing.T) {
+	n := 35
+	a := make([]float32, n)
+	b := make([]float32, n)
+	dst := make([]float32, n)
+	for i := 0; i < n; i++ {
+		a[i] = float32(i * 2)
+		b[i] = float32(100 - i)
+	}
+
+	AddVectorFloat32(a, b, dst)
+
+	for i := 0; i < n; i++ {
+		exp := a[i] + b[i]
+		if dst[i] != exp {
+			t.Fatalf("AddVectorFloat32 mismatch at %d: expected %f, got %f", i, exp, dst[i])
+		}
+	}
+}
+
+func TestAVX2ScaleOffsetFloat32(t *testing.T) {
+	n := 37
+	src := make([]float32, n)
+	dst := make([]float32, n)
+	for i := 0; i < n; i++ {
+		src[i] = float32(i)
+	}
+
+	ScaleOffsetFloat32(src, dst, 0.5, 20.0)
+
+	for i := 0; i < n; i++ {
+		exp := float32(i)*0.5 + 20.0
+		if dst[i] != exp {
+			t.Fatalf("ScaleOffsetFloat32 mismatch at %d: expected %f, got %f", i, exp, dst[i])
+		}
+	}
+}
+
+func TestAVX2Laplacian2DVectorFloat32(t *testing.T) {
+	n := 25
+	c := make([]float32, n)
+	l := make([]float32, n)
+	r := make([]float32, n)
+	u := make([]float32, n)
+	d := make([]float32, n)
+	dst := make([]float32, n)
+
+	for i := 0; i < n; i++ {
+		c[i] = float32(30 + i)
+		l[i] = float32(28 + i)
+		r[i] = float32(32 + i)
+		u[i] = float32(29 + i)
+		d[i] = float32(31 + i)
+	}
+
+	Laplacian2DVectorFloat32(c, l, r, u, d, dst)
+
+	for i := 0; i < n; i++ {
+		exp := l[i] + r[i] + u[i] + d[i] - 4.0*c[i]
+		diff := dst[i] - exp
+		if diff < 0 { diff = -diff }
+		if diff > 1e-4 {
+			t.Fatalf("Laplacian2DVectorFloat32 mismatch at %d: expected %f, got %f", i, exp, dst[i])
+		}
+	}
+}
+
+func TestAVX2SumAndSumSqUint8(t *testing.T) {
+	n := 128
+	src := make([]uint8, n)
+	mask := make([]uint8, n)
+	var expSum uint64
+	var expSumSq uint64
+	var expCount uint64
+
+	for i := 0; i < n; i++ {
+		src[i] = uint8(i + 10)
+		if i%3 == 0 {
+			mask[i] = 0 // Masked out
+		} else {
+			mask[i] = 255
+			expSum += uint64(src[i])
+			expSumSq += uint64(src[i]) * uint64(src[i])
+			expCount++
+		}
+	}
+
+	sum, sumSq, count := SumAndSumSqUint8(src, mask)
+
+	if sum != expSum || sumSq != expSumSq || count != expCount {
+		t.Fatalf("SumAndSumSqUint8 mismatch: expected sum=%d, sumSq=%d, count=%d; got sum=%d, sumSq=%d, count=%d",
+			expSum, expSumSq, expCount, sum, sumSq, count)
+	}
+}
+

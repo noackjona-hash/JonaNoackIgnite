@@ -1,0 +1,15 @@
+{
+  "step_number": 2,
+  "phase_number": 1,
+  "phase_name": "Phase I: Sensor & Radiometric Calibration",
+  "name": "Dead-Pixel-Erkennung & Interpolation",
+  "description": "Detektiert Sensor-Ausfälle (Dead Pixels bei 0 oder 255) und korrigiert diese durch lokale 3x3-Nachbarschafts-Interpolation.",
+  "formula": "\\text{BadPixel} = (I == 0) \\lor (I == 255), \\quad T_{\\text{clean}} = \\text{Median}_{3\\times 3}(T)",
+  "duration_ms": 28.54959999967832,
+  "metrics": {
+    "Defekte Pixel": 0,
+    "Anteil": "0.0000 %",
+    "Status": "Bereinigt"
+  },
+  "image_filename": "step_02_dead_pixel_erkennung__interpolation.png"
+}

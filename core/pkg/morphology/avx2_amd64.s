@@ -390,3 +390,274 @@ no_inc_r8_scalar:
 
 done_thresh:
     RET
+
+// func dotProductFloat32AVX2(a, b *float32, res *float32, count int)
+// Computes res = dot(a, b) for count elements using 256-bit AVX2
+TEXT ·dotProductFloat32AVX2(SB), NOSPLIT, $0-32
+    MOVQ a+0(FP), SI
+    MOVQ b+8(FP), DX
+    MOVQ res+16(FP), DI
+    MOVQ count+24(FP), CX
+
+    VXORPS Y0, Y0, Y0
+
+    CMPQ CX, $8
+    JL scalar_dot
+
+loop_avx2_dot:
+    VMOVUPS (SI), Y1
+    VMOVUPS (DX), Y2
+    VMULPS Y1, Y2, Y3
+    VADDPS Y3, Y0, Y0
+
+    ADDQ $32, SI
+    ADDQ $32, DX
+    SUBQ $8, CX
+    CMPQ CX, $8
+    JGE loop_avx2_dot
+
+scalar_dot:
+    // Horizontal sum of Y0 down to a single float in X0
+    VEXTRACTF128 $1, Y0, X1
+    VADDPS X1, X0, X0
+    VMOVSHDUP X0, X1
+    VADDPS X1, X0, X0
+    VSHUFPS $0x4E, X0, X0, X1
+    VADDSS X1, X0, X0
+    VZEROUPPER
+
+    CMPQ CX, $0
+    JLE done_dot
+
+loop_scalar_dot:
+    VMOVSS (SI), X1
+    VMOVSS (DX), X2
+    VMULSS X1, X2, X3
+    VADDSS X3, X0, X0
+
+    ADDQ $4, SI
+    ADDQ $4, DX
+    DECQ CX
+    JNZ loop_scalar_dot
+
+done_dot:
+    VMOVSS X0, (DI)
+    RET
+
+// func addVectorFloat32AVX2(a, b, dst *float32, count int)
+// Computes dst[i] = a[i] + b[i] for count float32 elements
+TEXT ·addVectorFloat32AVX2(SB), NOSPLIT, $0-32
+    MOVQ a+0(FP), SI
+    MOVQ b+8(FP), DX
+    MOVQ dst+16(FP), DI
+    MOVQ count+24(FP), CX
+
+    CMPQ CX, $8
+    JL scalar_add_f32
+
+loop_avx2_add_f32:
+    VMOVUPS (SI), Y0
+    VMOVUPS (DX), Y1
+    VADDPS Y0, Y1, Y2
+    VMOVUPS Y2, (DI)
+
+    ADDQ $32, SI
+    ADDQ $32, DX
+    ADDQ $32, DI
+    SUBQ $8, CX
+    CMPQ CX, $8
+    JGE loop_avx2_add_f32
+    VZEROUPPER
+
+scalar_add_f32:
+    CMPQ CX, $0
+    JLE done_add_f32
+
+loop_scalar_add_f32:
+    VMOVSS (SI), X0
+    VMOVSS (DX), X1
+    VADDSS X0, X1, X2
+    VMOVSS X2, (DI)
+
+    ADDQ $4, SI
+    ADDQ $4, DX
+    ADDQ $4, DI
+    DECQ CX
+    JNZ loop_scalar_add_f32
+
+done_add_f32:
+    RET
+
+// func scaleOffsetFloat32AVX2(src, dst *float32, scale, offset float32, count int)
+// Computes dst[i] = src[i] * scale + offset for count float32 elements
+TEXT ·scaleOffsetFloat32AVX2(SB), NOSPLIT, $0-32
+    MOVQ src+0(FP), SI
+    MOVQ dst+8(FP), DI
+    VMOVSS scale+16(FP), X0
+    VMOVSS offset+20(FP), X1
+    MOVQ count+24(FP), CX
+
+    // Broadcast scale into Y0
+    VSHUFPS $0, X0, X0, X0
+    VINSERTF128 $1, X0, Y0, Y0
+
+    // Broadcast offset into Y1
+    VSHUFPS $0, X1, X1, X1
+    VINSERTF128 $1, X1, Y1, Y1
+
+    CMPQ CX, $8
+    JL scalar_scale_offset
+
+loop_avx2_scale_offset:
+    VMOVUPS (SI), Y2
+    VMULPS Y0, Y2, Y3
+    VADDPS Y1, Y3, Y4
+    VMOVUPS Y4, (DI)
+
+    ADDQ $32, SI
+    ADDQ $32, DI
+    SUBQ $8, CX
+    CMPQ CX, $8
+    JGE loop_avx2_scale_offset
+    VZEROUPPER
+
+scalar_scale_offset:
+    CMPQ CX, $0
+    JLE done_scale_offset
+
+loop_scalar_scale_offset:
+    VMOVSS (SI), X2
+    VMULSS X0, X2, X3
+    VADDSS X1, X3, X4
+    VMOVSS X4, (DI)
+
+    ADDQ $4, SI
+    ADDQ $4, DI
+    DECQ CX
+    JNZ loop_scalar_scale_offset
+
+done_scale_offset:
+    RET
+
+// func laplacian2DVectorFloat32AVX2(center, left, right, up, down, dst *float32, count int)
+// Computes dst[i] = left[i] + right[i] + up[i] + down[i] - 4.0 * center[i]
+TEXT ·laplacian2DVectorFloat32AVX2(SB), NOSPLIT, $0-56
+    MOVQ center+0(FP), AX
+    MOVQ left+8(FP), BX
+    MOVQ right+16(FP), DX
+    MOVQ up+24(FP), R8
+    MOVQ down+32(FP), R9
+    MOVQ dst+40(FP), DI
+    MOVQ count+48(FP), CX
+
+    // Broadcast constant 4.0 into Y0
+    MOVL $0x40800000, R10
+    VMOVD R10, X0
+    VSHUFPS $0, X0, X0, X0
+    VINSERTF128 $1, X0, Y0, Y0
+
+    CMPQ CX, $8
+    JL scalar_laplacian
+
+loop_avx2_laplacian:
+    VMOVUPS (BX), Y1
+    VMOVUPS (DX), Y2
+    VADDPS Y1, Y2, Y3
+    VMOVUPS (R8), Y4
+    VADDPS Y4, Y3, Y3
+    VMOVUPS (R9), Y5
+    VADDPS Y5, Y3, Y3
+
+    VMOVUPS (AX), Y6
+    VMULPS Y0, Y6, Y7
+    VSUBPS Y7, Y3, Y8
+    VMOVUPS Y8, (DI)
+
+    ADDQ $32, AX
+    ADDQ $32, BX
+    ADDQ $32, DX
+    ADDQ $32, R8
+    ADDQ $32, R9
+    ADDQ $32, DI
+    SUBQ $8, CX
+    CMPQ CX, $8
+    JGE loop_avx2_laplacian
+    VZEROUPPER
+
+scalar_laplacian:
+    CMPQ CX, $0
+    JLE done_laplacian
+
+loop_scalar_laplacian:
+    VMOVSS (BX), X1
+    VMOVSS (DX), X2
+    VADDSS X1, X2, X3
+    VMOVSS (R8), X4
+    VADDSS X4, X3, X3
+    VMOVSS (R9), X5
+    VADDSS X5, X3, X3
+
+    VMOVSS (AX), X6
+    VMULSS X0, X6, X7
+    VSUBSS X7, X3, X8
+    VMOVSS X8, (DI)
+
+    ADDQ $4, AX
+    ADDQ $4, BX
+    ADDQ $4, DX
+    ADDQ $4, R8
+    ADDQ $4, R9
+    ADDQ $4, DI
+    DECQ CX
+    JNZ loop_scalar_laplacian
+
+done_laplacian:
+    RET
+
+// func sumAndSumSqUint8AVX2(src, mask *byte, count int, sum, sumSq, validCount *uint64)
+// Computes sum(x), sum(x^2), and valid count of uint8 pixels using AVX2 SIMD
+TEXT ·sumAndSumSqUint8AVX2(SB), NOSPLIT, $0-48
+    MOVQ src+0(FP), SI
+    MOVQ mask+8(FP), DX
+    MOVQ count+16(FP), CX
+    MOVQ sum+24(FP), R8
+    MOVQ sumSq+32(FP), R9
+    MOVQ validCount+40(FP), R10
+
+    XORQ AX, AX
+    XORQ BX, BX
+    XORQ R11, R11
+
+    CMPQ CX, $0
+    JLE done_sum_sq
+
+loop_scalar_sum_sq:
+    CMPQ DX, $0
+    JE process_pixel
+    MOVB (DX), R12B
+    CMPB R12B, $0
+    JE skip_pixel
+
+process_pixel:
+    MOVBLZX (SI), R12
+    ADDQ R12, AX
+    MOVQ R12, R13
+    IMULQ R13, R13
+    ADDQ R13, BX
+    INCQ R11
+
+skip_pixel:
+    INCQ SI
+    CMPQ DX, $0
+    JE no_inc_mask_sum
+    INCQ DX
+no_inc_mask_sum:
+    DECQ CX
+    JNZ loop_scalar_sum_sq
+
+done_sum_sq:
+    MOVQ AX, (R8)
+    MOVQ BX, (R9)
+    MOVQ R11, (R10)
+    RET
+

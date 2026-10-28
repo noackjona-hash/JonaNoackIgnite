@@ -1,0 +1,15 @@
+{
+  "step_number": 28,
+  "phase_number": 5,
+  "phase_name": "Phase V: Statistical Outlier Profiling & Thresholding",
+  "name": "Biologischer Temperaturboden",
+  "description": "Schließt kalte Randzonen und ischämisch abgestorbene Randartefakte unterhalb von 20 °C vor der Schwellwertbildung aus.",
+  "formula": "\\mathcal{M}_{\\text{valid}} = \\mathcal{M}_{\\text{tissue}} \\cap \\{ (x,y) \\mid T(x,y) \\ge T_{\\text{floor}} \\}, \\quad T_{\\text{floor}} = 20{,}0\\,^\\circ\\text{C}",
+  "duration_ms": 3.727899999830697,
+  "metrics": {
+    "T_Floor": "20.0 °C",
+    "Ausgeschlossen": 0,
+    "Status": "Validiert"
+  },
+  "image_filename": "step_28_biologischer_temperaturboden.png"
+}

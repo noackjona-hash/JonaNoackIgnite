@@ -1,0 +1,15 @@
+{
+  "step_number": 27,
+  "phase_number": 5,
+  "phase_name": "Phase V: Statistical Outlier Profiling & Thresholding",
+  "name": "Hampel-MAD Skalenschätzung",
+  "description": "Berechnet die Median Absolute Deviation (MAD): Verhindert Maskierungsfehler (Swamping & Masking) durch floride Entzündungsareale.",
+  "formula": "\\text{MAD} = \\text{median}(|x_i - \\text{Median}|), \\quad \\hat{\\sigma} = 1{,}4826 \\cdot \\text{MAD}",
+  "duration_ms": 5.505199999788601,
+  "metrics": {
+    "MAD": "12.00",
+    "Sigma σ̂": "17.79",
+    "Konsistenzfaktor": "1.4826"
+  },
+  "image_filename": "step_27_hampel_mad_skalenschätzung.png"
+}

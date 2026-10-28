@@ -4,6 +4,7 @@ import (
 	"math"
 
 	"ignite-core/pkg/imageutil"
+	"ignite-core/pkg/morphology"
 )
 
 // BioheatPerfusionMap encapsulates the quantitative microvascular perfusion rate field
@@ -55,19 +56,29 @@ func SolvePennesBioheatField(src *imageutil.GrayMatrix, bodyMask *imageutil.Gray
 
 	// Step 1: Convert 8-bit sensor intensity to absolute temperature matrix T(x, y) [°C]
 	tempMatrix := imageutil.NewFloatMatrix(w, h)
-	rangeT := tMax - tMin
-	for y := 0; y < h; y++ {
-		row := y * w
-		for x := 0; x < w; x++ {
-			rawVal := float64(src.Data[row+x])
-			tempMatrix.Data[row+x] = float32(tMin + (rawVal/255.0)*rangeT)
-		}
+	rangeT := float32(tMax - tMin)
+	scale := rangeT / 255.0
+	offset := float32(tMin)
+	for i, v := range src.Data {
+		tempMatrix.Data[i] = float32(v)*scale + offset
 	}
 
 	// Step 2: Compute discrete 2D Laplacian nabla^2 T in physical SI units [K / m^2]
 	// nabla^2 T = [ T(x+1, y) + T(x-1, y) + T(x, y+1) + T(x, y-1) - 4*T(x,y) ] / dx^2
 	dx2 := pixelPitch * pixelPitch
 	perfField := imageutil.NewFloatMatrix(w, h)
+
+	// Precompute vectorized 2D Laplacian field using AVX2 SIMD
+	laplacianField := imageutil.NewFloatMatrix(w, h)
+	for y := 1; y < h-1; y++ {
+		centerRow := tempMatrix.Data[y*w+1 : (y+1)*w-1]
+		leftRow := tempMatrix.Data[y*w : (y+1)*w-2]
+		rightRow := tempMatrix.Data[y*w+2 : (y+1)*w]
+		upRow := tempMatrix.Data[(y-1)*w+1 : y*w-1]
+		downRow := tempMatrix.Data[(y+1)*w+1 : (y+2)*w-1]
+		dstRow := laplacianField.Data[y*w+1 : (y+1)*w-1]
+		morphology.Laplacian2DVectorFloat32(centerRow, leftRow, rightRow, upRow, downRow, dstRow)
+	}
 
 	var (
 		sumPerf        float64
@@ -80,7 +91,7 @@ func SolvePennesBioheatField(src *imageutil.GrayMatrix, bodyMask *imageutil.Gray
 
 	for y := 1; y < h-1; y++ {
 		row := y * w
-		for x := 1; x < w; x++ {
+		for x := 1; x < w-1; x++ {
 			p := row + x
 			if bodyMask != nil && bodyMask.Data[p] == 0 {
 				continue
@@ -91,12 +102,8 @@ func SolvePennesBioheatField(src *imageutil.GrayMatrix, bodyMask *imageutil.Gray
 				continue
 			}
 
-			// 2D discrete Laplacian (4-neighbor stencil)
-			tL := float64(tempMatrix.Data[row+x-1])
-			tR := float64(tempMatrix.Data[row+x+1])
-			tT := float64(tempMatrix.Data[(y-1)*w+x])
-			tB := float64(tempMatrix.Data[(y+1)*w+x])
-			laplacianSI := (tL + tR + tT + tB - 4.0*tc) / dx2
+			// 2D discrete Laplacian from vectorized AVX2 field
+			laplacianSI := float64(laplacianField.Data[p]) / dx2
 
 			// Surface thermal losses: Convective + Stefan-Boltzmann radiative
 			tKelvin := tc + 273.15

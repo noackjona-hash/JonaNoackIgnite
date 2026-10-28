@@ -1,0 +1,15 @@
+{
+  "step_number": 20,
+  "phase_number": 4,
+  "phase_name": "Phase IV: Multiscale Morphological Anomaly Extraction",
+  "name": "1D Horizontale Minkowski Erosion",
+  "description": "Erste Stufe der separablen morphologischen Erosion: Findet das horizontale lokale Minimum über 2R+1 Pixel.",
+  "formula": "\\mathcal{E}_H(I)(x,y) = \\min_{-R \\le k \\le R} I(x+k, y)",
+  "duration_ms": 2.3842999999033054,
+  "metrics": {
+    "Kernel-Typ": "1D Horizontal",
+    "Länge": "109 px",
+    "Komplexität": "O(R)"
+  },
+  "image_filename": "step_20_1d_horizontale_minkowski_erosion.png"
+}

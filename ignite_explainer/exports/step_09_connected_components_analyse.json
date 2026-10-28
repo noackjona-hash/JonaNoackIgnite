@@ -1,0 +1,15 @@
+{
+  "step_number": 9,
+  "phase_number": 2,
+  "phase_name": "Phase II: Anatomical Body Segmentation & Geodesics",
+  "name": "Connected Components Analyse",
+  "description": "Isoliert alle anatomischen Gewebestrukturen mittels 4-Wege Breiten-Graphsuche (BFS) in diskrete Zusammenhangskomponenten.",
+  "formula": "\\mathcal{C}_k = \\{ p \\in \\Omega \\mid \\exists\\,\\text{4-Weg-Pfad zu } q \\in \\mathcal{C}_k \\}",
+  "duration_ms": 5.308399999648827,
+  "metrics": {
+    "Komponenten": 171,
+    "Konnektivität": "4-fach vernetzt",
+    "Methode": "BFS Traversierung"
+  },
+  "image_filename": "step_09_connected_components_analyse.png"
+}

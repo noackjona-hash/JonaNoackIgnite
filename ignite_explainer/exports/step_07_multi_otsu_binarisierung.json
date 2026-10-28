@@ -1,0 +1,15 @@
+{
+  "step_number": 7,
+  "phase_number": 2,
+  "phase_name": "Phase II: Anatomical Body Segmentation & Geodesics",
+  "name": "Multi-Otsu Binarisierung",
+  "description": "Deterministische Trennung von biologischem Gewebe und Raumhintergrund durch Maximierung der Inter-Klassen-Varianz σ_B².",
+  "formula": "\\sigma_B^2(t) = \\omega_0(t)\\omega_1(t)[\\mu_0(t) - \\mu_1(t)]^2, \\quad t^* = \\arg\\max_t \\sigma_B^2(t)",
+  "duration_ms": 3.6577000000761473,
+  "metrics": {
+    "Otsu-Schwelle": 97,
+    "Gewebeanteil": "24.3 %",
+    "Pixelanzahl": 378525
+  },
+  "image_filename": "step_07_multi_otsu_binarisierung.png"
+}

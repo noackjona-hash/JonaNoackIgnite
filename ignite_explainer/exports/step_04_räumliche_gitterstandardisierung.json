@@ -1,0 +1,15 @@
+{
+  "step_number": 4,
+  "phase_number": 1,
+  "phase_name": "Phase I: Sensor & Radiometric Calibration",
+  "name": "Räumliche Gitterstandardisierung",
+  "description": "Kalibriert das Pixelkoordinatensystem auf metrische Einheiten (0.6 mm/Pixel) für normgerechte Wundflächenvermessung nach DIN EN ISO 13485.",
+  "formula": "\\text{Pitch} = 0{,}6\\,\\text{mm/px}, \\quad \\text{Fläche}(A) = \\text{Pixelanzahl} \\cdot \\text{Pitch}^2",
+  "duration_ms": 0.0015999999050109182,
+  "metrics": {
+    "Sensor-Pitch": "0.6 mm/px",
+    "Breite": "864.0 mm",
+    "Höhe": "648.0 mm"
+  },
+  "image_filename": "step_04_räumliche_gitterstandardisierung.png"
+}

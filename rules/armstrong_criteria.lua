@@ -6,7 +6,7 @@
 
 function evaluate_hotspot(hotspot, stats)
     local contra_delta = hotspot.contra_delta
-    if contra_delta == nil or contra_delta <= 0 then
+    if contra_delta == nil then
         local baseline = stats.orig_median or stats.median or 120.0
         contra_delta = hotspot.max_val - baseline
     end
@@ -23,13 +23,15 @@ function evaluate_hotspot(hotspot, stats)
     local has_halo = halo_delta >= 5.0
     local is_focal_metabolic = laplacian <= -3.5 or peak_to_mean >= 1.25
 
-    -- 0. Deeskalation bilateral symmetrischer Muskelphysiologie (Waden / Oberschenkel):
-    -- Wenn kontralaterale Asymmetrie unter dem Armstrong-Schwellenwert (1.8 K) liegt und keine fokale Überhöhung oder scharfe Kante vorliegt:
-    if contra_delta < 18.0 and prominence < 25.0 and not is_sharp_edge and not has_halo and not is_focal_metabolic then
+    -- 0. Klinische Grundvoraussetzung nach Armstrong (IWGDF 2023):
+    -- Ein pathologisches Gewebeulkus / Entzündungsherd erfordert zwingend eine signifikante
+    -- kontralaterale Asymmetrie (Delta T >= 1.2 K). Hypotherme oder kältere Zonen der Gegenseite
+    -- (Delta T < 1.2 K) sind per se physiologisch unbedenklich (BENIGN).
+    if contra_delta < 12.0 then
         return {
             risk_level = "BENIGN",
             diagnosis_type = "BENIGN",
-            recommendation = "Physiologische Gewebesymmetrie / normaler Muskelbefund (Armstrong Asymmetrie Delta T < 1.8 K).",
+            recommendation = "Physiologische Gewebesymmetrie / unbedenklicher Befund (keine signifikante kontralaterale Asymmetrie, Delta T < 1.2 K).",
             score = 1.0
         }
     end

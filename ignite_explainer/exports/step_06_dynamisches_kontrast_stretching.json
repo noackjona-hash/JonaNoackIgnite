@@ -1,0 +1,15 @@
+{
+  "step_number": 6,
+  "phase_number": 1,
+  "phase_name": "Phase I: Sensor & Radiometric Calibration",
+  "name": "Dynamisches Kontrast-Stretching",
+  "description": "Spreizt den 8-Bit Dynamikbereich exakt über das biologisch relevante Gewebeband (22–36 °C), um subtilste Entzündungsgradienten sichtbar zu machen.",
+  "formula": "I_{\\text{stretch}} = \\text{clip}\\left(\\frac{T - T_{\\text{low}}}{T_{\\text{high}} - T_{\\text{low}}} \\cdot 255,\\, 0,\\, 255\\right)",
+  "duration_ms": 12.187599999833765,
+  "metrics": {
+    "Fenster Min": "22.0 °C",
+    "Fenster Max": "36.0 °C",
+    "Dynamik": "256 Stufen"
+  },
+  "image_filename": "step_06_dynamisches_kontrast_stretching.png"
+}

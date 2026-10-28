@@ -1,0 +1,15 @@
+{
+  "step_number": 39,
+  "phase_number": 7,
+  "phase_name": "Phase VII: Biophysical Differential Diagnosis & Triage",
+  "name": "2D-Laplace Divergenzanalyse",
+  "description": "Bestätigt mittels Divergenzoperator ∇²T, ob ein Herd als biophysikalische Wärmequelle (lokale Stoffwechselsteigerung) fungiert.",
+  "formula": "\\nabla^2 T = \\frac{\\partial^2 T}{\\partial x^2} + \\frac{\\partial^2 T}{\\partial y^2} < 0 \\implies \\text{Lokale Wärmequelle}",
+  "duration_ms": 31.51060000027428,
+  "metrics": {
+    "Operator": "Diskreter 3x3 Laplace",
+    "Quelle": "∇²T < 0 bestätigt",
+    "Senke": "∇²T > 0"
+  },
+  "image_filename": "step_39_2d_laplace_divergenzanalyse.png"
+}

@@ -12,10 +12,10 @@ __pycache__/
 .pytest_cache/
 
 # Virtual Environments
-.venv/
-venv/
-env/
-ENV/
+**/.venv/
+**/venv/
+**/env/
+**/ENV/
 
 # Maturin & Build Artifacts
 /dist/
@@ -39,6 +39,7 @@ desktop.ini
 
 # Installer & Binaries
 *.exe
+*.exe~
 *.msi
 /dist/
 /build/
@@ -46,6 +47,10 @@ desktop.ini
 /target/
 ignite_steps_output/
 *.spec
+*.obj
+*.ply
+*.stl
+noackjona-hash_*.json
 
 # .NET / C#
 **/bin/
@@ -65,6 +70,7 @@ core/ignite-core.exe
 
 # Temporary CLI outputs
 ergebnis.json
+test_output.json
 
 # LaTeX artifacts
 *.aux

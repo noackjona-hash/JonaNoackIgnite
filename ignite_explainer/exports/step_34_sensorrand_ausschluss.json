@@ -1,0 +1,15 @@
+{
+  "step_number": 34,
+  "phase_number": 6,
+  "phase_name": "Phase VI: Geometric Morphology & Artifact Rejection",
+  "name": "Sensorrand-Ausschluss",
+  "description": "Schließt Randartefakte und Vignettierungseffekte an den Kanten des Bolometer-Sensors aus.",
+  "formula": "\\text{Valid}(\\mathcal{R}_k) \\iff \\text{BBox}(\\mathcal{R}_k) \\subset [b_{\\text{px}},\\, W - b_{\\text{px}}] \\times [b_{\\text{px}},\\, H - b_{\\text{px}}]",
+  "duration_ms": 0.014299999747890979,
+  "metrics": {
+    "Randabstand": "15 px",
+    "Sicher im Zentrum": 6,
+    "Am Rand verworfen": 0
+  },
+  "image_filename": "step_34_sensorrand_ausschluss.png"
+}

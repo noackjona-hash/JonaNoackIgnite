@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="IGNITE Medical Workstation – klinische PACS-Oberfläche zur Infrarot-Thermografie-Befundung (DFS / IWGDF / Armstrong).">
+    <title>IGNITE Medical Workstation · ThermoAI Vision v5.0.0</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="workstation.css">
+</head>
+<body>
+<!-- ====================================================================
+     CLINICAL PACS MEDICAL SPLASH SCREEN (DIN EN ISO 13485 / JUFO 2026)
+     ==================================================================== -->
+<div id="splash-screen" class="splash-visible">
+    <div class="splash-backdrop-glow"></div>
+    <div class="splash-grid-pattern"></div>
+    <div class="splash-card">
+        <!-- Top Regulatory & Header Bar -->
+        <div class="splash-top-bar">
+            <div class="splash-cert-badge">
+                <span class="cert-pulse-dot"></span>
+                <span>DIN EN ISO 13485 CERTIFIED PACS WORKSTATION</span>
+            </div>
+            <div class="splash-build-tag">BUILD 2026.04 · PURE GO + AVX2</div>
+        </div>
+
+        <!-- Central Brand Emblem & Title -->
+        <div class="splash-hero">
+            <div class="splash-logo-container">
+                <div class="splash-logo-halo"></div>
+                <div class="splash-logo-icon">
+                    <svg class="splash-caduceus" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="32" cy="32" r="30" stroke="url(#sp-blue)" stroke-width="2" stroke-dasharray="4 2" opacity="0.6"/>
+                        <path d="M32 8V56" stroke="url(#sp-cyan)" stroke-width="3" stroke-linecap="round"/>
+                        <path d="M22 20C22 20 28 16 32 24C36 32 42 28 42 28" stroke="#38BDF8" stroke-width="2.5" stroke-linecap="round"/>
+                        <path d="M42 36C42 36 36 32 32 40C28 48 22 44 22 44" stroke="#38BDF8" stroke-width="2.5" stroke-linecap="round"/>
+                        <circle cx="32" cy="10" r="4" fill="#38BDF8"/>
+                        <!-- Animated ECG Pulse Line -->
+                        <path class="ecg-trace" d="M8 32H22L25 21L30 43L34 24L38 37L41 32H56" stroke="#00F0FF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <defs>
+                            <linearGradient id="sp-blue" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#0284C7"/>
+                                <stop offset="1" stop-color="#38BDF8"/>
+                            </linearGradient>
+                            <linearGradient id="sp-cyan" x1="32" y1="8" x2="32" y2="56" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#38BDF8"/>
+                                <stop offset="1" stop-color="#0284C7"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="splash-brand-text">
+                <div class="splash-title-row">
+                    <span class="splash-title-main">IGNITE</span>
+                    <span class="splash-title-sub">THERMOAI VISION</span>
+                </div>
+                <div class="splash-tagline">Autonomous Clinical Infrared Diagnostics &amp; Diabetic Foot Ulcer Prevention</div>
+                <div class="splash-project-meta">
+                    <span class="splash-meta-badge meta-jufo">🏆 Jugend forscht 2026</span>
+                    <span class="splash-meta-badge meta-author">Jona Noack</span>
+                    <span class="splash-meta-badge meta-class">MDR SaMD Klasse IIa</span>
+                    <span class="splash-meta-badge meta-tech">Go 1.24 · AVX2 SIMD</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Subsystem Diagnostic Initialization Log -->
+        <div class="splash-diag-console">
+            <div class="splash-diag-header">
+                <span class="diag-console-title">SYSTEM-INITIALISIERUNG &amp; HARDWARE-DIAGNOSE</span>
+                <span class="diag-console-status" id="splash-diag-counter">0 / 7 SUBSYSTEME</span>
+            </div>
+            <div class="splash-steps-list" id="splash-steps-box">
+                <!-- Dynamically filled with diagnostic steps -->
+            </div>
+        </div>
+
+        <!-- Progress Bar & Status -->
+        <div class="splash-progress-wrapper">
+            <div class="splash-progress-info">
+                <span id="splash-progress-label">Initialisiere diagnostische Subsysteme...</span>
+                <span id="splash-progress-pct" class="splash-pct-num">0%</span>
+            </div>
+            <div class="splash-progress-track">
+                <div class="splash-progress-bar" id="splash-bar">
+                    <div class="splash-bar-glow"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer & Dismiss Actions -->
+        <div class="splash-footer">
+            <div class="splash-footer-left">
+                <span>Sensorschnittstelle: FLIR LWIR 8–14 µm (NETD &lt; 40 mK) · Armstrong-Kriterien (ΔT ≥ 2,2 K) &amp; IWGDF 2023</span>
+            </div>
+            <div class="splash-footer-right">
+                <button class="splash-skip-btn" id="splash-btn-skip" title="Direkt zur Workstation springen">
+                    <span>Workstation starten ➔</span>
+                    <kbd>Leertaste / Esc</kbd>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="app-container">
+    <!-- TOP WORKSTATION HEADER -->
+    <header id="workstation-header">
+        <div class="header-left">
+            <div class="logo-box"><span class="logo-flame">⚡</span></div>
+            <div class="title-box">
+                <div class="title-row">
+                    <span class="app-title">IGNITE</span>
+                    <span class="badge badge-version">v5.0.0 · Go Core</span>
+                    <span class="badge badge-simd">AVX2 SIMD</span>
+                    <span class="badge badge-iso">DIN EN ISO 13485</span>
+                    <span class="sensor-beacon" title="Live-Sensorverbindung"><span class="beacon-dot"></span>LWIR SENSOR ONLINE</span>
+                </div>
+                <div class="app-subtitle">THERMOAI VISION · CLINICAL MEDICAL PACS WORKSTATION · FLIR LWIR 8–14 µm</div>
+            </div>
+        </div>
+        <div class="header-center">
+            <div class="segmented-control" id="viewport-mode-selector">
+                <button class="seg-btn active" data-mode="dual" id="btn-mode-dual"><span>◫ Dual-Viewport</span></button>
+                <button class="seg-btn" data-mode="curtain" id="btn-mode-curtain"><span>◧ Vorhang-Split</span></button>
+                <button class="seg-btn" data-mode="overlay" id="btn-mode-overlay"><span>▣ Vollbild Befund</span></button>
+            </div>
+        </div>
+        <div class="header-right">
+            <button class="action-btn btn-ghost" data-act="toggleDarkroom" id="btn-darkroom" title="Dunkelkammer-Modus (OLED Reinschwarz)"><span>🌙 Dunkelkammer</span></button>
+            <button class="action-btn btn-ghost" data-act="toggleAudio" id="btn-audio" title="Klinische Tonsignale ein/aus"><span>🔊 Ton: AN</span></button>
+            <button class="action-btn btn-ghost" data-act="showSplash" id="btn-splash-replay" title="System-Start &amp; Diagnostics anzeigen"><span>🚀 Splash</span></button>
+            <button class="action-btn btn-ghost" data-act="undo" id="btn-undo" title="Rückgängig (Strg+Z)">↶</button>
+            <button class="action-btn btn-ghost" data-act="redo" id="btn-redo" title="Wiederholen (Strg+Y)">↷</button>
+            <button class="action-btn btn-secondary" id="btn-open-file" data-act="open" title="Wärmebild von Festplatte laden (Strg+O)"><span>📂 Bild laden</span></button>
+            <button class="action-btn btn-primary" id="btn-quick-demo" data-act="demo" title="Kalibriertes Demobild auswerten"><span>⚡ Schnelltest</span></button>
+            <button class="action-btn btn-ghost" id="btn-open-pap" data-act="pap" title="42-Stufen Programmablaufplan (Strg+P)"><span>📊 PAP Stufen</span></button>
+        </div>
+    </header>
+
+    <!-- MENU BAR -->
+    <nav id="menubar">
+        <div class="menu"><button class="menu-btn">Datei</button><div class="menu-drop">
+            <button data-act="open">Neues Wärmebild öffnen… <kbd>Strg+O</kbd></button>
+            <button data-act="demo">Schnelltest (Demobild)</button>
+            <button data-act="openSecond">Kontralaterales / Verlaufsbild laden…</button>
+            <hr>
+            <button data-act="prevCase">Vorheriger Fall <kbd>←</kbd></button>
+            <button data-act="nextCase">Nächster Fall <kbd>→</kbd></button>
+            <hr>
+            <button data-act="undo">Rückgängig <kbd>Strg+Z</kbd></button>
+            <button data-act="redo">Wiederholen <kbd>Strg+Y</kbd></button>
+            <button data-act="reset">Alles zurücksetzen <kbd>Strg+R</kbd></button>
+            <hr>
+            <button data-act="quit">Beenden</button>
+        </div></div>
+        <div class="menu"><button class="menu-btn">Ansicht</button><div class="menu-drop">
+            <button data-view="normal">Thermogramm (Palette)</button>
+            <button data-view="isotherm">Isothermen-Bandfilter</button>
+            <button data-view="relief">2,5D Topografisches Relief</button>
+            <button data-view="corrected">3D-Lambertian Kantenkorrektur</button>
+            <button data-view="bioheat">Pennes-Bioheat Perfusion</button>
+            <button data-view="laplace">Laplace-Wärmefluss ∇²T</button>
+            <button data-view="dsa">DSA – Venen-Subtraktion</button>
+            <button data-view="pressure">Plantardruck-Proxy (kPa)</button>
+            <button data-view="mirror">Kontralaterale Differenz |L − R|</button>
+            <button data-view="compare">Verlaufsvergleich |A − B|</button>
+            <button data-view="depth">3D-Tiefenkarte (mm)</button>
+            <hr>
+            <button data-act="fit">Einpassen <kbd>0</kbd></button>
+            <button data-act="actual">1:1 Pixel <kbd>1</kbd></button>
+            <button data-act="zoomIn">Vergrößern <kbd>+</kbd></button>
+            <button data-act="zoomOut">Verkleinern <kbd>−</kbd></button>
+            <hr>
+            <button data-act="toggleFindings">Befund-Overlay ein/aus</button>
+            <button data-act="toggleZones">5-Zonen-Overlay ein/aus</button>
+            <button data-act="toggleVeins">Venen-Overlay ein/aus</button>
+            <button data-act="toggleInvert">Palette invertieren</button>
+            <button data-act="toggleSync">Viewport-Synchronisation</button>
+            <button data-act="toggleFilmstrip">Filmstreifen ein/aus</button>
+        </div></div>
+        <div class="menu"><button class="menu-btn">Messen</button><div class="menu-drop">
+            <button data-tool="crosshair">Fadenkreuz</button>
+            <button data-tool="pan">Verschieben (Pan)</button>
+            <button data-tool="rect">Rechteck-ROI</button>
+            <button data-tool="circle">Kreis-/Ellipsen-ROI</button>
+            <button data-tool="poly">Freihand-Polygon-ROI</button>
+            <button data-tool="profile">Schnittprofil A–B</button>
+            <button data-tool="probe">Punktsonde</button>
+            <button data-tool="gonio">Goniometer (3 Punkte)</button>
+            <button data-tool="ruler">Lineal (mm)</button>
+            <button data-tool="text">Text-/Pfeil-Annotation</button>
+            <button data-tool="erase">Radierer</button>
+            <hr>
+            <button data-act="clearAnn">Alle Markierungen löschen</button>
+        </div></div>
+        <div class="menu"><button class="menu-btn">3D / CAD</button><div class="menu-drop">
+            <button data-act="exportObj">Wavefront OBJ (Thermofarben)…</button>
+            <button data-act="exportStl">Binäres STL (3D-Druck)…</button>
+            <button data-act="exportPly">Stanford PLY…</button>
+            <button data-act="exportXyz">XYZ-Punktwolke…</button>
+            <button data-act="exportDepthCsv">Tiefenmatrix (CSV)…</button>
+        </div></div>
+        <div class="menu"><button class="menu-btn">Berichte</button><div class="menu-drop">
+            <button data-act="reportPdf">Ärztlicher Befundbericht (PDF/Druck)…</button>
+            <button data-act="reportHtml">Befundbericht (HTML)…</button>
+            <button data-act="exportJson">Patientendatensatz (JSON)…</button>
+            <button data-act="hotspotsCsv">Herde &amp; Ulkusrisiko (CSV)…</button>
+            <button data-act="zonesCsv">5-Zonen &amp; Biomechanik (CSV)…</button>
+            <button data-act="matrixCsv">2D-Temperaturmatrix (CSV)…</button>
+            <hr>
+            <button data-act="exportViewPng">Aktuelle Ansicht (PNG)…</button>
+            <button data-act="exportOverlayPng">Diagnostisches Befund-Overlay (PNG)…</button>
+            <button data-act="exportVascPng">Frangi-Gefäßbaum (PNG)…</button>
+            <button data-act="exportDepthPng">3D-Tiefenkarte (PNG)…</button>
+        </div></div>
+        <div class="menu"><button class="menu-btn">Extras</button><div class="menu-drop">
+            <button data-act="autosplit">Extremitäten trennen (L/R)</button>
+            <button data-act="luaTab">Lua-Regeleditor öffnen</button>
+            <button data-act="benchmark">AVX2-Benchmark ausführen</button>
+            <button data-act="auditVerify">Audit-Kette (SHA-256) prüfen</button>
+        </div></div>
+        <div class="menu"><button class="menu-btn">Hilfe</button><div class="menu-drop">
+            <button data-act="showSplash">🚀 Splash-Screen &amp; Systemdiagnose…</button>
+            <button data-act="shortcuts">Tastenkürzel</button>
+            <button data-act="about">Über IGNITE (Jugend forscht 2026)</button>
+        </div></div>
+    </nav>
+
+    <!-- CLINICAL DEMOGRAPHICS & STUDY HEADER (DICOM/PACS) -->
+    <section id="patient-banner" aria-label="Patientenstammdaten und Studienkontext">
+        <div class="pat-item pat-main">
+            <span class="pat-icon">🪪</span>
+            <div class="pat-meta">
+                <div class="pat-line1"><strong id="pat-id">ANON-7F4C82</strong> <span class="badge badge-pat-demo" id="pat-demo">M · 68 J.</span> <span class="badge badge-acc">ACC #904218-DFS</span></div>
+                <div class="pat-line2"><span class="lbl">Abt.:</span> Diabetologie &amp; Angiologische Gefäßchirurgie · Univ.-Klinikum</div>
+            </div>
+        </div>
+        <div class="pat-sep"></div>
+        <div class="pat-item">
+            <span class="lbl">STUDIE / PROTOKOLL</span>
+            <div class="pat-val" id="pat-study">Plantar Pedis Bilateral (Armstrong-Protokoll)</div>
+        </div>
+        <div class="pat-sep"></div>
+        <div class="pat-item">
+            <span class="lbl">AUFNAHMEZEITPUNKT</span>
+            <div class="pat-val" id="pat-datetime">2026-10-24 11:42:15 CET</div>
+        </div>
+        <div class="pat-sep"></div>
+        <div class="pat-item">
+            <span class="lbl">SENSORIK / KALIBRIERUNG</span>
+            <div class="pat-val" id="pat-sensor">FLIR LWIR (NETD &lt; 40 mK · 0.60 mm/px)</div>
+        </div>
+        <div class="pat-sep"></div>
+        <div class="pat-item">
+            <span class="lbl">KLINISCHE PARAMETER</span>
+            <div class="pat-val"><span class="highlight-param">ε = 0.98</span> (DIN 54183) · <span class="highlight-param">21.8 °C / 45% r.F.</span></div>
+        </div>
+        <div class="pat-sep"></div>
+        <div class="pat-item pat-status-box">
+            <span class="lbl">REGULATORIK</span>
+            <div class="pat-val"><span class="badge badge-samd">SaMD Klasse IIa</span> <span class="badge badge-iso">ISO 13485</span></div>
+        </div>
+        <div class="pat-actions">
+            <button class="mini-btn pat-btn" id="btn-edit-patient" data-act="editPatient" title="Patientenstammdaten bearbeiten">✏️ Akte</button>
+            <button class="mini-btn pat-btn" id="btn-anonymize" data-act="anonymizePatient" title="Pseudonym nach DSGVO Art. 25 neu generieren">🔒 Anon</button>
+        </div>
+    </section>
+
+    <!-- DISPLAY TOOLBAR -->
+    <div id="display-toolbar">
+        <label>Palette <select id="sel-palette"></select></label>
+        <label>W/L-Preset <select id="sel-wl">
+            <option value="standard">Standard LWIR (20–45 °C)</option><option value="druck">Druck / Knochen (30–38 °C)</option>
+            <option value="vaskulaer">Vaskulär / Perfusion (28–36 °C)</option><option value="zehen">Extremitäten / Zehen (22–32 °C)</option>
+            <option value="voll">Vollbereich (Auto Min-Max)</option></select></label>
+        <label>Window <input type="range" id="sl-window" min="20" max="255" value="255"><span id="val-window">255</span></label>
+        <label>Level <input type="range" id="sl-level" min="0" max="255" value="128"><span id="val-level">128</span></label>
+        <label>Ansicht <select id="sel-view">
+            <option value="normal">Thermogramm</option><option value="isotherm">Isothermen</option>
+            <option value="relief">2,5D Relief</option><option value="corrected">3D-Korrektur</option>
+            <option value="bioheat">Bioheat</option><option value="laplace">Laplace ∇²T</option>
+            <option value="dsa">DSA Venen</option><option value="pressure">Plantardruck</option>
+            <option value="mirror">L − R Differenz</option><option value="compare">Verlauf A − B</option>
+            <option value="depth">3D-Tiefe</option></select></label>
+        <span id="iso-controls" class="hidden">
+            <label>Iso ab <input type="range" id="sl-iso-lo" min="20" max="45" step="0.1" value="30"><span id="val-iso-lo">30.0 °C</span></label>
+            <label>bis <input type="range" id="sl-iso-hi" min="20" max="45" step="0.1" value="40"><span id="val-iso-hi">40.0 °C</span></label>
+        </span>
+        <span class="tb-sep"></span>
+        <button class="tb-btn" data-act="zoomOut" title="Verkleinern">−</button>
+        <span id="zoom-readout">100 %</span>
+        <button class="tb-btn" data-act="zoomIn" title="Vergrößern">+</button>
+        <button class="tb-btn" data-act="fit" title="Einpassen">⤢ Fit</button>
+        <button class="tb-btn" data-act="actual" title="1:1">1:1</button>
+        <button class="tb-btn toggle active" id="tb-sync" data-act="toggleSync" title="Zoom/Pan beider Viewports koppeln">⛓ Sync</button>
+        <button class="tb-btn toggle active" id="tb-findings" data-act="toggleFindings" title="Befund-Overlay">◎ Befund</button>
+        <button class="tb-btn toggle" id="tb-invert" data-act="toggleInvert" title="Palette invertieren">◐ Invers</button>
+        <button class="tb-btn" data-act="autosplit" title="Linken &amp; rechten Fuß trennen">✂ L/R</button>
+        <button class="tb-btn" data-act="reset" title="Alles zurücksetzen (Strg+R)">↺ Reset</button>
+    </div>
+
+    <!-- MAIN WORKSPACE -->
+    <main id="workstation-main">
+        <!-- PACS TOOLSTRIP -->
+        <aside id="toolstrip">
+            <button class="tool-btn active" data-tool="crosshair" title="Fadenkreuz &amp; Reticle">⌖</button>
+            <button class="tool-btn" data-tool="pan" title="Verschieben">✋</button>
+            <button class="tool-btn" data-tool="rect" title="Rechteck-ROI">▭</button>
+            <button class="tool-btn" data-tool="circle" title="Kreis-ROI">◯</button>
+            <button class="tool-btn" data-tool="poly" title="Freihand-ROI (Doppelklick schließt)">⬡</button>
+            <button class="tool-btn" data-tool="profile" title="Schnittprofil A–B">╱</button>
+            <button class="tool-btn" data-tool="probe" title="Punktsonde">📍</button>
+            <button class="tool-btn" data-tool="gonio" title="Goniometer (3 Punkte)">∠</button>
+            <button class="tool-btn" data-tool="ruler" title="Lineal (mm)">📏</button>
+            <button class="tool-btn" data-tool="text" title="Text-Annotation">T</button>
+            <button class="tool-btn" data-tool="erase" title="Radierer">⌫</button>
+        </aside>
+
+        <!-- VIEWPORT SECTION -->
+        <section id="viewport-section">
+            <div id="viewports-wrapper" class="mode-dual">
+                <div class="viewport-box" id="viewport-left">
+                    <div class="viewport-badge-bar">
+                        <span class="vp-badge">1. ROH-THERMOGRAMM (LWIR 8–14 µm)</span>
+                        <span class="vp-telemetry" id="telemetry-left">1440 × 1080 px</span>
+                    </div>
+                    <div class="canvas-container" id="container-orig">
+                        <canvas id="canvas-orig"></canvas>
+                        <canvas id="canvas-ann-orig" class="layer"></canvas>
+                        <canvas id="canvas-crosshair-orig" class="overlay-crosshair layer"></canvas>
+
+                        <!-- DICOM HUD OVERLAYS (CORNER ANNOTATIONS) -->
+                        <div class="dicom-hud hud-top-left">
+                            <div class="hud-line hud-bright" id="hud-l-pat">ANON-7F4C82 (M/68)</div>
+                            <div class="hud-line">PID: 904218-DFS</div>
+                            <div class="hud-line" id="hud-l-date">2026-10-24 11:42:15 CET</div>
+                        </div>
+                        <div class="dicom-hud hud-top-right">
+                            <div class="hud-line hud-bright">UNIVERSITÄTSKLINIKUM</div>
+                            <div class="hud-line">LWIR SCREENING (8–14 µm)</div>
+                            <div class="hud-line" id="hud-l-res">720 × 540 · 0.60 mm/px</div>
+                        </div>
+                        <div class="dicom-hud hud-bottom-left">
+                            <div class="hud-line" id="hud-l-wl">W: 25.5 K · L: 32.5 °C</div>
+                            <div class="hud-line" id="hud-l-zoom">ZOOM: 100% · FIT</div>
+                            <div class="hud-line" id="hud-l-lut">LUT: Ironbow (klinisch)</div>
+                        </div>
+                        <div class="dicom-hud hud-bottom-right">
+                            <div class="hud-line hud-cert">DIN EN ISO 13485</div>
+                            <div class="hud-line" id="hud-l-cal">CAL: NUC ISO-9712 OK</div>
+                            <div class="hud-line hud-flag">ROH-THERMOGRAMM</div>
+                        </div>
+
+                        <!-- ANATOMICAL COMPASS & ORIENTATION LABELS -->
+                        <div class="anat-tag anat-distal">D (DISTAL)</div>
+                        <div class="anat-tag anat-proximal">P (PROXIMAL)</div>
+                        <div class="anat-tag anat-left-limb">R</div>
+                        <div class="anat-tag anat-right-limb">L</div>
+                        <div class="pacs-metric-scale" id="scale-l">
+                            <div class="scale-bar"></div>
+                            <span class="scale-text">50 mm</span>
+                        </div>
+                    </div>
+                </div>
+                <div id="curtain-divider" class="hidden">
+                    <div class="curtain-line"></div>
+                    <div class="curtain-handle" id="curtain-handle"><span class="handle-icon">↔</span></div>
+                </div>
+                <div class="viewport-box" id="viewport-right">
+                    <div class="viewport-badge-bar">
+                        <span class="vp-badge vp-badge-accent" id="badge-right">2. BEFUND &amp; HOTSPOT-DIAGNOSTIK</span>
+                        <span class="vp-telemetry" id="telemetry-right">Armstrong ΔT ≥ 2,2 K</span>
+                    </div>
+                    <div class="canvas-container" id="container-result">
+                        <canvas id="canvas-result"></canvas>
+                        <canvas id="canvas-ann-result" class="layer"></canvas>
+                        <canvas id="canvas-crosshair-result" class="overlay-crosshair layer"></canvas>
+
+                        <!-- DICOM HUD OVERLAYS (CORNER ANNOTATIONS) -->
+                        <div class="dicom-hud hud-top-left">
+                            <div class="hud-line hud-bright" id="hud-r-pat">ANON-7F4C82 · BEFUND</div>
+                            <div class="hud-line">DFS / IWGDF 2023 PROTOKOLL</div>
+                            <div class="hud-line hud-alert" id="hud-r-status">ARMSTRONG: ΔT ≥ 2,2 K</div>
+                        </div>
+                        <div class="dicom-hud hud-top-right">
+                            <div class="hud-line hud-bright">DIAGNOSTIK-OVERLAY</div>
+                            <div class="hud-line" id="hud-r-hotspots">HOTSPOTS: 1 DETEKTIERT</div>
+                            <div class="hud-line" id="hud-r-tai">TAI: 1.88 K · THDI: 5.6 K</div>
+                        </div>
+                        <div class="dicom-hud hud-bottom-left">
+                            <div class="hud-line" id="hud-r-view">ANSICHT: THERMOGRAMM</div>
+                            <div class="hud-line" id="hud-r-zoom">ZOOM: 100% · SYNC ON</div>
+                            <div class="hud-line" id="hud-r-mesh">3D DEPTH: LAMBERTIAN</div>
+                        </div>
+                        <div class="dicom-hud hud-bottom-right">
+                            <div class="hud-line hud-cert">MDR SaMD KLASSE IIa</div>
+                            <div class="hud-line" id="hud-r-triage-badge">TRIAGE: KRITISCH (ROT)</div>
+                            <div class="hud-line" id="hud-r-max-t">MAX T: 43.5 °C (ΔT +6.4 K)</div>
+                        </div>
+
+                        <!-- ANATOMICAL COMPASS & ORIENTATION LABELS -->
+                        <div class="anat-tag anat-distal">D (DISTAL)</div>
+                        <div class="anat-tag anat-proximal">P (PROXIMAL)</div>
+                        <div class="anat-tag anat-left-limb">R</div>
+                        <div class="anat-tag anat-right-limb">L</div>
+                        <div class="pacs-metric-scale" id="scale-r">
+                            <div class="scale-bar"></div>
+                            <span class="scale-text">50 mm</span>
+                        </div>
+                    </div>
+                    
+                    <!-- CALIBRATED RADIOMETRIC MEDICAL COLORBAR -->
+                    <div id="colorbar" class="medical-colorbar" title="Radiometrische Temperaturskala (°C)">
+                        <div class="cb-header">TEMP [°C]</div>
+                        <div class="cb-body">
+                            <div class="cb-scale-ticks">
+                                <span class="cb-tick" style="top:0%">45°</span>
+                                <span class="cb-tick" style="top:20%">40°</span>
+                                <span class="cb-tick" style="top:40%">35°</span>
+                                <span class="cb-tick cb-tick-armstrong" style="top:44%">⚠ 34°</span>
+                                <span class="cb-tick" style="top:60%">30°</span>
+                                <span class="cb-tick" style="top:80%">25°</span>
+                                <span class="cb-tick" style="top:100%">20°</span>
+                            </div>
+                            <div class="cb-bar-container">
+                                <canvas id="cb-canvas" width="14" height="200"></canvas>
+                                <div id="cb-pointer" class="cb-pointer" style="top:50%"><span class="pointer-arrow">◀</span><span class="pointer-val" id="cb-pointer-val">32.5°</span></div>
+                                <div class="cb-risk-bracket" title="Armstrong Gefahrenzone (Hyperthermie)">
+                                    <span class="bracket-label">ARMSTRONG ALARM</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="cb-footer">NETD &lt; 40 mK</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FILMSTRIP -->
+            <div id="filmstrip">
+                <div id="filmstrip-head"><span>STUDIEN-FILMSTREIFEN</span><span id="filmstrip-count"></span>
+                    <button class="mini-btn" data-act="prevCase">‹</button><button class="mini-btn" data-act="nextCase">›</button>
+                    <button class="mini-btn" data-act="toggleFilmstrip">Ausblenden</button></div>
+                <div id="filmstrip-items"></div>
+            </div>
+
+            <!-- TELEMETRY -->
+            <footer id="live-telemetry-bar">
+                <div class="telem-item"><span class="telem-label">FOKUS:</span><span class="telem-val" id="val-coords">X: --- , Y: ---</span></div>
+                <div class="telem-divider"></div>
+                <div class="telem-item"><span class="telem-label">T:</span><span class="telem-val telem-highlight" id="val-temp">--.- °C</span></div>
+                <div class="telem-divider"></div>
+                <div class="telem-item"><span class="telem-label">KONTRA:</span><span class="telem-val" id="val-contra">--.- °C</span></div>
+                <div class="telem-divider"></div>
+                <div class="telem-item"><span class="telem-label">ΔT:</span><span class="telem-val telem-delta" id="val-delta">±-.-- K</span></div>
+                <div class="telem-divider"></div>
+                <div class="telem-item"><span class="telem-label">Z:</span><span class="telem-val" id="val-depth">-- mm</span></div>
+                <div class="telem-divider"></div>
+                <div class="telem-item"><span class="telem-label">ANATOMIE:</span><span class="telem-val" id="val-anatomy">Gewebe nicht fokussiert</span></div>
+                <div class="telem-status" id="triage-status-pill"><span class="status-dot"></span><span id="triage-text">STANDBY</span></div>
+            </footer>
+        </section>
+
+        <!-- CLINICAL INSPECTOR -->
+        <aside id="inspector-panel">
+            <div id="inspector-category-bar">
+                <button class="cat-pill active" data-cat="diagnostics" id="cat-diagnostics"><span>🩺 Diagnose</span></button>
+                <button class="cat-pill" data-cat="anatomy" id="cat-anatomy"><span>🦶 Anatomie</span></button>
+                <button class="cat-pill" data-cat="signals" id="cat-signals"><span>⚡ Signale</span></button>
+                <button class="cat-pill" data-cat="system" id="cat-system"><span>⚙️ System</span></button>
+            </div>
+            <div id="inspector-content">
+                <!-- DIAGNOSE -->
+                <div class="cat-page active" id="page-diagnostics">
+                    <!-- CLINICAL TRIAGE ALERT BANNER -->
+                    <div id="clinical-triage-card" class="clinical-alert-box alert-crit">
+                        <div class="alert-icon">⚠️</div>
+                        <div class="alert-body">
+                            <div class="alert-headline" id="triage-headline">ARMSTRONG-ALARM: AKUTES PRÄ-ULKUS</div>
+                            <div class="alert-sub" id="triage-subtext">Pathologische Hyperthermie ΔT ≥ 2,2 K gegenüber der kontralateralen Extremität festgestellt.</div>
+                        </div>
+                    </div>
+
+                    <!-- PHYSICIAN VALIDATION & SIGN-OFF -->
+                    <div class="panel-section medical-validation-section">
+                        <div class="section-title"><span>ÄRZTLICHE VALIDIERUNG &amp; SIGNATUR</span><span class="counter-badge badge-pending" id="badge-val-status">UNSIGNIERT</span></div>
+                        <div class="val-card">
+                            <div class="val-status-row">
+                                <span class="val-label">Befund-Status:</span>
+                                <strong id="val-status-text" class="status-warning">Klinische Prüfung ausstehend</strong>
+                            </div>
+                            <div class="val-doctor-row">
+                                <span class="val-label">Befundender Facharzt:</span>
+                                <select id="sel-doctor" class="med-select">
+                                    <option value="dr_noack">Prof. Dr. med. J. Noack (Diabetologie / Angiologie)</option>
+                                    <option value="oa_schmidt">Dr. med. E. Schmidt (Gefäßchirurgie)</option>
+                                    <option value="oa_weber">Dr. med. M. Weber (Wundzentrum / DFS)</option>
+                                </select>
+                            </div>
+                            <div class="val-actions-row">
+                                <button class="mini-wide btn-sign" id="btn-sign-report" data-act="signReport">✍️ Befund freigeben &amp; digital signieren (SHA-256)</button>
+                            </div>
+                            <div class="val-signature-info hidden" id="val-signature-info">
+                                <div class="sig-line">✓ <strong>Digital signiert</strong> nach DSGVO Art. 30 &amp; ISO 13485</div>
+                                <div class="sig-hash" id="val-sig-hash">Hash: 8f4a21... · 24.10.2026 12:45 CET</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- DIFFERENTIAL DIAGNOSIS ASSISTANT -->
+                    <div class="panel-section">
+                        <div class="section-title"><span>DIFFERENTIALDIAGNOSTIK-LEITFADEN</span><span class="badge badge-iso">IWGDF 2023</span></div>
+                        <div class="diff-diag-grid">
+                            <div class="diff-diag-item active-diff" id="diff-inflam">
+                                <div class="diff-header"><span class="diff-name">Subklinisches Ulkus / Entzündung</span><span class="diff-prob prob-high" id="diff-inflam-prob">94% Wk.</span></div>
+                                <div class="diff-criteria">ΔT ≥ +2.2 K · Top-Hat isoliert · Zirkularität &gt; 0.65 · Frangi-Gefäßfilter negativ</div>
+                            </div>
+                            <div class="diff-diag-item" id="diff-charcot">
+                                <div class="diff-header"><span class="diff-name">Charcot-Neuroarthropathie (Tarsus)</span><span class="diff-prob prob-med" id="diff-charcot-prob">18% Wk.</span></div>
+                                <div class="diff-criteria">Großflächige Mittelfußhyperthermie · Plantardruck erhöht · kein punktueller Spitzenfokus</div>
+                            </div>
+                            <div class="diff-diag-item" id="diff-vein">
+                                <div class="diff-header"><span class="diff-name">Venöse Ektasie / Varikosis</span><span class="diff-prob prob-low" id="diff-vein-prob">&lt; 5% Wk.</span></div>
+                                <div class="diff-criteria">Tubuläre Morphologie · Gefäßfilter positiv · kein lokaler Gewebe-Hotspot</div>
+                            </div>
+                            <div class="diff-diag-item" id="diff-ischemia">
+                                <div class="diff-header"><span class="diff-name">pAVK / Ischämie (Hypothermie)</span><span class="diff-prob prob-low" id="diff-ischemia-prob">&lt; 5% Wk.</span></div>
+                                <div class="diff-criteria">Akrales Temperaturdefizit (ΔT &lt; -2.0 K) · fehlende arterielle Perfusion</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel-section">
+                        <div class="section-title"><span>HERDE &amp; HOTSPOT-KLASSIFIKATION</span><span class="counter-badge" id="hotspot-count-badge">0 HERDE</span></div>
+                        <div id="hotspot-list-container"><div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-text">Keine Untersuchung geladen. Klicken Sie auf „Schnelltest“ oder „Bild laden“.</div></div></div>
+                    </div>
+                    <div class="panel-section">
+                        <div class="section-title">ARMSTRONG / IWGDF RISIKOSTUFE</div>
+                        <div class="score-card" id="risk-score-card">
+                            <div class="score-row"><span class="score-label">Klinischer Status:</span><span class="score-val" id="risk-tier-title">Physiologische Normaltemperatur</span></div>
+                            <div class="score-progress-bar"><div class="score-fill" id="risk-score-fill" style="width:15%"></div></div>
+                            <div class="score-detail" id="risk-recommendation">Keine signifikante thermische Asymmetrie nachweisbar (ΔT &lt; 1,2 K).</div>
+                        </div>
+                        <ul id="action-list" class="action-list"></ul>
+                    </div>
+                    <div class="panel-section">
+                        <div class="section-title">5-ZONEN BILATERALVERGLEICH (L / R)</div>
+                        <table class="dtable" id="tbl-zones"><thead><tr><th>Zone</th><th>L °C</th><th>R °C</th><th>ΔT K</th><th>Status</th></tr></thead><tbody></tbody></table>
+                        <div class="metric-row"><span>Thermal Asymmetry Index (TAI):</span><span class="metric-val" id="m-tai">--</span></div>
+                        <div class="metric-row"><span>Thermal Heat Dissipation Index (THDI):</span><span class="metric-val" id="m-thdi">--</span></div>
+                    </div>
+                    <div class="panel-section">
+                        <div class="section-title">ANGIOSOM-ZUORDNUNG (TAYLOR &amp; PALMER)</div>
+                        <table class="dtable" id="tbl-angio"><thead><tr><th>Territorium</th><th>Arterie</th><th>ΔT</th></tr></thead><tbody></tbody></table>
+                    </div>
+                </div>
+
+                <!-- ANATOMIE -->
+                <div class="cat-page" id="page-anatomy">
+                    <div class="panel-section">
+                        <div class="section-title">5-ZONEN TEMPERATURPROFIL</div>
+                        <div class="zone-grid" id="zone-grid"></div>
+                    </div>
+                    <div class="panel-section">
+                        <div class="section-title">BIOMECHANIK · PLANTARDRUCK-PROXY</div>
+                        <div class="metric-card">
+                            <div class="metric-row"><span>Spitzendruck:</span><span class="metric-val" id="bm-peak">-- kPa</span></div>
+                            <div class="metric-row"><span>Mittlerer Druck:</span><span class="metric-val" id="bm-mean">-- kPa</span></div>
+                            <div class="metric-row"><span>Hochrisikofläche (≥ 320 kPa):</span><span class="metric-val" id="bm-area">-- cm²</span></div>
+                            <div class="metric-row"><span>Peak-Lokalisation:</span><span class="metric-val" id="bm-loc">--</span></div>
+                            <div class="metric-row"><span>Risikokategorie:</span><span class="metric-val status-accent" id="bm-cat">--</span></div>
+                        </div>
+                    </div>
+                    <div class="panel-section">
+                        <div class="section-title">FUSSGEWÖLBE · ARCH INDEX</div>
+                        <div class="metric-card">
+                            <div class="metric-row"><span>Links:</span><span class="metric-val" id="ai-left">--</span></div>
+                            <div class="metric-row"><span>Rechts:</span><span class="metric-val" id="ai-right">--</span></div>
+                        </div>
+                    </div>
+                    <div class="panel-section">
+                        <div class="section-title">3D-LAMBERTIAN KANTENKORREKTUR</div>
+                        <div class="metric-card">
+                            <div class="metric-row"><span>Max. Rekonstruktionstiefe Z:</span><span class="metric-val" id="recon-max-depth">-- mm</span></div>
+                            <div class="metric-row"><span>Mittlere Rand-Kompensation:</span><span class="metric-val" id="recon-edge-comp">-- K</span></div>
+                            <div class="metric-row"><span>Tiefe am Cursor (Z):</span><span class="metric-val" id="recon-cursor-depth">-- mm</span></div>
+                        </div>
+                        <div class="btn-grid">
+                            <button class="mini-wide" data-act="exportObj">OBJ</button><button class="mini-wide" data-act="exportStl">STL</button>
+                            <button class="mini-wide" data-act="exportPly">PLY</button><button class="mini-wide" data-act="exportXyz">XYZ</button>
+                            <button class="mini-wide" data-act="exportDepthCsv">Tiefe CSV</button><button class="mini-wide" data-act="exportDepthPng">Tiefe PNG</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SIGNALE -->
+                <div class="cat-page" id="page-signals">
+                    <div class="panel-section">
+                        <div class="section-title">THERMISCHES HISTOGRAMM (256 BINS)</div>
+                        <canvas id="cv-hist" width="340" height="120"></canvas>
+                        <div class="metric-row"><span>Gewebe-Median / MAD-Schwelle:</span><span class="metric-val" id="hist-info">--</span></div>
+                    </div>
+                    <div class="panel-section">
+                        <div class="section-title">SCHNITTPROFIL T(x) ENTLANG A–B</div>
+                        <canvas id="cv-profile" width="340" height="120"></canvas>
+                        <div class="metric-row"><span>Profil:</span><span class="metric-val" id="profile-info">Werkzeug „╱“ wählen und Linie ziehen</span></div>
+                    </div>
+                    <div class="panel-section">
+                        <div class="section-title">ROI-STATISTIK</div>
+                        <table class="dtable" id="tbl-roi"><thead><tr><th>ROI</th><th>mm²</th><th>Min</th><th>Max</th><th>Ø</th><th>σ</th></tr></thead><tbody></tbody></table>
+                    </div>
+                    <div class="panel-section">
+                        <div class="section-title">PUNKTSONDEN &amp; DIFFERENZMATRIX</div>
+                        <table class="dtable" id="tbl-probes"><thead><tr><th>Sonde</th><th>X</th><th>Y</th><th>T °C</th><th>Zone</th></tr></thead><tbody></tbody></table>
+                        <div id="probe-matrix"></div>
+                    </div>
+                    <div class="panel-section">
+                        <div class="section-title">MESSUNGEN (LINEAL &amp; GONIOMETER)</div>
+                        <table class="dtable" id="tbl-meas"><thead><tr><th>Typ</th><th>Wert</th></tr></thead><tbody></tbody></table>
+                    </div>
+                    <div class="panel-section">
+                        <div class="section-title">FRANGI-VASKULÄRFILTER</div>
+                        <div class="param-control"><div class="param-header"><span>Overlay-Deckkraft</span><span class="param-val" id="val-vein-op">60 %</span></div>
+                            <input type="range" id="sl-vein-op" class="slider-input" min="0" max="100" value="60"></div>
+                        <div class="param-control"><div class="param-header"><span>Sensitivität (Schwelle)</span><span class="param-val" id="val-vein-th">40</span></div>
+                            <input type="range" id="sl-vein-th" class="slider-input" min="5" max="200" value="40"></div>
+                        <div class="metric-row"><span>Gefäßpixel:</span><span class="metric-val" id="vein-px">--</span></div>
+                    </div>
+                    <div class="panel-section">
+                        <div class="section-title">PENNES 2D-BIOHEAT PERFUSION</div>
+                        <div class="metric-card">
+                            <div class="metric-row"><span>Mittlere Perfusion w_b:</span><span class="metric-val" id="bioheat-mean">--</span></div>
+                            <div class="metric-row"><span>Hyperämische Fläche:</span><span class="metric-val" id="bioheat-hyper">--</span></div>
+                            <div class="metric-row"><span>Mikrovaskulärer Status:</span><span class="metric-val status-accent" id="bioheat-status">--</span></div>
+                        </div>
+                    </div>
+                    <div class="panel-section">
+                        <div class="section-title">LUA-REGELEDITOR (armstrong_criteria.lua)</div>
+                        <textarea id="lua-editor" spellcheck="false"></textarea>
+                        <div class="btn-grid">
+                            <button class="mini-wide" data-act="luaValidate">Prüfen</button>
+                            <button class="mini-wide" data-act="luaApply">Anwenden</button>
+                            <button class="mini-wide" data-act="luaReset">Standard</button>
+                        </div>
+                        <div class="metric-row"><span>Status:</span><span class="metric-val" id="lua-status">--</span></div>
+                    </div>
+                </div>
+
+                <!-- SYSTEM -->
+                <div class="cat-page" id="page-system">
+                    <div class="panel-section">
+                        <div class="section-title">PATIENT &amp; FALL</div>
+                        <div class="form-grid">
+                            <label>Pseudonym<input id="pt-id" readonly></label>
+                            <label>Alter<input id="pt-age" type="number" min="0" max="120" placeholder="Jahre"></label>
+                            <label>Geschlecht<select id="pt-sex"><option>–</option><option>weiblich</option><option>männlich</option><option>divers</option></select></label>
+                            <label>Region<select id="pt-region"><option>Füße (bilateral)</option><option>Linker Fuß</option><option>Rechter Fuß</option><option>Unterschenkel</option></select></label>
+                            <label>Untersuchung<input id="pt-date" type="date"></label>
+                            <label>Notiz<input id="pt-note" placeholder="Anamnese / Befundnotiz"></label>
+                        </div>
+                    </div>
+                    <div class="panel-section">
+                        <div class="section-title">42-STUFIGE DIAGNOSE-PIPELINE</div>
+                        <div class="timing-header"><span>Gesamtlaufzeit Go-Pipeline:</span><span class="timing-highlight" id="timing-total-val">-- ms</span></div>
+                        <div id="stages-list-container" class="stages-scrollbox"></div>
+                    </div>
+                    <div class="panel-section">
+                        <div class="section-title">PIPELINE-PARAMETER</div>
+                        <div class="param-control"><div class="param-header"><span>MAD-Schwellenwert (k):</span><span class="param-val" id="param-k-val">3.0</span></div>
+                            <input type="range" min="1.5" max="4.5" step="0.1" value="3.0" id="slider-k" class="slider-input"></div>
+                        <div class="param-control"><div class="param-header"><span>Top-Hat Kernfaktor (R):</span><span class="param-val" id="param-r-val">0.050</span></div>
+                            <input type="range" min="0.02" max="0.10" step="0.005" value="0.05" id="slider-r" class="slider-input"></div>
+                        <div class="param-control"><div class="param-header"><span>Rand-Erosionsfaktor:</span><span class="param-val" id="param-m-val">0.005</span></div>
+                            <input type="range" min="0.001" max="0.02" step="0.001" value="0.005" id="slider-m" class="slider-input"></div>
+                        <button class="mini-wide full" data-act="reanalyze">↻ Mit Parametern neu analysieren</button>
+                    </div>
+                    <div class="panel-section">
+                        <div class="section-title">AVX2-HARDWARE-BENCHMARK</div>
+                        <div class="metric-card">
+                            <div class="metric-row"><span>Ø Laufzeit:</span><span class="metric-val" id="bn-mean">--</span></div>
+                            <div class="metric-row"><span>Min / Max:</span><span class="metric-val" id="bn-minmax">--</span></div>
+                            <div class="metric-row"><span>Durchsatz:</span><span class="metric-val" id="bn-fps">--</span></div>
+                        </div>
+                        <button class="mini-wide full" data-act="benchmark">▶ Benchmark (5 Läufe)</button>
+                    </div>
+                    <div class="panel-section">
+                        <div class="section-title">ANNOTATIONEN</div>
+                        <div id="ann-list" class="audit-scrollbox"></div>
+                    </div>
+                    <div class="panel-section">
+                        <div class="section-title">DSGVO ART. 30 AUDIT-TRAIL (SHA-256)</div>
+                        <div id="audit-list-container" class="audit-scrollbox"></div>
+                        <button class="mini-wide full" data-act="auditVerify">🔒 Hash-Kette verifizieren</button>
+                        <div class="metric-row"><span>Integrität:</span><span class="metric-val" id="audit-integrity">--</span></div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </main>
+</div>
+
+<div id="toast"></div>
+<div id="modal" class="hidden"><div id="modal-box"><div id="modal-title"></div><div id="modal-body"></div><div id="modal-actions"></div></div></div>
+
+<script src="render.js"></script>
+<script src="tools.js"></script>
+<script src="panels.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

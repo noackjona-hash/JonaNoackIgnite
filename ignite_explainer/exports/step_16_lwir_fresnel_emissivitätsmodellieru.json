@@ -1,0 +1,15 @@
+{
+  "step_number": 16,
+  "phase_number": 3,
+  "phase_name": "Phase III: 3D Anatomical Inflation & Angle Compensation",
+  "name": "LWIR Fresnel-Emissivitätsmodellierung",
+  "description": "Modelliert den physikalischen Abfall der Wärmeabstrahlung an gekrümmten Körpergrenzen nach den elektrodynamischen Fresnel-Formeln.",
+  "formula": "\\varepsilon(\\theta) = \\varepsilon_0 \\cdot \\cos^p(\\theta), \\quad \\varepsilon_0 = 0{,}98, \\quad p = 0{,}2",
+  "duration_ms": 34.98039999976754,
+  "metrics": {
+    "ε_0 (Normale)": "0.98",
+    "Min ε(θ)": "0.618",
+    "Exponent p": "0.2"
+  },
+  "image_filename": "step_16_lwir_fresnel_emissivitätsmodellieru.png"
+}
