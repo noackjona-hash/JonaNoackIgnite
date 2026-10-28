@@ -162,16 +162,17 @@ Der rechte Inspector der Go Walk PACS Workstation ist in **6 klinische Fachberei
 | **`🦶 Anatomie & 3D`** | 5-Zonen Temperaturprofil (Hallux, Ballen, Ferse), Biomechanik & Arch-Index, 3D-Lambertian Kantenkorrektur & Mesh-Export (OBJ, STL, PLY, XYZ) |
 | **`⚡ Signale & Regeln`** | Frangi-Hesse Vaskulärfilter (Venenunterdrückung), Pennes 2D-Bioheat Perfusion, GopherLua 5.1 Regel-Editor |
 | **`⚙️ System & Audit`** | Patientenstammdaten (DICOM / DSGVO Art. 25), 42-Stufen PAP Timing Profiler, revisionssicherer SHA-256 Audit-Trail |
-| **`📊 Diagramme & Statistik`** | Deskriptive Statistik ($\mu$, $\sigma$, SEM, Median, MAD, $\tau$), Thermisches Histogramm, 5-Zonen Vergleich, Real-Sampled Schnittprofil A–B |
+| **`📊 Diagramme & Statistik`** | Deskriptive Statistik ($\mu$, $\sigma$, SEM, Median, MAD, $\tau$), Thermisches Histogramm, 5-Zonen Vergleich, Real-Sampled Schnittprofil A–B, Orthogonales Entzündungs-Kreuzprofil mit $\pm 1\sigma / \pm 2\sigma$ Standardabweichungs-Korridor |
 
 ### 5.2 Interaktive klinische Werkzeuge & Viewport-Ergonomie
-* **6 Interaktive Messmodi:**
+* **7 Interaktive Messmodi:**
   * `⌖ Retikel`: Live-Spot-Probe mit kontralateraler Referenz.
   * `📏 Lineal`: Metrische Distanz (0.60 mm/px) und thermischer Gradient $\frac{\Delta T}{\Delta s}$ in K/cm.
   * `⬛ Rechteck-ROI`: Statistische Auswertung ($T_{\text{min}}, T_{\text{max}}, T_{\text{mean}}, \sigma$) und automatische kontralaterale Vergleichs-ROI.
   * `⭕ Kreis-ROI`: Differenzierung von Herd-Zentrum vs. periphärem Vasodilatations-Halo ($\Delta T_{\text{halo}}$).
   * `📐 Goniometer`: 3-Punkt Orthopädischer Winkel (z. B. Hallux-Valgus-Winkel $\alpha$).
   * `📈 Schnittlinie`: Dynamisches Transversalprofil $A \to B$ zur Echtzeit-Visualisierung im Diagramm-Tab.
+  * `➕ Kreuz & σ`: Orthogonales Entzündungs-Kreuzprofil ($X$/$Y$-Achsen) mit Standardabweichungs-Diagramm ($\pm 1\sigma$, $\pm 2\sigma$, $\mu$, Peak, Z-Score).
 * **Isothermen & Kontrast-Presets:**
   * `🔥 Isotherme ≥ 34°C`: Hebt potenziell ulzeröse Gewebebereiche leuchtend hervor.
   * `Kontrast-Presets`: Vollbereich (20–45°C), Entzündung/Ulkus (30–38°C), Ischämie (20–30°C), Plantarhaut (26–36°C).

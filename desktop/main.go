@@ -54,6 +54,8 @@ var (
 	diagHistCanvas    *walk.CustomWidget
 	diagZoneCanvas    *walk.CustomWidget
 	diagProfileCanvas *walk.CustomWidget
+	diagCrossCanvas   *walk.CustomWidget
+	hotspotTableView  *walk.TableView
 
 	lblStatMean   *walk.Label
 	lblStatStdDev *walk.Label
@@ -286,6 +288,10 @@ func main() {
 					Action{
 						Text:        "📈 Transversale Schnittlinie (Live A–B Profil)",
 						OnTriggered: func() { setToolMode(ToolProfileLine) },
+					},
+					Action{
+						Text:        "➕ Entzündungs-Kreuz & Standardabweichung (σ)",
+						OnTriggered: func() { setToolMode(ToolCrosshairSigma) },
 					},
 					Separator{},
 					Action{
@@ -532,6 +538,10 @@ func main() {
 						OnClicked: func() { setToolMode(ToolProfileLine) },
 					},
 					PushButton{
+						Text:      "➕ Kreuz & σ",
+						OnClicked: func() { setToolMode(ToolCrosshairSigma) },
+					},
+					PushButton{
 						Text:      "🔥 Isotherme ≥34°",
 						OnClicked: onToggleIsotherm,
 					},
@@ -672,8 +682,10 @@ func main() {
 										Layout: VBox{Margins: Margins{Left: 8, Top: 8, Right: 8, Bottom: 8}, Spacing: 4},
 										Children: []Widget{
 											TableView{
-												Model:            hotspotModel,
-												AlternatingRowBG: true,
+												AssignTo:              &hotspotTableView,
+												Model:                 hotspotModel,
+												AlternatingRowBG:      true,
+												OnCurrentIndexChanged: onHotspotSelected,
 												Columns: []TableViewColumn{
 													TableViewColumn{Title: "ID", Width: 35},
 													TableViewColumn{Title: "Klasse", Width: 110},
@@ -1000,6 +1012,20 @@ end`,
 													},
 												},
 											},
+											GroupBox{
+												Title:   "4. Entzündungs-Kreuzprofil & Standardabweichung (X/Y-Achsen durch Herd mit ±1σ & ±2σ Band)",
+												Layout:  VBox{MarginsZero: true, Spacing: 0},
+												MinSize: Size{Height: 165},
+												Children: []Widget{
+													CustomWidget{
+														AssignTo:            &diagCrossCanvas,
+														ClearsBackground:    false,
+														DoubleBuffering:     true,
+														InvalidatesOnResize: true,
+														PaintPixels:         PaintInflammationCrossChart,
+													},
+												},
+											},
 										},
 									},
 								},
@@ -1206,9 +1232,22 @@ func onViewportMouseDown(x, y int, button walk.MouseButton) {
 				}
 			}
 
-		case ToolRuler, ToolProfileLine, ToolRectROI, ToolCircleROI:
+		case ToolRuler, ToolProfileLine, ToolRectROI, ToolCircleROI, ToolCrosshairSigma:
 			GState.ActivePoints = []image.Point{pt}
 			GState.IsDrawing = true
+			if GState.ActiveTool == ToolCrosshairSigma {
+				GState.CrosshairPoint = pt
+				GState.HasCrosshairPoint = true
+				GState.CrosshairCustom = true
+				if GState.CrosshairRadius <= 0 {
+					GState.CrosshairRadius = 40
+				}
+				cm := ComputeCrosshairMetrics(GState.RawGray, GState.Width, GState.Height, pt, GState.CrosshairRadius, 61)
+				GState.CrosshairMetrics = cm
+				if diagCrossCanvas != nil {
+					diagCrossCanvas.Invalidate()
+				}
+			}
 
 		case ToolGoniometer:
 			if len(GState.ActivePoints) == 0 {
@@ -1295,6 +1334,26 @@ func onViewportMouseUp(x, y int, button walk.MouseButton) {
 			}
 			GState.IsDrawing = false
 			GState.ActivePoints = nil
+
+		case ToolCrosshairSigma:
+			dx := pt.X - p1.X
+			dy := pt.Y - p1.Y
+			radPx := int(math.Sqrt(float64(dx*dx + dy*dy)))
+			if radPx < 15 {
+				radPx = 40
+			}
+			GState.CrosshairPoint = p1
+			GState.HasCrosshairPoint = true
+			GState.CrosshairRadius = radPx
+			GState.CrosshairCustom = true
+			cm := ComputeCrosshairMetrics(GState.RawGray, GState.Width, GState.Height, p1, radPx, 61)
+			GState.CrosshairMetrics = cm
+			AddCompletedMeasurement("Kreuz-Profil", "Entzündungs-Kreuz", fmt.Sprintf("Peak %.1f °C", cm.PeakT), fmt.Sprintf("σ ±%.2f K · Z %+.1fσ", cm.StdDev, cm.ZScore), cm.Risk, []image.Point{p1, pt})
+			if diagCrossCanvas != nil {
+				diagCrossCanvas.Invalidate()
+			}
+			GState.IsDrawing = false
+			GState.ActivePoints = nil
 		}
 
 		if vpLeft != nil {
@@ -1312,12 +1371,13 @@ func setToolMode(mode ToolMode) {
 	GState.ActivePoints = nil
 
 	modeNames := map[ToolMode]string{
-		ToolReticle:     "⌖ Fadenkreuz (Spot-Probe)",
-		ToolRuler:       "📏 Distanzlineal & Gradient (K/cm)",
-		ToolRectROI:     "⬛ Rechteck-ROI (Symmetrie)",
-		ToolCircleROI:   "⭕ Kreis-ROI (Vasodilatations-Halo)",
-		ToolGoniometer:  "📐 Goniometer (3-Punkt Gelenkwinkel)",
-		ToolProfileLine: "📈 Schnittlinie (Live A–B Profil)",
+		ToolReticle:        "⌖ Fadenkreuz (Spot-Probe)",
+		ToolRuler:          "📏 Distanzlineal & Gradient (K/cm)",
+		ToolRectROI:        "⬛ Rechteck-ROI (Symmetrie)",
+		ToolCircleROI:      "⭕ Kreis-ROI (Vasodilatations-Halo)",
+		ToolGoniometer:     "📐 Goniometer (3-Punkt Gelenkwinkel)",
+		ToolProfileLine:    "📈 Schnittlinie (Live A–B Profil)",
+		ToolCrosshairSigma: "➕ Entzündungs-Kreuz & Standardabweichung (σ)",
 	}
 
 	if toolStatusLabel != nil {
@@ -1331,6 +1391,31 @@ func setToolMode(mode ToolMode) {
 	}
 	if vpRight != nil {
 		vpRight.Invalidate()
+	}
+}
+
+func onHotspotSelected() {
+	if hotspotTableView == nil || GState.LastResult == nil {
+		return
+	}
+	idx := hotspotTableView.CurrentIndex()
+	if idx >= 0 && idx < len(GState.LastResult.Hotspots) {
+		hs := GState.LastResult.Hotspots[idx]
+		GState.CrosshairPoint = image.Pt(hs.Region.CenterX, hs.Region.CenterY)
+		GState.HasCrosshairPoint = true
+		GState.CrosshairRadius = int(math.Max(35.0, math.Sqrt(float64(hs.Region.AreaPixels))*1.4))
+		GState.CrosshairCustom = true
+		cm := ComputeCrosshairMetrics(GState.RawGray, GState.Width, GState.Height, GState.CrosshairPoint, GState.CrosshairRadius, 61)
+		GState.CrosshairMetrics = cm
+		if vpLeft != nil {
+			vpLeft.Invalidate()
+		}
+		if vpRight != nil {
+			vpRight.Invalidate()
+		}
+		if diagCrossCanvas != nil {
+			diagCrossCanvas.Invalidate()
+		}
 	}
 }
 

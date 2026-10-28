@@ -399,6 +399,16 @@ func UpdateModels(res *pipeline.AnalysisResult) {
 		}
 	}
 
+	if len(res.Hotspots) > 0 && !GState.CrosshairCustom {
+		hs := res.Hotspots[0]
+		GState.CrosshairPoint = image.Pt(hs.Region.CenterX, hs.Region.CenterY)
+		GState.HasCrosshairPoint = true
+		GState.CrosshairRadius = int(math.Max(35.0, math.Sqrt(float64(hs.Region.AreaPixels))*1.4))
+	}
+	if GState.HasCrosshairPoint && len(GState.RawGray) > 0 {
+		GState.CrosshairMetrics = ComputeCrosshairMetrics(GState.RawGray, GState.Width, GState.Height, GState.CrosshairPoint, GState.CrosshairRadius, 61)
+	}
+
 	if diagHistCanvas != nil {
 		diagHistCanvas.Invalidate()
 	}
@@ -407,6 +417,9 @@ func UpdateModels(res *pipeline.AnalysisResult) {
 	}
 	if diagProfileCanvas != nil {
 		diagProfileCanvas.Invalidate()
+	}
+	if diagCrossCanvas != nil {
+		diagCrossCanvas.Invalidate()
 	}
 }
 

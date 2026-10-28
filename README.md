@@ -17,6 +17,7 @@ Entwickelt für den deutschen Jugendwettbewerb **Jugend forscht 2026** (Fachgebi
     * `⭕ Zirkuläres Halo-ROI`: Differenzierung von Kern- vs. periphärem Vasodilatations-Ring ($\Delta T_{\text{halo}}$).
     * `📐 Orthopädischer Goniometer`: 3-Punkt-Winkelmessung mit Gradbogen und Hallux-Valgus-Einstufung.
     * `📈 Dynamische Schnittlinie`: Transversalprofil $A \to B$ zur Echtzeit-Visualisierung der Temperaturverteilung.
+    * `➕ Entzündungs-Kreuz & Standardabweichung (σ)`: Orthogonale $X$- und $Y$-Achsen-Abtastung direkt durch das Entzündungszentrum mit biostatistischem Diagramm, Gaußschem $\pm 1\sigma$ Konfidenzkorridor, $\pm 2\sigma$ Ausreißerlinie, Z-Score ($Z = \frac{T_{\text{max}} - \mu}{\sigma}$) und FWHM-Breite.
   * **Dynamische Isothermen-Bänderung ($T \ge 34{,}0\,^\circ\text{C}$):**
     * Hebt potenziell ulzeröse Gewebebereiche leuchtend hervor.
   * **Klinische Fensterungs-Presets (Window / Level):**

@@ -190,6 +190,7 @@ func PaintRightViewport(canvas *walk.Canvas, bounds walk.Rectangle) error {
 	// Messungen & aktive Zeichen-Tools
 	drawMeasurements(canvas, actualBounds, dest)
 	drawActiveDrawing(canvas, actualBounds, dest)
+	drawActiveCrosshair(canvas, actualBounds, dest)
 
 	// Fadenkreuz & Retikel
 	if GState.ShowCrosshair && GState.HasHover && GState.ActiveTool == ToolReticle {
@@ -620,6 +621,30 @@ func drawMeasurements(canvas *walk.Canvas, bounds, dest walk.Rectangle) {
 				canvas.DrawRectanglePixels(pen, bRect)
 				canvas.DrawTextPixels(fmt.Sprintf("%s · %s", m.Label, m.ValueStr), hudBoldFont, textCol, walk.Rectangle{X: bRect.X + 4, Y: bRect.Y + 4, Width: badgeW - 8, Height: 16}, walk.TextCenter)
 			}
+
+		case "Kreuz-Profil":
+			if len(m.Points) >= 1 {
+				sc := ImgToScreen(m.Points[0], dest, w, h)
+				radPx := 40
+				if len(m.Points) >= 2 {
+					sr := ImgToScreen(m.Points[1], dest, w, h)
+					radPx = int(math.Abs(float64(sr.X - sc.X)))
+					if radPx < 15 {
+						radPx = 15
+					}
+				}
+				canvas.DrawLinePixels(pen, walk.Point{X: sc.X - radPx, Y: sc.Y}, walk.Point{X: sc.X + radPx, Y: sc.Y})
+				canvas.DrawLinePixels(pen, walk.Point{X: sc.X, Y: sc.Y - radPx}, walk.Point{X: sc.X, Y: sc.Y + radPx})
+				canvas.DrawEllipsePixels(measureGreenDash, walk.Rectangle{X: sc.X - radPx/2, Y: sc.Y - radPx/2, Width: radPx, Height: radPx})
+
+				badgeW := 195
+				badgeH := 36
+				bRect := walk.Rectangle{X: sc.X + 12, Y: sc.Y - 18, Width: badgeW, Height: badgeH}
+				canvas.FillRectanglePixels(br, bRect)
+				canvas.DrawRectanglePixels(pen, bRect)
+				canvas.DrawTextPixels(fmt.Sprintf("%s · %s", m.Label, m.ValueStr), hudBoldFont, textCol, walk.Rectangle{X: bRect.X + 6, Y: bRect.Y + 2, Width: badgeW - 12, Height: 15}, walk.TextLeft)
+				canvas.DrawTextPixels(m.DetailsStr, hudFont, walk.RGB(71, 85, 105), walk.Rectangle{X: bRect.X + 6, Y: bRect.Y + 18, Width: badgeW - 12, Height: 15}, walk.TextLeft)
+			}
 		}
 	}
 }
@@ -684,5 +709,105 @@ func drawActiveDrawing(canvas *walk.Canvas, bounds, dest walk.Rectangle) {
 			gm := ComputeGoniometerAngle(GState.ActivePoints[0], GState.ActivePoints[1], mousePt)
 			drawMiniBadge(canvas, sMouse.X+12, sMouse.Y-12, fmt.Sprintf("Winkel: %.1f° (%s)", gm.AngleDeg, gm.Category), walk.RGB(2, 132, 199))
 		}
+
+	case ToolCrosshairSigma:
+		s1 := ImgToScreen(GState.ActivePoints[0], dest, w, h)
+		dx := sMouse.X - s1.X
+		dy := sMouse.Y - s1.Y
+		radPx := int(math.Sqrt(float64(dx*dx + dy*dy)))
+		if radPx < 20 {
+			radPx = 20
+		}
+		canvas.DrawLinePixels(measureDashPen, walk.Point{X: s1.X - radPx, Y: s1.Y}, walk.Point{X: s1.X + radPx, Y: s1.Y})
+		canvas.DrawLinePixels(measureDashPen, walk.Point{X: s1.X, Y: s1.Y - radPx}, walk.Point{X: s1.X, Y: s1.Y + radPx})
+		canvas.DrawEllipsePixels(measureGreenDash, walk.Rectangle{X: s1.X - radPx/2, Y: s1.Y - radPx/2, Width: radPx, Height: radPx})
+		imgRad := int(float64(radPx) / GState.Zoom)
+		cm := ComputeCrosshairMetrics(GState.RawGray, w, h, GState.ActivePoints[0], imgRad, 31)
+		drawMiniBadge(canvas, sMouse.X+12, sMouse.Y-12, fmt.Sprintf("➕ Kreuz: R=%.1fmm · σ=±%.2fK · Z=%+.1fσ", cm.RadiusMm, cm.StdDev, cm.ZScore), walk.RGB(2, 132, 199))
 	}
+}
+
+func drawActiveCrosshair(canvas *walk.Canvas, bounds, dest walk.Rectangle) {
+	if dest.Width <= 0 || dest.Height <= 0 || len(GState.RawGray) == 0 {
+		return
+	}
+
+	var pt image.Point
+	radPx := 45
+	if GState.HasCrosshairPoint {
+		pt = GState.CrosshairPoint
+		if GState.CrosshairRadius > 0 {
+			radPx = GState.CrosshairRadius
+		}
+	} else if GState.LastResult != nil && len(GState.LastResult.Hotspots) > 0 {
+		hs := GState.LastResult.Hotspots[0]
+		pt = image.Pt(hs.Region.CenterX, hs.Region.CenterY)
+		radPx = int(math.Max(35.0, math.Sqrt(float64(hs.Region.AreaPixels))*1.4))
+	} else {
+		return
+	}
+
+	sc := ImgToScreen(pt, dest, GState.Width, GState.Height)
+	screenRad := int(float64(radPx) * GState.Zoom * float64(dest.Width) / float64(GState.Width))
+	if screenRad < 15 {
+		screenRad = 15
+	}
+
+	cm := ComputeCrosshairMetrics(GState.RawGray, GState.Width, GState.Height, pt, radPx, 41)
+
+	crossPenH, _ := walk.NewCosmeticPen(walk.PenSolid, walk.RGB(2, 132, 199))
+	defer crossPenH.Dispose()
+	crossPenV, _ := walk.NewCosmeticPen(walk.PenSolid, walk.RGB(217, 119, 6))
+	defer crossPenV.Dispose()
+
+	// Horizontale Achse X (West-Ost)
+	canvas.DrawLinePixels(crossPenH, walk.Point{X: sc.X - screenRad, Y: sc.Y}, walk.Point{X: sc.X + screenRad, Y: sc.Y})
+	// Vertikale Achse Y (Nord-Süd)
+	canvas.DrawLinePixels(crossPenV, walk.Point{X: sc.X, Y: sc.Y - screenRad}, walk.Point{X: sc.X, Y: sc.Y + screenRad})
+
+	// ±1σ Konzentrischer Kreis (Emerald Green Dashed)
+	sSigma := int(float64(screenRad) * (cm.SpatialSigma / cm.RadiusMm))
+	if sSigma < 6 {
+		sSigma = screenRad / 2
+	}
+	canvas.DrawEllipsePixels(measureGreenDash, walk.Rectangle{X: sc.X - sSigma, Y: sc.Y - sSigma, Width: 2 * sSigma, Height: 2 * sSigma})
+
+	// Ticks bei ±1σ auf beiden Achsen
+	canvas.DrawLinePixels(measureGreenDash, walk.Point{X: sc.X - sSigma, Y: sc.Y - 4}, walk.Point{X: sc.X - sSigma, Y: sc.Y + 4})
+	canvas.DrawLinePixels(measureGreenDash, walk.Point{X: sc.X + sSigma, Y: sc.Y - 4}, walk.Point{X: sc.X + sSigma, Y: sc.Y + 4})
+	canvas.DrawLinePixels(measureGreenDash, walk.Point{X: sc.X - 4, Y: sc.Y - sSigma}, walk.Point{X: sc.X + 4, Y: sc.Y - sSigma})
+	canvas.DrawLinePixels(measureGreenDash, walk.Point{X: sc.X - 4, Y: sc.Y + sSigma}, walk.Point{X: sc.X + 4, Y: sc.Y + sSigma})
+
+	// Ticks bei ±2σ auf beiden Achsen
+	sTwoSigma := int(float64(sSigma) * 2.0)
+	if sTwoSigma <= screenRad {
+		canvas.DrawLinePixels(reticleRedPen, walk.Point{X: sc.X - sTwoSigma, Y: sc.Y - 3}, walk.Point{X: sc.X - sTwoSigma, Y: sc.Y + 3})
+		canvas.DrawLinePixels(reticleRedPen, walk.Point{X: sc.X + sTwoSigma, Y: sc.Y - 3}, walk.Point{X: sc.X + sTwoSigma, Y: sc.Y + 3})
+		canvas.DrawLinePixels(reticleRedPen, walk.Point{X: sc.X - 3, Y: sc.Y - sTwoSigma}, walk.Point{X: sc.X + 3, Y: sc.Y - sTwoSigma})
+		canvas.DrawLinePixels(reticleRedPen, walk.Point{X: sc.X - 3, Y: sc.Y + sTwoSigma}, walk.Point{X: sc.X + 3, Y: sc.Y + sTwoSigma})
+	}
+
+	// Zentrum-Marker (Peak)
+	canvas.DrawEllipsePixels(reticleRedPen, walk.Rectangle{X: sc.X - 3, Y: sc.Y - 3, Width: 6, Height: 6})
+
+	// Schwebendes Info-Badge
+	badgeW := 210
+	badgeH := 36
+	bx := sc.X + 12
+	by := sc.Y - screenRad - 30
+	if by < bounds.Y+60 {
+		by = sc.Y + screenRad + 10
+	}
+	if bx+badgeW > bounds.X+bounds.Width-20 {
+		bx = sc.X - badgeW - 12
+	}
+	bRect := walk.Rectangle{X: bx, Y: by, Width: badgeW, Height: badgeH}
+	canvas.FillRectanglePixels(badgeBrush, bRect)
+	canvas.DrawRectanglePixels(measurePen, bRect)
+	badgeCol := walk.RGB(2, 132, 199)
+	if cm.Risk == "CRITICAL" {
+		badgeCol = walk.RGB(220, 38, 38)
+	}
+	canvas.DrawTextPixels(fmt.Sprintf("➕ Entzündungs-Kreuz · Peak %.1f°C", cm.PeakT), hudBoldFont, badgeCol, walk.Rectangle{X: bRect.X + 6, Y: bRect.Y + 3, Width: badgeW - 12, Height: 14}, walk.TextLeft)
+	canvas.DrawTextPixels(fmt.Sprintf("μ=%.1f°C · σ=±%.2fK · Z=%+.1fσ", cm.MeanT, cm.StdDev, cm.ZScore), hudFont, walk.RGB(71, 85, 105), walk.Rectangle{X: bRect.X + 6, Y: bRect.Y + 18, Width: badgeW - 12, Height: 14}, walk.TextLeft)
 }

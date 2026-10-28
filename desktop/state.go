@@ -22,6 +22,7 @@ const (
 	ToolCircleROI                   // Kreis-ROI mit Entzündungs-Halo
 	ToolGoniometer                  // 3-Punkt Orthopädischer Winkel
 	ToolProfileLine                 // A-B Schnittlinie für Live-Diagramm
+	ToolCrosshairSigma              // Orthogonales Entzündungs-Kreuz mit Standardabweichung (μ ± σ)
 )
 
 type MeasurementItem struct {
@@ -71,6 +72,13 @@ type AppState struct {
 	ShowIsotherm      bool
 	ShowArmstrongIso  bool
 	IsothermTemp      float64
+
+	// Entzündungs-Kreuzprofil & Standardabweichung
+	HasCrosshairPoint  bool
+	CrosshairPoint     image.Point
+	CrosshairRadius    int
+	CrosshairCustom    bool
+	CrosshairMetrics   interface{} // *CrosshairMetrics
 
 	// Patient & Klinik
 	PatientID     string

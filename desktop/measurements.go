@@ -58,6 +58,24 @@ type GoniometerMetrics struct {
 	Risk     string
 }
 
+// CrosshairMetrics enthält Messdaten des orthogonalen Kreuzprofils durch eine Entzündung.
+type CrosshairMetrics struct {
+	Center       image.Point
+	RadiusPx     int
+	RadiusMm     float64
+	HorizontalT  []float64 // X-Achsen-Temperaturwerte (West -> Ost)
+	VerticalT    []float64 // Y-Achsen-Temperaturwerte (Nord -> Süd)
+	DistancesMm  []float64 // Relative Distanz -R_mm bis +R_mm
+	MeanT        float64   // Gewebemittelwert entlang des Kreuzes / Referenz
+	StdDev       float64   // Standardabweichung σ
+	PeakT        float64   // Maximale Temperatur im Zentrum / Peak
+	DeltaT       float64   // Peak - MeanT
+	ZScore       float64   // (PeakT - MeanT) / StdDev (Anzahl Standardabweichungen)
+	FwhmMm       float64   // Halbwertsbreite (Full Width at Half Maximum) in mm
+	SpatialSigma float64   // Räumliche Standardabweichung der thermischen Streuung in mm
+	Risk         string    // NORMAL, MODERATE, CRITICAL
+}
+
 // SampleProfileLine sampelt reale Temperaturen entlang einer beliebig orientierten Strecke A->B.
 func SampleProfileLine(raw []byte, w, h int, p1, p2 image.Point, numSamples int) (profile, contraProfile []float64) {
 	if len(raw) == 0 || w <= 0 || h <= 0 || numSamples <= 1 {
@@ -368,3 +386,152 @@ func AddCompletedMeasurement(mType, label, valStr, detStr, risk string, pts []im
 	RecordAudit("MEASUREMENT_ADD", GState.NextMeasureID, risk, 0.5)
 	return item
 }
+
+// ComputeCrosshairMetrics berechnet das orthogonale Kreuzprofil und die Standardabweichung durch einen Entzündungsherd.
+func ComputeCrosshairMetrics(raw []byte, w, h int, center image.Point, radiusPx int, numSamples int) CrosshairMetrics {
+	if radiusPx <= 0 {
+		radiusPx = 45
+	}
+	if numSamples < 21 {
+		numSamples = 61
+	}
+	if numSamples%2 == 0 {
+		numSamples++
+	}
+
+	radiusMm := float64(radiusPx) * 0.60
+	horizT := make([]float64, numSamples)
+	vertT := make([]float64, numSamples)
+	distMm := make([]float64, numSamples)
+
+	midIdx := numSamples / 2
+	var allT []float64
+	var sumT float64
+
+	peakT := -100.0
+	minT := 100.0
+
+	for i := 0; i < numSamples; i++ {
+		// Offset in Pixels relativ zum Zentrum: von -radiusPx bis +radiusPx
+		relFrac := float64(i-midIdx) / float64(midIdx)
+		offsetPx := int(relFrac * float64(radiusPx))
+		distMm[i] = relFrac * radiusMm
+
+		// 1. Horizontaler Punkt (X = Center.X + offsetPx, Y = Center.Y)
+		hx := center.X + offsetPx
+		hy := center.Y
+		ht := 20.0
+		if hx >= 0 && hx < w && hy >= 0 && hy < h && len(raw) > 0 {
+			b := raw[hy*w+hx]
+			if b > 30 {
+				ht = TempOf(b)
+				allT = append(allT, ht)
+				sumT += ht
+			}
+		}
+		horizT[i] = ht
+		if ht > peakT {
+			peakT = ht
+		}
+		if ht < minT && ht > 20.0 {
+			minT = ht
+		}
+
+		// 2. Vertikaler Punkt (X = Center.X, Y = Center.Y + offsetPx)
+		vx := center.X
+		vy := center.Y + offsetPx
+		vt := 20.0
+		if vx >= 0 && vx < w && vy >= 0 && vy < h && len(raw) > 0 {
+			b := raw[vy*w+vx]
+			if b > 30 {
+				vt = TempOf(b)
+				allT = append(allT, vt)
+				sumT += vt
+			}
+		}
+		vertT[i] = vt
+		if vt > peakT {
+			peakT = vt
+		}
+		if vt < minT && vt > 20.0 {
+			minT = vt
+		}
+	}
+
+	if peakT < 20.0 {
+		peakT = 20.0
+	}
+
+	// Berechne Mittelwert μ und Standardabweichung σ
+	meanT := 30.5
+	stdDev := 0.75
+	if len(allT) >= 4 {
+		meanT = sumT / float64(len(allT))
+		var sumSq float64
+		for _, v := range allT {
+			d := v - meanT
+			sumSq += d * d
+		}
+		stdDev = math.Sqrt(sumSq / float64(len(allT)-1))
+		if stdDev < 0.15 {
+			stdDev = 0.50
+		}
+	}
+
+	deltaT := peakT - meanT
+	zScore := 0.0
+	if stdDev > 0 {
+		zScore = deltaT / stdDev
+	}
+
+	// Halbwertsbreite FWHM (Full Width at Half Maximum)
+	halfMaxT := meanT + deltaT*0.5
+	var leftIdx, rightIdx int = 0, numSamples - 1
+	foundL, foundR := false, false
+	for i := 0; i <= midIdx; i++ {
+		if horizT[i] >= halfMaxT {
+			leftIdx = i
+			foundL = true
+			break
+		}
+	}
+	for i := numSamples - 1; i >= midIdx; i-- {
+		if horizT[i] >= halfMaxT {
+			rightIdx = i
+			foundR = true
+			break
+		}
+	}
+	fwhmMm := 0.0
+	if foundL && foundR && rightIdx >= leftIdx {
+		fwhmMm = float64(rightIdx-leftIdx) / float64(numSamples-1) * (2.0 * radiusMm)
+	} else {
+		fwhmMm = radiusMm * 0.45
+	}
+	spatialSigma := fwhmMm / 2.355 // Gaußsche Relation FWHM = 2.355 * σ_spatial
+
+	risk := "NORMAL"
+	if deltaT >= 2.2 || zScore >= 3.0 || peakT >= 34.0 {
+		risk = "CRITICAL"
+	} else if deltaT >= 1.2 || zScore >= 2.0 || peakT >= 32.0 {
+		risk = "MODERATE"
+	}
+
+	return CrosshairMetrics{
+		Center:       center,
+		RadiusPx:     radiusPx,
+		RadiusMm:     radiusMm,
+		HorizontalT:  horizT,
+		VerticalT:    vertT,
+		DistancesMm:  distMm,
+		MeanT:        meanT,
+		StdDev:       stdDev,
+		PeakT:        peakT,
+		DeltaT:       deltaT,
+		ZScore:       zScore,
+		FwhmMm:       fwhmMm,
+		SpatialSigma: spatialSigma,
+		Risk:         risk,
+	}
+}
+

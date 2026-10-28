@@ -34,10 +34,14 @@ var (
 	diagSigmaPen   *walk.CosmeticPen
 	diagAlertPen   *walk.CosmeticPen
 	diagBarLBrush  *walk.SolidColorBrush
-	diagBarRBrush  *walk.SolidColorBrush
-	diagAlertBrush *walk.SolidColorBrush
-	diagFont       *walk.Font
-	diagBoldFont   *walk.Font
+	diagBarRBrush       *walk.SolidColorBrush
+	diagAlertBrush      *walk.SolidColorBrush
+	diagCrossSigmaBrush *walk.SolidColorBrush // Zartes Grün für das ±1σ Konfidenzband
+	diagHorizPen        *walk.CosmeticPen     // Cyan für Horizontalachse X
+	diagVertPen         *walk.CosmeticPen     // Amber für Vertikalachse Y
+	diagTwoSigmaPen     *walk.CosmeticPen     // Dotted Red für ±2σ Warnschwelle
+	diagFont            *walk.Font
+	diagBoldFont        *walk.Font
 
 	CurrentStats *TissueStats
 )
@@ -53,6 +57,10 @@ func initDiagramGraphics() {
 	diagBarLBrush, _ = walk.NewSolidColorBrush(walk.RGB(2, 132, 199))          // Links: Blau
 	diagBarRBrush, _ = walk.NewSolidColorBrush(walk.RGB(16, 185, 129))         // Rechts: Grün
 	diagAlertBrush, _ = walk.NewSolidColorBrush(walk.RGB(220, 38, 38))         // Alarm-Säule: Rot
+	diagCrossSigmaBrush, _ = walk.NewSolidColorBrush(walk.RGB(240, 253, 244))  // Pale Emerald Ribbon (±1σ)
+	diagHorizPen, _ = walk.NewCosmeticPen(walk.PenSolid, walk.RGB(2, 132, 199)) // Cyan X-Axis
+	diagVertPen, _ = walk.NewCosmeticPen(walk.PenSolid, walk.RGB(217, 119, 6))  // Amber Y-Axis
+	diagTwoSigmaPen, _ = walk.NewCosmeticPen(walk.PenDot, walk.RGB(239, 68, 68)) // Dotted Red (±2σ)
 	diagFont, _ = walk.NewFont("Segoe UI", 8, 0)
 	diagBoldFont, _ = walk.NewFont("Segoe UI", 8, walk.FontBold)
 }
@@ -473,3 +481,176 @@ func PaintProfileChart(canvas *walk.Canvas, bounds walk.Rectangle) error {
 
 	return nil
 }
+
+// PaintInflammationCrossChart zeichnet das orthogonale Kreuzprofil durch die Entzündung mit Standardabweichungs-Korridor (±1σ, ±2σ).
+func PaintInflammationCrossChart(canvas *walk.Canvas, bounds walk.Rectangle) error {
+	if diagBgBrush == nil {
+		initDiagramGraphics()
+	}
+	actualBounds := bounds
+	if diagCrossCanvas != nil {
+		cb := diagCrossCanvas.ClientBoundsPixels()
+		if cb.Width > 0 && cb.Height > 0 {
+			actualBounds = cb
+		}
+	}
+	canvas.FillRectanglePixels(diagBgBrush, actualBounds)
+
+	if len(GState.RawGray) == 0 || GState.Width <= 0 || GState.Height <= 0 {
+		canvas.DrawTextPixels("Entzündungs-Kreuzprofil: Kein Thermogramm geladen", diagFont, walk.RGB(148, 163, 184), actualBounds, walk.TextCenter|walk.TextVCenter)
+		return nil
+	}
+
+	// 1. Bestimme Entzündungs-Zentrum
+	center := image.Pt(GState.Width/2, GState.Height/2)
+	rad := 45
+	hotspotLabel := "Fokus"
+
+	if GState.HasCrosshairPoint {
+		center = GState.CrosshairPoint
+		if GState.CrosshairRadius > 0 {
+			rad = GState.CrosshairRadius
+		}
+		hotspotLabel = "Manuell gewählt"
+	} else if GState.LastResult != nil && len(GState.LastResult.Hotspots) > 0 {
+		hs := GState.LastResult.Hotspots[0]
+		center = image.Pt(hs.Region.CenterX, hs.Region.CenterY)
+		rad = int(math.Max(35.0, math.Sqrt(float64(hs.Region.AreaPixels))*1.4))
+		hotspotLabel = fmt.Sprintf("Hotspot #1 (%s)", hs.Region.DiagnosisType)
+	}
+
+	// 2. Berechne orthogonales Profil & Standardabweichung
+	numPts := 61
+	cm := ComputeCrosshairMetrics(GState.RawGray, GState.Width, GState.Height, center, rad, numPts)
+
+	padL, padR, padT, padB := 45, 95, 24, 26
+	plotW := actualBounds.Width - padL - padR
+	plotH := actualBounds.Height - padT - padB
+	if plotW <= 30 || plotH <= 30 {
+		return nil
+	}
+
+	// Y-Skalierung (Temperatur in °C)
+	minScaleT := math.Min(22.0, cm.MeanT-2.5*cm.StdDev)
+	maxScaleT := math.Max(38.0, math.Max(cm.PeakT+1.5, cm.MeanT+2.8*cm.StdDev))
+	if maxScaleT <= minScaleT {
+		maxScaleT = minScaleT + 10.0
+	}
+
+	mapY := func(t float64) int {
+		frac := (t - minScaleT) / (maxScaleT - minScaleT)
+		return padT + plotH - int(frac*float64(plotH))
+	}
+
+	mapX := func(idx int) int {
+		return padL + int(float64(idx)/float64(numPts-1)*float64(plotW))
+	}
+
+	// Titel
+	title := fmt.Sprintf("ENTZÜNDUNGS-KREUZPROFIL & STANDARDABWEICHUNG · %s @ (%d, %d)", hotspotLabel, center.X, center.Y)
+	canvas.DrawTextPixels(title, diagBoldFont, walk.RGB(3, 105, 161), walk.Rectangle{X: padL, Y: 4, Width: plotW, Height: 16}, walk.TextLeft)
+
+	// Gitterlinien & Y-Achsenbeschriftung
+	ySteps := 4
+	for i := 0; i <= ySteps; i++ {
+		tVal := minScaleT + float64(i)*(maxScaleT-minScaleT)/float64(ySteps)
+		y := mapY(tVal)
+		canvas.DrawLinePixels(diagGridPen, walk.Point{X: padL, Y: y}, walk.Point{X: padL + plotW, Y: y})
+		canvas.DrawTextPixels(fmt.Sprintf("%.1f°", tVal), diagFont, walk.RGB(71, 85, 105), walk.Rectangle{X: 4, Y: y - 6, Width: 36, Height: 12}, walk.TextRight)
+	}
+
+	// X-Achsenbeschriftung (Distanz in mm relativ zum Entzündungszentrum)
+	xSteps := 4
+	for i := 0; i <= xSteps; i++ {
+		idx := i * (numPts - 1) / xSteps
+		x := mapX(idx)
+		canvas.DrawLinePixels(diagGridPen, walk.Point{X: x, Y: padT}, walk.Point{X: x, Y: padT + plotH})
+		dist := cm.DistancesMm[idx]
+		canvas.DrawTextPixels(fmt.Sprintf("%+.0f mm", dist), diagFont, walk.RGB(71, 85, 105), walk.Rectangle{X: x - 25, Y: padT + plotH + 4, Width: 50, Height: 14}, walk.TextCenter)
+	}
+
+	// Standardabweichungs-Korridor (±1σ Shaded Band)
+	yPlus1 := mapY(cm.MeanT + cm.StdDev)
+	yMinus1 := mapY(cm.MeanT - cm.StdDev)
+	if yMinus1 > yPlus1 {
+		sigmaRect := walk.Rectangle{X: padL, Y: yPlus1, Width: plotW, Height: yMinus1 - yPlus1}
+		canvas.FillRectanglePixels(diagCrossSigmaBrush, sigmaRect)
+	}
+
+	// Linien für ±1σ, ±2σ und Mittelwert μ
+	yMean := mapY(cm.MeanT)
+	yPlus2 := mapY(cm.MeanT + 2.0*cm.StdDev)
+	yMinus2 := mapY(cm.MeanT - 2.0*cm.StdDev)
+
+	// +2σ Dotted Alert
+	if yPlus2 >= padT && yPlus2 <= padT+plotH {
+		canvas.DrawLinePixels(diagTwoSigmaPen, walk.Point{X: padL, Y: yPlus2}, walk.Point{X: padL + plotW, Y: yPlus2})
+		canvas.DrawTextPixels(fmt.Sprintf("+2σ (%.1f°C)", cm.MeanT+2.0*cm.StdDev), diagFont, walk.RGB(220, 38, 38), walk.Rectangle{X: padL + plotW + 4, Y: yPlus2 - 6, Width: 90, Height: 12}, walk.TextLeft)
+	}
+
+	// +1σ Dashed Green
+	if yPlus1 >= padT && yPlus1 <= padT+plotH {
+		canvas.DrawLinePixels(diagSigmaPen, walk.Point{X: padL, Y: yPlus1}, walk.Point{X: padL + plotW, Y: yPlus1})
+		canvas.DrawTextPixels(fmt.Sprintf("+1σ (%.1f°C)", cm.MeanT+cm.StdDev), diagFont, walk.RGB(16, 185, 129), walk.Rectangle{X: padL + plotW + 4, Y: yPlus1 - 6, Width: 90, Height: 12}, walk.TextLeft)
+	}
+
+	// Mittelwert μ
+	if yMean >= padT && yMean <= padT+plotH {
+		canvas.DrawLinePixels(diagMeanPen, walk.Point{X: padL, Y: yMean}, walk.Point{X: padL + plotW, Y: yMean})
+		canvas.DrawTextPixels(fmt.Sprintf("μ (%.1f°C)", cm.MeanT), diagFont, walk.RGB(3, 105, 161), walk.Rectangle{X: padL + plotW + 4, Y: yMean - 6, Width: 90, Height: 12}, walk.TextLeft)
+	}
+
+	// -1σ Dashed Green
+	if yMinus1 >= padT && yMinus1 <= padT+plotH {
+		canvas.DrawLinePixels(diagSigmaPen, walk.Point{X: padL, Y: yMinus1}, walk.Point{X: padL + plotW, Y: yMinus1})
+		canvas.DrawTextPixels(fmt.Sprintf("-1σ (%.1f°C)", cm.MeanT-cm.StdDev), diagFont, walk.RGB(16, 185, 129), walk.Rectangle{X: padL + plotW + 4, Y: yMinus1 - 6, Width: 90, Height: 12}, walk.TextLeft)
+	}
+
+	// -2σ Dotted Alert
+	if yMinus2 >= padT && yMinus2 <= padT+plotH {
+		canvas.DrawLinePixels(diagTwoSigmaPen, walk.Point{X: padL, Y: yMinus2}, walk.Point{X: padL + plotW, Y: yMinus2})
+		canvas.DrawTextPixels(fmt.Sprintf("-2σ (%.1f°C)", cm.MeanT-2.0*cm.StdDev), diagFont, walk.RGB(220, 38, 38), walk.Rectangle{X: padL + plotW + 4, Y: yMinus2 - 6, Width: 90, Height: 12}, walk.TextLeft)
+	}
+
+	// Nulllinie im Entzündungszentrum (s = 0)
+	midIdx := numPts / 2
+	xCenter := mapX(midIdx)
+	canvas.DrawLinePixels(diagGridPen, walk.Point{X: xCenter, Y: padT}, walk.Point{X: xCenter, Y: padT + plotH})
+
+	// 1. Horizontale Achse X (West -> Ost) in Cyan
+	var prevH walk.Point
+	for i := 0; i < numPts; i++ {
+		cur := walk.Point{X: mapX(i), Y: mapY(cm.HorizontalT[i])}
+		if i > 0 {
+			canvas.DrawLinePixels(diagHorizPen, prevH, cur)
+		}
+		prevH = cur
+	}
+
+	// 2. Vertikale Achse Y (Nord -> Süd) in Amber
+	var prevV walk.Point
+	for i := 0; i < numPts; i++ {
+		cur := walk.Point{X: mapX(i), Y: mapY(cm.VerticalT[i])}
+		if i > 0 {
+			canvas.DrawLinePixels(diagVertPen, prevV, cur)
+		}
+		prevV = cur
+	}
+
+	// Peak Markierung im Zentrum
+	yPeak := mapY(cm.PeakT)
+	canvas.DrawEllipsePixels(diagAlertPen, walk.Rectangle{X: xCenter - 4, Y: yPeak - 4, Width: 8, Height: 8})
+	peakBadge := fmt.Sprintf("Peak: %.1f°C (Z = %+.1fσ)", cm.PeakT, cm.ZScore)
+	canvas.DrawTextPixels(peakBadge, diagBoldFont, walk.RGB(220, 38, 38), walk.Rectangle{X: xCenter - 75, Y: yPeak - 16, Width: 150, Height: 14}, walk.TextCenter)
+
+	// Infokasten Oben Rechts
+	infoStr := fmt.Sprintf("μ=%.1f°C · σ=±%.2fK · ΔT=%+.2fK · FWHM=%.1fmm", cm.MeanT, cm.StdDev, cm.DeltaT, cm.FwhmMm)
+	canvas.DrawTextPixels(infoStr, diagBoldFont, walk.RGB(3, 105, 161), walk.Rectangle{X: padL + plotW - 320, Y: 4, Width: 320, Height: 14}, walk.TextRight)
+
+	// Legende Unten
+	leg := "Blau: Schnitt X (West-Ost) · Orange: Schnitt Y (Nord-Süd) · Grünes Band: ±1σ Normalbereich · Rot: +2σ Ausreißerschwelle"
+	canvas.DrawTextPixels(leg, diagFont, walk.RGB(71, 85, 105), walk.Rectangle{X: padL, Y: padT + plotH + 4, Width: plotW, Height: 14}, walk.TextLeft)
+
+	return nil
+}
+
