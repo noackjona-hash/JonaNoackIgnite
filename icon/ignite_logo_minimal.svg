@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Dark Background Gradient -->
+    <radialGradient id="bgGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#1E293B"/>
+      <stop offset="60%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#0B0F19"/>
+    </radialGradient>
+
+    <!-- Clinical Thermal Gradient: Cyan -> Amber -> Coral-Crimson -->
+    <linearGradient id="thermalGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#0284C7"/>   <!-- Deep Sapphire/Cyan -->
+      <stop offset="35%" stop-color="#38BDF8"/>  <!-- Luminous Cyan -->
+      <stop offset="65%" stop-color="#F59E0B"/>  <!-- Warning Amber -->
+      <stop offset="100%" stop-color="#EF4444"/> <!-- Acute Hotspot Crimson -->
+    </linearGradient>
+
+    <!-- Core Focal Glow -->
+    <radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#EF4444" stop-opacity="0.8"/>
+      <stop offset="50%" stop-color="#F59E0B" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#0284C7" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Subtle Drop Shadow -->
+    <filter id="glowFilter" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Background Base -->
+  <rect width="512" height="512" rx="128" fill="url(#bgGrad)"/>
+  <rect width="512" height="512" rx="128" fill="none" stroke="#334155" stroke-width="2" stroke-opacity="0.4"/>
+
+  <!-- Core Ambient Glow -->
+  <circle cx="256" cy="276" r="140" fill="url(#coreGlow)"/>
+
+  <!-- Minimalist Flame & Reticle Composition -->
+  <g filter="url(#glowFilter)">
+    <!-- Outer Flame Contour (Sleek Geometric Vector) -->
+    <path d="M 256,76 
+             C 272,130 304,175 336,204 
+             C 348,215 352,228 348,240 
+             C 342,256 322,260 310,250 
+             C 292,234 286,212 284,196 
+             C 284,236 304,264 300,296 
+             C 294,340 256,368 256,368
+             C 256,368 218,340 212,296
+             C 208,264 228,236 228,196
+             C 226,212 220,234 202,250
+             C 190,260 170,256 164,240
+             C 160,228 164,215 176,204
+             C 208,175 240,130 256,76 Z" 
+          fill="none" 
+          stroke="url(#thermalGrad)" 
+          stroke-width="14" 
+          stroke-linecap="round" 
+          stroke-linejoin="round"/>
+
+    <!-- Concentric Medical Reticles (Targeting the Lesion) -->
+    <!-- Outer Reticle Arc (Healthy Peripheral Tissue) -->
+    <circle cx="256" cy="296" r="112" 
+            fill="none" 
+            stroke="#0284C7" 
+            stroke-width="12" 
+            stroke-dasharray="88 24" 
+            stroke-linecap="round"/>
+
+    <!-- Mid Reticle Arc (Hyperthermia / Risk Corridor) -->
+    <circle cx="256" cy="296" r="68" 
+            fill="none" 
+            stroke="#F59E0B" 
+            stroke-width="10" 
+            stroke-dasharray="46 16" 
+            stroke-linecap="round"/>
+
+    <!-- Focal Core Reticle (Acute Armstrong Hotspot Delta-T >= 2.2K) -->
+    <circle cx="256" cy="296" r="26" 
+            fill="none" 
+            stroke="#EF4444" 
+            stroke-width="8" 
+            stroke-dasharray="16 8" 
+            stroke-linecap="round"/>
+
+    <circle cx="256" cy="296" r="6" fill="#EF4444"/>
+
+    <!-- Precision Crosshair Axes (X and Y with Tick Marks) -->
+    <!-- Horizontal Axis -->
+    <line x1="104" y1="296" x2="220" y2="296" stroke="#38BDF8" stroke-width="8" stroke-linecap="round"/>
+    <line x1="292" y1="296" x2="408" y2="296" stroke="#38BDF8" stroke-width="8" stroke-linecap="round"/>
+
+    <!-- Vertical Axis -->
+    <line x1="256" y1="164" x2="256" y2="260" stroke="url(#thermalGrad)" stroke-width="8" stroke-linecap="round"/>
+    <line x1="256" y1="332" x2="256" y2="428" stroke="#0284C7" stroke-width="8" stroke-linecap="round"/>
+
+    <!-- Orthogonal Caliper Ticks (at +/- 1 Sigma and +/- 2 Sigma) -->
+    <line x1="188" y1="288" x2="188" y2="304" stroke="#38BDF8" stroke-width="4" stroke-linecap="round"/>
+    <line x1="324" y1="288" x2="324" y2="304" stroke="#38BDF8" stroke-width="4" stroke-linecap="round"/>
+    <line x1="248" y1="228" x2="264" y2="228" stroke="#F59E0B" stroke-width="4" stroke-linecap="round"/>
+    <line x1="248" y1="364" x2="264" y2="364" stroke="#0284C7" stroke-width="4" stroke-linecap="round"/>
+  </g>
+</svg>
