@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# IGNITE Medical Suite v5.0.0 · Standalone Showcase Launcher
+# IGNITE Medical Suite v12.3.4.81 · Standalone Showcase Launcher
 # Fuer Fedora Linux, Ubuntu/Debian, Android (Termux) & macOS
 # Jugend forscht 2026 · Fachgebiet Arbeitswelt
 # =============================================================================
@@ -8,7 +8,7 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "======================================================"
-echo " IGNITE Medical Suite v5.0.0 · Standalone Showcase"
+echo " IGNITE Medical Suite v12.3.4.81 · Standalone Showcase"
 echo " Jugend forscht 2026 · Fachgebiet Arbeitswelt"
 echo "======================================================"
 echo ""

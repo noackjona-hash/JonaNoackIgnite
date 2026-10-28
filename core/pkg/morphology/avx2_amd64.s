@@ -1,7 +1,7 @@
 #include "textflag.h"
 
 // ============================================================================
-// IGNITE v5.0.0 HIGH-PERFORMANCE x86_64 AVX2 SIMD ASSEMBLY KERNELS
+// IGNITE v12.3.4.81 HIGH-PERFORMANCE x86_64 AVX2 SIMD ASSEMBLY KERNELS
 // ============================================================================
 
 // func minVectorAVX2(src, dst *byte, count int)

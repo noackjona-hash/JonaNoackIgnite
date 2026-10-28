@@ -6,14 +6,20 @@ updates:
     schedule:
       interval: "weekly"
 
-  # Python Dependencies (pip)
-  - package-ecosystem: "pip"
-    directory: "/"
+  # Go Core Module
+  - package-ecosystem: "gomod"
+    directory: "/core"
     schedule:
       interval: "weekly"
 
-  # Rust Crates (Cargo)
-  - package-ecosystem: "cargo"
+  # Go Desktop Workstation Module
+  - package-ecosystem: "gomod"
+    directory: "/desktop"
+    schedule:
+      interval: "weekly"
+
+  # Python Dependencies (pip)
+  - package-ecosystem: "pip"
     directory: "/"
     schedule:
       interval: "weekly"

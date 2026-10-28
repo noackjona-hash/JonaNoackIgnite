@@ -143,7 +143,7 @@ def bump_all_files(new_version: str, old_version: str, dry_run: bool = False) ->
     if c1 or c2:
         updated.append("config.py")
 
-    # 6. installer/ignite_installer.iss
+    # 6. installer/ignite_installer.iss & installer/setup.iss
     iss_file = REPO_ROOT / "installer" / "ignite_installer.iss"
     if iss_file.exists():
         if update_file_regex(
@@ -154,7 +154,24 @@ def bump_all_files(new_version: str, old_version: str, dry_run: bool = False) ->
         ):
             updated.append("installer/ignite_installer.iss")
 
-    # 7. LICENSE
+    setup_iss = REPO_ROOT / "installer" / "setup.iss"
+    if setup_iss.exists():
+        update_file_regex(setup_iss, r'(#define MyAppVersion\s*")[^"]+(")', rf'\g<1>{new_version}\g<2>', dry_run)
+        update_file_regex(setup_iss, r'(OutputBaseFilename=IGNITE_Medical_Suite_v)[^_\s]+(_Setup)', rf'\g<1>{new_version}\g<2>', dry_run)
+        updated.append("installer/setup.iss")
+
+    # 7. desktop manifests
+    manifest_file = REPO_ROOT / "desktop" / "Ignite.exe.manifest"
+    if manifest_file.exists():
+        update_file_regex(manifest_file, r'(version=")[^"]+(")', rf'\g<1>{new_version}\g<2>', dry_run)
+        updated.append("desktop/Ignite.exe.manifest")
+
+    wails_json = REPO_ROOT / "desktop" / "wails.json"
+    if wails_json.exists():
+        update_file_regex(wails_json, r'("productVersion":\s*")[^"]+(")', rf'\g<1>{new_version}\g<2>', dry_run)
+        updated.append("desktop/wails.json")
+
+    # 8. LICENSE
     if update_file_regex(
         REPO_ROOT / "LICENSE",
         r'(Version\s*)[0-9.]+(\s*\(Institutional)',
@@ -163,7 +180,7 @@ def bump_all_files(new_version: str, old_version: str, dry_run: bool = False) ->
     ):
         updated.append("LICENSE")
 
-    # 8. scripts/build_setup.ps1
+    # 9. scripts/build_setup.ps1
     if update_file_regex(
         REPO_ROOT / "scripts" / "build_setup.ps1",
         r'(IGNITE Core v)[0-9.]+(\s*–\s*Rust Build)',
@@ -172,7 +189,7 @@ def bump_all_files(new_version: str, old_version: str, dry_run: bool = False) ->
     ):
         updated.append("scripts/build_setup.ps1")
 
-    # 9. ignite-landing/index.html
+    # 10. ignite-landing/index.html
     landing_html = REPO_ROOT / "ignite-landing" / "index.html"
     if landing_html.exists():
         update_file_regex(

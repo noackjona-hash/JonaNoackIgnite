@@ -1,5 +1,5 @@
 # ==============================================================================
-# build_all_platforms.ps1 — Universal Multi-OS Package Generator fuer IGNITE v5.0
+# build_all_platforms.ps1 — Universal Multi-OS Package Generator fuer IGNITE v12.3.4.81
 # ==============================================================================
 
 $ErrorActionPreference = "Stop"
@@ -10,7 +10,7 @@ $DistDir = Join-Path $RootDir "dist"
 $CoreDir = Join-Path $RootDir "core"
 
 Write-Host "==================================================================" -ForegroundColor Cyan
-Write-Host " IGNITE Medical Suite v5.0.0 -- Multi-Platform Release Builder" -ForegroundColor Cyan
+Write-Host " IGNITE Medical Suite v12.3.4.81 -- Multi-Platform Release Builder" -ForegroundColor Cyan
 Write-Host "==================================================================" -ForegroundColor Cyan
 
 # 1. Verzeichnisse anlegen

@@ -133,7 +133,7 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 	status := map[string]interface{}{
 		"status":      "ONLINE",
 		"engine":      "ignite-core",
-		"version":     "5.0.0",
+		"version":     "12.3.4.81",
 		"arch":        runtime.GOARCH,
 		"os":          runtime.GOOS,
 		"num_cpu":     runtime.NumCPU(),
@@ -194,7 +194,7 @@ func main() {
 		http.HandleFunc("/api/symmetry", handleSymmetry)
 
 		addr := fmt.Sprintf("127.0.0.1:%d", *port)
-		log.Printf("[IGNITE-CORE v5.0.0] High-Performance Engine listening on http://%s", addr)
+		log.Printf("[IGNITE-CORE v12.3.4.81] High-Performance Engine listening on http://%s", addr)
 		if err := http.ListenAndServe(addr, nil); err != nil {
 			log.Fatalf("Server failed: %v", err)
 		}
@@ -252,7 +252,7 @@ func main() {
 
 	// CLI Mode
 	if *inputPath == "" {
-		fmt.Println("IGNITE Core v5.0.0 (Go + x86_64 AVX2)")
+		fmt.Println("IGNITE Core v12.3.4.81 (Go + x86_64 AVX2)")
 		fmt.Println("Usage:")
 		fmt.Println("  ignite-core -mode=server -port=54321")
 		fmt.Println("  ignite-core -mode=cli -input=\"path/to/image.jpg\" -output=\"result.json\"")

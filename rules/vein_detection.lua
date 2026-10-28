@@ -1,5 +1,5 @@
 -- vein_detection.lua
--- IGNITE Medical Imaging Suite v5.0.0
+-- IGNITE Medical Imaging Suite v12.3.4.81
 -- Differenzierung zwischen oberflaechlichen Venen und entzuendlichen Herden.
 
 function evaluate_hotspot(hotspot, stats)

@@ -1,11 +1,11 @@
 ; ==============================================================================
-; IGNITE Medical Imaging Suite v5.0.0 — Inno Setup Script
+; IGNITE Medical Imaging Suite v12.3.4.81 — Inno Setup Script
 ; Jugend forscht 2026: Deterministische Thermografie-Workstation
 ; Author: Jona Noack
 ; ==============================================================================
 
 #define MyAppName "IGNITE Medical Suite"
-#define MyAppVersion "5.0.0"
+#define MyAppVersion "12.3.4.81"
 #define MyAppPublisher "Jona Noack (Jugend forscht 2026)"
 #define MyAppURL "https://github.com/noackjona-hash/JonaNoackIgnite"
 #define MyAppExeName "Ignite.exe"
@@ -23,7 +23,7 @@ DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 LicenseFile=..\LICENSE
 OutputDir=..\dist
-OutputBaseFilename=IGNITE_Medical_Suite_v5.0.0_Setup
+OutputBaseFilename=IGNITE_Medical_Suite_v12.3.4.81_Setup
 SetupIconFile=..\icon\LogoRund.ico
 Compression=lzma2/ultra64
 SolidCompression=yes

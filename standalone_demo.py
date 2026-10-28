@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-standalone_demo.py – Zero-Dependency Portable Showcase für IGNITE v5.0.0
+standalone_demo.py – Zero-Dependency Portable Showcase für IGNITE v12.3.4.81
 Entwickelt für Vorführungen auf beliebigen Fremdrechnern (Windows, Fedora Linux, Android/Termux).
 
 HIGHLIGHTS:
@@ -455,7 +455,7 @@ def generate_web_html(res: Dict[str, Any]) -> str:
     <header>
         <div class="header-title">
             <span>⚡ IGNITE Medical Suite</span>
-            <span class="badge">v5.0.0 Portable</span>
+            <span class="badge">v12.3.4.81 Portable</span>
             <span class="badge">Pure Python</span>
             <span class="badge badge-red">ARMSTRONG ALARM ΔT ≥ 2.2 K</span>
         </div>

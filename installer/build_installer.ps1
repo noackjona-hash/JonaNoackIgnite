@@ -1,12 +1,12 @@
 # ==============================================================================
-# IGNITE Medical Imaging Suite v5.0.0 — Automated Installer Build Script
-# Pure Go Native Architecture: AVX2 Rechenkern + Wails v2 PACS Workstation
+# IGNITE Medical Imaging Suite v12.3.4.81 — Automated Installer Build Script
+# Pure Go Native Architecture: AVX2 Rechenkern + Win32 PACS Workstation
 # ==============================================================================
 
 $ErrorActionPreference = "Stop"
 
 Write-Host "==================================================================" -ForegroundColor Cyan
-Write-Host " Building IGNITE Medical Imaging Suite v5.0.0 (Pure Go Suite)" -ForegroundColor Cyan
+Write-Host " Building IGNITE Medical Imaging Suite v12.3.4.81 (Pure Go Suite)" -ForegroundColor Cyan
 Write-Host "==================================================================" -ForegroundColor Cyan
 
 $RootDir = Split-Path -Parent $PSScriptRoot
@@ -62,5 +62,5 @@ if ($LASTEXITCODE -ne 0) { throw "Inno Setup compilation failed!" }
 
 Write-Host "`n==================================================================" -ForegroundColor Green
 Write-Host " Installer created successfully in dist/:" -ForegroundColor Green
-Get-Item "$RootDir\dist\IGNITE_Medical_Suite_v5.0.0_Setup.exe" | Select-Object Name, Length, LastWriteTime | Format-Table -AutoSize
+Get-Item "$RootDir\dist\IGNITE_Medical_Suite_v12.3.4.81_Setup.exe" | Select-Object Name, Length, LastWriteTime | Format-Table -AutoSize
 Write-Host "==================================================================" -ForegroundColor Green

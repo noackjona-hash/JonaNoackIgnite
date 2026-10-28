@@ -3,7 +3,7 @@ setlocal enabledelayedexpansion
 title IGNITE Medical Suite · Standalone Showcase Launcher
 
 echo ======================================================
-echo  IGNITE Medical Suite v5.0.0 · Standalone Showcase
+echo  IGNITE Medical Suite v12.3.4.81 · Standalone Showcase
 echo  Jugend forscht 2026 · Fachgebiet Arbeitswelt
 echo ======================================================
 echo.

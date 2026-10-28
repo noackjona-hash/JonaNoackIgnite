@@ -1,5 +1,5 @@
 -- perfusion_eval.lua
--- IGNITE Medical Imaging Suite v5.0.0
+-- IGNITE Medical Imaging Suite v12.3.4.81
 -- Beurteilung des longitudinalen Temperaturgradienten zur Erkennung von pAVK.
 
 function evaluate_perfusion_drop(max_drop, hypo_area_percent)

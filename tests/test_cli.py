@@ -7,6 +7,7 @@ import pytest
 import numpy as np
 
 import cli
+import config
 
 
 def test_cli_parser_creation():
@@ -36,7 +37,7 @@ def test_cli_info_execution(capsys):
     assert exit_code == 0
     captured = capsys.readouterr()
     assert "IGNITE SYSTEM- UND HARDWARE-STATUS" in captured.out or "IGNITE System- und Hardware-Status" in captured.out
-    assert "v5.0.0" in captured.out
+    assert config.APP_VERSION in captured.out
 
 
 def test_cli_analyze_single_image(tmp_path):

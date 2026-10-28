@@ -98,7 +98,7 @@ func showNativeSplashScreen() {
 		Layout:   VBox{Margins: Margins{Left: 20, Top: 20, Right: 20, Bottom: 16}, Spacing: 8},
 		Children: []Widget{
 			Label{
-				Text: "⚡ IGNITE THERMOAI VISION v5.0.0",
+				Text: "⚡ IGNITE THERMOAI VISION v12.3.4.81",
 				Font: Font{Family: "Segoe UI", PointSize: 13, Bold: true},
 			},
 			Label{
@@ -151,7 +151,7 @@ func main() {
 
 	err := MainWindow{
 		AssignTo: &mw,
-		Title:    "IGNITE Medical Workstation · ThermoAI Vision v5.0.0 (DIN EN ISO 13485 / C++ Workstation Flair)",
+		Title:    "IGNITE Medical Workstation · ThermoAI Vision v12.3.4.81 (DIN EN ISO 13485 / C++ Workstation Flair)",
 		MinSize:  Size{Width: 1200, Height: 750},
 		Size:     Size{Width: 1600, Height: 950},
 		Layout:   VBox{MarginsZero: true, Spacing: 0},
@@ -1571,7 +1571,7 @@ func onExportReportHtml() {
 			measureRows.WriteString("<tr><td colspan='6'><em>Keine manuellen Messungen erfasst</em></td></tr>")
 		}
 
-		html := fmt.Sprintf(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>IGNITE Befundbericht %s</title><style>body{font-family:Segoe UI,sans-serif;margin:30px;color:#1e293b}h1{color:#0284c7}h2{color:#0369a1;margin-top:20px}table{border-collapse:collapse;width:100%%;margin-top:10px}td,th{border:1px solid #cbd5e1;padding:8px;text-align:left}th{background:#f1f5f9;color:#334155}.badge{padding:4px 8px;border-radius:4px;font-weight:bold}.crit{background:#fee2e2;color:#dc2626}.mod{background:#fef3c7;color:#d97706}.norm{background:#dcfce7;color:#16a34a}</style></head><body><h1>IGNITE Medical Workstation – Befundbericht</h1><p><strong>Patient (Pseudonym):</strong> %s · <strong>Studie:</strong> %s · <strong>Datum:</strong> %s</p><p><strong>Validierender Arzt:</strong> %s · <strong>Digitale Signatur:</strong> %s</p><p><strong>Diagnostische Triage:</strong> <span class="badge crit">%s</span> · <strong>Detektierte Entzündungsherde:</strong> %d</p><h2>Klinische Messungen & Geometrie (0.60 mm/px)</h2><table><tr><th>ID</th><th>Typ</th><th>Bezeichnung</th><th>Messwert</th><th>Details & Gradient</th><th>Triage</th></tr>%s</table><p style="margin-top:30px;font-size:11px;color:#64748b">Erstellt mit IGNITE Medical Imaging Suite v5.0.0 (Jugend forscht 2026 · Jona Noack) · DIN EN ISO 13485 · IWGDF Armstrong ΔT ≥ 2,2 K · DSGVO Art. 30 Audit</p></body></html>`,
+		html := fmt.Sprintf(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>IGNITE Befundbericht %s</title><style>body{font-family:Segoe UI,sans-serif;margin:30px;color:#1e293b}h1{color:#0284c7}h2{color:#0369a1;margin-top:20px}table{border-collapse:collapse;width:100%%;margin-top:10px}td,th{border:1px solid #cbd5e1;padding:8px;text-align:left}th{background:#f1f5f9;color:#334155}.badge{padding:4px 8px;border-radius:4px;font-weight:bold}.crit{background:#fee2e2;color:#dc2626}.mod{background:#fef3c7;color:#d97706}.norm{background:#dcfce7;color:#16a34a}</style></head><body><h1>IGNITE Medical Workstation – Befundbericht</h1><p><strong>Patient (Pseudonym):</strong> %s · <strong>Studie:</strong> %s · <strong>Datum:</strong> %s</p><p><strong>Validierender Arzt:</strong> %s · <strong>Digitale Signatur:</strong> %s</p><p><strong>Diagnostische Triage:</strong> <span class="badge crit">%s</span> · <strong>Detektierte Entzündungsherde:</strong> %d</p><h2>Klinische Messungen & Geometrie (0.60 mm/px)</h2><table><tr><th>ID</th><th>Typ</th><th>Bezeichnung</th><th>Messwert</th><th>Details & Gradient</th><th>Triage</th></tr>%s</table><p style="margin-top:30px;font-size:11px;color:#64748b">Erstellt mit IGNITE Medical Imaging Suite v12.3.4.81 (Jugend forscht 2026 · Jona Noack) · DIN EN ISO 13485 · IWGDF Armstrong ΔT ≥ 2,2 K · DSGVO Art. 30 Audit</p></body></html>`,
 			GState.PatientID, GState.PatientID, GState.PatientStudy, time.Now().Format("02.01.2006 15:04:05"), GState.DoctorName, GState.SignatureHash, GState.LastResult.HighestRisk, GState.LastResult.TotalHotspots, measureRows.String())
 		os.WriteFile(dlg.FilePath, []byte(html), 0644)
 		walk.MsgBox(mw, "Exportiert", "Umfassender Befundbericht erfolgreich gespeichert.", walk.MsgBoxIconInformation)
@@ -1754,7 +1754,7 @@ func onReAnonymize() {
 
 func onAbout() {
 	walk.MsgBox(mw, "Über IGNITE Medical Workstation",
-		"IGNITE Medical Imaging Suite v5.0.0\n"+
+		"IGNITE Medical Imaging Suite v12.3.4.81\n"+
 			"Entwickelt für Jugend forscht 2026 von Jona Noack.\n\n"+
 			"Reine Go Desktop-Architektur mit nativem C++ / Win32 Workstation-Look.\n"+
 			"42-stufige deterministische Bildverarbeitung mit AVX2-Vektorkernen.\n"+

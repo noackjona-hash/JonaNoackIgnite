@@ -8,4 +8,4 @@ Bitte lies vor der Bearbeitung von Code in diesem Repository immer zuerst **[AGE
 3. **Ordnerstruktur & Schlüsseldateien:** Vollständige Aufschlüsselung aller Ordner und Services.
 4. **Klinische Algorithmen & 42-Stufen PAP:** 42-stufige Pipeline (dokumentiert in `docs/PROGRAMMABLAUFPLAN_42_STUFEN.md`), Otsu + Chamfer Distanzerosion, Morphologischer Top-Hat, MAD-Outlier Schwellwert, Frangi-Hesse Gefäßfilter, Pennes Bioheat Modell, Taylor & Palmer Angiosome.
 5. **GUI-Regeln & Inspector-System:** Synchronisierter Dual-Viewport mit Live-Fadenkreuz, Vorhang-Split (Curtain Wipe), 4-Kategorien-Inspector (Diagnose, Anatomie, Signale, System).
-6. **Build- & Testkommandos:** Go Tests, Go Desktop Workstation Build (`desktop/Ignite.exe`), Inno Setup Installer (`dist/IGNITE_Medical_Suite_v5.0.0_Setup.exe`).
+6. **Build- & Testkommandos:** Go Tests, Go Desktop Workstation Build (`desktop/Ignite.exe`), Inno Setup Installer (`dist/IGNITE_Medical_Suite_v12.3.4.81_Setup.exe`).

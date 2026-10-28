@@ -8,7 +8,7 @@
 
 ## 1. Projektübersicht & Mission
 
-* **Projektname:** IGNITE Medical Imaging Suite (v5.0.0+)
+* **Projektname:** IGNITE Medical Imaging Suite (v12.3.4.81)
 * **Wettbewerb & Kontext:** Entwickelt für **Jugend forscht 2026** (Fachgebiet Arbeitswelt / Informatik) von **Jona Noack**.
 * **Klinische Kernmission:**  
   Vollautomatisierte, deterministische und berührungslose Früherkennung subklinischer Gewebeentzündungen, diabetischer Fußulzera (DFS / DFU) und vaskulärer Durchblutungsstörungen mittels hochauflösender Infrarot-Thermografie (LWIR, Long-Wave Infrared, 8–14 µm).
@@ -210,7 +210,7 @@ go build -ldflags="-H windowsgui -s -w" -o Ignite.exe .
 
 ### 6.3 1-Klick Gesamt-Build (Inno Setup Installer)
 ```powershell
-# Baut Go-Kern, Go Desktop Suite und schnürt dist/IGNITE_Medical_Suite_v5.0.0_Setup.exe
+# Baut Go-Kern, Go Desktop Suite und schnürt dist/IGNITE_Medical_Suite_v12.3.4.81_Setup.exe
 .\installer\build_installer.ps1
 ```
 

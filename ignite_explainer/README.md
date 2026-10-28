@@ -1,7 +1,7 @@
 # IGNITE Explainer Pipeline — 42-Stufige Diagnostik in reinem Python & Assembler
 
 > **Jugend forscht 2026** — Fachgebiet Arbeitswelt / Informatik  
-> **Projekt:** IGNITE Medical Imaging Suite (v5.0.0)  
+> **Projekt:** IGNITE Medical Imaging Suite (v12.3.4.81)  
 > **Autor:** Jona Noack  
 > **Klinische Kernmission:** Deterministische, berührungslose Früherkennung subklinischer Gewebeentzündungen, diabetischer Fußulzera (DFS / DFU) und vaskulärer Durchblutungsstörungen mittels hochauflösender LWIR-Infrarot-Thermografie (8–14 µm).
 

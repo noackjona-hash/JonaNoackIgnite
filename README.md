@@ -1,4 +1,4 @@
-# IGNITE Medical Imaging Suite (v5.0.0)
+# IGNITE Medical Imaging Suite (v12.3.4.81)
 
 **IGNITE** ist eine deterministische, hochauflösende Infrarot-Thermografie-Workstation zur automatisierten Früherkennung subklinischer Gewebeentzündungen, diabetischer Fußulzera und vaskulärer Auffälligkeiten. 
 
@@ -6,31 +6,45 @@ Entwickelt für den deutschen Jugendwettbewerb **Jugend forscht 2026** (Fachgebi
 
 ---
 
-## 🚀 Neuheiten & Highlights in Version 5.0.0
+## 🚀 Neuheiten & Highlights in Version 12.3.4.81
 
-* **Next-Gen Obsidian Glass Cockpit & Ergonomie:**
-  * **Obsidian Medical Dark Mode:** Ergonomisches, kontrastoptimiertes Farbkonzept (`#07090E` Deep Space Canvas, `#0D111A` Frosted Slate Glass, `#00F0FF` Laser Cyan, `#2563EB` Cobalt Blue, `#FF2A55` Armstrong Alarm Red).
-  * **Interaktiver Vorhang-Wipe-Split-Slider (`[🌓 Vorhang-Wipe]`):** Stufenloses, interaktives Überblenden per beweglichem Center-Handle `[ ◀ 🌓 ▶ ]` zwischen dem Roh-Wärmebild und dem radiometrischen Befund-Overlay mit hardware-beschleunigtem Clipping.
-  * **2.5D Isometrisches Relief-Topografie-Mapping (`[🏔️ 3D-Relief]`):** Räumliche 2.5D-Projektion der Temperaturwerte als 3D-Relief mit berechnetem Hillshading (Schattierungsvektor) – pathologische Hyperthermien heben sich wie vulkanische Bergspitzen unmittelbar vom kühleren Normalgewebe ab.
-  * **256-Kanal Radiometrisches Histogramm & Quantilspektrum (`[📊 Spektrum]`):** Live-Histogramm aller 256 Graustufen/Temperaturstufen mit visueller Kennzeichnung von Median, Normalinterquartilbereich (Q25–Q75) und pathologischen MAD-Ausreißerschwellen direkt über dem Farbskalen-Ramp.
-  * **5-Zonen Anatomische Armstrong-Matrix (`[🦶 Zonen]`):** Automatische anatomische Zerlegung des Fußes in Hallux (Großzehe), Metatarsale I–II (medialer Ballen), Metatarsale III–V (lateraler Ballen), Plantargewölbe (Mittelfuß) und Calcaneus (Ferse) mit zonenbasierter Ulkus-Risikostufe (Klasse 0 bis 3).
-  * **Dual-Viewport & Live-Fadenkreuz:** Synchronisiertes Pan & Zoom zwischen Infrarot-Originalaufnahme und diagnostischem Befund-Overlay mit pixelgenauer Temperatur- & Differenzanzeige.
-  * **Modulare Inspector-Tabs:** Schneller Wechsel zwischen Entzündungsherden (Hotspots), Frangi-Venenkartierung, Perfusion-Gradienten, Radiometrie-Spektrum und 5-Zonen-Matrix.
-* **Venen- & Adernkartierung (Vascular Mapping):** Multiskaliger **Frangi-Vesselness-Filter** basierend auf der 2D-Hesse-Matrix $\mathcal{H}$ zur präzisen Segmentierung tubulärer Blutgefäße und deren Unterscheidung von Entzündungsherden.
-* **Perfusion & Longitudinaler Temperaturgradient ($dT/dy$):** Automatische Erkennung distaler Durchblutungsabbrüche zur Früherkennung von pAVK („Schaufensterkrankheit“) und diabetischer Mikroangiopathie.
-* **Bilateraler Seitenvergleich (Armstrong-Kriterium $\Delta T \ge 2{,}2\,\text{K}$):** Spiegelbildlicher Vergleich beider Extremitäten (L vs. R) zur eindeutigen Unterscheidung zwischen harmloser mechanischer Belastung (Socken/Druckstellen) und echten pathologischen Entzündungen.
-* **Universal Multi-Anatomical Engine & Akren-Erhaltung:** Vollautomatische Unterstützung für alle anatomischen Regionen (Füße, Hände/Finger, Knie, Wirbelsäule, allgemeines Weichgewebe). Dank physikalisch kalibrierter 3D-Lambertian-Winkelkompensation entfällt aggressiver Randverschnitt: Entzündungsherde an Zehen- und Fingerkuppen werden mit vollständiger anatomischer Randintegrität erfasst, während abgetrennte Hintergrundartefakte (Bettlaken/Boden) automatisch gefiltert werden.
-* **Klinisches Severity-Ranking & Triaging:** Automatische Sortierung detektierter Herde nach pathologischem Risikoscore und lokaler Temperaturüberhöhung ($\Delta T$), sodass akute Entzündungsfoci in der Desktop-Workstation unmittelbar als Herd #1 mit interaktiver Callout-Karte priorisiert werden.
-* **6 spezialisierte x86_64 AVX2-Assembler-Kernels:**
-  * `minVectorAVX2` & `maxVectorAVX2`: 32 Pixel parallel pro CPU-Takt für morphologische Erosion und Dilation.
-  * `subVectorAVX2`: Sättigende Subtraktion (`VPSUBUSB`) für die Top-Hat-Filterung.
+* **Reine Go Native PACS Workstation (`desktop/`) & Ergonomie:**
+  * **Authentischer Win32 / C++ Workstation-Look:** Extrem schlanke, blitzschnelle native Windows-Oberfläche (ohne CGO/gcc, Win32 Common Controls 6.0 via Walk) mit direkter In-Process Anbindung an den Go-Rechenkern (Zero-IPC / Zero-Copy).
+  * **Interaktive Viewport-Messwerkzeuge (Toolbar & Shortcuts):**
+    * `⌖ Retikel`: Live-Spot-Probe mit kontralateraler Referenz.
+    * `📏 Caliper-Lineal`: Metrische Distanz ($0{,}60\,\text{mm/px}$) und thermischer Gewebegradient $G = \frac{\Delta T}{\Delta s}$ in $\text{K/cm}$ mit automatischer Armstrong-Risikoklassifikation.
+    * `⬛ Bilaterales Rechteck-ROI`: $T_{\text{min}}, T_{\text{max}}, T_{\text{mean}}, \sigma$, Gewebefläche in $\text{mm}^2/\text{cm}^2$ und automatische kontralateral gespiegelte Referenz-ROI mit bilateralem $\Delta T$.
+    * `⭕ Zirkuläres Halo-ROI`: Differenzierung von Kern- vs. periphärem Vasodilatations-Ring ($\Delta T_{\text{halo}}$).
+    * `📐 Orthopädischer Goniometer`: 3-Punkt-Winkelmessung mit Gradbogen und Hallux-Valgus-Einstufung.
+    * `📈 Dynamische Schnittlinie`: Transversalprofil $A \to B$ zur Echtzeit-Visualisierung der Temperaturverteilung.
+  * **Dynamische Isothermen-Bänderung ($T \ge 34{,}0\,^\circ\text{C}$):**
+    * Hebt potenziell ulzeröse Gewebebereiche leuchtend hervor.
+  * **Klinische Fensterungs-Presets (Window / Level):**
+    * *Auto (Min–Max)*, *DFS/DFU Fokus ($28–36\,^\circ\text{C}$)*, *Ischämie-Screening ($22–32\,^\circ\text{C}$)*, *High-Contrast Hotspot ($30–38\,^\circ\text{C}$)*.
+  * **Erweiterte wissenschaftliche Farbpaletten:**
+    * Google **Turbo (Scientific HDR)** und **Inferno** ergänzen Ironbow, Medical Jet, Rainbow, Viridis und Grayscale.
+  * **Umfassende Export-Suite:**
+    * Hochauflösender PNG-Snapshot des Viewports inklusive Messungen.
+    * Revisionssicherer CSV-Export aller geometrischen & thermischen Messungen.
+    * 3D-Mesh-Export als **Wavefront OBJ**, **XYZ Point Cloud** oder **STL Surface Mesh**.
+* **42-stufige deterministische Bildverarbeitungs-Pipeline (`core/`):**
+  * Otsu-Schwellenwert-Segmentierung & 2-Pass Chamfer-$L_2$ Distanzerosion zur randartefaktfreien Gewebemaskierung.
+  * Morphologischer White Top-Hat zur Isolation fokaler Temperaturspitzen.
+  * Robustes Hampel/MAD-Outlier-Thresholding ($\tau = \text{Median} + k \times 1{,}4826 \times \text{MAD}$).
+  * Multiskaliger **Frangi-Hesse-Filter** zur Differenzierung tubulärer Blutgefäße von runden Entzündungsherden.
+  * Pennes 2D-Bioheat Perfusion & THDI (Thermal Heat Dissipation Index).
+* **11 spezialisierte x86_64 AVX2-Assembler-Kernels (`core/pkg/morphology/*.s`):**
+  * `minVectorAVX2` & `maxVectorAVX2`: Morphologische Erosion/Dilation (32 Pixel parallel pro CPU-Takt).
+  * `subVectorAVX2`: Sättigende Subtraktion (`VPSUBUSB`) für den Top-Hat-Filter.
   * `absDiffVectorAVX2`: Vektorisierte Differenz $|a - b|$ für den Armstrong-Seitenvergleich.
-  * `thresholdMaskAVX2`: Gleichzeitiges Binarisieren, Schwellwertabgleich und Gewebemaskierung in 256-Bit-Registern.
-  * `fmaVectorFloat32AVX2`: Vektorisierte Gleitkomma-Faltung für den Frangi-Gefäßfilter.
+  * `thresholdMaskAVX2`: Paralleles Binarisieren & Gewebemaskierung.
+  * `fmaVectorFloat32AVX2`: Gleitkomma-Faltung (FMA) für den Frangi-Gefäßfilter.
+  * `mulScalarFloat32AVX2`, `dotProductFloat32AVX2`, `addVectorFloat32AVX2`, `scaleOffsetFloat32AVX2`, `laplacian2DVectorFloat32AVX2`, `sumAndSumSqUint8AVX2`.
 * **Automatisierter Windows-Installer (Inno Setup 6):**
-  * Standalone-Installationsassistent (`dist/IGNITE_Medical_Suite_v5.0.0_Setup.exe`, 28.3 MB) mit LZMA2/Ultra64-Kompression, Startmenü- und Desktop-Icons sowie sauberem Uninstaller.
-  * Ein-Klick-Buildskript [`installer/build_installer.ps1`](file:///d:/Downloads/03_Programmierung%20&%20Entwicklung/05_JUFO/JonaNoackIgnite/installer/build_installer.ps1).
-* **CI/CD GitHub Actions Workflow:** Vollautomatisches Testen des AVX2-Kerns, Kompilieren der .NET 10 WPF Suite, Bauen des Inno Setup Installers und Veröffentlichen von Release-Artefakten via [`.github/workflows/ci_v5.yml`](file:///d:/Downloads/03_Programmierung%20&%20Entwicklung/05_JUFO/JonaNoackIgnite/.github/workflows/ci_v5.yml).
+  * Standalone-Installationsassistent (`dist/IGNITE_Medical_Suite_v12.3.4.81_Setup.exe`) mit Ultra64-Kompression, Startmenü- und Desktop-Icons sowie uninstaller.
+  * 1-Klick-Buildskript [`installer/build_installer.ps1`](installer/build_installer.ps1).
+* **Modernisierte CI/CD GitHub Actions:**
+  * Schnelle, automatisierte Builds für Go 1.24+ AVX2 Core, Go PACS Workstation, Python-Validierung und Inno Setup Paketierung via [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 
 ---
 
@@ -38,47 +52,47 @@ Entwickelt für den deutschen Jugendwettbewerb **Jugend forscht 2026** (Fachgebi
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ 1. C# (.NET 10 / WPF)                                                        │
-│    OBSIDIAN MEDICAL WORKSTATION GUI                                         │
-│    - Dual-Viewport mit synchronem Zoom/Pan und Fadenkreuz                   │
-│    - DSGVO-Pseudonymisierung (ANON-<hash>), Hardware-Status-Pills           │
-│    - Kalibrierte Farbskala (Ironbow/Rainbow), Docking-Tabs, Hotspot-Liste   │
+│ 1. Go (Walk / Win32)                                                        │
+│    NATIVE GO MEDICAL PACS WORKSTATION GUI (desktop/)                        │
+│    - Reines Go ohne CGO/gcc mit authentischem C++ / Win32 Workstation-Look  │
+│    - Direkte In-Process Anbindung an den Go-Kern (Zero-IPC / Zero-Copy)     │
+│    - Dual-Viewport mit synchronem Zoom/Pan, Live-Fadenkreuz & HUD           │
+│    - 6 interaktive Messmodi, Isothermen, Windowing, Paletten (Turbo/Inferno)│
 └──────────────────────────────────────┬──────────────────────────────────────┘
-                                       │ Lokaler IPC-Aufruf (CLI / JSON)
+                                       │ Direkter In-Process Aufruf (Zero-Copy)
                                        ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ 2. Go (Golang 1.27)                                                         │
-│    ORCHESTRIERUNG & BILDVERARBEITUNG                                        │
-│    - Otsu-Binarisierung, 2-Pass Chamfer-L2 Distanzerosion                   │
-│    - Multiskaliger Frangi-Vesselness Filter (Gefäß-Eigenwerte)              │
-│    - O(N) Histogramm-basierter Median & MAD-Statistik (Outlier-Filter)      │
-│    - Parallele Verteilung auf alle CPU-Kerne via Goroutinen                 │
+│ 2. Go (Golang 1.24+)                                                        │
+│    42-STUFIGE DETERMINISTISCHE PIPELINE & BILDVERARBEITUNG (core/)          │
+│    - Otsu-Binarisierung, 2-Pass Chamfer-L2 Distanzerosion                  │
+│    - Multiskaliger Frangi-Vesselness Filter (Hesse-Eigenwerte λ1, λ2)       │
+│    - O(N) Histogramm-basierter Median & MAD-Statistik (Hampel Outlier)      │
+│    - Parallele Verteilung auf CPU-Kerne via Goroutinen                      │
 └──────────────────────────────────────┬──────────────────────────────────────┘
-                                       │ Native Instruktions-Einbindung
+                                       │ Direkte SIMD-Instruktionseinbindung
                                        ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ 3. x86_64 Assembler (AVX2 / SIMD - Plan 9)                                  │
-│    HARDWARE INNER-LOOP (6 KERNELS)                                          │
-│    - VPMINUB, VPMAXUB, VPSUBUSB, VPOR, VMULPS, VADDPS                       │
+│    HARDWARE INNER-LOOP (11 KERNELS) (core/pkg/morphology/*.s)               │
+│    - VPMINUB, VPMAXUB, VPSUBUSB, VPOR, VFMADD231PS, VMULPS, VADDPS          │
 │    - 32 Byte-Pixel bzw. 8 Float32-Werte GLEICHZEITIG pro Taktzyklus         │
 │    - Völlig C-compilerfrei dank Go-integriertem Assembler (`go tool asm`)   │
 └──────────────────────────────────────┬──────────────────────────────────────┘
-                                       │ Eingebettete Skript-Ausführung
+                                       │ Eingebetteter Interpreter
                                        ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ 4. Lua (GopherLua)                                                          │
-│    KLINISCHE DIAGNOSE-LOGIK & REGEL-ENGINE                                  │
+│ 4. Lua (GopherLua 5.1)                                                      │
+│    KLINISCHE DIAGNOSE-LOGIK & REGEL-ENGINE (rules/)                         │
 │    - Dynamische Schwellenwert- und Risikobewertung (Armstrong 2007)         │
-│    - Ärzte können Diagnose-Kriterien in Textdateien anpassen,                │
-│      OHNE dass das Programm neu kompiliert werden muss!                     │
+│    - Ärzte können Kriterien anpassen OHNE Neukompilierung                   │
 └──────────────────────────────────────┬──────────────────────────────────────┘
                                        │ Audit-Transaktion
                                        ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ 5. SQL (SQLite)                                                             │
-│    REVISIONSSICHERES AUDIT-LOG & DATENSCHUTZ                                │
+│ 5. SQL (SQLite) & Kryptografie                                              │
+│    REVISIONSSICHERES AUDIT-LOG & DATENSCHUTZ (desktop/ignite_medical.db)    │
 │    - DSGVO Art. 30 Konformität: Lokale Pseudonymisierung (ANON-<hash>)      │
-│    - Speicherung von Messreihen, Parametern und Schwellenwerten             │
+│    - SHA-256 Hash-Ketten für forensische Revisionssicherheit                │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -89,7 +103,7 @@ Entwickelt für den deutschen Jugendwettbewerb **Jugend forscht 2026** (Fachgebi
 | Pipeline-Stufe | Technologie / Instruktion | Gemessene Latenz |
 | :--- | :--- | :--- |
 | **Körper-Maskierung (Otsu + Chamfer)** | Go (Goroutinen) | 19,6 ms |
-| **Top-Hat-Filter (Opening + Differenz)** | x86_64 AVX2 (`VPMINUB`, `VPMAXUB`, `VPSUBUSB`) | **37,8 ms** (@1440x1080) / **1,4 ms** (@160x120) |
+| **Top-Hat-Filter (Opening + Differenz)** | x86_64 AVX2 (`minVectorAVX2`, `maxVectorAVX2`, `subVectorAVX2`) | **37,8 ms** (@1440x1080) / **1,4 ms** (@160x120) |
 | **Outlier-Thresholding (MAD + Maske)** | x86_64 AVX2 (`thresholdMaskAVX2`) | 4,2 ms |
 | **Geometrie & Zirkularität** | Go (4-Connected BFS) | 3,5 ms |
 | **Frangi-Venenkartierung (3 Skalen)** | AVX2 Float32 FMA (`fmaVectorFloat32AVX2`) | 88,6 ms |
@@ -97,19 +111,19 @@ Entwickelt für den deutschen Jugendwettbewerb **Jugend forscht 2026** (Fachgebi
 | **Bilateraler Seitenvergleich** | AVX2 Abs-Diff (`absDiffVectorAVX2`) | 5,8 ms |
 | **Klinische Risikobewertung** | Eingebettetes Lua (`armstrong_criteria.lua`) | < 0,1 ms |
 | **Gesamte Pipeline-Laufzeit** | **End-to-End** | **~169,5 ms** |
-| **GPU-Farbrendering (Ironbow)** | C# / WPF Hardware-Canvas | 0,0 ms CPU-Last |
+| **GDI-Farbrendering & Viewports** | Go Walk / Win32 GDI | < 1 ms |
 
 ---
 
 ## 📦 Installation & Ausführung
 
 ### Option A: Windows Installer (Empfohlen)
-Laden Sie die aktuelle Setup-Datei aus dem Release-Verzeichnis oder GitHub Actions herunter und führen Sie sie aus:
-* **Datei:** `dist/IGNITE_Medical_Suite_v5.0.0_Setup.exe` (28.3 MB)
+Laden Sie die Setup-Datei aus dem Release-Verzeichnis oder GitHub Actions herunter und führen Sie sie aus:
+* **Datei:** `dist/IGNITE_Medical_Suite_v12.3.4.81_Setup.exe`
 * Installiert die vollständige Anwendung inklusive aller vorkompilierten AVX2-Binärdateien, Lua-Regeln, Testdaten und Dokumentationen.
 
-### Option B: Automatisiertes Build-Skript (PowerShell)
-Um das gesamte Projekt inklusive Go-Kern, .NET 10 WPF Suite und Inno Setup Installer aus dem Quellcode zu bauen:
+### Option B: Automatisiertes 1-Klick Build-Skript (PowerShell)
+Um das gesamte Projekt inklusive Go-Kern, Go Desktop Workstation und Inno Setup Installer aus dem Quellcode zu bauen:
 ```powershell
 .\installer\build_installer.ps1
 ```
@@ -120,14 +134,14 @@ Um das gesamte Projekt inklusive Go-Kern, .NET 10 WPF Suite und Inno Setup Insta
 ```bash
 cd core
 go test -v ./pkg/...
-go build -o ignite-core.exe ./cmd/ignite-core
+go build -ldflags="-s -w" -o ignite-core.exe ./cmd/ignite-core
 cd ..
 ```
 
-#### 2. Native Go Desktop-Workstation kompilieren & starten (Wails v2)
+#### 2. Native Go Desktop-Workstation kompilieren & starten
 ```bash
 cd desktop
-go build -tags desktop,production -ldflags="-H windowsgui -s -w" -o Ignite.exe .
+go build -ldflags="-H windowsgui -s -w" -o Ignite.exe .
 .\Ignite.exe
 ```
 
@@ -141,18 +155,18 @@ go build -tags desktop,production -ldflags="-H windowsgui -s -w" -o Ignite.exe .
 ## 📜 Klinische Lua-Regeln
 
 Die medizinische Klassifikation erfolgt dynamisch über Textskripte im Ordner `rules/`:
-* [`rules/armstrong_criteria.lua`](file:///d:/Downloads/03_Programmierung%20&%20Entwicklung/05_JUFO/JonaNoackIgnite/rules/armstrong_criteria.lua): Armstrong-Kriterien ($\Delta T \ge 2{,}2\,\text{K}$ und Zirkularität).
-* [`rules/vein_detection.lua`](file:///d:/Downloads/03_Programmierung%20&%20Entwicklung/05_JUFO/JonaNoackIgnite/rules/vein_detection.lua): Unterscheidung von röhrenförmigen Gefäßen und runden Herden.
-* [`rules/perfusion_eval.lua`](file:///d:/Downloads/03_Programmierung%20&%20Entwicklung/05_JUFO/JonaNoackIgnite/rules/perfusion_eval.lua): Stadieneinteilung von Durchblutungsabbrüchen.
+* [`rules/armstrong_criteria.lua`](rules/armstrong_criteria.lua): Armstrong-Kriterien ($\Delta T \ge 2{,}2\,\text{K}$ und Zirkularität).
+* [`rules/vein_detection.lua`](rules/vein_detection.lua): Unterscheidung von röhrenförmigen Gefäßen und runden Herden.
+* [`rules/perfusion_eval.lua`](rules/perfusion_eval.lua): Stadieneinteilung von Durchblutungsabbrüchen.
 
 ---
 
 ## 📖 Wissenschaftliche Dokumentation & Berichte
-* [Wissenschaftliche Monographie v5.0.0](docs/WISSENSCHAFTLICHE_DOKUMENTATION.md)
-* [Architektur-Dokumentation v5.0.0](docs/ARCHITECTURE_v5.md)
+* [Wissenschaftliche Monographie](docs/WISSENSCHAFTLICHE_DOKUMENTATION.md)
+* [Architektur-Dokumentation](docs/ARCHITECTURE_v5.md)
 * [Mathematische Algorithmen-Beschreibung](docs/ALGORITHM.md)
+* [42-Stufen Programmablaufplan (PAP)](docs/PROGRAMMABLAUFPLAN_42_STUFEN.md)
 * [Schriftliche Arbeit (Jugend forscht 2026)](docs/SCHRIFTLICHE_ARBEIT_JUGEND_FORSCHT.md)
 * [Schriftliche Arbeit (PDF-Druckfassung)](docs/SCHRIFTLICHE_ARBEIT_JUGEND_FORSCHT.pdf)
 * [Optimierungs-Bericht & Benchmarks](docs/OPTIMIZATIONS.md)
 * [Performance- & Optimierungs-Leitfaden](docs/OPTIMIZATION_GUIDE.md)
-
