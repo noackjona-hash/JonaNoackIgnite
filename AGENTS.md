@@ -152,22 +152,33 @@ Die Pipeline verarbeitet Infrarotdaten in 4 Phasen:
 
 ## 5. GUI-Architektur & Inspector-Tab-System
 
-### 5.1 Inspector-Kategorisierung (WICHTIG für Agenten!)
-Der rechte Inspector (`inspector-panel`) ist zur Vermeidung von Überlauf in **4 klinische Hauptkategorien** unterteilt:
+### 5.1 Inspector-Kategorisierung & Klinische Messwerkzeuge
+Der rechte Inspector der Go Walk PACS Workstation ist in **6 klinische Fachbereiche** unterteilt:
 
-| Kategorie-Button | Kategorie-ID | Enthaltene Diagnostik-Bereiche |
-| :--- | :--- | :--- |
-| **`cat-diagnostics`** (Diagnose) | `diagnostics` | Herde & Hotspots, Armstrong/IWGDF Risiko-Score, Triage-Einstufung |
-| **`cat-anatomy`** (Anatomie) | `anatomy` | 5-Zonen Temperaturprofil (Hallux, Ballen, Ferse), 3D-Lambertian Kantenkorrektur |
-| **`cat-signals`** (Signale) | `signals` | Frangi-Hesse Vaskulärfilter (Venenunterdrückung), Pennes 2D-Bioheat Perfusion |
-| **`cat-system`** (System) | `system` | 42-Stufen PAP Timing, Pipeline-Parameter (k, R, m), DSGVO Art. 30 Audit-Log |
+| Tab-Titel | Tab-Inhalt & Funktionsumfang |
+| :--- | :--- |
+| **`📋 Befund & Triage`** | Detektierte Herde & Hotspots, IWGDF/Armstrong Risiko-Score, Triage, ärztliche Validierung & SHA-256 Signatur |
+| **`📐 Messungen & Tools`** | Caliper-Lineal (mm, $\Delta T/\Delta s$ in K/cm), Rechteck-ROI (mit kontralateraler Spiegelung), Kreis-ROI (Halo), 3-Punkt Goniometer (Hallux Valgus), Fensterung (Presets), CSV & Snapshot-PNG Export |
+| **`🦶 Anatomie & 3D`** | 5-Zonen Temperaturprofil (Hallux, Ballen, Ferse), Biomechanik & Arch-Index, 3D-Lambertian Kantenkorrektur & Mesh-Export (OBJ, STL, PLY, XYZ) |
+| **`⚡ Signale & Regeln`** | Frangi-Hesse Vaskulärfilter (Venenunterdrückung), Pennes 2D-Bioheat Perfusion, GopherLua 5.1 Regel-Editor |
+| **`⚙️ System & Audit`** | Patientenstammdaten (DICOM / DSGVO Art. 25), 42-Stufen PAP Timing Profiler, revisionssicherer SHA-256 Audit-Trail |
+| **`📊 Diagramme & Statistik`** | Deskriptive Statistik ($\mu$, $\sigma$, SEM, Median, MAD, $\tau$), Thermisches Histogramm, 5-Zonen Vergleich, Real-Sampled Schnittprofil A–B |
 
-### 5.2 Dual-Viewport & Ergonomie
-* **Dual-Viewport & Vorhang:**
-  * Viewport 1 (links): `canvas-orig` mit Roh-Thermogramm (LWIR 8–14 µm).
-  * Viewport 2 (rechts): `canvas-result` mit Befund-Overlay und Hotspot-Konturen.
-  * Synchronisiertes Fadenkreuz über beide Viewports (`canvas-crosshair-orig` & `canvas-crosshair-result`) mit Live-Temperaturabfrage und Armstrong-Differenzanzeige.
-  * Interaktiver Vorhang-Split (`curtain-divider`) für dynamische A/B-Befundung.
+### 5.2 Interaktive klinische Werkzeuge & Viewport-Ergonomie
+* **6 Interaktive Messmodi:**
+  * `⌖ Retikel`: Live-Spot-Probe mit kontralateraler Referenz.
+  * `📏 Lineal`: Metrische Distanz (0.60 mm/px) und thermischer Gradient $\frac{\Delta T}{\Delta s}$ in K/cm.
+  * `⬛ Rechteck-ROI`: Statistische Auswertung ($T_{\text{min}}, T_{\text{max}}, T_{\text{mean}}, \sigma$) und automatische kontralaterale Vergleichs-ROI.
+  * `⭕ Kreis-ROI`: Differenzierung von Herd-Zentrum vs. periphärem Vasodilatations-Halo ($\Delta T_{\text{halo}}$).
+  * `📐 Goniometer`: 3-Punkt Orthopädischer Winkel (z. B. Hallux-Valgus-Winkel $\alpha$).
+  * `📈 Schnittlinie`: Dynamisches Transversalprofil $A \to B$ zur Echtzeit-Visualisierung im Diagramm-Tab.
+* **Isothermen & Kontrast-Presets:**
+  * `🔥 Isotherme ≥ 34°C`: Hebt potenziell ulzeröse Gewebebereiche leuchtend hervor.
+  * `Kontrast-Presets`: Vollbereich (20–45°C), Entzündung/Ulkus (30–38°C), Ischämie (20–30°C), Plantarhaut (26–36°C).
+* **Dual-Viewport & Fadenkreuz:**
+  * Viewport 1 (links): Roh-Thermogramm (LWIR 8–14 µm) mit anatomischen Marken (D, P, L, R) und 50-mm Maßstab.
+  * Viewport 2 (rechts): Diagnostik-Befundung mit Hotspot-Konturen, Bounding-Boxes, Mess-Overlays und radiometrischer Farbskala.
+  * Farbpaletten: Ironbow, Turbo (Scientific HDR), Inferno, Hot Iron, Medical Jet, Rainbow, Grayscale.
 
 ---
 

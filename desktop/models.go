@@ -204,6 +204,47 @@ func (m *AuditModel) SetItems(items []*AuditTableItem) {
 	m.PublishRowsReset()
 }
 
+// ── Messungen & Tools Table Model ───────────────────────────────────────────
+type MeasurementModel struct {
+	walk.TableModelBase
+	items []*MeasurementItem
+}
+
+func NewMeasurementModel() *MeasurementModel {
+	return &MeasurementModel{items: make([]*MeasurementItem, 0)}
+}
+
+func (m *MeasurementModel) RowCount() int {
+	return len(m.items)
+}
+
+func (m *MeasurementModel) Value(row, col int) interface{} {
+	if row < 0 || row >= len(m.items) {
+		return nil
+	}
+	item := m.items[row]
+	switch col {
+	case 0:
+		return item.ID
+	case 1:
+		return item.Type
+	case 2:
+		return item.Label
+	case 3:
+		return item.ValueStr
+	case 4:
+		return item.DetailsStr
+	case 5:
+		return item.Risk
+	}
+	return nil
+}
+
+func (m *MeasurementModel) SetItems(items []*MeasurementItem) {
+	m.items = items
+	m.PublishRowsReset()
+}
+
 func formatFloat(v float64, prec int) string {
 	return fmt.Sprintf("%.*f", prec, v)
 }

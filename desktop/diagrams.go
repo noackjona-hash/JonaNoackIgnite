@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"image"
 	"math"
 	"sort"
 
@@ -372,9 +373,13 @@ func PaintProfileChart(canvas *walk.Canvas, bounds walk.Rectangle) error {
 		return nil
 	}
 
-	canvas.DrawTextPixels("TRANSVERSALES TEMPERATURPROFIL T(x) ENTLANG DER HERD-ACHSE A–B", diagBoldFont, walk.RGB(3, 105, 161), walk.Rectangle{X: padL, Y: 4, Width: plotW, Height: 18}, walk.TextLeft)
+	title := "TRANSVERSALES TEMPERATURPROFIL T(x) ENTLANG DER HERD-ACHSE A–B"
+	if GState.CustomProfileName != "" {
+		title = "BENUTZER-SCHNITTPROFIL T(s): " + GState.CustomProfileName
+	}
+	canvas.DrawTextPixels(title, diagBoldFont, walk.RGB(3, 105, 161), walk.Rectangle{X: padL, Y: 4, Width: plotW, Height: 18}, walk.TextLeft)
 
-	// Gitter
+	// Gitter & Skala
 	for i := 0; i <= 4; i++ {
 		y := padT + int(float64(plotH)*(float64(i)/4.0))
 		canvas.DrawLinePixels(diagGridPen, walk.Point{X: padL, Y: y}, walk.Point{X: padL + plotW, Y: y})
@@ -382,25 +387,59 @@ func PaintProfileChart(canvas *walk.Canvas, bounds walk.Rectangle) error {
 		canvas.DrawTextPixels(fmt.Sprintf("%.0f°", tVal), diagFont, walk.RGB(71, 85, 105), walk.Rectangle{X: 4, Y: y - 6, Width: 32, Height: 12}, walk.TextRight)
 	}
 
-	// Zeichne Temperaturkurve
+	// 34°C Armstrong-Gefahrenschwelle als feine rote Referenzlinie
+	y34 := padT + plotH - int((34.0-20.0)/(45.0-20.0)*float64(plotH))
+	if y34 >= padT && y34 <= padT+plotH {
+		canvas.DrawLinePixels(diagAlertPen, walk.Point{X: padL, Y: y34}, walk.Point{X: padL + plotW, Y: y34})
+		canvas.DrawTextPixels("34.0°C (Hyperthermie-Schwelle)", diagFont, walk.RGB(220, 38, 38), walk.Rectangle{X: padL + plotW - 170, Y: y34 - 14, Width: 165, Height: 12}, walk.TextRight)
+	}
+
+	// Daten vorbereiten: Entweder CustomProfile oder berechneter Real-Transect
+	numPts := 80
+	var profilePts, contraPts []float64
+
+	if len(GState.CustomProfile) == numPts {
+		profilePts = GState.CustomProfile
+		contraPts = GState.CustomProfileRef
+	} else if GState.RawGray != nil && GState.Width > 0 && GState.Height > 0 {
+		// Ermittle Referenzachse: horizontal durch den heißesten Punkt
+		targetY := GState.Height / 2
+		if GState.LastResult != nil && len(GState.LastResult.Hotspots) > 0 {
+			targetY = GState.LastResult.Hotspots[0].Region.CenterY
+		}
+		p1 := image.Pt(0, targetY)
+		p2 := image.Pt(GState.Width-1, targetY)
+		profilePts, contraPts = SampleProfileLine(GState.RawGray, GState.Width, GState.Height, p1, p2, numPts)
+	}
+
 	profilePen, _ := walk.NewCosmeticPen(walk.PenSolid, walk.RGB(2, 132, 199))
 	defer profilePen.Dispose()
 	contraPen, _ := walk.NewCosmeticPen(walk.PenDash, walk.RGB(16, 185, 129))
 	defer contraPen.Dispose()
 
 	var prevPt, prevContraPt walk.Point
-	numPts := 80
+	maxT := 20.0
+	var maxPt walk.Point
+
 	for i := 0; i < numPts; i++ {
 		fx := float64(i) / float64(numPts-1)
-		// Simuliere Temperaturkurve mit Peak am Hotspot (linker Fuß)
-		distToHotspot := math.Abs(fx - 0.32)
-		hotspotBoost := 12.5 * math.Exp(-distToHotspot*distToHotspot*45.0)
-		tVal := 31.0 + hotspotBoost + math.Sin(fx*12.0)*0.8
-
-		// Kontralaterale Referenz (rechter Fuß symmetrisch)
-		distToContra := math.Abs(fx - 0.68)
-		contraBoost := 1.2 * math.Exp(-distToContra*distToContra*45.0)
-		tContra := 31.0 + contraBoost + math.Sin((1.0-fx)*12.0)*0.8
+		var tVal, tContra float64
+		if i < len(profilePts) {
+			tVal = profilePts[i]
+			if i < len(contraPts) {
+				tContra = contraPts[i]
+			} else {
+				tContra = 20.0
+			}
+		} else {
+			// Fallback-Kurve
+			distToHotspot := math.Abs(fx - 0.32)
+			hotspotBoost := 12.5 * math.Exp(-distToHotspot*distToHotspot*45.0)
+			tVal = 31.0 + hotspotBoost + math.Sin(fx*12.0)*0.8
+			distToContra := math.Abs(fx - 0.68)
+			contraBoost := 1.2 * math.Exp(-distToContra*distToContra*45.0)
+			tContra = 31.0 + contraBoost + math.Sin((1.0-fx)*12.0)*0.8
+		}
 
 		cx := padL + int(fx*float64(plotW))
 		cy := padT + plotH - int((tVal-20.0)/(45.0-20.0)*float64(plotH))
@@ -408,6 +447,11 @@ func PaintProfileChart(canvas *walk.Canvas, bounds walk.Rectangle) error {
 
 		curPt := walk.Point{X: cx, Y: cy}
 		curContraPt := walk.Point{X: cx, Y: cyContra}
+
+		if tVal > maxT {
+			maxT = tVal
+			maxPt = curPt
+		}
 
 		if i > 0 {
 			canvas.DrawLinePixels(profilePen, prevPt, curPt)
@@ -417,8 +461,15 @@ func PaintProfileChart(canvas *walk.Canvas, bounds walk.Rectangle) error {
 		prevContraPt = curContraPt
 	}
 
+	// Peak-Marker
+	if maxT > 25.0 {
+		canvas.DrawEllipsePixels(diagAlertPen, walk.Rectangle{X: maxPt.X - 4, Y: maxPt.Y - 4, Width: 8, Height: 8})
+		canvas.DrawTextPixels(fmt.Sprintf("Peak: %.1f°C", maxT), diagBoldFont, walk.RGB(220, 38, 38), walk.Rectangle{X: maxPt.X - 40, Y: maxPt.Y - 18, Width: 80, Height: 14}, walk.TextCenter)
+	}
+
 	// Legende
-	canvas.DrawTextPixels("Blau: T(x) Herd-Achse · Grün gestrichelt: Kontralaterale gesunde Referenz", diagFont, walk.RGB(71, 85, 105), walk.Rectangle{X: padL + 10, Y: padT + plotH + 4, Width: plotW, Height: 14}, walk.TextLeft)
+	legText := "Blau: T(s) Schnittprofil · Grün gestrichelt: Kontralaterale Referenz · Rot: Peak"
+	canvas.DrawTextPixels(legText, diagFont, walk.RGB(71, 85, 105), walk.Rectangle{X: padL + 10, Y: padT + plotH + 4, Width: plotW, Height: 14}, walk.TextLeft)
 
 	return nil
 }

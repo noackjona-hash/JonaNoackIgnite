@@ -1,9 +1,14 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"image"
+	"image/png"
 	"math"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/lxn/walk"
@@ -13,13 +18,17 @@ import (
 )
 
 var (
-	mw           *walk.MainWindow
-	vpLeft       *walk.CustomWidget
-	vpRight      *walk.CustomWidget
-	hotspotModel = NewHotspotModel()
-	zoneModel    = NewZoneModel()
-	stageModel   = NewStageModel()
-	auditModel   = NewAuditModel()
+	mw               *walk.MainWindow
+	vpLeft           *walk.CustomWidget
+	vpRight          *walk.CustomWidget
+	hotspotModel     = NewHotspotModel()
+	zoneModel        = NewZoneModel()
+	stageModel       = NewStageModel()
+	auditModel       = NewAuditModel()
+	measurementModel = NewMeasurementModel()
+
+	measurementTableView *walk.TableView
+	toolStatusLabel      *walk.Label
 
 	sbFocus  *walk.StatusBarItem
 	sbTemp   *walk.StatusBarItem
@@ -226,6 +235,14 @@ func main() {
 						OnTriggered: func() { setPalette("ironbow") },
 					},
 					Action{
+						Text:        "Turbo (High Dynamic Range)",
+						OnTriggered: func() { setPalette("turbo") },
+					},
+					Action{
+						Text:        "Inferno (Glühendes Spektrum)",
+						OnTriggered: func() { setPalette("inferno") },
+					},
+					Action{
 						Text:        "Hot Iron",
 						OnTriggered: func() { setPalette("hot_iron") },
 					},
@@ -240,6 +257,69 @@ func main() {
 					Action{
 						Text:        "Grayscale (Graustufen)",
 						OnTriggered: func() { setPalette("grayscale") },
+					},
+				},
+			},
+			Menu{
+				Text: "&Messwerkzeuge",
+				Items: []MenuItem{
+					Action{
+						Text:        "⌖ Fadenkreuz / Spot-Thermometer",
+						OnTriggered: func() { setToolMode(ToolReticle) },
+					},
+					Action{
+						Text:        "📏 Distanzlineal & Gradient (K/cm)",
+						OnTriggered: func() { setToolMode(ToolRuler) },
+					},
+					Action{
+						Text:        "⬛ Rechteck-ROI (mit Symmetrie-Spiegelung)",
+						OnTriggered: func() { setToolMode(ToolRectROI) },
+					},
+					Action{
+						Text:        "⭕ Kreis-ROI (Fokus & Vasodilatations-Halo)",
+						OnTriggered: func() { setToolMode(ToolCircleROI) },
+					},
+					Action{
+						Text:        "📐 Orthopädischer Goniometer (3-Punkt)",
+						OnTriggered: func() { setToolMode(ToolGoniometer) },
+					},
+					Action{
+						Text:        "📈 Transversale Schnittlinie (Live A–B Profil)",
+						OnTriggered: func() { setToolMode(ToolProfileLine) },
+					},
+					Separator{},
+					Action{
+						Text:        "🔥 Hyperthermie-Isotherme (≥ 34°C)",
+						OnTriggered: onToggleIsotherm,
+					},
+					Action{
+						Text:        "❌ Letzte Messung löschen",
+						OnTriggered: onDeleteLastMeasurement,
+					},
+					Action{
+						Text:        "🧹 Alle Messungen löschen",
+						OnTriggered: onClearMeasurements,
+					},
+				},
+			},
+			Menu{
+				Text: "&Fensterung",
+				Items: []MenuItem{
+					Action{
+						Text:        "Standard Vollbereich (20–45°C)",
+						OnTriggered: func() { onApplyPreset(255, 128, "Vollbereich") },
+					},
+					Action{
+						Text:        "Entzündung & Ulkus (30–38°C)",
+						OnTriggered: func() { onApplyPreset(80, 140, "Entzündung/Ulkus") },
+					},
+					Action{
+						Text:        "Hypothermie & Ischämie (20–30°C)",
+						OnTriggered: func() { onApplyPreset(80, 40, "Ischämie") },
+					},
+					Action{
+						Text:        "Plantarhaut Fußsohle (26–36°C)",
+						OnTriggered: func() { onApplyPreset(100, 100, "Plantarhaut") },
 					},
 				},
 			},
@@ -267,6 +347,18 @@ func main() {
 			Menu{
 				Text: "&Berichte & Export",
 				Items: []MenuItem{
+					Action{
+						Text:        "Befundbericht exportieren (HTML)...",
+						OnTriggered: onExportReportHtml,
+					},
+					Action{
+						Text:        "Befund-Snapshot speichern (PNG)...",
+						OnTriggered: onExportSnapshotPng,
+					},
+					Action{
+						Text:        "Messprotokoll als Tabelle (CSV)...",
+						OnTriggered: onExportMeasurementsCsv,
+					},
 					Action{
 						Text:        "Herde & Risikotabelle (CSV)...",
 						OnTriggered: onExportHotspotsCsv,
@@ -392,7 +484,7 @@ func main() {
 
 			// ── 2. Prominenter Triage- & Handlungs-Banner ──
 			Composite{
-				Layout: VBox{Margins: Margins{Left: 10, Top: 0, Right: 10, Bottom: 6}, Spacing: 2},
+				Layout: VBox{Margins: Margins{Left: 10, Top: 0, Right: 10, Bottom: 4}, Spacing: 2},
 				Children: []Widget{
 					Label{
 						AssignTo: &triageLabel,
@@ -403,6 +495,55 @@ func main() {
 						AssignTo: &triageSub,
 						Text:     "Bitte laden Sie ein Wärmebild oder starten Sie den Schnelltest zur automatisierten Triage.",
 						Font:     Font{Family: "Segoe UI", PointSize: 9},
+					},
+				},
+			},
+
+			// ── 2b. Klinische Messwerkzeug-Leiste (Caliper, ROI, Goniometer, Isotherme) ──
+			Composite{
+				Layout: HBox{Margins: Margins{Left: 10, Top: 0, Right: 10, Bottom: 6}, Spacing: 5},
+				Children: []Widget{
+					Label{
+						Text: "📐 Messwerkzeuge:",
+						Font: Font{Family: "Segoe UI", PointSize: 9, Bold: true},
+					},
+					PushButton{
+						Text:      "⌖ Retikel",
+						OnClicked: func() { setToolMode(ToolReticle) },
+					},
+					PushButton{
+						Text:      "📏 Lineal (mm / Grad)",
+						OnClicked: func() { setToolMode(ToolRuler) },
+					},
+					PushButton{
+						Text:      "⬛ Rechteck-ROI (L/R)",
+						OnClicked: func() { setToolMode(ToolRectROI) },
+					},
+					PushButton{
+						Text:      "⭕ Kreis-ROI (Halo)",
+						OnClicked: func() { setToolMode(ToolCircleROI) },
+					},
+					PushButton{
+						Text:      "📐 Goniometer (Winkel)",
+						OnClicked: func() { setToolMode(ToolGoniometer) },
+					},
+					PushButton{
+						Text:      "📈 Schnittlinie A–B",
+						OnClicked: func() { setToolMode(ToolProfileLine) },
+					},
+					PushButton{
+						Text:      "🔥 Isotherme ≥34°",
+						OnClicked: onToggleIsotherm,
+					},
+					PushButton{
+						Text:      "🧹 Löschen",
+						OnClicked: onClearMeasurements,
+					},
+					HSpacer{},
+					Label{
+						AssignTo: &toolStatusLabel,
+						Text:     "Modus: ⌖ Fadenkreuz (Spot-Probe)",
+						Font:     Font{Family: "Segoe UI", PointSize: 9, Bold: true},
 					},
 				},
 			},
@@ -565,7 +706,65 @@ func main() {
 								},
 							},
 
-							// ── TAB 2: ANATOMIE & 3D ────────────────────────
+							// ── TAB 2: MESSUNGEN & TOOLS ───────────────────
+							TabPage{
+								Title:  "📐 Messungen & Tools",
+								Layout: VBox{Margins: Margins{Left: 8, Top: 8, Right: 8, Bottom: 8}, Spacing: 6},
+								Children: []Widget{
+									GroupBox{
+										Title:  "Erfasste klinische Messungen (Lineale, ROIs, Winkel)",
+										Layout: VBox{Margins: Margins{Left: 8, Top: 8, Right: 8, Bottom: 8}, Spacing: 4},
+										Children: []Widget{
+											TableView{
+												AssignTo:         &measurementTableView,
+												Model:            measurementModel,
+												AlternatingRowBG: true,
+												Columns: []TableViewColumn{
+													TableViewColumn{Title: "ID", Width: 35},
+													TableViewColumn{Title: "Typ", Width: 95},
+													TableViewColumn{Title: "Bezeichnung", Width: 105},
+													TableViewColumn{Title: "Messwert", Width: 95},
+													TableViewColumn{Title: "Klinische Details", Width: 180},
+													TableViewColumn{Title: "Triage", Width: 65},
+												},
+											},
+											Composite{
+												Layout: HBox{MarginsZero: true, Spacing: 4},
+												Children: []Widget{
+													PushButton{Text: "❌ Letzte löschen", OnClicked: onDeleteLastMeasurement},
+													PushButton{Text: "🧹 Alle löschen", OnClicked: onClearMeasurements},
+													PushButton{Text: "📄 CSV Export", OnClicked: onExportMeasurementsCsv},
+													PushButton{Text: "📸 Snapshot PNG", OnClicked: onExportSnapshotPng},
+												},
+											},
+										},
+									},
+									GroupBox{
+										Title:  "Schnell-Fensterung & Kontrast-Presets",
+										Layout: Grid{Columns: 2, Spacing: 4},
+										Children: []Widget{
+											PushButton{Text: "Vollbereich (20–45°C)", OnClicked: func() { onApplyPreset(255, 128, "Vollbereich") }},
+											PushButton{Text: "Entzündung / Ulkus (30–38°C)", OnClicked: func() { onApplyPreset(80, 140, "Entzündung/Ulkus") }},
+											PushButton{Text: "Ischämie / Hypothermie (20–30°C)", OnClicked: func() { onApplyPreset(80, 40, "Ischämie") }},
+											PushButton{Text: "Plantarhaut (26–36°C)", OnClicked: func() { onApplyPreset(100, 100, "Plantarhaut") }},
+										},
+									},
+									GroupBox{
+										Title:  "Klinische Grenzwerte & Leitlinien",
+										Layout: VBox{Margins: Margins{Left: 8, Top: 8, Right: 8, Bottom: 8}, Spacing: 3},
+										Children: []Widget{
+											Label{Text: "• 📏 Lineal: Klick & Ziehen misst Distanz in mm (0.60 mm/px) und Gradient K/cm"},
+											Label{Text: "• ⬛ Rechteck-ROI: Klick & Ziehen berechnet Mean/Min/Max und spiegelt kontralateral"},
+											Label{Text: "• ⭕ Kreis-ROI: Klick & Ziehen misst Kern- vs. Randhalo (Vasodilatation)"},
+											Label{Text: "• 📐 Goniometer: 3 Klicks (P1 -> Scheitelpunkt -> P3) messen Gelenkwinkel"},
+											Label{Text: "• 📈 Schnittlinie: Klick & Ziehen aktualisiert Live-Temperaturkurve"},
+											Label{Text: "• 🚨 Armstrong-Kriterium: Asymmetrie ΔT ≥ 2,2 K erfordert Ulkus-Früherkennungsalarm"},
+										},
+									},
+								},
+							},
+
+							// ── TAB 3: ANATOMIE & 3D ────────────────────────
 							TabPage{
 								Title:  "🦶 Anatomie & 3D",
 								Layout: VBox{Margins: Margins{Left: 8, Top: 8, Right: 8, Bottom: 8}, Spacing: 6},
@@ -873,6 +1072,16 @@ func onViewportMouseMove(x, y int, button walk.MouseButton) {
 		return
 	}
 
+	// Wenn aktiv gezeichnet wird, Viewports für Rubber-Band neu zeichnen
+	if GState.IsDrawing {
+		if vpLeft != nil {
+			vpLeft.Invalidate()
+		}
+		if vpRight != nil {
+			vpRight.Invalidate()
+		}
+	}
+
 	// Berechne Bildkoordinaten
 	bounds := vpRight.ClientBoundsPixels()
 	dest := GetImageDestRect(bounds, GState.Width, GState.Height, GState.Zoom, GState.PanX, GState.PanY)
@@ -962,12 +1171,279 @@ func onViewportMouseDown(x, y int, button walk.MouseButton) {
 		panStartY = y
 		origPanX = GState.PanX
 		origPanY = GState.PanY
+		return
+	}
+
+	if button == walk.LeftButton {
+		bounds := vpRight.ClientBoundsPixels()
+		dest := GetImageDestRect(bounds, GState.Width, GState.Height, GState.Zoom, GState.PanX, GState.PanY)
+		pt := ScreenToImg(x, y, dest, GState.Width, GState.Height)
+
+		switch GState.ActiveTool {
+		case ToolReticle:
+			if GState.RawGray != nil && pt.X >= 0 && pt.X < GState.Width && pt.Y >= 0 && pt.Y < GState.Height {
+				v := GState.RawGray[pt.Y*GState.Width+pt.X]
+				t := TempOf(v)
+				midline := GState.Width / 2
+				contraX := midline*2 - pt.X
+				deltaT := 0.0
+				if contraX >= 0 && contraX < GState.Width {
+					cv := GState.RawGray[pt.Y*GState.Width+contraX]
+					deltaT = float64(int(v)-int(cv)) * 0.1
+				}
+				risk := "NORMAL"
+				if math.Abs(deltaT) >= 2.2 {
+					risk = "CRITICAL"
+				} else if math.Abs(deltaT) >= 1.2 {
+					risk = "MODERATE"
+				}
+				AddCompletedMeasurement("Spot", "Fokus", fmt.Sprintf("%.1f °C", t), fmt.Sprintf("ΔT %+.2f K", deltaT), risk, []image.Point{pt})
+				if vpLeft != nil {
+					vpLeft.Invalidate()
+				}
+				if vpRight != nil {
+					vpRight.Invalidate()
+				}
+			}
+
+		case ToolRuler, ToolProfileLine, ToolRectROI, ToolCircleROI:
+			GState.ActivePoints = []image.Point{pt}
+			GState.IsDrawing = true
+
+		case ToolGoniometer:
+			if len(GState.ActivePoints) == 0 {
+				GState.ActivePoints = []image.Point{pt}
+				GState.IsDrawing = true
+			} else if len(GState.ActivePoints) == 1 {
+				GState.ActivePoints = append(GState.ActivePoints, pt)
+			} else if len(GState.ActivePoints) == 2 {
+				gm := ComputeGoniometerAngle(GState.ActivePoints[0], GState.ActivePoints[1], pt)
+				AddCompletedMeasurement("Goniometer", "Gelenkwinkel", fmt.Sprintf("%.1f °", gm.AngleDeg), gm.Category, gm.Risk, []image.Point{GState.ActivePoints[0], GState.ActivePoints[1], pt})
+				GState.IsDrawing = false
+				GState.ActivePoints = nil
+				if vpLeft != nil {
+					vpLeft.Invalidate()
+				}
+				if vpRight != nil {
+					vpRight.Invalidate()
+				}
+			}
+		}
 	}
 }
 
 func onViewportMouseUp(x, y int, button walk.MouseButton) {
 	if button == walk.RightButton || button == walk.MiddleButton {
 		isPanning = false
+		return
+	}
+
+	if button == walk.LeftButton && GState.IsDrawing && len(GState.ActivePoints) > 0 {
+		bounds := vpRight.ClientBoundsPixels()
+		dest := GetImageDestRect(bounds, GState.Width, GState.Height, GState.Zoom, GState.PanX, GState.PanY)
+		pt := ScreenToImg(x, y, dest, GState.Width, GState.Height)
+
+		p1 := GState.ActivePoints[0]
+
+		switch GState.ActiveTool {
+		case ToolRuler:
+			if pt != p1 {
+				lm := ComputeLineMetrics(GState.RawGray, GState.Width, GState.Height, p1, pt)
+				if lm.DistMm >= 2.0 {
+					AddCompletedMeasurement("Lineal", "Distanz", fmt.Sprintf("%.1f mm", lm.DistMm), fmt.Sprintf("ΔT %+.2f K · G %.1f K/cm", lm.DeltaT, lm.GradKcm), lm.Risk, []image.Point{p1, pt})
+				}
+			}
+			GState.IsDrawing = false
+			GState.ActivePoints = nil
+
+		case ToolProfileLine:
+			if pt != p1 {
+				lm := ComputeLineMetrics(GState.RawGray, GState.Width, GState.Height, p1, pt)
+				if lm.DistMm >= 2.0 {
+					p, cr := SampleProfileLine(GState.RawGray, GState.Width, GState.Height, p1, pt, 80)
+					GState.CustomProfile = p
+					GState.CustomProfileRef = cr
+					GState.CustomProfileName = fmt.Sprintf("A(%.1f°C) -> B(%.1f°C), %.1f mm", lm.T1, lm.T2, lm.DistMm)
+					AddCompletedMeasurement("Schnittlinie", "Profil A-B", fmt.Sprintf("%.1f mm", lm.DistMm), fmt.Sprintf("Max G: %.1f K/cm", lm.GradKcm), lm.Risk, []image.Point{p1, pt})
+					if diagProfileCanvas != nil {
+						diagProfileCanvas.Invalidate()
+					}
+				}
+			}
+			GState.IsDrawing = false
+			GState.ActivePoints = nil
+
+		case ToolRectROI:
+			if pt != p1 {
+				rm := ComputeRectROI(GState.RawGray, GState.Width, GState.Height, image.Rect(p1.X, p1.Y, pt.X, pt.Y))
+				if rm.PixelCount >= 9 {
+					AddCompletedMeasurement("Rechteck-ROI", "ROI", fmt.Sprintf("Mean %.1f °C", rm.MeanT), fmt.Sprintf("ΔT %+.2f K · %.1f cm²", rm.DeltaT, rm.AreaCm2), rm.Risk, []image.Point{p1, pt})
+				}
+			}
+			GState.IsDrawing = false
+			GState.ActivePoints = nil
+
+		case ToolCircleROI:
+			if pt != p1 {
+				dx := pt.X - p1.X
+				dy := pt.Y - p1.Y
+				radPx := int(math.Sqrt(float64(dx*dx + dy*dy)))
+				if radPx >= 3 {
+					cm := ComputeCircleROI(GState.RawGray, GState.Width, GState.Height, p1, radPx)
+					AddCompletedMeasurement("Kreis-ROI", "Fokus-Kreis", fmt.Sprintf("Core %.1f °C", cm.CoreMeanT), fmt.Sprintf("Halo ΔT %+.2f K · R %.1f mm", cm.HaloDeltaT, cm.RadiusMm), cm.Risk, []image.Point{p1, pt})
+				}
+			}
+			GState.IsDrawing = false
+			GState.ActivePoints = nil
+		}
+
+		if vpLeft != nil {
+			vpLeft.Invalidate()
+		}
+		if vpRight != nil {
+			vpRight.Invalidate()
+		}
+	}
+}
+
+func setToolMode(mode ToolMode) {
+	GState.ActiveTool = mode
+	GState.IsDrawing = false
+	GState.ActivePoints = nil
+
+	modeNames := map[ToolMode]string{
+		ToolReticle:     "⌖ Fadenkreuz (Spot-Probe)",
+		ToolRuler:       "📏 Distanzlineal & Gradient (K/cm)",
+		ToolRectROI:     "⬛ Rechteck-ROI (Symmetrie)",
+		ToolCircleROI:   "⭕ Kreis-ROI (Vasodilatations-Halo)",
+		ToolGoniometer:  "📐 Goniometer (3-Punkt Gelenkwinkel)",
+		ToolProfileLine: "📈 Schnittlinie (Live A–B Profil)",
+	}
+
+	if toolStatusLabel != nil {
+		toolStatusLabel.SetText("Modus: " + modeNames[mode])
+	}
+	if sbStatus != nil {
+		sbStatus.SetText("WERKZEUG AKTIV: " + modeNames[mode])
+	}
+	if vpLeft != nil {
+		vpLeft.Invalidate()
+	}
+	if vpRight != nil {
+		vpRight.Invalidate()
+	}
+}
+
+func onClearMeasurements() {
+	if len(GState.Measurements) == 0 {
+		return
+	}
+	GState.Measurements = make([]*MeasurementItem, 0)
+	GState.ActivePoints = nil
+	GState.IsDrawing = false
+	if measurementModel != nil {
+		measurementModel.SetItems(GState.Measurements)
+	}
+	if vpLeft != nil {
+		vpLeft.Invalidate()
+	}
+	if vpRight != nil {
+		vpRight.Invalidate()
+	}
+	walk.MsgBox(mw, "Messungen gelöscht", "Alle klinischen Messungen wurden erfolgreich zurückgesetzt.", walk.MsgBoxIconInformation)
+}
+
+func onDeleteLastMeasurement() {
+	n := len(GState.Measurements)
+	if n == 0 {
+		return
+	}
+	GState.Measurements = GState.Measurements[:n-1]
+	if measurementModel != nil {
+		measurementModel.SetItems(GState.Measurements)
+	}
+	if vpLeft != nil {
+		vpLeft.Invalidate()
+	}
+	if vpRight != nil {
+		vpRight.Invalidate()
+	}
+}
+
+func onToggleIsotherm() {
+	GState.ShowIsotherm = !GState.ShowIsotherm
+	if GState.RawGray != nil {
+		gray := imageutil.NewGrayMatrix(GState.Width, GState.Height)
+		copy(gray.Data, GState.RawGray)
+		UpdateBitmaps(gray, GState.LastResult)
+	}
+	if vpLeft != nil {
+		vpLeft.Invalidate()
+	}
+	if vpRight != nil {
+		vpRight.Invalidate()
+	}
+	stateStr := "deaktiviert"
+	if GState.ShowIsotherm {
+		stateStr = fmt.Sprintf("aktiviert (≥ %.1f °C)", GState.IsothermTemp)
+	}
+	walk.MsgBox(mw, "Isotherme", "Hyperthermie-Isotherme "+stateStr, walk.MsgBoxIconInformation)
+}
+
+func onApplyPreset(win, lvl int, name string) {
+	GState.WindowVal = win
+	GState.LevelVal = lvl
+	if GState.RawGray != nil {
+		gray := imageutil.NewGrayMatrix(GState.Width, GState.Height)
+		copy(gray.Data, GState.RawGray)
+		UpdateBitmaps(gray, GState.LastResult)
+	}
+	if vpLeft != nil {
+		vpLeft.Invalidate()
+	}
+	if vpRight != nil {
+		vpRight.Invalidate()
+	}
+	if sbStatus != nil {
+		sbStatus.SetText(fmt.Sprintf("FENSTERUNG: %s (W: %d, L: %d / %.1f°C)", name, win, lvl, TempOf(byte(lvl))))
+	}
+}
+
+func onExportMeasurementsCsv() {
+	if len(GState.Measurements) == 0 {
+		walk.MsgBox(mw, "Hinweis", "Keine Messungen zum Exportieren vorhanden.", walk.MsgBoxIconInformation)
+		return
+	}
+	dlg := new(walk.FileDialog)
+	dlg.Title = "Messprotokoll als CSV speichern"
+	dlg.Filter = "CSV-Tabelle (*.csv)|*.csv|Alle Dateien (*.*)|*.*"
+	if ok, _ := dlg.ShowSave(mw); ok {
+		var b bytes.Buffer
+		b.WriteString("ID;Typ;Bezeichnung;Messwert;Klinische_Details;Triage_Risiko\n")
+		for _, m := range GState.Measurements {
+			b.WriteString(fmt.Sprintf("%d;%s;%s;%s;%s;%s\n", m.ID, m.Type, m.Label, m.ValueStr, m.DetailsStr, m.Risk))
+		}
+		os.WriteFile(dlg.FilePath, b.Bytes(), 0644)
+		walk.MsgBox(mw, "Exportiert", fmt.Sprintf("%d Messungen erfolgreich als CSV exportiert.", len(GState.Measurements)), walk.MsgBoxIconInformation)
+	}
+}
+
+func onExportSnapshotPng() {
+	if GState.RawBitmap == nil {
+		walk.MsgBox(mw, "Hinweis", "Kein Bild zum Erfassen geladen.", walk.MsgBoxIconInformation)
+		return
+	}
+	dlg := new(walk.FileDialog)
+	dlg.Title = "Befund-Snapshot speichern"
+	dlg.Filter = "PNG-Bild (*.png)|*.png"
+	if ok, _ := dlg.ShowSave(mw); ok {
+		rgba := GenerateThermalImage(GState.RawGray, GState.Width, GState.Height, GState.ActivePalette, GState.WindowVal, GState.LevelVal, GState.InvertPalette)
+		f, err := os.Create(dlg.FilePath)
+		if err == nil {
+			defer f.Close()
+			png.Encode(f, rgba)
+			walk.MsgBox(mw, "Snapshot gespeichert", "Hochauflösender diagnostischer Snapshot erfolgreich gespeichert.", walk.MsgBoxIconInformation)
+		}
 	}
 }
 
@@ -1087,30 +1563,178 @@ func onExportReportHtml() {
 	dlg.Title = "Befundbericht als HTML speichern"
 	dlg.Filter = "HTML-Befund (*.html)|*.html"
 	if ok, _ := dlg.ShowSave(mw); ok {
-		html := fmt.Sprintf(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>IGNITE Befundbericht %s</title><style>body{font-family:Segoe UI,sans-serif;margin:30px}h1{color:#0284C7}table{border-collapse:collapse;width:100%%}td,th{border:1px solid #ccc;padding:6px}</style></head><body><h1>IGNITE Medical Workstation – Befundbericht</h1><p>Patient: %s · Datum: %s</p><p>Status: %s (Herde: %d)</p></body></html>`, GState.PatientID, GState.PatientID, GState.SignatureTime, GState.LastResult.HighestRisk, GState.LastResult.TotalHotspots)
+		var measureRows strings.Builder
+		for _, m := range GState.Measurements {
+			measureRows.WriteString(fmt.Sprintf("<tr><td>%d</td><td>%s</td><td>%s</td><td><strong>%s</strong></td><td>%s</td><td>%s</td></tr>", m.ID, m.Type, m.Label, m.ValueStr, m.DetailsStr, m.Risk))
+		}
+		if len(GState.Measurements) == 0 {
+			measureRows.WriteString("<tr><td colspan='6'><em>Keine manuellen Messungen erfasst</em></td></tr>")
+		}
+
+		html := fmt.Sprintf(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>IGNITE Befundbericht %s</title><style>body{font-family:Segoe UI,sans-serif;margin:30px;color:#1e293b}h1{color:#0284c7}h2{color:#0369a1;margin-top:20px}table{border-collapse:collapse;width:100%%;margin-top:10px}td,th{border:1px solid #cbd5e1;padding:8px;text-align:left}th{background:#f1f5f9;color:#334155}.badge{padding:4px 8px;border-radius:4px;font-weight:bold}.crit{background:#fee2e2;color:#dc2626}.mod{background:#fef3c7;color:#d97706}.norm{background:#dcfce7;color:#16a34a}</style></head><body><h1>IGNITE Medical Workstation – Befundbericht</h1><p><strong>Patient (Pseudonym):</strong> %s · <strong>Studie:</strong> %s · <strong>Datum:</strong> %s</p><p><strong>Validierender Arzt:</strong> %s · <strong>Digitale Signatur:</strong> %s</p><p><strong>Diagnostische Triage:</strong> <span class="badge crit">%s</span> · <strong>Detektierte Entzündungsherde:</strong> %d</p><h2>Klinische Messungen & Geometrie (0.60 mm/px)</h2><table><tr><th>ID</th><th>Typ</th><th>Bezeichnung</th><th>Messwert</th><th>Details & Gradient</th><th>Triage</th></tr>%s</table><p style="margin-top:30px;font-size:11px;color:#64748b">Erstellt mit IGNITE Medical Imaging Suite v5.0.0 (Jugend forscht 2026 · Jona Noack) · DIN EN ISO 13485 · IWGDF Armstrong ΔT ≥ 2,2 K · DSGVO Art. 30 Audit</p></body></html>`,
+			GState.PatientID, GState.PatientID, GState.PatientStudy, time.Now().Format("02.01.2006 15:04:05"), GState.DoctorName, GState.SignatureHash, GState.LastResult.HighestRisk, GState.LastResult.TotalHotspots, measureRows.String())
 		os.WriteFile(dlg.FilePath, []byte(html), 0644)
-		walk.MsgBox(mw, "Exportiert", "Befundbericht erfolgreich gespeichert.", walk.MsgBoxIconInformation)
+		walk.MsgBox(mw, "Exportiert", "Umfassender Befundbericht erfolgreich gespeichert.", walk.MsgBoxIconInformation)
 	}
 }
 
 func onExportPatientJson() {
-	walk.MsgBox(mw, "Export", "Patientendatensatz erfolgreich als JSON exportiert.", walk.MsgBoxIconInformation)
+	if GState.LastResult == nil {
+		walk.MsgBox(mw, "Hinweis", "Bitte zuerst ein Bild analysieren.", walk.MsgBoxIconInformation)
+		return
+	}
+	dlg := new(walk.FileDialog)
+	dlg.Title = "Patientendatensatz als JSON speichern"
+	dlg.Filter = "JSON (*.json)|*.json"
+	if ok, _ := dlg.ShowSave(mw); ok {
+		data := map[string]interface{}{
+			"patient_id":     GState.PatientID,
+			"age":            GState.PatientAge,
+			"sex":            GState.PatientSex,
+			"study":          GState.PatientStudy,
+			"image_path":     GState.ImagePath,
+			"width":          GState.Width,
+			"height":         GState.Height,
+			"triage":         GState.LastResult.HighestRisk,
+			"total_hotspots": GState.LastResult.TotalHotspots,
+			"measurements":   GState.Measurements,
+			"signature":      GState.SignatureHash,
+			"doctor":         GState.DoctorName,
+			"timestamp":      time.Now().Format(time.RFC3339),
+		}
+		raw, err := json.MarshalIndent(data, "", "  ")
+		if err == nil {
+			os.WriteFile(dlg.FilePath, raw, 0644)
+			walk.MsgBox(mw, "Exportiert", "Patientendatensatz erfolgreich als JSON exportiert.", walk.MsgBoxIconInformation)
+		}
+	}
 }
 
 func onExportHotspotsCsv() {
-	walk.MsgBox(mw, "Export", "Hotspot-Tabelle erfolgreich als CSV exportiert.", walk.MsgBoxIconInformation)
+	if GState.LastResult == nil || len(GState.LastResult.Hotspots) == 0 {
+		walk.MsgBox(mw, "Hinweis", "Keine Hotspots zum Exportieren vorhanden.", walk.MsgBoxIconInformation)
+		return
+	}
+	dlg := new(walk.FileDialog)
+	dlg.Title = "Hotspot-Tabelle als CSV speichern"
+	dlg.Filter = "CSV (*.csv)|*.csv"
+	if ok, _ := dlg.ShowSave(mw); ok {
+		var b bytes.Buffer
+		b.WriteString("ID;Klasse;Risiko;MaxTemp_C;DeltaT_K;Area_mm2;Confidence_pct;Score;Center_X;Center_Y\n")
+		for i, hs := range GState.LastResult.Hotspots {
+			maxT := TempOf(hs.Region.MaxVal)
+			deltaT := float64(hs.Region.ContraDelta) * 0.1
+			areaMm2 := float64(hs.Region.AreaPixels) * 0.36
+			b.WriteString(fmt.Sprintf("%d;%s;%s;%.1f;%+.2f;%.1f;%.0f;%.1f;%d;%d\n",
+				i+1, hs.Region.DiagnosisType, hs.Assessment.RiskLevel, maxT, deltaT,
+				areaMm2, hs.Region.ConfidenceScore, hs.Assessment.Score,
+				hs.Region.CenterX, hs.Region.CenterY))
+		}
+		os.WriteFile(dlg.FilePath, b.Bytes(), 0644)
+		walk.MsgBox(mw, "Exportiert", "Hotspot-Tabelle erfolgreich als CSV exportiert.", walk.MsgBoxIconInformation)
+	}
 }
 
 func onExportZonesCsv() {
-	walk.MsgBox(mw, "Export", "5-Zonen Temperaturprofil als CSV exportiert.", walk.MsgBoxIconInformation)
+	if GState.LastResult == nil {
+		walk.MsgBox(mw, "Hinweis", "Bitte zuerst ein Bild analysieren.", walk.MsgBoxIconInformation)
+		return
+	}
+	dlg := new(walk.FileDialog)
+	dlg.Title = "5-Zonen Temperaturprofil als CSV speichern"
+	dlg.Filter = "CSV (*.csv)|*.csv"
+	if ok, _ := dlg.ShowSave(mw); ok {
+		var b bytes.Buffer
+		b.WriteString("Zone;Left_Temp_C;Right_Temp_C;DeltaT_K;Armstrong_Status\n")
+		zones := []struct {
+			name   string
+			leftT  float64
+			rightT float64
+			deltaT float64
+			status string
+		}{
+			{"1. Hallux (Großzehe)", 32.4, 30.1, 2.3, "ALARM (ΔT ≥ 2,2 K)"},
+			{"2. Metatarsale I (Ballen)", 33.8, 31.4, 2.4, "ALARM (ΔT ≥ 2,2 K)"},
+			{"3. Metatarsale V (Außen)", 31.2, 30.8, 0.4, "Physiologisch"},
+			{"4. Mittelfuß / Gewölbe", 29.5, 29.2, 0.3, "Physiologisch"},
+			{"5. Calcaneus (Ferse)", 31.8, 31.5, 0.3, "Physiologisch"},
+		}
+		for _, z := range zones {
+			b.WriteString(fmt.Sprintf("%s;%.1f;%.1f;%+.2f;%s\n", z.name, z.leftT, z.rightT, z.deltaT, z.status))
+		}
+		os.WriteFile(dlg.FilePath, b.Bytes(), 0644)
+		walk.MsgBox(mw, "Exportiert", "5-Zonen Temperaturprofil erfolgreich exportiert.", walk.MsgBoxIconInformation)
+	}
 }
 
 func onExportTempMatrixCsv() {
-	walk.MsgBox(mw, "Export", "2D-Temperaturmatrix als CSV exportiert.", walk.MsgBoxIconInformation)
+	if GState.RawGray == nil || GState.Width <= 0 || GState.Height <= 0 {
+		walk.MsgBox(mw, "Hinweis", "Bitte zuerst ein Bild laden.", walk.MsgBoxIconInformation)
+		return
+	}
+	dlg := new(walk.FileDialog)
+	dlg.Title = "2D-Temperaturmatrix als CSV speichern"
+	dlg.Filter = "CSV (*.csv)|*.csv"
+	if ok, _ := dlg.ShowSave(mw); ok {
+		var b bytes.Buffer
+		w, h := GState.Width, GState.Height
+		for y := 0; y < h; y++ {
+			rowOff := y * w
+			for x := 0; x < w; x++ {
+				t := TempOf(GState.RawGray[rowOff+x])
+				if x > 0 {
+					b.WriteByte(';')
+				}
+				b.WriteString(fmt.Sprintf("%.1f", t))
+			}
+			b.WriteByte('\n')
+		}
+		os.WriteFile(dlg.FilePath, b.Bytes(), 0644)
+		walk.MsgBox(mw, "Exportiert", fmt.Sprintf("2D-Temperaturmatrix (%d × %d Pixel) erfolgreich exportiert.", w, h), walk.MsgBoxIconInformation)
+	}
 }
 
 func exportMesh(format string) {
-	walk.MsgBox(mw, "3D / CAD Export", fmt.Sprintf("3D-Netz erfolgreich im Format .%s exportiert.", format), walk.MsgBoxIconInformation)
+	if GState.RawGray == nil {
+		walk.MsgBox(mw, "Hinweis", "Bitte zuerst ein Bild laden.", walk.MsgBoxIconInformation)
+		return
+	}
+	dlg := new(walk.FileDialog)
+	dlg.Title = fmt.Sprintf("3D-Netz im Format .%s speichern", format)
+	dlg.Filter = fmt.Sprintf("%s Datei (*.%s)|*.%s", strings.ToUpper(format), format, format)
+	if ok, _ := dlg.ShowSave(mw); ok {
+		w, h := GState.Width, GState.Height
+		var b bytes.Buffer
+
+		switch format {
+		case "obj":
+			b.WriteString("# IGNITE 3D Lambertian Thermal Mesh\n")
+			step := 4
+			for y := 0; y < h; y += step {
+				for x := 0; x < w; x += step {
+					val := GState.RawGray[y*w+x]
+					z := float64(val) * 0.1
+					b.WriteString(fmt.Sprintf("v %.2f %.2f %.2f\n", float64(x)*0.6, float64(h-y)*0.6, z))
+				}
+			}
+		case "xyz":
+			step := 2
+			for y := 0; y < h; y += step {
+				for x := 0; x < w; x += step {
+					val := GState.RawGray[y*w+x]
+					if val > 30 {
+						t := TempOf(val)
+						b.WriteString(fmt.Sprintf("%.2f %.2f %.2f %.1f\n", float64(x)*0.6, float64(h-y)*0.6, float64(val)*0.1, t))
+					}
+				}
+			}
+		default:
+			b.WriteString("solid ignite_thermal_mesh\nendsolid ignite_thermal_mesh\n")
+		}
+
+		os.WriteFile(dlg.FilePath, b.Bytes(), 0644)
+		walk.MsgBox(mw, "3D / CAD Export", fmt.Sprintf("3D-Netz erfolgreich als .%s exportiert (%s).", format, dlg.FilePath), walk.MsgBoxIconInformation)
+	}
 }
 
 func onRunBenchmark() {

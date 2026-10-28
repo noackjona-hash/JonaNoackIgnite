@@ -13,6 +13,27 @@ import (
 	"ignite-core/pkg/pipeline"
 )
 
+type ToolMode int
+
+const (
+	ToolReticle     ToolMode = iota // Spot Probe / Fadenkreuz
+	ToolRuler                       // Distanz & Gradient
+	ToolRectROI                     // Rechteck-ROI mit kontralateraler Spiegelung
+	ToolCircleROI                   // Kreis-ROI mit Entzündungs-Halo
+	ToolGoniometer                  // 3-Punkt Orthopädischer Winkel
+	ToolProfileLine                 // A-B Schnittlinie für Live-Diagramm
+)
+
+type MeasurementItem struct {
+	ID         int
+	Type       string        // "Lineal", "Rechteck-ROI", "Kreis-ROI", "Goniometer", "Schnittlinie", "Spot"
+	Label      string        // z.B. "Distanz M1"
+	Points     []image.Point // Bildkoordinaten
+	ValueStr   string        // Primärer Wert (z.B. "42.5 mm", "32.4°", "Mean 33.1 °C")
+	DetailsStr string        // Zusatzmetrik (z.B. "ΔT 3.1 K · G 0.7 K/cm", "Fläche 12.4 cm²")
+	Risk       string        // "NORMAL", "MODERATE", "CRITICAL"
+}
+
 type AppState struct {
 	// Bilddaten
 	ImagePath     string
@@ -37,6 +58,19 @@ type AppState struct {
 	ActivePalette string
 	WindowVal     int
 	LevelVal      int
+
+	// Werkzeuge & Messfunktionen
+	ActiveTool        ToolMode
+	Measurements      []*MeasurementItem
+	NextMeasureID     int
+	ActivePoints      []image.Point
+	IsDrawing         bool
+	CustomProfile     []float64
+	CustomProfileRef  []float64
+	CustomProfileName string
+	ShowIsotherm      bool
+	ShowArmstrongIso  bool
+	IsothermTemp      float64
 
 	// Patient & Klinik
 	PatientID     string
@@ -67,6 +101,9 @@ var GState = &AppState{
 	ActivePalette: "ironbow",
 	WindowVal:     255,
 	LevelVal:      128,
+	ActiveTool:    ToolReticle,
+	Measurements:  make([]*MeasurementItem, 0),
+	IsothermTemp:  34.0,
 	PatientID:     "ANON-7F4C82",
 	PatientAge:    "68",
 	PatientSex:    "männlich",
@@ -95,7 +132,7 @@ func RawOf(temp float64) byte {
 	return byte(v)
 }
 
-// ── Farbpaletten-LUT (Ironbow, Hot Iron, Medical Jet, Rainbow, Turbo, Gray) ──
+// ── Farbpaletten-LUT (Ironbow, Hot Iron, Medical Jet, Rainbow, Turbo, Inferno, Gray) ──
 func PaletteColor(val byte, pal string, inv bool) color.RGBA {
 	v := float64(val) / 255.0
 	if inv {
@@ -125,6 +162,56 @@ func PaletteColor(val byte, pal string, inv bool) color.RGBA {
 		g := math.Max(0.0, math.Min(1.0, 1.5-math.Abs(4.0*v-2.0)))
 		b := math.Max(0.0, math.Min(1.0, 1.5-math.Abs(4.0*v-1.0)))
 		return color.RGBA{R: byte(r * 255), G: byte(g * 255), B: byte(b * 255), A: 255}
+
+	case "turbo":
+		// Turbo High-Dynamic Scientific Palette (Schwarz/Blau -> Cyan -> Grün -> Gelb -> Rot)
+		var r, g, b float64
+		if v < 0.25 {
+			r = 0.15 + v*0.8
+			g = v * 2.0
+			b = 0.5 + v*2.0
+		} else if v < 0.5 {
+			r = 0.1 + (v-0.25)*1.8
+			g = 0.5 + (v-0.25)*2.0
+			b = 1.0 - (v-0.25)*4.0
+		} else if v < 0.75 {
+			r = 0.55 + (v-0.5)*1.8
+			g = 1.0 - (v-0.5)*1.4
+			b = 0.0
+		} else {
+			r = 1.0
+			g = 0.65 - (v-0.75)*2.6
+			b = (v - 0.75) * 0.8
+		}
+		return color.RGBA{
+			R: byte(math.Max(0, math.Min(255, r*255))),
+			G: byte(math.Max(0, math.Min(255, g*255))),
+			B: byte(math.Max(0, math.Min(255, b*255))),
+			A: 255,
+		}
+
+	case "inferno":
+		// Schwarz -> Dunkelpurpur -> Glühendes Orange -> Warmes Gelb
+		var r, g, b float64
+		if v < 0.3 {
+			r = v * 1.5
+			g = 0.0
+			b = v * 2.5
+		} else if v < 0.65 {
+			r = 0.45 + (v-0.3)*1.5
+			g = (v - 0.3) * 1.6
+			b = 0.75 - (v-0.3)*2.1
+		} else {
+			r = 1.0
+			g = 0.56 + (v-0.65)*1.25
+			b = (v - 0.65) * 1.8
+		}
+		return color.RGBA{
+			R: byte(math.Max(0, math.Min(255, r*255))),
+			G: byte(math.Max(0, math.Min(255, g*255))),
+			B: byte(math.Max(0, math.Min(255, b*255))),
+			A: 255,
+		}
 
 	case "rainbow":
 		hue := (1.0 - v) * 240.0 // 240 (blau) bis 0 (rot)
@@ -210,6 +297,8 @@ func GenerateThermalImage(raw []byte, w, h int, pal string, win, lvl int, inv bo
 		span = 1
 	}
 
+	isoRaw := byte(RawOf(GState.IsothermTemp))
+
 	for i, b := range raw {
 		norm := (float64(b) - minVal) / span
 		if norm < 0 {
@@ -220,6 +309,12 @@ func GenerateThermalImage(raw []byte, w, h int, pal string, win, lvl int, inv bo
 		}
 		pixVal := byte(norm * 255.0)
 		c := PaletteColor(pixVal, pal, inv)
+
+		// Klinische Isothermen-Hervorhebung (> 34.0°C)
+		if GState.ShowIsotherm && b >= isoRaw && b > 30 {
+			c = color.RGBA{R: 244, G: 63, B: 94, A: 255}
+		}
+
 		offset := i * 4
 		img.Pix[offset] = c.R
 		img.Pix[offset+1] = c.G

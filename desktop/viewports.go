@@ -27,6 +27,12 @@ var (
 	colorbarPalette  string
 	colorbarInvert   bool
 	colorbarHeight   int
+
+	measurePen       *walk.CosmeticPen
+	measureGreenPen  *walk.CosmeticPen
+	measureAmberPen  *walk.CosmeticPen
+	measureDashPen   *walk.CosmeticPen
+	measureGreenDash *walk.CosmeticPen
 )
 
 func initViewportGraphics() {
@@ -44,6 +50,12 @@ func initViewportGraphics() {
 	cardBorderPen, _ = walk.NewCosmeticPen(walk.PenSolid, walk.RGB(203, 213, 225))
 	framePen, _ = walk.NewCosmeticPen(walk.PenSolid, walk.RGB(203, 213, 225))
 	barBorderPen, _ = walk.NewCosmeticPen(walk.PenSolid, walk.RGB(148, 163, 184))
+
+	measurePen, _ = walk.NewCosmeticPen(walk.PenSolid, walk.RGB(2, 132, 199))
+	measureGreenPen, _ = walk.NewCosmeticPen(walk.PenSolid, walk.RGB(16, 185, 129))
+	measureAmberPen, _ = walk.NewCosmeticPen(walk.PenSolid, walk.RGB(217, 119, 6))
+	measureDashPen, _ = walk.NewCosmeticPen(walk.PenDash, walk.RGB(2, 132, 199))
+	measureGreenDash, _ = walk.NewCosmeticPen(walk.PenDash, walk.RGB(16, 185, 129))
 }
 
 func updateColorbarBitmap(barH int) {
@@ -121,8 +133,12 @@ func PaintLeftViewport(canvas *walk.Canvas, bounds walk.Rectangle) error {
 	// Anatomische Orientierungs-Marken
 	drawAnatomicalTags(canvas, dest)
 
+	// Messungen & aktive Zeichen-Tools
+	drawMeasurements(canvas, actualBounds, dest)
+	drawActiveDrawing(canvas, actualBounds, dest)
+
 	// Fadenkreuz & Retikel
-	if GState.ShowCrosshair && GState.HasHover {
+	if GState.ShowCrosshair && GState.HasHover && GState.ActiveTool == ToolReticle {
 		drawReticle(canvas, actualBounds, dest)
 	}
 
@@ -171,8 +187,12 @@ func PaintRightViewport(canvas *walk.Canvas, bounds walk.Rectangle) error {
 	// Anatomische Orientierungs-Marken
 	drawAnatomicalTags(canvas, dest)
 
+	// Messungen & aktive Zeichen-Tools
+	drawMeasurements(canvas, actualBounds, dest)
+	drawActiveDrawing(canvas, actualBounds, dest)
+
 	// Fadenkreuz & Retikel
-	if GState.ShowCrosshair && GState.HasHover {
+	if GState.ShowCrosshair && GState.HasHover && GState.ActiveTool == ToolReticle {
 		drawReticle(canvas, actualBounds, dest)
 	}
 
@@ -411,4 +431,258 @@ func drawColorbar(canvas *walk.Canvas, b walk.Rectangle) {
 	canvas.DrawLinePixels(reticleRedPen, walk.Point{X: barX + barW + 2, Y: barY}, walk.Point{X: barX + barW + 5, Y: barY})
 	canvas.DrawLinePixels(reticleRedPen, walk.Point{X: barX + barW + 5, Y: barY}, walk.Point{X: barX + barW + 5, Y: armY})
 	canvas.DrawLinePixels(reticleRedPen, walk.Point{X: barX + barW + 2, Y: armY}, walk.Point{X: barX + barW + 5, Y: armY})
+}
+
+func ImgToScreen(pt image.Point, dest walk.Rectangle, imgW, imgH int) walk.Point {
+	if imgW <= 0 || imgH <= 0 || dest.Width <= 0 || dest.Height <= 0 {
+		return walk.Point{}
+	}
+	sx := dest.X + int(float64(pt.X)/float64(imgW)*float64(dest.Width))
+	sy := dest.Y + int(float64(pt.Y)/float64(imgH)*float64(dest.Height))
+	return walk.Point{X: sx, Y: sy}
+}
+
+func ScreenToImg(x, y int, dest walk.Rectangle, imgW, imgH int) image.Point {
+	if dest.Width <= 0 || dest.Height <= 0 || imgW <= 0 || imgH <= 0 {
+		return image.Point{}
+	}
+	ix := int(float64(x-dest.X) / float64(dest.Width) * float64(imgW))
+	iy := int(float64(y-dest.Y) / float64(dest.Height) * float64(imgH))
+	if ix < 0 {
+		ix = 0
+	}
+	if ix >= imgW {
+		ix = imgW - 1
+	}
+	if iy < 0 {
+		iy = 0
+	}
+	if iy >= imgH {
+		iy = imgH - 1
+	}
+	return image.Pt(ix, iy)
+}
+
+func drawMiniBadge(canvas *walk.Canvas, x, y int, text string, col walk.Color) {
+	bW := len(text)*7 + 16
+	bH := 20
+	bRect := walk.Rectangle{X: x, Y: y, Width: bW, Height: bH}
+	canvas.FillRectanglePixels(badgeBrush, bRect)
+	canvas.DrawRectanglePixels(cardBorderPen, bRect)
+	canvas.DrawTextPixels(text, hudBoldFont, col, walk.Rectangle{X: x + 6, Y: y + 3, Width: bW - 12, Height: 14}, walk.TextLeft)
+}
+
+func drawMeasurements(canvas *walk.Canvas, bounds, dest walk.Rectangle) {
+	if len(GState.Measurements) == 0 || dest.Width <= 0 || dest.Height <= 0 {
+		return
+	}
+
+	w, h := GState.Width, GState.Height
+
+	for _, m := range GState.Measurements {
+		pen := measurePen
+		textCol := walk.RGB(2, 132, 199)
+		br := badgeBrush
+		if m.Risk == "CRITICAL" {
+			pen = reticleRedPen
+			textCol = walk.RGB(220, 38, 38)
+			br = badgeAlarmBr
+		} else if m.Risk == "MODERATE" {
+			pen = measureAmberPen
+			textCol = walk.RGB(217, 119, 6)
+		}
+
+		switch m.Type {
+		case "Lineal", "Schnittlinie":
+			if len(m.Points) >= 2 {
+				s1 := ImgToScreen(m.Points[0], dest, w, h)
+				s2 := ImgToScreen(m.Points[1], dest, w, h)
+
+				canvas.DrawLinePixels(pen, s1, s2)
+
+				// Caliper End Ticks
+				dx := float64(s2.X - s1.X)
+				dy := float64(s2.Y - s1.Y)
+				lenPx := math.Sqrt(dx*dx + dy*dy)
+				if lenPx > 1 {
+					nx := -dy / lenPx * 6.0
+					ny := dx / lenPx * 6.0
+					canvas.DrawLinePixels(pen, walk.Point{X: s1.X + int(nx), Y: s1.Y + int(ny)}, walk.Point{X: s1.X - int(nx), Y: s1.Y - int(ny)})
+					canvas.DrawLinePixels(pen, walk.Point{X: s2.X + int(nx), Y: s2.Y + int(ny)}, walk.Point{X: s2.X - int(nx), Y: s2.Y - int(ny)})
+				}
+
+				// Center Badge
+				midX := (s1.X + s2.X) / 2
+				midY := (s1.Y + s2.Y) / 2
+				badgeW := 160
+				badgeH := 32
+				bRect := walk.Rectangle{X: midX - badgeW/2, Y: midY - badgeH - 6, Width: badgeW, Height: badgeH}
+				canvas.FillRectanglePixels(br, bRect)
+				canvas.DrawRectanglePixels(pen, bRect)
+				canvas.DrawTextPixels(fmt.Sprintf("%s: %s", m.Label, m.ValueStr), hudBoldFont, textCol, walk.Rectangle{X: bRect.X + 4, Y: bRect.Y + 2, Width: badgeW - 8, Height: 14}, walk.TextCenter)
+				canvas.DrawTextPixels(m.DetailsStr, hudFont, walk.RGB(71, 85, 105), walk.Rectangle{X: bRect.X + 4, Y: bRect.Y + 16, Width: badgeW - 8, Height: 14}, walk.TextCenter)
+			}
+
+		case "Rechteck-ROI":
+			if len(m.Points) >= 2 {
+				s1 := ImgToScreen(m.Points[0], dest, w, h)
+				s2 := ImgToScreen(m.Points[1], dest, w, h)
+
+				minX := int(math.Min(float64(s1.X), float64(s2.X)))
+				maxX := int(math.Max(float64(s1.X), float64(s2.X)))
+				minY := int(math.Min(float64(s1.Y), float64(s2.Y)))
+				maxY := int(math.Max(float64(s1.Y), float64(s2.Y)))
+
+				roiBox := walk.Rectangle{X: minX, Y: minY, Width: maxX - minX, Height: maxY - minY}
+				canvas.DrawRectanglePixels(pen, roiBox)
+
+				// Zeichne kontralateral gespiegelte Box (Dashed Green)
+				midlineScreen := dest.X + dest.Width/2
+				contraMinX := midlineScreen*2 - maxX
+				contraMaxX := midlineScreen*2 - minX
+				contraBox := walk.Rectangle{X: contraMinX, Y: minY, Width: contraMaxX - contraMinX, Height: maxY - minY}
+				canvas.DrawRectanglePixels(measureGreenDash, contraBox)
+
+				badgeW := 185
+				badgeH := 36
+				bRect := walk.Rectangle{X: minX, Y: minY - badgeH - 4, Width: badgeW, Height: badgeH}
+				if bRect.Y < bounds.Y {
+					bRect.Y = maxY + 4
+				}
+				canvas.FillRectanglePixels(br, bRect)
+				canvas.DrawRectanglePixels(pen, bRect)
+				canvas.DrawTextPixels(fmt.Sprintf("%s · %s", m.Label, m.ValueStr), hudBoldFont, textCol, walk.Rectangle{X: bRect.X + 6, Y: bRect.Y + 2, Width: badgeW - 12, Height: 15}, walk.TextLeft)
+				canvas.DrawTextPixels(m.DetailsStr, hudFont, walk.RGB(71, 85, 105), walk.Rectangle{X: bRect.X + 6, Y: bRect.Y + 18, Width: badgeW - 12, Height: 15}, walk.TextLeft)
+			}
+
+		case "Kreis-ROI":
+			if len(m.Points) >= 2 {
+				sc := ImgToScreen(m.Points[0], dest, w, h)
+				sp := ImgToScreen(m.Points[1], dest, w, h)
+				dx := sp.X - sc.X
+				dy := sp.Y - sc.Y
+				radPx := int(math.Sqrt(float64(dx*dx + dy*dy)))
+				if radPx < 2 {
+					radPx = 2
+				}
+
+				canvas.DrawEllipsePixels(pen, walk.Rectangle{X: sc.X - radPx, Y: sc.Y - radPx, Width: 2 * radPx, Height: 2 * radPx})
+				coreRad := int(float64(radPx) * 0.5)
+				canvas.DrawEllipsePixels(hairlinePen, walk.Rectangle{X: sc.X - coreRad, Y: sc.Y - coreRad, Width: 2 * coreRad, Height: 2 * coreRad})
+				canvas.DrawLinePixels(pen, walk.Point{X: sc.X - 4, Y: sc.Y}, walk.Point{X: sc.X + 4, Y: sc.Y})
+				canvas.DrawLinePixels(pen, walk.Point{X: sc.X, Y: sc.Y - 4}, walk.Point{X: sc.X, Y: sc.Y + 4})
+
+				badgeW := 170
+				badgeH := 36
+				bRect := walk.Rectangle{X: sc.X + radPx + 4, Y: sc.Y - 18, Width: badgeW, Height: badgeH}
+				if bRect.X+badgeW > bounds.X+bounds.Width {
+					bRect.X = sc.X - radPx - 4 - badgeW
+				}
+				canvas.FillRectanglePixels(br, bRect)
+				canvas.DrawRectanglePixels(pen, bRect)
+				canvas.DrawTextPixels(fmt.Sprintf("%s: %s", m.Label, m.ValueStr), hudBoldFont, textCol, walk.Rectangle{X: bRect.X + 6, Y: bRect.Y + 2, Width: badgeW - 12, Height: 15}, walk.TextLeft)
+				canvas.DrawTextPixels(m.DetailsStr, hudFont, walk.RGB(71, 85, 105), walk.Rectangle{X: bRect.X + 6, Y: bRect.Y + 18, Width: badgeW - 12, Height: 15}, walk.TextLeft)
+			}
+
+		case "Goniometer":
+			if len(m.Points) >= 3 {
+				s1 := ImgToScreen(m.Points[0], dest, w, h)
+				sv := ImgToScreen(m.Points[1], dest, w, h)
+				s3 := ImgToScreen(m.Points[2], dest, w, h)
+
+				canvas.DrawLinePixels(pen, s1, sv)
+				canvas.DrawLinePixels(pen, sv, s3)
+				canvas.DrawEllipsePixels(pen, walk.Rectangle{X: sv.X - 14, Y: sv.Y - 14, Width: 28, Height: 28})
+
+				badgeW := 160
+				badgeH := 34
+				bRect := walk.Rectangle{X: sv.X + 16, Y: sv.Y - 17, Width: badgeW, Height: badgeH}
+				if bRect.X+badgeW > bounds.X+bounds.Width {
+					bRect.X = sv.X - 16 - badgeW
+				}
+				canvas.FillRectanglePixels(br, bRect)
+				canvas.DrawRectanglePixels(pen, bRect)
+				canvas.DrawTextPixels(fmt.Sprintf("%s: %s", m.Label, m.ValueStr), hudBoldFont, textCol, walk.Rectangle{X: bRect.X + 6, Y: bRect.Y + 2, Width: badgeW - 12, Height: 14}, walk.TextLeft)
+				canvas.DrawTextPixels(m.DetailsStr, hudFont, walk.RGB(71, 85, 105), walk.Rectangle{X: bRect.X + 6, Y: bRect.Y + 16, Width: badgeW - 12, Height: 14}, walk.TextLeft)
+			}
+
+		case "Spot":
+			if len(m.Points) >= 1 {
+				sc := ImgToScreen(m.Points[0], dest, w, h)
+				canvas.DrawEllipsePixels(pen, walk.Rectangle{X: sc.X - 8, Y: sc.Y - 8, Width: 16, Height: 16})
+				canvas.DrawLinePixels(pen, walk.Point{X: sc.X - 12, Y: sc.Y}, walk.Point{X: sc.X + 12, Y: sc.Y})
+				canvas.DrawLinePixels(pen, walk.Point{X: sc.X, Y: sc.Y - 12}, walk.Point{X: sc.X, Y: sc.Y + 12})
+
+				badgeW := 130
+				badgeH := 24
+				bRect := walk.Rectangle{X: sc.X + 12, Y: sc.Y - 12, Width: badgeW, Height: badgeH}
+				canvas.FillRectanglePixels(br, bRect)
+				canvas.DrawRectanglePixels(pen, bRect)
+				canvas.DrawTextPixels(fmt.Sprintf("%s · %s", m.Label, m.ValueStr), hudBoldFont, textCol, walk.Rectangle{X: bRect.X + 4, Y: bRect.Y + 4, Width: badgeW - 8, Height: 16}, walk.TextCenter)
+			}
+		}
+	}
+}
+
+func drawActiveDrawing(canvas *walk.Canvas, bounds, dest walk.Rectangle) {
+	if !GState.IsDrawing || len(GState.ActivePoints) == 0 || dest.Width <= 0 || dest.Height <= 0 {
+		return
+	}
+
+	w, h := GState.Width, GState.Height
+	mousePt := ScreenToImg(GState.HoverX, GState.HoverY, dest, w, h)
+	sMouse := ImgToScreen(mousePt, dest, w, h)
+
+	switch GState.ActiveTool {
+	case ToolRuler, ToolProfileLine:
+		s1 := ImgToScreen(GState.ActivePoints[0], dest, w, h)
+		canvas.DrawLinePixels(measureDashPen, s1, sMouse)
+		m := ComputeLineMetrics(GState.RawGray, w, h, GState.ActivePoints[0], mousePt)
+		badgeText := fmt.Sprintf("%.1f mm (ΔT %.2f K)", m.DistMm, m.DeltaT)
+		drawMiniBadge(canvas, sMouse.X+12, sMouse.Y-12, badgeText, walk.RGB(2, 132, 199))
+
+	case ToolRectROI:
+		s1 := ImgToScreen(GState.ActivePoints[0], dest, w, h)
+		minX := int(math.Min(float64(s1.X), float64(sMouse.X)))
+		maxX := int(math.Max(float64(s1.X), float64(sMouse.X)))
+		minY := int(math.Min(float64(s1.Y), float64(sMouse.Y)))
+		maxY := int(math.Max(float64(s1.Y), float64(sMouse.Y)))
+		canvas.DrawRectanglePixels(measureDashPen, walk.Rectangle{X: minX, Y: minY, Width: maxX - minX, Height: maxY - minY})
+
+		midlineScreen := dest.X + dest.Width/2
+		contraMinX := midlineScreen*2 - maxX
+		contraMaxX := midlineScreen*2 - minX
+		canvas.DrawRectanglePixels(measureGreenDash, walk.Rectangle{X: contraMinX, Y: minY, Width: contraMaxX - contraMinX, Height: maxY - minY})
+
+		m := ComputeRectROI(GState.RawGray, w, h, image.Rect(GState.ActivePoints[0].X, GState.ActivePoints[0].Y, mousePt.X, mousePt.Y))
+		badgeText := fmt.Sprintf("ROI: %.1f cm² · Mean: %.1f°C · ΔT: %.2f K", m.AreaCm2, m.MeanT, m.DeltaT)
+		drawMiniBadge(canvas, minX, minY-22, badgeText, walk.RGB(2, 132, 199))
+
+	case ToolCircleROI:
+		s1 := ImgToScreen(GState.ActivePoints[0], dest, w, h)
+		dx := sMouse.X - s1.X
+		dy := sMouse.Y - s1.Y
+		radPx := int(math.Sqrt(float64(dx*dx + dy*dy)))
+		canvas.DrawEllipsePixels(measureDashPen, walk.Rectangle{X: s1.X - radPx, Y: s1.Y - radPx, Width: 2 * radPx, Height: 2 * radPx})
+		canvas.DrawLinePixels(hairlinePen, s1, sMouse)
+
+		imgRad := int(math.Sqrt(float64((mousePt.X-GState.ActivePoints[0].X)*(mousePt.X-GState.ActivePoints[0].X) + (mousePt.Y-GState.ActivePoints[0].Y)*(mousePt.Y-GState.ActivePoints[0].Y))))
+		cm := ComputeCircleROI(GState.RawGray, w, h, GState.ActivePoints[0], imgRad)
+		badgeText := fmt.Sprintf("R: %.1f mm · Halo ΔT: %+.2f K", cm.RadiusMm, cm.HaloDeltaT)
+		drawMiniBadge(canvas, sMouse.X+12, sMouse.Y-12, badgeText, walk.RGB(2, 132, 199))
+
+	case ToolGoniometer:
+		if len(GState.ActivePoints) == 1 {
+			s1 := ImgToScreen(GState.ActivePoints[0], dest, w, h)
+			canvas.DrawLinePixels(measureDashPen, s1, sMouse)
+			drawMiniBadge(canvas, sMouse.X+12, sMouse.Y-12, "Punkt 2 (Scheitelpunkt) setzen", walk.RGB(2, 132, 199))
+		} else if len(GState.ActivePoints) == 2 {
+			s1 := ImgToScreen(GState.ActivePoints[0], dest, w, h)
+			sv := ImgToScreen(GState.ActivePoints[1], dest, w, h)
+			canvas.DrawLinePixels(measurePen, s1, sv)
+			canvas.DrawLinePixels(measureDashPen, sv, sMouse)
+			gm := ComputeGoniometerAngle(GState.ActivePoints[0], GState.ActivePoints[1], mousePt)
+			drawMiniBadge(canvas, sMouse.X+12, sMouse.Y-12, fmt.Sprintf("Winkel: %.1f° (%s)", gm.AngleDeg, gm.Category), walk.RGB(2, 132, 199))
+		}
+	}
 }
