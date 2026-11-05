@@ -72,6 +72,10 @@ core/ignite-core.exe
 ergebnis.json
 test_output.json
 
+# Klinische Patientendaten & Medien (DSGVO Art. 25 & GitHub 100MB Limit)
+*.mp4
+BilderArzt/
+
 # LaTeX artifacts
 *.aux
 *.out
