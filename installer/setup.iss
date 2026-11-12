@@ -8,7 +8,7 @@
 #define MyAppVersion "12.3.4.81"
 #define MyAppPublisher "Jona Noack (Jugend forscht 2026)"
 #define MyAppURL "https://github.com/noackjona-hash/JonaNoackIgnite"
-#define MyAppExeName "Ignite.exe"
+#define MyAppExeName "Ignite.Desktop.exe"
 
 [Setup]
 AppId={{C78F9082-E763-4DC2-87F9-536979A46440}}

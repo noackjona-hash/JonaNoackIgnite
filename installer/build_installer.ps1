@@ -1,12 +1,12 @@
-# ==============================================================================
+﻿# ==============================================================================
 # IGNITE Medical Imaging Suite v12.3.4.81 — Automated Installer Build Script
-# Pure Go Native Architecture: AVX2 Rechenkern + Win32 PACS Workstation
+# High-Performance Hybrid: AVX2 Rechenkern (Go) + .NET 10 WPF Clinical Workstation
 # ==============================================================================
 
 $ErrorActionPreference = "Stop"
 
 Write-Host "==================================================================" -ForegroundColor Cyan
-Write-Host " Building IGNITE Medical Imaging Suite v12.3.4.81 (Pure Go Suite)" -ForegroundColor Cyan
+Write-Host " Building IGNITE Medical Imaging Suite v12.3.4.81 (.NET 10 WPF)" -ForegroundColor Cyan
 Write-Host "==================================================================" -ForegroundColor Cyan
 
 $RootDir = Split-Path -Parent $PSScriptRoot
@@ -25,18 +25,14 @@ Set-Location "$RootDir\core"
 go build -ldflags="-s -w" -o ignite-core.exe ./cmd/ignite-core
 if ($LASTEXITCODE -ne 0) { throw "Go core build failed!" }
 
-# 3. Build Go Native Desktop Workstation (Walk GUI with C++ Flair)
-Write-Host "`n[2/4] Compiling Go Native Walk Medical Workstation..." -ForegroundColor Yellow
-Set-Location "$RootDir\desktop"
-go build -ldflags="-H windowsgui -s -w" -o Ignite.exe .
-if ($LASTEXITCODE -ne 0) { throw "Go desktop build failed!" }
+# 3. Publish .NET 10 WPF Desktop Application
+Write-Host "`n[2/4] Publishing .NET 10 WPF Desktop Application..." -ForegroundColor Yellow
+Set-Location $RootDir
+dotnet publish desktop/Ignite.Desktop.csproj -c Release -r win-x64 --self-contained false -o "$PublishDir"
+if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed!" }
 
 # 4. Copy bundled dependencies into publish folder
-Write-Host "`n[3/4] Bundling Go binaries, Lua rules and manifest..." -ForegroundColor Yellow
-Copy-Item -Path "$RootDir\desktop\Ignite.exe" -Destination "$PublishDir\Ignite.exe" -Force
-if (Test-Path "$RootDir\desktop\Ignite.exe.manifest") {
-    Copy-Item -Path "$RootDir\desktop\Ignite.exe.manifest" -Destination "$PublishDir\Ignite.exe.manifest" -Force
-}
+Write-Host "`n[3/4] Bundling Go core, Lua rules and database..." -ForegroundColor Yellow
 Copy-Item -Path "$RootDir\core\ignite-core.exe" -Destination "$PublishDir\ignite-core.exe" -Force
 Copy-Item -Path "$RootDir\rules" -Destination "$PublishDir\rules" -Recurse -Force
 if (Test-Path "$RootDir\desktop\ignite_medical.db") {
