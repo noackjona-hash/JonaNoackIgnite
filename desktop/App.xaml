@@ -27,7 +27,9 @@
         <Color x:Key="ColorMedicalBlue">#0284C7</Color>
         <Color x:Key="ColorPurple">#7C3AED</Color>
         <Color x:Key="ColorCritical">#DC2626</Color>      <!-- Alert / Triage Red -->
+        <Color x:Key="ColorCriticalBg">#FEE2E2</Color>    <!-- Alert / Triage Red Badge Bg -->
         <Color x:Key="ColorWarning">#D97706</Color>       <!-- Warning Amber -->
+        <Color x:Key="ColorWarningBg">#FEF3C7</Color>     <!-- Warning Amber Badge Bg -->
         <Color x:Key="ColorSuccess">#16A34A</Color>       <!-- Health Green -->
         <Color x:Key="ColorSuccessBg">#DCFCE7</Color>     <!-- Health Green Badge Bg -->
 
@@ -47,7 +49,9 @@
         <SolidColorBrush x:Key="MedicalBlueBrush" Color="{StaticResource ColorMedicalBlue}"/>
         <SolidColorBrush x:Key="PurpleBrush" Color="{StaticResource ColorPurple}"/>
         <SolidColorBrush x:Key="CriticalBrush" Color="{StaticResource ColorCritical}"/>
+        <SolidColorBrush x:Key="CriticalBgBrush" Color="{StaticResource ColorCriticalBg}"/>
         <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource ColorWarning}"/>
+        <SolidColorBrush x:Key="WarningBgBrush" Color="{StaticResource ColorWarningBg}"/>
         <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource ColorSuccess}"/>
         <SolidColorBrush x:Key="SuccessBgBrush" Color="{StaticResource ColorSuccessBg}"/>
 

@@ -505,6 +505,17 @@ end";
         {
         }
 
+        private Brush SafeFindBrush(string resourceKey, Brush? fallback = null)
+        {
+            try
+            {
+                if (TryFindResource(resourceKey) is Brush b)
+                    return b;
+            }
+            catch { }
+            return fallback ?? Brushes.Transparent;
+        }
+
         // --- Analysis Pipeline Execution ---
         private async Task RunPipelineAsync()
         {
@@ -568,19 +579,19 @@ end";
                 {
                     if (BorderTriageBadge != null)
                     {
-                        BorderTriageBadge.Background = (Brush)FindResource("CriticalBgBrush");
+                        BorderTriageBadge.Background = SafeFindBrush("CriticalBgBrush", new SolidColorBrush(Color.FromRgb(0xFE, 0xE2, 0xE2)));
                         BorderTriageBadge.BorderBrush = new SolidColorBrush(Color.FromRgb(0xFC, 0xA5, 0xA5));
                     }
-                    if (BadgeAiStatusDot != null) BadgeAiStatusDot.Background = (Brush)FindResource("CriticalBrush");
+                    if (BadgeAiStatusDot != null) BadgeAiStatusDot.Background = SafeFindBrush("CriticalBrush", Brushes.Red);
                     if (TxtHeaderAiStatus != null)
                     {
                         TxtHeaderAiStatus.Text = $"KRITISCH (ΔT = +{maxVal:F1} K)";
-                        TxtHeaderAiStatus.Foreground = (Brush)FindResource("CriticalBrush");
+                        TxtHeaderAiStatus.Foreground = SafeFindBrush("CriticalBrush", Brushes.Red);
                     }
                     if (TxtInspectorCaseRisk != null)
                     {
                         TxtInspectorCaseRisk.Text = $"ARMSTRONG RISIKO: CRITICAL (ΔT = +{maxVal:F1} K)";
-                        TxtInspectorCaseRisk.Foreground = (Brush)FindResource("CriticalBrush");
+                        TxtInspectorCaseRisk.Foreground = SafeFindBrush("CriticalBrush", Brushes.Red);
                     }
                     if (FloatingArmstrongBanner != null)
                     {
@@ -592,10 +603,10 @@ end";
                 {
                     if (BorderTriageBadge != null)
                     {
-                        BorderTriageBadge.Background = (Brush)FindResource("SuccessBgBrush");
+                        BorderTriageBadge.Background = SafeFindBrush("SuccessBgBrush", new SolidColorBrush(Color.FromRgb(0xDC, 0xFC, 0xE7)));
                         BorderTriageBadge.BorderBrush = new SolidColorBrush(Color.FromRgb(0x86, 0xEF, 0xAC));
                     }
-                    if (BadgeAiStatusDot != null) BadgeAiStatusDot.Background = (Brush)FindResource("SuccessBrush");
+                    if (BadgeAiStatusDot != null) BadgeAiStatusDot.Background = SafeFindBrush("SuccessBrush", Brushes.Green);
                     if (TxtHeaderAiStatus != null)
                     {
                         TxtHeaderAiStatus.Text = "STABIL / PHYSIOLOGISCH";
@@ -604,7 +615,7 @@ end";
                     if (TxtInspectorCaseRisk != null)
                     {
                         TxtInspectorCaseRisk.Text = "ARMSTRONG STADIUM 0 (PHYSIOLOGISCH)";
-                        TxtInspectorCaseRisk.Foreground = (Brush)FindResource("CyanBrush");
+                        TxtInspectorCaseRisk.Foreground = SafeFindBrush("CyanBrush", Brushes.DodgerBlue);
                     }
                     if (FloatingArmstrongBanner != null) FloatingArmstrongBanner.Visibility = Visibility.Collapsed;
                 }
