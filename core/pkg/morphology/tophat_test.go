@@ -270,3 +270,96 @@ func TestAVX2SumAndSumSqUint8(t *testing.T) {
 	}
 }
 
+func TestVHGWExactnessAndMaskedOpening(t *testing.T) {
+	w, h, r := 73, 59, 11
+	mat := imageutil.NewGrayMatrix(w, h)
+	mask := imageutil.NewGrayMatrix(w, h)
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			v := uint8((x*7 + y*13) % 200)
+			if x >= 15 && x <= 58 && y >= 10 && y <= 48 {
+				mask.Set(x, y, 255)
+				mat.Set(x, y, 140+(v%60))
+			} else {
+				// Cold air background (should NOT bleed into TopHatMasked)
+				mat.Set(x, y, 30)
+			}
+		}
+	}
+
+	// Verify unmasked Erode1DHorizontal matches exact naive window min
+	gotH := Erode1DHorizontal(mat, r)
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			exp := uint8(255)
+			for dx := -r; dx <= r; dx++ {
+				nx := x + dx
+				if nx >= 0 && nx < w {
+					if val := mat.At(nx, y); val < exp {
+						exp = val
+					}
+				}
+			}
+			if gotH.At(x, y) != exp {
+				t.Fatalf("vhgw Erode1DHorizontal mismatch at (%d,%d): expected %d, got %d", x, y, exp, gotH.At(x, y))
+			}
+		}
+	}
+
+	// Verify unmasked Dilate1DVertical matches exact naive window max
+	gotV := Dilate1DVertical(mat, r)
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			exp := uint8(0)
+			for dy := -r; dy <= r; dy++ {
+				ny := y + dy
+				if ny >= 0 && ny < h {
+					if val := mat.At(x, ny); val > exp {
+						exp = val
+					}
+				}
+			}
+			if gotV.At(x, y) != exp {
+				t.Fatalf("vhgw Dilate1DVertical mismatch at (%d,%d): expected %d, got %d", x, y, exp, gotV.At(x, y))
+			}
+		}
+	}
+
+	// Verify TopHatMasked blocks cold background (30) from bleeding into skin boundary (>=140)
+	// On a flat warm tissue plateau at 160 inside mask, masked TopHat must be 0 even right at border!
+	flatTissue := imageutil.NewGrayMatrix(w, h)
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			if mask.At(x, y) > 0 {
+				flatTissue.Set(x, y, 160)
+			} else {
+				flatTissue.Set(x, y, 30)
+			}
+		}
+	}
+	thMasked := TopHatMasked(flatTissue, mask, r)
+	if thMasked.At(15, 10) != 0 || thMasked.At(58, 48) != 0 {
+		t.Fatalf("expected 0 border artifact in TopHatMasked, got (%d, %d)", thMasked.At(15, 10), thMasked.At(58, 48))
+	}
+
+	// Verify CloseBinaryMasked bridges a 2px dark crease inside a hotspot
+	bin := imageutil.NewGrayMatrix(30, 30)
+	binMask := imageutil.NewGrayMatrix(30, 30)
+	for y := 5; y < 25; y++ {
+		for x := 5; x < 25; x++ {
+			binMask.Set(x, y, 255)
+			if x >= 10 && x <= 19 && y >= 10 && y <= 19 && x != 14 && x != 15 {
+				bin.Set(x, y, 255)
+			}
+		}
+	}
+	closed := CloseBinaryMasked(bin, binMask, 2)
+	if closed.At(14, 15) != 255 || closed.At(15, 15) != 255 {
+		t.Fatalf("CloseBinaryMasked failed to bridge 2px crease: got (%d, %d)", closed.At(14, 15), closed.At(15, 15))
+	}
+	if closed.At(7, 15) != 0 {
+		t.Fatalf("CloseBinaryMasked leaked beyond radius: got %d at (7,15)", closed.At(7, 15))
+	}
+}
+
+

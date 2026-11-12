@@ -3,7 +3,9 @@ package pipeline
 import (
 	"fmt"
 	"math"
+	"runtime"
 	"sort"
+	"sync"
 	"time"
 
 	"ignite-core/pkg/imageutil"
@@ -163,38 +165,76 @@ func Run(src *imageutil.GrayMatrix, cfg PipelineConfig) AnalysisResult {
 	addStage(2, 1, phase1Name, "Bad-Pixel & Dead-Pixel Interpolation",
 		"3x3 Nachbarschafts-Interpolation defekter oder blockierter Mikrobolometer-Sensorelemente.", s2Start)
 
-	// Stage 3: Edge-Preserving Bilateral Noise Filtering
+	// Stage 3: Edge-Preserving Bilateral Noise Filtering (Full-Resolution Parallel LUT Bilateral Filter)
 	s3Start := time.Now()
 	filteredSrc := calibratedSrc.Clone()
-	// Anisotrope Rauschglättung mit Noise-Coring: Erhält anatomische Läsionsbrücken ohne künstliche Fragmentierung
-	for y := 1; y < h-1; y += 2 {
-		row := y * w
-		for x := 1; x < w-1; x += 2 {
-			cIdx := row + x
-			cVal := float64(calibratedSrc.Data[cIdx])
-			if cVal < 20 {
-				continue
-			}
-			var sumW, sumVal float64
-			for dy := -1; dy <= 1; dy++ {
-				nRow := (y + dy) * w
-				for dx := -1; dx <= 1; dx++ {
-					nVal := float64(calibratedSrc.Data[nRow+x+dx])
-					spatialDistSq := float64(dx*dx + dy*dy)
-					rangeDiff := nVal - cVal
-					wWeight := math.Exp(-spatialDistSq/(2.0*2.25) - (rangeDiff*rangeDiff)/(2.0*144.0))
-					sumW += wWeight
-					sumVal += wWeight * nVal
-				}
-			}
-			if sumW > 0 {
-				// 10% Blending verhindert das Zerschneiden echter zusammenhängender Läsionen
-				filteredSrc.Data[cIdx] = uint8(math.Round(cVal*0.90 + (sumVal/sumW)*0.10))
-			}
+	var spatialKernel [3][3]float32
+	for dy := -1; dy <= 1; dy++ {
+		for dx := -1; dx <= 1; dx++ {
+			spatialKernel[dy+1][dx+1] = float32(math.Exp(-float64(dx*dx+dy*dy) / (2.0 * 2.25)))
 		}
 	}
+	var rangeLUT [256]float32
+	for d := 0; d < 256; d++ {
+		rangeLUT[d] = float32(math.Exp(-float64(d*d) / (2.0 * 256.0))) // sigma_r = 16.0
+	}
+
+	workers := runtime.GOMAXPROCS(0)
+	if workers > 8 {
+		workers = 8
+	}
+	if workers < 1 || h < 16 {
+		workers = 1
+	}
+	var bilatWG sync.WaitGroup
+	for wk := 0; wk < workers; wk++ {
+		y0 := 1 + wk*(h-2)/workers
+		y1 := 1 + (wk+1)*(h-2)/workers
+		if y0 >= y1 {
+			continue
+		}
+		bilatWG.Add(1)
+		go func(yStart, yEnd int) {
+			defer bilatWG.Done()
+			for y := yStart; y < yEnd; y++ {
+				row := y * w
+				for x := 1; x < w-1; x++ {
+					cIdx := row + x
+					cInt := int(calibratedSrc.Data[cIdx])
+					if cInt < 20 {
+						continue
+					}
+					var sumW, sumVal float32
+					for dy := -1; dy <= 1; dy++ {
+						nRow := (y + dy) * w
+						skRow := spatialKernel[dy+1]
+						for dx := -1; dx <= 1; dx++ {
+							nInt := int(calibratedSrc.Data[nRow+x+dx])
+							diff := nInt - cInt
+							if diff < 0 {
+								diff = -diff
+							}
+							wWeight := skRow[dx+1] * rangeLUT[diff]
+							sumW += wWeight
+							sumVal += wWeight * float32(nInt)
+						}
+					}
+					if sumW > 0 {
+						// 45% smoothed blend attenuates high-frequency FLIR MSX micro-noise while preserving steep rims
+						blended := float32(cInt)*0.55 + (sumVal/sumW)*0.45
+						v := int(blended + 0.5)
+						if v > 255 {
+							v = 255
+						}
+						filteredSrc.Data[cIdx] = uint8(v)
+					}
+				}
+			}
+		}(y0, y1)
+	}
+	bilatWG.Wait()
 	addStage(3, 1, phase1Name, "Edge-Preserving Bilateral Filtering",
-		"Nicht-lineare bilaterale Rauschunterdrückung ohne Weichzeichnung anatomischer Gewebekonturen.", s3Start)
+		"Vollauflösende parallele LUT-bilaterale Rauschunterdrückung (3x3, sigma_r=16) zum Erhalt von Läsionsbrücken.", s3Start)
 
 	// Stage 4: Spatial Grid Resolution Standardization
 	s4Start := time.Now()
@@ -207,35 +247,47 @@ func Run(src *imageutil.GrayMatrix, cfg PipelineConfig) AnalysisResult {
 
 	// Stage 5: Stefan-Boltzmann Thermal Drift Equilibrium
 	s5Start := time.Now()
-	var bgSum float64
-	var bgCount int
+	var globalHist [256]int
 	for _, v := range filteredSrc.Data {
-		if v < 40 {
-			bgSum += float64(v)
-			bgCount++
+		globalHist[v]++
+	}
+	p10Target := len(filteredSrc.Data) / 10
+	cumCnt := 0
+	p10Ambient := 40.0
+	for b := 0; b < 256; b++ {
+		cumCnt += globalHist[b]
+		if cumCnt >= p10Target {
+			p10Ambient = float64(b)
+			break
 		}
 	}
-	ambientOffset := float64(0)
-	if bgCount > 0 {
-		ambientOffset = math.Round((bgSum/float64(bgCount))*10) / 10
+	ambientOffset := math.Round(p10Ambient*10) / 10
+	ambientTempC := 18.0 + (p10Ambient-40.0)*0.05
+	if ambientTempC < 18.0 {
+		ambientTempC = 18.0
+	} else if ambientTempC > 24.0 {
+		ambientTempC = 24.0
 	}
-	_ = ambientOffset
 	addStage(5, 1, phase1Name, "Stefan-Boltzmann Thermal Drift Equilibrium",
-		"Modellierung des thermischen Strahlungsgleichgewichts und Kompensation von Umgebungstemperatur-Drift.", s5Start)
+		fmt.Sprintf("Thermisches Strahlungsgleichgewicht & P10-Raumluft-Kalibrierung (Basis %.1f, %.1f °C).", ambientOffset, ambientTempC), s5Start)
 
 	// Stage 6: Dynamic Range Radiometric Contrast Stretching
 	s6Start := time.Now()
 	var minTissue, maxTissue uint8 = 255, 0
-	for _, v := range filteredSrc.Data {
-		if v > 30 {
-			if v < minTissue { minTissue = v }
-			if v > maxTissue { maxTissue = v }
+	for b := 31; b < 256; b++ {
+		if globalHist[b] > 0 {
+			if uint8(b) < minTissue {
+				minTissue = uint8(b)
+			}
+			if uint8(b) > maxTissue {
+				maxTissue = uint8(b)
+			}
 		}
 	}
 	_ = minTissue
 	_ = maxTissue
 	addStage(6, 1, phase1Name, "Dynamic Range Radiometric Contrast Stretching",
-		"Robustes Histogramm-Stretching des aktiven Infrarotbereichs zur Erhaltung feiner Temperaturdifferenzen.", s6Start)
+		"Histogramm-Bereichsprüfung des aktiven Infrarotbereichs zur Erhaltung feiner Temperaturdifferenzen.", s6Start)
 
 	// =========================================================================
 	// PHASE II: Anatomical Body Segmentation & Boundary Geodesics (Stages 7–12)
@@ -283,7 +335,7 @@ func Run(src *imageutil.GrayMatrix, cfg PipelineConfig) AnalysisResult {
 
 	// Stage 12: Distal Margin Geodesic Boundary Preservation
 	s12Start := time.Now()
-	bodyMask := segmentation.ErodeBodyMask(rawMask, cfg.MarginFactor)
+	bodyMask := segmentation.ErodeBodyMaskFromDist(rawMask, distMap, cfg.MarginFactor)
 	// Falls ROI angegeben, außerhalb maskieren
 	if cfg.ROI[2] > cfg.ROI[0] && cfg.ROI[3] > cfg.ROI[1] {
 		for y := 0; y < h; y++ {
@@ -366,15 +418,24 @@ func Run(src *imageutil.GrayMatrix, cfg PipelineConfig) AnalysisResult {
 	addStage(15, 3, phase3Name, "Optical Viewing Angle Cosine Field cos(theta)",
 		"Skalarprodukt der Oberflächennormalen mit der optischen Infrarotkamera-Achse v = (0, 0, 1)^T.", s15Start)
 
-	// Stage 16: LWIR Fresnel Emissivity Attenuation Modeling
+	// Stage 16: LWIR Fresnel Emissivity Attenuation Modeling (Fast LUT)
 	s16Start := time.Now()
 	var meanEmissivity float64
 	var emCount int
 	if cosThetaMap != nil {
+		var emLUT [1025]float64
+		for k := 1; k <= 1024; k++ {
+			emLUT[k] = 0.98 * math.Pow(float64(k)/1024.0, 0.22)
+		}
 		for _, c := range cosThetaMap.Data {
 			if c > 0 {
-				em := 0.98 * math.Pow(float64(c), 0.22)
-				meanEmissivity += em
+				idxLUT := int(c * 1024.0)
+				if idxLUT < 1 {
+					idxLUT = 1
+				} else if idxLUT > 1024 {
+					idxLUT = 1024
+				}
+				meanEmissivity += emLUT[idxLUT]
 				emCount++
 			}
 		}
@@ -426,29 +487,29 @@ func Run(src *imageutil.GrayMatrix, cfg PipelineConfig) AnalysisResult {
 	addStage(19, 4, phase4Name, "Dynamic Anatomical Structuring Element Sizing",
 		"Adaptive Berechnung des morphologischen Kernradius R = max(15, min(W,H)*0.05) angepasst an Extremitätendimensionen.", s19Start)
 
-	// Stage 20: AVX2 1D Horizontal Minkowski Erosion
+	// Stage 20: AVX2/vHGW Masked 1D Horizontal Minkowski Erosion
 	s20Start := time.Now()
-	erodedH := morphology.Erode1DHorizontal(imgToAnalyze, radius)
+	erodedH := morphology.Erode1DHorizontalMasked(imgToAnalyze, bodyMask, radius)
 	addStage(20, 4, phase4Name, "AVX2 1D Horizontal Minkowski Erosion",
-		"SIMD AVX2-vektorisierte horizontale 1D-Min-Reduktion (VPMINUB) entlang der Bildzeilen.", s20Start)
+		"Gewebemaskierte O(1) vHGW horizontale 1D-Min-Reduktion ohne Kälterand-Artefakte.", s20Start)
 
-	// Stage 21: AVX2 1D Vertical Minkowski Erosion
+	// Stage 21: AVX2/vHGW Masked 1D Vertical Minkowski Erosion
 	s21Start := time.Now()
-	eroded := morphology.Erode1DVertical(erodedH, radius)
+	eroded := morphology.Erode1DVerticalMasked(erodedH, bodyMask, radius)
 	addStage(21, 4, phase4Name, "AVX2 1D Vertical Minkowski Erosion",
-		"SIMD AVX2-vektorisierte vertikale 1D-Min-Reduktion (VPMINUB) zum Abschluss der 2D-Erosion.", s21Start)
+		"SIMD AVX2-vektorisierte maskierte vertikale 1D-Min-Reduktion zum Abschluss der 2D-Erosion.", s21Start)
 
-	// Stage 22: AVX2 1D Horizontal Minkowski Dilation
+	// Stage 22: AVX2/vHGW Masked 1D Horizontal Minkowski Dilation
 	s22Start := time.Now()
-	dilatedH := morphology.Dilate1DHorizontal(eroded, radius)
+	dilatedH := morphology.Dilate1DHorizontalMasked(eroded, bodyMask, radius)
 	addStage(22, 4, phase4Name, "AVX2 1D Horizontal Minkowski Dilation",
-		"SIMD AVX2-vektorisierte horizontale 1D-Max-Expansion (VPMAXUB) entlang der Bildzeilen.", s22Start)
+		"Gewebemaskierte O(1) vHGW horizontale 1D-Max-Expansion entlang aktiver Hautareale.", s22Start)
 
-	// Stage 23: AVX2 1D Vertical Minkowski Dilation
+	// Stage 23: AVX2/vHGW Masked 1D Vertical Minkowski Dilation
 	s23Start := time.Now()
-	opened := morphology.Dilate1DVertical(dilatedH, radius)
+	opened := morphology.Dilate1DVerticalMasked(dilatedH, bodyMask, radius)
 	addStage(23, 4, phase4Name, "AVX2 1D Vertical Minkowski Dilation",
-		"SIMD AVX2-vektorisierte vertikale 1D-Max-Expansion (VPMAXUB) zum Abschluss der morphologischen Öffnung.", s23Start)
+		"SIMD AVX2-vektorisierte maskierte vertikale 1D-Max-Expansion zum Abschluss der Öffnung.", s23Start)
 
 	// Stage 24: Top-Hat Saturated Residue Extraction & Boundary Suppression
 	s24Start := time.Now()
@@ -533,11 +594,11 @@ func Run(src *imageutil.GrayMatrix, cfg PipelineConfig) AnalysisResult {
 	addStage(29, 5, phase5Name, "AVX2 Vectorized Anomaly Thresholding",
 		"SIMD AVX2-beschleunigter Schwellwertvergleich zur Erzeugung der binären Anomalie-Kandidatenmaske.", s29Start)
 
-	// Stage 30: Geodesic Dual-Threshold Hysteresis Reconstruction
+	// Stage 30: Geodesic Dual-Threshold Hysteresis Reconstruction + MSX Crease Closing
 	s30Start := time.Now()
-	tauWeak := uint8(float64(stats.Threshold) * 0.85)
-	if tauWeak < stats.Threshold*3/4 {
-		tauWeak = stats.Threshold * 3 / 4
+	tauWeak := uint8(float64(stats.Threshold) * 0.72)
+	if minWeak := stats.Threshold * 2 / 3; tauWeak < minWeak {
+		tauWeak = minWeak
 	}
 	reconstructedHotspots := binaryHotspots.Clone()
 	var hystQueue []int
@@ -571,9 +632,10 @@ func Run(src *imageutil.GrayMatrix, cfg PipelineConfig) AnalysisResult {
 			}
 		}
 	}
-	binaryHotspots = reconstructedHotspots
+	// Heal 1-4 px FLIR MSX crease splits across the same anatomical hotspot
+	binaryHotspots = morphology.CloseBinaryMasked(reconstructedHotspots, bodyMask, 2)
 	addStage(30, 5, phase5Name, "Geodesic Dual-Threshold Hysteresis Reconstruction",
-		fmt.Sprintf("Geodätische Rekonstruktion verbindet hochsignifikante Kerne (K=3.0) mit perizentralen Anomaliezellen (%d Pixel).", len(hystQueue)), s30Start)
+		fmt.Sprintf("Geodätische Rekonstruktion & r=2 MSX-Faltenschluss (%d Pixel).", len(hystQueue)), s30Start)
 
 	// =========================================================================
 	// PHASE VI: Geometric Morphology & Multi-Scale Artifact Rejection (Stages 31–36)
@@ -676,7 +738,7 @@ func Run(src *imageutil.GrayMatrix, cfg PipelineConfig) AnalysisResult {
 		tP := time.Now()
 		p := perfusion.ComputeLongitudinalProfile(src, bodyMask)
 		perfProfile = &p
-		bm := perfusion.SolvePennesBioheatField(src, bodyMask, 20.0, 42.0)
+		bm := perfusion.SolvePennesBioheatField(src, bodyMask, ambientTempC, 42.0)
 		bioheatMap = &bm
 		timing.PerfusionMs = float64(time.Since(tP).Microseconds()) / 1000.0
 	}
@@ -722,13 +784,16 @@ func Run(src *imageutil.GrayMatrix, cfg PipelineConfig) AnalysisResult {
 
 	// Stage 40: Armstrong Contralateral / Baseline Hyperthermia Assessment
 	s40Start := time.Now()
-	leftFoot, rightFoot, hasTwoFeet := detectBilateralFeet(bodyMask)
+	leftFoot, rightFoot, verticalSplit, hasTwoFeet := detectBilateralFeet(bodyMask)
 
 	for idx := range regions {
 		r := &regions[idx]
-		contraX, contraY := mapHomologousContralateral(r.CenterX, r.CenterY, w, h, leftFoot, rightFoot, hasTwoFeet)
+		contraX, contraY := mapHomologousContralateral(r.CenterX, r.CenterY, w, h, leftFoot, rightFoot, verticalSplit, hasTwoFeet)
 		var contraMax uint8
-		searchRadius := 45
+		searchRadius := 50
+		if r.AreaPixels > 1200 {
+			searchRadius = 65
+		}
 		for dy := -searchRadius; dy <= searchRadius; dy++ {
 			for dx := -searchRadius; dx <= searchRadius; dx++ {
 				nx := contraX + dx
@@ -743,6 +808,7 @@ func Run(src *imageutil.GrayMatrix, cfg PipelineConfig) AnalysisResult {
 				}
 			}
 		}
+		r.ContraMeasured = true
 		if contraMax > 0 {
 			r.ContraDelta = math.Round(float64(int(r.MaxVal)-int(contraMax))*10) / 10
 		} else {
@@ -750,7 +816,7 @@ func Run(src *imageutil.GrayMatrix, cfg PipelineConfig) AnalysisResult {
 		}
 	}
 	addStage(40, 7, phase7Name, "Armstrong Contralateral / Baseline Hyperthermia Assessment",
-		"Internationale Armstrong-Klassifikation (Delta T >= 2.2 K) via homologer anatomischer Fußregistrierung.", s40Start)
+		"Internationale Armstrong-Klassifikation (Delta T >= 2.2 K) via orientierungsinvarianter Fußregistrierung.", s40Start)
 
 	// Stage 41: Local Focal Prominence & Diffuse Plateau Suppression
 	s41Start := time.Now()
@@ -764,13 +830,19 @@ func Run(src *imageutil.GrayMatrix, cfg PipelineConfig) AnalysisResult {
 		// Biophysical Criterion for Bilateral Muscular/Physiological Plateaus:
 		// 1. Symmetrische bilaterale Wärme (< 1.8 K Unterschied am homologen Referenzort) im proximalen Gewebe
 		isSymmetric := r.ContraDelta < 18.0
-		isProximalZone := float64(r.CenterY) > float64(h)*0.55 || r.AreaPixels > 1200
-		isFlatLaplacian := r.ThermalLaplacian > -2.5 || r.LocalProminence < 25.0
+		isProximalZone := float64(r.CenterY) > float64(h)*0.55 || r.AreaPixels > 1500
+		if verticalSplit && leftFoot != nil && rightFoot != nil {
+			// In 90°-rotated views, proximal leg/ankle typically extends toward the outer X side with greater width/area
+			isProximalZone = float64(r.CenterX) > float64(w)*0.55 || r.AreaPixels > 1500
+		}
+		isFlatLaplacian := r.ThermalLaplacian > -2.5 || r.LocalProminence < 28.0
 
-		// 2. Diffuse physiologische Fersen-/Muskel-Belastungszone ohne fokale Überhöhung
-		isDiffuseHeel := float64(r.CenterY) > float64(h)*0.65 && r.LocalProminence < 45.0 && r.ThermalLaplacian > -3.0
+		// 2. Diffuse physiologische Fersen-/Knöchel-/Muskel-Belastungszone ohne steile fokale Überhöhung
+		isDiffuseProximalPlateau := isProximalZone && r.EdgeGradient <= 3.8 &&
+			((r.LocalProminence < 45.0 && (r.ThermalLaplacian > -3.5 || r.LocalSurroundMed >= 190.0)) ||
+				(r.AreaPixels > 6000 && r.ContraDelta < 50.0 && r.LocalProminence < 68.0))
 
-		if (isSymmetric && (isProximalZone || isFlatLaplacian)) || isDiffuseHeel {
+		if (isSymmetric && (isProximalZone || isFlatLaplacian)) || isDiffuseProximalPlateau {
 			r.Status = "REJECTED_DIFFUSE_PLATEAU"
 			suppressedPlateaus++
 		}
@@ -961,22 +1033,87 @@ type FootCompartment struct {
 	PixelCount int
 }
 
-// detectBilateralFeet locates the left and right foot by analyzing inter-pedal sagittal density profile.
-func detectBilateralFeet(bodyMask *imageutil.GrayMatrix) (lf, rf *FootCompartment, hasTwoFeet bool) {
+// findProfileValley finds the strongest inter-pedal gap along a 1D projection profile.
+func findProfileValley(sums []int, first, last int) (valleyPos int, valleyVal, lowerPeak float64, ok bool) {
+	if first < 0 || last <= first || (last-first) < 220 {
+		return -1, 0, 0, false
+	}
+	n := len(sums)
+	smoothed := make([]float64, n)
+	radius := 15
+	for i := first; i <= last; i++ {
+		sum, cnt := 0, 0
+		for d := -radius; d <= radius; d++ {
+			ni := i + d
+			if ni >= 0 && ni < n {
+				sum += sums[ni]
+				cnt++
+			}
+		}
+		smoothed[i] = float64(sum) / float64(cnt)
+	}
+
+	spanStart := first + int(float64(last-first)*0.20)
+	spanEnd := first + int(float64(last-first)*0.80)
+	minVal := 1e9
+	vPos := -1
+	for i := spanStart; i <= spanEnd; i++ {
+		if smoothed[i] < minVal {
+			minVal = smoothed[i]
+			vPos = i
+		}
+	}
+	if vPos < 0 {
+		return -1, 0, 0, false
+	}
+
+	var peakA, peakB float64
+	for i := first; i < vPos; i++ {
+		if smoothed[i] > peakA {
+			peakA = smoothed[i]
+		}
+	}
+	for i := vPos + 1; i <= last; i++ {
+		if smoothed[i] > peakB {
+			peakB = smoothed[i]
+		}
+	}
+	lp := peakA
+	if peakB < lp {
+		lp = peakB
+	}
+	if lp < 50.0 || (minVal > lp*0.60 && minVal > 50.0) {
+		return -1, minVal, lp, false
+	}
+	return vPos, minVal, lp, true
+}
+
+// detectBilateralFeet locates the left and right (or top and bottom when rotated 90°) feet
+// by analyzing both sagittal X and transverse Y density profiles.
+func detectBilateralFeet(bodyMask *imageutil.GrayMatrix) (lf, rf *FootCompartment, verticalSplit bool, hasTwoFeet bool) {
 	if bodyMask == nil {
-		return nil, nil, false
+		return nil, nil, false, false
 	}
 	w, h := bodyMask.Width, bodyMask.Height
 	colSums := make([]int, w)
+	rowSums := make([]int, h)
 	totalTissue := 0
-	firstX, lastX := -1, -1
-	for x := 0; x < w; x++ {
-		for y := 0; y < h; y++ {
-			if bodyMask.At(x, y) > 0 {
+	for y := 0; y < h; y++ {
+		rowOff := y * w
+		for x := 0; x < w; x++ {
+			if bodyMask.Data[rowOff+x] > 0 {
 				colSums[x]++
+				rowSums[y]++
 				totalTissue++
 			}
 		}
+	}
+	if totalTissue < 5000 {
+		return nil, nil, false, false
+	}
+
+	firstX, lastX := -1, -1
+	for x := 0; x < w; x++ {
 		if colSums[x] > 0 {
 			if firstX == -1 {
 				firstX = x
@@ -984,67 +1121,42 @@ func detectBilateralFeet(bodyMask *imageutil.GrayMatrix) (lf, rf *FootCompartmen
 			lastX = x
 		}
 	}
-	if totalTissue < 5000 || firstX == -1 || (lastX-firstX) < 250 {
-		return nil, nil, false
-	}
-
-	// Moving-average smoothing of column profile (window 31)
-	smoothed := make([]float64, w)
-	radius := 15
-	for x := firstX; x <= lastX; x++ {
-		sum := 0
-		cnt := 0
-		for dx := -radius; dx <= radius; dx++ {
-			nx := x + dx
-			if nx >= 0 && nx < w {
-				sum += colSums[nx]
-				cnt++
+	firstY, lastY := -1, -1
+	for y := 0; y < h; y++ {
+		if rowSums[y] > 0 {
+			if firstY == -1 {
+				firstY = y
 			}
-		}
-		smoothed[x] = float64(sum) / float64(cnt)
-	}
-
-	// Search for inter-pedal sagittal valley within the central 60% of foot span
-	spanStart := firstX + int(float64(lastX-firstX)*0.20)
-	spanEnd := firstX + int(float64(lastX-firstX)*0.80)
-
-	minVal := 1e9
-	valleyX := -1
-	for x := spanStart; x <= spanEnd; x++ {
-		if smoothed[x] < minVal {
-			minVal = smoothed[x]
-			valleyX = x
+			lastY = y
 		}
 	}
 
-	peakLeft := 0.0
-	for x := firstX; x < valleyX; x++ {
-		if smoothed[x] > peakLeft {
-			peakLeft = smoothed[x]
-		}
-	}
-	peakRight := 0.0
-	for x := valleyX + 1; x <= lastX; x++ {
-		if smoothed[x] > peakRight {
-			peakRight = smoothed[x]
-		}
+	vx, minX, lpX, okX := findProfileValley(colSums, firstX, lastX)
+	vy, minY, lpY, okY := findProfileValley(rowSums, firstY, lastY)
+
+	if !okX && !okY {
+		return nil, nil, false, false
 	}
 
-	lowerPeak := peakLeft
-	if peakRight < lowerPeak {
-		lowerPeak = peakRight
-	}
-	if lowerPeak < 50.0 || (minVal > lowerPeak*0.60 && minVal > 50.0) {
-		return nil, nil, false
+	// Prefer standard sagittal X-split when strong; fall back to vertical Y-split for 90°-rotated views
+	splitPos := vx
+	if !okX || (okY && (1.0-minY/lpY) > (1.0-minX/lpX)+0.15 && !okX) {
+		verticalSplit = true
+		splitPos = vy
+	} else if !okX && okY {
+		verticalSplit = true
+		splitPos = vy
 	}
 
 	lf = &FootCompartment{MinX: w, MaxX: 0, MinY: h, MaxY: 0}
 	rf = &FootCompartment{MinX: w, MaxX: 0, MinY: h, MaxY: 0}
 
-	for y := 0; y < h; y++ {
+	for y := firstY; y <= lastY; y++ {
+		rowOff := y * w
 		for x := firstX; x <= lastX; x++ {
-			if bodyMask.At(x, y) > 0 {
-				if x <= valleyX {
+			if bodyMask.Data[rowOff+x] > 0 {
+				isFirst := (!verticalSplit && x <= splitPos) || (verticalSplit && y <= splitPos)
+				if isFirst {
 					lf.PixelCount++
 					if x < lf.MinX { lf.MinX = x }
 					if x > lf.MaxX { lf.MaxX = x }
@@ -1070,14 +1182,17 @@ func detectBilateralFeet(bodyMask *imageutil.GrayMatrix) (lf, rf *FootCompartmen
 		lf.CenterY /= lf.PixelCount
 		rf.CenterX /= rf.PixelCount
 		rf.CenterY /= rf.PixelCount
-		return lf, rf, true
+		return lf, rf, verticalSplit, true
 	}
-	return nil, nil, false
+	return nil, nil, false, false
 }
 
 // mapHomologousContralateral maps a point (x, y) on one foot to its homologous anatomical counterpart on the opposite foot.
-func mapHomologousContralateral(x, y, w, h int, lf, rf *FootCompartment, hasTwoFeet bool) (int, int) {
+func mapHomologousContralateral(x, y, w, h int, lf, rf *FootCompartment, verticalSplit, hasTwoFeet bool) (int, int) {
 	if !hasTwoFeet || lf == nil || rf == nil {
+		if verticalSplit {
+			return x, h - 1 - y
+		}
 		return w - 1 - x, y
 	}
 
@@ -1090,34 +1205,42 @@ func mapHomologousContralateral(x, y, w, h int, lf, rf *FootCompartment, hasTwoF
 		return w - 1 - x, y
 	}
 
+	if verticalSplit {
+		if y <= lf.MaxY {
+			// Point is on Top Foot; medial side faces lf.MaxY (split valley) -> maps to rf.MinY
+			u := float64(x-lf.MinX) / float64(wL)
+			if u < 0 { u = 0 } else if u > 1 { u = 1 }
+			v := float64(lf.MaxY-y) / float64(hL)
+			if v < 0 { v = 0 } else if v > 1 { v = 1 }
+			return rf.MinX + int(math.Round(u*float64(wR))), rf.MinY + int(math.Round(v*float64(hR)))
+		}
+		// Point is on Bottom Foot; medial side faces rf.MinY -> maps to lf.MaxY
+		u := float64(x-rf.MinX) / float64(wR)
+		if u < 0 { u = 0 } else if u > 1 { u = 1 }
+		v := float64(y-rf.MinY) / float64(hR)
+		if v < 0 { v = 0 } else if v > 1 { v = 1 }
+		return lf.MinX + int(math.Round(u*float64(wL))), lf.MaxY - int(math.Round(v*float64(hL)))
+	}
+
 	if x <= lf.MaxX {
-		// Point is on Left Foot.
-		// Medial edge of left foot is at lf.MaxX (facing the sagittal valley).
-		u := float64(lf.MaxX - x) / float64(wL)
-		if u < 0 { u = 0 }
-		if u > 1 { u = 1 }
-		v := float64(y - lf.MinY) / float64(hL)
-		if v < 0 { v = 0 }
-		if v > 1 { v = 1 }
+		// Point is on Left Foot; medial edge is at lf.MaxX (facing sagittal valley).
+		u := float64(lf.MaxX-x) / float64(wL)
+		if u < 0 { u = 0 } else if u > 1 { u = 1 }
+		v := float64(y-lf.MinY) / float64(hL)
+		if v < 0 { v = 0 } else if v > 1 { v = 1 }
 
-		// Map to Right Foot: medial edge is at rf.MinX.
-		contraX := rf.MinX + int(math.Round(u * float64(wR)))
-		contraY := rf.MinY + int(math.Round(v * float64(hR)))
-		return contraX, contraY
-	} else {
-		// Point is on Right Foot.
-		// Medial edge of right foot is at rf.MinX.
-		u := float64(x - rf.MinX) / float64(wR)
-		if u < 0 { u = 0 }
-		if u > 1 { u = 1 }
-		v := float64(y - rf.MinY) / float64(hR)
-		if v < 0 { v = 0 }
-		if v > 1 { v = 1 }
-
-		// Map to Left Foot: medial edge is at lf.MaxX.
-		contraX := lf.MaxX - int(math.Round(u * float64(wL)))
-		contraY := lf.MinY + int(math.Round(v * float64(hL)))
+		contraX := rf.MinX + int(math.Round(u*float64(wR)))
+		contraY := rf.MinY + int(math.Round(v*float64(hR)))
 		return contraX, contraY
 	}
+	// Point is on Right Foot; medial edge is at rf.MinX.
+	u := float64(x-rf.MinX) / float64(wR)
+	if u < 0 { u = 0 } else if u > 1 { u = 1 }
+	v := float64(y-rf.MinY) / float64(hR)
+	if v < 0 { v = 0 } else if v > 1 { v = 1 }
+
+	contraX := lf.MaxX - int(math.Round(u*float64(wL)))
+	contraY := lf.MinY + int(math.Round(v*float64(hL)))
+	return contraX, contraY
 }
 

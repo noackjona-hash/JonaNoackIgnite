@@ -26,27 +26,25 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.24.x'
-          cache-dependency-path: |
-            core/go.sum
-            desktop/go.sum
+          cache-dependency-path: core/go.sum
+
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
 
       - name: Build Go AVX2 Core
         working-directory: core
         run: |
           go build -ldflags="-s -w" -v -o ignite-core.exe ./cmd/ignite-core
 
-      - name: Build Go Desktop Workstation
-        working-directory: desktop
+      - name: Publish .NET 10 WPF Workstation
         run: |
-          go build -ldflags="-H windowsgui -s -w" -v -o Ignite.exe .
+          New-Item -ItemType Directory -Path "release\publish" -Force | Out-Null
+          dotnet publish desktop/Ignite.Desktop.csproj -c Release -r win-x64 --self-contained false -o "release\publish"
 
       - name: Bundle Portable Release
         run: |
-          New-Item -ItemType Directory -Path "release\publish" -Force | Out-Null
-          Copy-Item -Path "desktop\Ignite.exe" -Destination "release\publish\Ignite.exe" -Force
-          if (Test-Path "desktop\Ignite.exe.manifest") {
-            Copy-Item -Path "desktop\Ignite.exe.manifest" -Destination "release\publish\Ignite.exe.manifest" -Force
-          }
           Copy-Item -Path "core\ignite-core.exe" -Destination "release\publish\ignite-core.exe" -Force
           Copy-Item -Path "rules" -Destination "release\publish\rules" -Recurse -Force
           if (Test-Path "desktop\ignite_medical.db") {

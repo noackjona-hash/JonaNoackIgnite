@@ -9,7 +9,7 @@ on:
 
 jobs:
   test-and-package:
-    name: Build Go AVX2 Core, Go PACS Workstation & Inno Setup Installer
+    name: Build Go AVX2 Core, .NET 10 WPF Workstation & Inno Setup Installer
     runs-on: windows-latest
 
     steps:
@@ -21,9 +21,13 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.24.x'
-          cache-dependency-path: |
-            core/go.sum
-            desktop/go.sum
+          cache-dependency-path: core/go.sum
+
+      # 1b. Setup .NET 10 SDK
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
 
       # 2. Test & Build Go AVX2 Core
       - name: Test Go Core & AVX2 SIMD Assembly
@@ -36,12 +40,12 @@ jobs:
         run: |
           go build -ldflags="-s -w" -v -o ignite-core.exe ./cmd/ignite-core
 
-      # 3. Test & Build Go Native Walk Medical Workstation
-      - name: Vet & Build Go Desktop Workstation
-        working-directory: desktop
+      # 3. Build & Publish .NET 10 WPF Medical Workstation
+      - name: Build & Publish .NET 10 WPF Desktop Workstation
         run: |
-          go vet ./...
-          go build -ldflags="-H windowsgui -s -w" -v -o Ignite.exe .
+          New-Item -ItemType Directory -Path "release\publish" -Force | Out-Null
+          dotnet build desktop/Ignite.Desktop.csproj -c Release
+          dotnet publish desktop/Ignite.Desktop.csproj -c Release -r win-x64 --self-contained false -o "release\publish"
 
       # 4. Setup Python & Run Manifest / Version Consistency Tests
       - name: Set up Python 3.10
@@ -58,14 +62,9 @@ jobs:
         run: |
           pytest tests/test_versioning.py -v
 
-      # 5. Bundle Executables, Rules and DB into Publish Directory
+      # 5. Bundle Go Core, Rules and DB into Publish Directory
       - name: Bundle Executables and Dependencies
         run: |
-          New-Item -ItemType Directory -Path "release\publish" -Force | Out-Null
-          Copy-Item -Path "desktop\Ignite.exe" -Destination "release\publish\Ignite.exe" -Force
-          if (Test-Path "desktop\Ignite.exe.manifest") {
-            Copy-Item -Path "desktop\Ignite.exe.manifest" -Destination "release\publish\Ignite.exe.manifest" -Force
-          }
           Copy-Item -Path "core\ignite-core.exe" -Destination "release\publish\ignite-core.exe" -Force
           Copy-Item -Path "rules" -Destination "release\publish\rules" -Recurse -Force
           if (Test-Path "desktop\ignite_medical.db") {

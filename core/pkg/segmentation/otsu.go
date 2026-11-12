@@ -53,8 +53,80 @@ func CalculateOtsuThreshold(src *imageutil.GrayMatrix) uint8 {
 	return bestThreshold
 }
 
+// CalculateMultiOtsuThresholds computes a 3-class Multi-Otsu thresholding pair (tLow, tHigh)
+// separating cold background, cool distal/extremity tissue, and warm core tissue.
+func CalculateMultiOtsuThresholds(src *imageutil.GrayMatrix) (uint8, uint8, float64, float64) {
+	total := len(src.Data)
+	if total == 0 {
+		return 85, 160, 0, 0
+	}
+
+	var hist [256]float64
+	invTotal := 1.0 / float64(total)
+	for _, v := range src.Data {
+		hist[v] += invTotal
+	}
+
+	// Cumulative zeroth (P) and first (S) moments for O(1) interval evaluation
+	var P [256]float64
+	var S [256]float64
+	P[0] = hist[0]
+	S[0] = 0
+	for i := 1; i < 256; i++ {
+		P[i] = P[i-1] + hist[i]
+		S[i] = S[i-1] + float64(i)*hist[i]
+	}
+	globalMean := S[255]
+
+	// 2-class variance reference
+	var bestVar2 float64
+	for t := 0; t < 255; t++ {
+		w0 := P[t]
+		w1 := 1.0 - w0
+		if w0 <= 1e-9 || w1 <= 1e-9 {
+			continue
+		}
+		m0 := S[t] / w0
+		m1 := (S[255] - S[t]) / w1
+		v := w0*(m0-globalMean)*(m0-globalMean) + w1*(m1-globalMean)*(m1-globalMean)
+		if v > bestVar2 {
+			bestVar2 = v
+		}
+	}
+
+	// Exhaustive fast 3-class Multi-Otsu over 256 bins (~32k ops, < 0.1 ms)
+	var bestVar3 float64
+	bestT1, bestT2 := uint8(85), uint8(160)
+	for t1 := 10; t1 < 230; t1++ {
+		w0 := P[t1]
+		if w0 <= 0.01 {
+			continue
+		}
+		m0 := S[t1] / w0
+		term0 := w0 * (m0 - globalMean) * (m0 - globalMean)
+
+		for t2 := t1 + 10; t2 < 250; t2++ {
+			w1 := P[t2] - P[t1]
+			w2 := 1.0 - P[t2]
+			if w1 <= 0.005 || w2 <= 0.005 {
+				continue
+			}
+			m1 := (S[t2] - S[t1]) / w1
+			m2 := (S[255] - S[t2]) / w2
+			v := term0 + w1*(m1-globalMean)*(m1-globalMean) + w2*(m2-globalMean)*(m2-globalMean)
+			if v > bestVar3 {
+				bestVar3 = v
+				bestT1 = uint8(t1)
+				bestT2 = uint8(t2)
+			}
+		}
+	}
+
+	return bestT1, bestT2, bestVar2, bestVar3
+}
+
 // SegmentBodyMask creates a binary foreground mask (255 = tissue, 0 = background)
-// using Otsu's method with contrast fallback for low-contrast images.
+// using Otsu's method (with Multi-Otsu cool-extremity guard) and fallback for low-contrast images.
 func SegmentBodyMask(src *imageutil.GrayMatrix) *imageutil.GrayMatrix {
 	w, h := src.Width, src.Height
 	mask := imageutil.NewGrayMatrix(w, h)
@@ -70,6 +142,12 @@ func SegmentBodyMask(src *imageutil.GrayMatrix) *imageutil.GrayMatrix {
 	}
 
 	threshold := CalculateOtsuThreshold(src)
+	tLow, tHigh, var2, var3 := CalculateMultiOtsuThresholds(src)
+	// When warm proximal legs skew 2-class Otsu high above cool contralateral toes (tLow >= 78),
+	// Multi-Otsu separates background cleanly while retaining cool red/orange distal toes.
+	if var2 > 0 && var3 > var2*1.12 && tLow >= 78 && int(threshold) > int(tLow)+12 && int(tHigh) >= int(threshold)-10 {
+		threshold = tLow
+	}
 
 	// Low dynamic range fallback
 	if (maxVal - minVal) < 30 {

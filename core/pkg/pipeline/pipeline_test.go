@@ -326,5 +326,100 @@ func TestInspectBild20(t *testing.T) {
 	}
 }
 
+func TestGroundTruthValidation(t *testing.T) {
+	gtIndices := []int{1, 10, 11, 12, 13, 14, 15, 16, 17}
+	var sumDice, sumIoU, sumSens, sumPrec, sumMs float64
+	var validCount int
+
+	for _, idx := range gtIndices {
+		imgPath := filepath.Join("..", "..", "..", "test-data", fmt.Sprintf("bild (%d).jpeg", idx))
+		gtPath := filepath.Join("..", "..", "..", "test-data", "ground_truth", fmt.Sprintf("bild (%d).png", idx))
+
+		gray, err := imageutil.LoadImageAsGray(imgPath)
+		if err != nil {
+			t.Fatalf("Failed to load image %d: %v", idx, err)
+		}
+		gt, err := imageutil.LoadImageAsGray(gtPath)
+		if err != nil {
+			t.Fatalf("Failed to load gt %d: %v", idx, err)
+		}
+
+		cfg := pipeline.DefaultPipelineConfig()
+		res := pipeline.Run(gray, cfg)
+
+		var tp, fp, fn int
+		var fnNoBodyMask, fnCoolOrig, fnBboxCap int
+		n := len(res.HotspotMask.Data)
+		for i := 0; i < n; i++ {
+			pred := res.HotspotMask.Data[i] > 127
+			truth := gt.Data[i] > 127
+			if pred && truth {
+				tp++
+			} else if pred && !truth {
+				fp++
+			} else if !pred && truth {
+				fn++
+				if res.BodyMask.Data[i] == 0 {
+					fnNoBodyMask++
+				} else if gray.Data[i] < 180 {
+					fnCoolOrig++
+				} else {
+					fnBboxCap++
+				}
+			}
+		}
+
+		dice := 0.0
+		if 2*tp+fp+fn > 0 {
+			dice = float64(2*tp) / float64(2*tp+fp+fn)
+		}
+		iou := 0.0
+		if tp+fp+fn > 0 {
+			iou = float64(tp) / float64(tp+fp+fn)
+		}
+		sens := 0.0
+		if tp+fn > 0 {
+			sens = float64(tp) / float64(tp+fn)
+		}
+		prec := 0.0
+		if tp+fp > 0 {
+			prec = float64(tp) / float64(tp+fp)
+		}
+
+		sumDice += dice
+		sumIoU += iou
+		sumSens += sens
+		sumPrec += prec
+		sumMs += res.Timing.TotalMs
+		validCount++
+
+		var spot0Info string
+		if len(res.Hotspots) > 0 {
+			r0 := res.Hotspots[0].Region
+			spot0Info = fmt.Sprintf("Max=%d SurMed=%.1f Prom=%.1f Lap=%.1f Edge=%.1f", r0.MaxVal, r0.LocalSurroundMed, r0.LocalProminence, r0.ThermalLaplacian, r0.EdgeGradient)
+		}
+		t.Logf("BILD %2d | Spots=%d | Dice=%.4f | IoU=%.4f | Sens=%.4f | Prec=%.4f | TP=%d FP=%d FN=%d (noMask=%d cool=%d cap=%d) | %s | %.1f ms",
+			idx, res.TotalHotspots, dice, iou, sens, prec, tp, fp, fn, fnNoBodyMask, fnCoolOrig, fnBboxCap, spot0Info, res.Timing.TotalMs)
+		for hsIdx, hs := range res.Hotspots {
+			if hsIdx > 0 {
+				rN := hs.Region
+				t.Logf("   extra[%d] Center=(%d,%d) Area=%d Max=%d SurMed=%.1f Prom=%.1f Lap=%.1f Edge=%.1f Contra=%.1f",
+					hsIdx, rN.CenterX, rN.CenterY, rN.AreaPixels, rN.MaxVal, rN.LocalSurroundMed, rN.LocalProminence, rN.ThermalLaplacian, rN.EdgeGradient, rN.ContraDelta)
+			}
+		}
+		if res.TotalHotspots != 1 {
+			t.Errorf("BILD %d: expected 1 confirmed clinical hotspot, got %d", idx, res.TotalHotspots)
+		}
+	}
+
+	meanDice := sumDice / float64(validCount)
+	t.Logf("SUMMARY (n=%d) | MeanDice=%.4f | MeanIoU=%.4f | MeanSens=%.4f | MeanPrec=%.4f | MeanTime=%.1f ms",
+		validCount, meanDice, sumIoU/float64(validCount), sumSens/float64(validCount), sumPrec/float64(validCount), sumMs/float64(validCount))
+	if meanDice < 0.48 {
+		t.Errorf("MeanDice regression: got %.4f, want >= 0.48", meanDice)
+	}
+}
+
+
 
 

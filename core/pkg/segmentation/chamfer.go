@@ -102,11 +102,10 @@ func ChamferDistanceTransform(mask *imageutil.GrayMatrix) *imageutil.FloatMatrix
 	return dist
 }
 
-// ErodeBodyMask removes tissue border pixels using the distance transform.
-// marginFactor (e.g. 0.05) removes the outer 5% distance margin.
-func ErodeBodyMask(mask *imageutil.GrayMatrix, marginFactor float32) *imageutil.GrayMatrix {
+// ErodeBodyMaskFromDist removes tissue border pixels using a precomputed Chamfer distance map.
+// marginFactor (e.g. 0.05) removes the outer 5% distance margin, avoiding redundant distance transforms.
+func ErodeBodyMaskFromDist(mask *imageutil.GrayMatrix, dist *imageutil.FloatMatrix, marginFactor float32) *imageutil.GrayMatrix {
 	w, h := mask.Width, mask.Height
-	dist := ChamferDistanceTransform(mask)
 	_, maxDist := dist.MinMax()
 
 	threshold := maxDist * marginFactor
@@ -120,4 +119,11 @@ func ErodeBodyMask(mask *imageutil.GrayMatrix, marginFactor float32) *imageutil.
 		}
 	}
 	return eroded
+}
+
+// ErodeBodyMask removes tissue border pixels using the distance transform.
+// marginFactor (e.g. 0.05) removes the outer 5% distance margin.
+func ErodeBodyMask(mask *imageutil.GrayMatrix, marginFactor float32) *imageutil.GrayMatrix {
+	dist := ChamferDistanceTransform(mask)
+	return ErodeBodyMaskFromDist(mask, dist, marginFactor)
 }

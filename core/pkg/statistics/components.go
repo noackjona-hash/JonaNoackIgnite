@@ -2,7 +2,6 @@ package statistics
 
 import (
 	"math"
-	"sort"
 
 	"ignite-core/pkg/imageutil"
 )
@@ -26,8 +25,9 @@ type HotspotRegion struct {
 	PeakToMean       float64 `json:"peak_to_mean"`      // Schärfegrad / Fokus-Spitzheitsfaktor (Max-Median) / (Mean-Median)
 	LocalProminence  float64 `json:"local_prominence"`  // Lokale Überhöhung über gesunde Gewebeumgebung (Kelvin/Einheiten)
 	LocalSurroundMed float64 `json:"local_surround_med"` // Lokaler Median der gesunden Gewebeumgebung im Ring
-	ContraDelta      float64 `json:"contra_delta"`      // Kontralaterale Armstrong-Asymmetrie Delta T zum gespiegelten Referenzort
-	DiagnosisType    string  `json:"diagnosis_type"`    // "INFLAMMATION", "PRESSURE_POINT", "INFLAMED_PRESSURE_POINT", "BENIGN"
+	ContraDelta      float64 `json:"contra_delta"`       // Kontralaterale Armstrong-Asymmetrie Delta T zum gespiegelten Referenzort
+	ContraMeasured   bool    `json:"contra_measured,omitempty"` // Flag ob kontralateraler Seitenvergleich tatsächlich gemessen wurde
+	DiagnosisType    string  `json:"diagnosis_type"`     // "INFLAMMATION", "PRESSURE_POINT", "INFLAMED_PRESSURE_POINT", "BENIGN"
 	ConfidenceScore  float64 `json:"confidence_score"`  // Konfidenz der Differentialdiagnose (0 - 100%)
 }
 
@@ -237,29 +237,48 @@ func ExtractHotspots(binaryMask *imageutil.GrayMatrix, original *imageutil.GrayM
 				haloDelta = math.Round((haloMean-origMed)*10) / 10
 			}
 
-			// 2.5 Lokale fokale Prominenz: Annulare Gewebeumgebung (Radius 30 px)
-			surroundBoxR := 30
-			ax0 := minX - surroundBoxR
+			// 2.5 Lokale fokale Prominenz: Saubere äußere Annular-Umgebung (ohne Eigenkontamination der Läsion)
+			boxSpanX := maxX - minX + 1
+			boxSpanY := maxY - minY + 1
+			outerPad := 56
+			if boxSpanX > outerPad {
+				outerPad = boxSpanX
+			}
+			if boxSpanY > outerPad {
+				outerPad = boxSpanY
+			}
+			if outerPad > 85 {
+				outerPad = 85
+			}
+			exclMargin := 8 // Exclude immediate inflammatory halo slope around binary core
+			ex0, ey0, ex1, ey1 := minX-exclMargin, minY-exclMargin, maxX+exclMargin, maxY+exclMargin
+
+			ax0 := minX - outerPad
 			if ax0 < 0 {
 				ax0 = 0
 			}
-			ay0 := minY - surroundBoxR
+			ay0 := minY - outerPad
 			if ay0 < 0 {
 				ay0 = 0
 			}
-			ax1 := maxX + surroundBoxR
+			ax1 := maxX + outerPad
 			if ax1 >= w {
 				ax1 = w - 1
 			}
-			ay1 := maxY + surroundBoxR
+			ay1 := maxY + outerPad
 			if ay1 >= h {
 				ay1 = h - 1
 			}
 
-			var localTissueVals []int
+			var ringHist [256]int
+			ringCount := 0
 			for sy := ay0; sy <= ay1; sy++ {
 				row := sy * w
 				for sx := ax0; sx <= ax1; sx++ {
+					// Exclude inner bounding core + immediate slope so the ring reflects healthy host tissue
+					if sx >= ex0 && sx <= ex1 && sy >= ey0 && sy <= ey1 {
+						continue
+					}
 					sidx := row + sx
 					isTis := true
 					if opts.BodyMask != nil {
@@ -268,16 +287,25 @@ func ExtractHotspots(binaryMask *imageutil.GrayMatrix, original *imageutil.GrayM
 						isTis = original.Data[sidx] > 40
 					}
 					if isTis && binaryMask.Data[sidx] == 0 {
-						localTissueVals = append(localTissueVals, int(original.Data[sidx]))
+						ringHist[original.Data[sidx]]++
+						ringCount++
 					}
 				}
 			}
 
 			localSurroundMed := float64(0)
 			localProminence := float64(0)
-			if len(localTissueVals) > 10 {
-				sort.Ints(localTissueVals)
-				localSurroundMed = float64(localTissueVals[len(localTissueVals)/2])
+			if ringCount > 20 {
+				// 40th percentile of outer non-hot tissue avoids skew from residual erythema in one quadrant
+				targetIdx := (ringCount * 40) / 100
+				cum := 0
+				for b := 0; b < 256; b++ {
+					cum += ringHist[b]
+					if cum > targetIdx {
+						localSurroundMed = float64(b)
+						break
+					}
+				}
 				localProminence = math.Max(0.0, float64(maxVal)-localSurroundMed)
 			} else {
 				localSurroundMed = origMed
@@ -437,7 +465,17 @@ func ExtractHotspots(binaryMask *imageutil.GrayMatrix, original *imageutil.GrayM
 			}
 			boxW := maxX - minX + 1
 			boxH := maxY - minY + 1
+			minBoxDim := boxW
+			maxBoxDim := boxH
+			if boxH < minBoxDim {
+				minBoxDim = boxH
+				maxBoxDim = boxW
+			}
 			isNarrowStreak := (boxW <= 4 && boxH >= 15) || (boxH <= 4 && boxW >= 15)
+			// FLIR MSX visible-light edge overlay creases produce small slivers with non-physical sharp thermal jumps
+			isMSXCrease := (edgeGradient >= 14.5 && area < 450 && circularity < 0.55) ||
+				(minBoxDim <= 18 && maxBoxDim >= minBoxDim*2 && area < 450 && edgeGradient >= 12.0) ||
+				(minBoxDim <= 16 && maxBoxDim >= minBoxDim*3 && area < 450 && circularity < 0.40)
 
 			bottomMargin := margin + 30 // Limbs entering bottom of FOV (55 px margin)
 			if minX <= margin || minY <= margin || maxX >= (w-margin) || maxY >= (h-bottomMargin) {
@@ -448,7 +486,7 @@ func ExtractHotspots(binaryMask *imageutil.GrayMatrix, original *imageutil.GrayM
 				hr.Status = "REJECTED_BORDER"
 			} else if area < minArea {
 				hr.Status = "REJECTED_SMALL"
-			} else if isNarrowStreak {
+			} else if isNarrowStreak || isMSXCrease {
 				hr.Status = "REJECTED_LINEAR"
 			} else if circularity < opts.MinCircularity && (area < 800 || (localProminence < 25.0 && float64(maxVal)-origMed < 18.0)) {
 				hr.Status = "REJECTED_LINEAR"
@@ -474,8 +512,8 @@ func ExtractHotspots(binaryMask *imageutil.GrayMatrix, original *imageutil.GrayM
 	regions = ConsolidateAndMergeHotspots(regions, original, opts.BodyMask, filteredMask)
 
 	// Post-Processing Phase B: Geodesic Level-Set Active Contour Expansion
-	// Expands lesion coverage outward to 100% of the true erythematous/hyperthermic footprint
-	ExpandGeodesicLesionContour(regions, original, opts.BodyMask, filteredMask)
+	// Expands lesion coverage outward to capture the true erythematous/hyperthermic footprint
+	ExpandGeodesicLesionContour(regions, original, opts.BodyMask, filteredMask, opts.OrigMedian)
 
 	// Cleanly re-index remaining confirmed hotspots
 	confID := 1
@@ -489,13 +527,39 @@ func ExtractHotspots(binaryMask *imageutil.GrayMatrix, original *imageutil.GrayM
 	return regions, filteredMask
 }
 
+// hasTissueBridge verifies along a line segment that two clusters belong to the same continuous limb
+// rather than spanning empty background air across the inter-pedal cleft.
+func hasTissueBridge(bodyMask *imageutil.GrayMatrix, x0, y0, x1, y1 int) bool {
+	if bodyMask == nil {
+		return true
+	}
+	steps := int(math.Hypot(float64(x1-x0), float64(y1-y0)))
+	if steps <= 2 {
+		return true
+	}
+	airGaps := 0
+	for s := 1; s < steps; s++ {
+		t := float64(s) / float64(steps)
+		x := int(math.Round(float64(x0) + t*float64(x1-x0)))
+		y := int(math.Round(float64(y0) + t*float64(y1-y0)))
+		if x >= 0 && x < bodyMask.Width && y >= 0 && y < bodyMask.Height {
+			if bodyMask.At(x, y) == 0 {
+				airGaps++
+				if airGaps > 5 {
+					return false
+				}
+			}
+		}
+	}
+	return true
+}
+
 // ConsolidateAndMergeHotspots merges adjacent fragmented hotspot clusters that belong to the same anatomical lesion,
 // performs topological saddle-point checks, and applies Non-Maximum Suppression (NMS).
 func ConsolidateAndMergeHotspots(regions []HotspotRegion, original *imageutil.GrayMatrix, bodyMask *imageutil.GrayMatrix, filteredMask *imageutil.GrayMatrix) []HotspotRegion {
 	if len(regions) < 2 {
 		return regions
 	}
-	w := original.Width
 
 	// Iterative multi-pass merging of adjacent/overlapping clusters
 	changed := true
@@ -516,7 +580,6 @@ func ConsolidateAndMergeHotspots(regions []HotspotRegion, original *imageutil.Gr
 				bbA := rA.BoundingBox
 				bbB := rB.BoundingBox
 
-				// Calculate gap between bounding boxes
 				gapX := 0
 				if bbA[0] > bbB[2] {
 					gapX = bbA[0] - bbB[2]
@@ -533,25 +596,19 @@ func ConsolidateAndMergeHotspots(regions []HotspotRegion, original *imageutil.Gr
 
 				distCenters := math.Hypot(float64(rA.CenterX-rB.CenterX), float64(rA.CenterY-rB.CenterY))
 
-				sameFoot := (rA.CenterX < w/2 && rB.CenterX < w/2) || (rA.CenterX >= w/2 && rB.CenterX >= w/2)
 				shouldMerge := false
-
-				// Merge adjacent clusters on the same anatomical foot/limb
-				// Clusters should only merge if they genuinely touch or are immediately contiguous (<= 15 px gap)
-				maxMergeDist := 35.0
-				maxGap := 15
-
-				if sameFoot && ((gapX <= maxGap && gapY <= maxGap) || distCenters <= maxMergeDist) {
+				maxMergeDist := 50.0
+				maxGap := 24
+				if ((gapX <= maxGap && gapY <= maxGap) || distCenters <= maxMergeDist) &&
+					hasTissueBridge(bodyMask, rA.CenterX, rA.CenterY, rB.CenterX, rB.CenterY) {
 					shouldMerge = true
 				}
 
 				if shouldMerge {
-					// Ensure rA is the more intense focus
 					if rB.MaxVal > rA.MaxVal {
 						rA, rB = rB, rA
 					}
 
-					// Merge rB into rA
 					rA.AreaPixels += rB.AreaPixels
 					rA.AreaPercent += rB.AreaPercent
 					if bbB[0] < rA.BoundingBox[0] {
@@ -568,7 +625,9 @@ func ConsolidateAndMergeHotspots(regions []HotspotRegion, original *imageutil.Gr
 					}
 					rA.CenterX = (rA.BoundingBox[0] + rA.BoundingBox[2]) / 2
 					rA.CenterY = (rA.BoundingBox[1] + rA.BoundingBox[3]) / 2
-
+					if float64(rB.MaxVal) > float64(rA.MaxVal) {
+						rA.MaxVal = rB.MaxVal
+					}
 					if rB.LocalProminence > rA.LocalProminence {
 						rA.LocalProminence = rB.LocalProminence
 					}
@@ -590,42 +649,184 @@ func ConsolidateAndMergeHotspots(regions []HotspotRegion, original *imageutil.Gr
 	return regions
 }
 
-// ExpandGeodesicLesionContour grows the lesion mask outward to capture the local erythema without corrupting the tight bounding box.
-func ExpandGeodesicLesionContour(regions []HotspotRegion, original *imageutil.GrayMatrix, bodyMask *imageutil.GrayMatrix, filteredMask *imageutil.GrayMatrix) {
+// ExpandGeodesicLesionContour performs connected geodesic FWHM region growth from confirmed hotspot seeds
+// using the clean annular tissue baseline (LocalSurroundMed) to capture the full erythematous lesion footprint.
+func ExpandGeodesicLesionContour(regions []HotspotRegion, original *imageutil.GrayMatrix, bodyMask *imageutil.GrayMatrix, filteredMask *imageutil.GrayMatrix, origMedianOpt ...float64) {
+	origMed := 0.0
+	if len(origMedianOpt) > 0 {
+		origMed = origMedianOpt[0]
+	}
 	w, h := original.Width, original.Height
+	minDim := w
+	if h < minDim {
+		minDim = h
+	}
+	maxGrowDist := math.Max(32.0, math.Min(76.0, float64(minDim)*0.068))
+	maxDistSq := maxGrowDist * maxGrowDist
+	totalPx := w * h
+	if totalPx == 0 {
+		return
+	}
+
+	visited := make([]bool, totalPx)
 	for idx := range regions {
 		r := &regions[idx]
 		if r.Status != "CONFIRMED_HOTSPOT" {
 			continue
 		}
 
-		// Find local healthy threshold for this specific focus (decay to baseline, but >= origMed)
-		thresholdCutoff := uint8(math.Max(float64(r.MaxVal)-28.0, float64(r.LocalSurroundMed)+12.0))
+		// Thermal FWHM Isotherm Cutoff anchored on clean healthy ring baseline,
+		// with warm-forefoot guard when global foot median is hyper-warm (>= 202)
+		baseTemp := r.LocalSurroundMed
+		if origMed >= 202.0 && origMed > baseTemp+15.0 {
+			cappedMed := math.Min(origMed, float64(r.MaxVal)-30.0)
+			baseTemp = 0.5*baseTemp + 0.5*cappedMed
+		}
+		prom := math.Max(10.0, float64(r.MaxVal)-baseTemp)
+		cutoffF := baseTemp + 0.22*prom
+		if minBase := baseTemp + 10.0; cutoffF < minBase {
+			cutoffF = minBase
+		}
+		if maxKeep := float64(r.MaxVal) - 18.0; cutoffF > maxKeep {
+			cutoffF = maxKeep
+		}
+		if cutoffF < 112.0 {
+			cutoffF = 112.0
+		}
+		thresholdCutoff := uint8(math.Round(cutoffF))
 
 		bb := r.BoundingBox
-		expandMargin := 8
-		x0 := int(math.Max(0, float64(bb[0]-expandMargin)))
-		y0 := int(math.Max(0, float64(bb[1]-expandMargin)))
-		x1 := int(math.Min(float64(w-1), float64(bb[2]+expandMargin)))
-		y1 := int(math.Min(float64(h-1), float64(bb[3]+expandMargin)))
+		// Collect initial 4-connected seeds already confirmed inside this region's bounding box
+		var queue []int
+		for y := bb[1]; y <= bb[3]; y++ {
+			row := y * w
+			for x := bb[0]; x <= bb[2]; x++ {
+				p := row + x
+				if filteredMask.Data[p] > 0 && !visited[p] {
+					visited[p] = true
+					queue = append(queue, p)
+				}
+			}
+		}
+		if len(queue) == 0 {
+			continue
+		}
+
+		// Allow slightly larger radius when the confirmed core is already wide
+		seedDiag := math.Hypot(float64(bb[2]-bb[0]), float64(bb[3]-bb[1]))
+		allowedR := math.Max(maxGrowDist, seedDiag*0.65+24.0)
+		if allowedR > 88.0 {
+			allowedR = 88.0
+		}
+		limitDistSq := math.Max(maxDistSq, allowedR*allowedR)
+		maxGrownArea := r.AreaPixels * 12
+		if maxGrownArea < 18000 {
+			maxGrownArea = 18000
+		}
+		if maxGrownArea > 26000 {
+			maxGrownArea = 26000
+		}
 
 		additionalPixels := 0
-		for y := y0; y <= y1; y++ {
-			row := y * w
-			for x := x0; x <= x1; x++ {
-				p := row + x
-				if bodyMask != nil && bodyMask.Data[p] == 0 {
+		newMinX, newMinY, newMaxX, newMaxY := bb[0], bb[1], bb[2], bb[3]
+		head := 0
+		for head < len(queue) {
+			curr := queue[head]
+			head++
+			cx := curr % w
+
+			neighbors := [4]int{-1, 1, -w, w}
+			for _, off := range neighbors {
+				np := curr + off
+				if np < 0 || np >= totalPx || visited[np] {
 					continue
 				}
-				if original.Data[p] >= thresholdCutoff {
-					if filteredMask.Data[p] == 0 {
-						filteredMask.Data[p] = 255
-						additionalPixels++
+				nx := np % w
+				if nx-cx > 1 || cx-nx > 1 {
+					continue
+				}
+				ny := np / w
+				// Never expand into cold ambient room background (< 100), even if inside search radius
+				if bodyMask != nil && bodyMask.Data[np] == 0 && original.Data[np] < 105 {
+					continue
+				}
+				dx := float64(nx - r.CenterX)
+				dy := float64(ny - r.CenterY)
+				if dx*dx+dy*dy > limitDistSq {
+					continue
+				}
+				if original.Data[np] < thresholdCutoff {
+					continue
+				}
+				// Stop expansion if approaching a distinct cooler-valley-separated secondary peak
+				if original.Data[np] > original.Data[curr]+12 && dx*dx+dy*dy > 1225.0 {
+					continue
+				}
+
+				visited[np] = true
+				queue = append(queue, np)
+				if filteredMask.Data[np] == 0 {
+					filteredMask.Data[np] = 255
+					additionalPixels++
+					if r.AreaPixels+additionalPixels >= maxGrownArea {
+						break
 					}
 				}
+				if nx < newMinX {
+					newMinX = nx
+				}
+				if nx > newMaxX {
+					newMaxX = nx
+				}
+				if ny < newMinY {
+					newMinY = ny
+				}
+				if ny > newMaxY {
+					newMaxY = ny
+				}
+			}
+			if r.AreaPixels+additionalPixels >= maxGrownArea {
+				break
+			}
+		}
+
+		// Local MSX-crease & necrotic notch hole-filling within the grown lesion footprint (2 passes)
+		for pass := 0; pass < 2; pass++ {
+			var toFill []int
+			for y := newMinY + 1; y < newMaxY; y++ {
+				row := y * w
+				for x := newMinX + 1; x < newMaxX; x++ {
+					p := row + x
+					if filteredMask.Data[p] > 0 || original.Data[p] < 95 {
+						continue
+					}
+					cnt := 0
+					if filteredMask.Data[p-1] > 0 { cnt++ }
+					if filteredMask.Data[p+1] > 0 { cnt++ }
+					if filteredMask.Data[p-w] > 0 { cnt++ }
+					if filteredMask.Data[p+w] > 0 { cnt++ }
+					if filteredMask.Data[p-w-1] > 0 { cnt++ }
+					if filteredMask.Data[p-w+1] > 0 { cnt++ }
+					if filteredMask.Data[p+w-1] > 0 { cnt++ }
+					if filteredMask.Data[p+w+1] > 0 { cnt++ }
+					if cnt >= 5 {
+						toFill = append(toFill, p)
+					}
+				}
+			}
+			if len(toFill) == 0 {
+				break
+			}
+			for _, p := range toFill {
+				filteredMask.Data[p] = 255
+				additionalPixels++
 			}
 		}
 
 		r.AreaPixels += additionalPixels
+		r.BoundingBox = [4]int{newMinX, newMinY, newMaxX, newMaxY}
+		if totalPx > 0 {
+			r.AreaPercent = math.Round((float64(r.AreaPixels)/float64(totalPx))*10000.0) / 100.0
+		}
 	}
 }
