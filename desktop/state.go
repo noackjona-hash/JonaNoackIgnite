@@ -16,23 +16,51 @@ import (
 type ToolMode int
 
 const (
-	ToolReticle     ToolMode = iota // Spot Probe / Fadenkreuz
-	ToolRuler                       // Distanz & Gradient
-	ToolRectROI                     // Rechteck-ROI mit kontralateraler Spiegelung
-	ToolCircleROI                   // Kreis-ROI mit Entzündungs-Halo
-	ToolGoniometer                  // 3-Punkt Orthopädischer Winkel
-	ToolProfileLine                 // A-B Schnittlinie für Live-Diagramm
-	ToolCrosshairSigma              // Orthogonales Entzündungs-Kreuz mit Standardabweichung (μ ± σ)
+	ToolReticle        ToolMode = iota // Spot Probe / Fadenkreuz
+	ToolRuler                          // Distanz & Gradient (K/cm)
+	ToolRectROI                        // Rechteck-ROI mit kontralateraler Spiegelung
+	ToolCircleROI                      // Kreis-ROI mit Entzündungs-Halo
+	ToolPolygonROI                     // NEU: Polygon-Planimetrie (Wundrand & Fläche)
+	ToolGoniometer                     // 3-Punkt Orthopädischer Winkel
+	ToolProfileLine                    // A-B Schnittlinie für Live-Diagramm
+	ToolCrosshairSigma                 // Orthogonales Entzündungs-Kreuz mit Standardabweichung (μ ± σ)
+	ToolThermalPin                     // NEU: Multi-Pin Dauersonden (P1, P2, P3...)
+	ToolMagnifier                      // NEU: 4x Radiometrische Subpixel-Lupe
 )
 
 type MeasurementItem struct {
 	ID         int
-	Type       string        // "Lineal", "Rechteck-ROI", "Kreis-ROI", "Goniometer", "Schnittlinie", "Spot"
+	Type       string        // "Lineal", "Rechteck-ROI", "Kreis-ROI", "Polygon-ROI", "Goniometer", "Schnittlinie", "Spot", "Pin-Sonde"
 	Label      string        // z.B. "Distanz M1"
 	Points     []image.Point // Bildkoordinaten
 	ValueStr   string        // Primärer Wert (z.B. "42.5 mm", "32.4°", "Mean 33.1 °C")
 	DetailsStr string        // Zusatzmetrik (z.B. "ΔT 3.1 K · G 0.7 K/cm", "Fläche 12.4 cm²")
 	Risk       string        // "NORMAL", "MODERATE", "CRITICAL"
+}
+
+type ThermalPinItem struct {
+	ID      int
+	Label   string
+	Pt      image.Point
+	TempC   float64
+	ContraC float64
+	DeltaT  float64
+	Local3  float64 // 3x3 Nachbarschaftsmittel
+	Zone    string
+	Risk    string
+}
+
+type BatchResultItem struct {
+	Index      int
+	Filename   string
+	FullPath   string
+	PeakTempC  float64
+	MaxDeltaT  float64
+	MeanTempC  float64
+	StdDevK    float64
+	Hotspots   int
+	Risk       string
+	DurationMs float64
 }
 
 type AppState struct {
@@ -43,27 +71,40 @@ type AppState struct {
 	RawGray       []byte
 	RawBitmap     *walk.Bitmap
 	OverlayBitmap *walk.Bitmap
+	DeltaTBitmap  *walk.Bitmap
+	TopHatBitmap  *walk.Bitmap
 	LastResult    *pipeline.AnalysisResult
+	LastRunMs     float64
 
-	// Viewport & Interaktion
-	Zoom          float64
-	PanX          int
-	PanY          int
-	HoverX        int
-	HoverY        int
-	HasHover      bool
-	ShowCrosshair bool
-	ShowFindings  bool
-	ShowHUD       bool
-	InvertPalette bool
-	ActivePalette string
-	WindowVal     int
-	LevelVal      int
+	// Viewport & WinUI 3 Interaktion
+	Zoom               float64
+	PanX               int
+	PanY               int
+	HoverX             int
+	HoverY             int
+	HasHover           bool
+	ShowCrosshair      bool
+	ShowFindings       bool
+	ShowHUD            bool
+	ShowCurtainWipe    bool
+	CurtainRatio       float64
+	IsDraggingCurtain  bool
+	ShowMagnifier      bool
+	MagnifierZoom      float64
+	ShowIsoContours    bool
+	ShowAngiosomeGrid  bool
+	RightViewMode      string // "overlay", "deltat", "tophat"
+	InvertPalette      bool
+	ActivePalette      string
+	WindowVal          int
+	LevelVal           int
 
 	// Werkzeuge & Messfunktionen
 	ActiveTool        ToolMode
 	Measurements      []*MeasurementItem
+	PinProbes         []ThermalPinItem
 	NextMeasureID     int
+	NextPinID         int
 	ActivePoints      []image.Point
 	IsDrawing         bool
 	CustomProfile     []float64
@@ -74,11 +115,23 @@ type AppState struct {
 	IsothermTemp      float64
 
 	// Entzündungs-Kreuzprofil & Standardabweichung
-	HasCrosshairPoint  bool
-	CrosshairPoint     image.Point
-	CrosshairRadius    int
-	CrosshairCustom    bool
-	CrosshairMetrics   interface{} // *CrosshairMetrics
+	HasCrosshairPoint bool
+	CrosshairPoint    image.Point
+	CrosshairRadius   int
+	CrosshairCustom   bool
+	CrosshairMetrics  interface{} // *CrosshairMetrics
+
+	// 3D Topografie-Renderer (Tab 4)
+	RotAzimuth      float64
+	RotElevation    float64
+	HeightScale3D   float64
+	Show3DWireframe bool
+	Show3DCutPlane  bool
+
+	// Serien-Browser & Longitudinal-Verlauf (Tab 6)
+	TestImageFiles  []string
+	CurrentImageIdx int
+	BatchResults    []*BatchResultItem
 
 	// Patient & Klinik
 	PatientID     string
@@ -102,27 +155,42 @@ type AppState struct {
 }
 
 var GState = &AppState{
-	Zoom:          1.0,
-	ShowCrosshair: true,
-	ShowFindings:  true,
-	ShowHUD:       true,
-	ActivePalette: "ironbow",
-	WindowVal:     255,
-	LevelVal:      128,
-	ActiveTool:    ToolReticle,
-	Measurements:  make([]*MeasurementItem, 0),
-	IsothermTemp:  34.0,
-	PatientID:     "ANON-7F4C82",
-	PatientAge:    "68",
-	PatientSex:    "männlich",
-	PatientRegion: "Füße (bilateral)",
-	PatientStudy:  "Plantar Pedis Bilateral (Armstrong-Protokoll)",
-	PatientNote:   "V.a. diabetisches Fußsyndrom (DFS) Wagner 0 / Armstrong 3",
-	DoctorName:    "Prof. Dr. med. J. Noack (Diabetologie / Angiologie)",
-	ParamK:        3.0,
-	ParamR:        0.05,
-	ParamM:        0.005,
-	AuditLogs:     make([]AuditTableItem, 0),
+	Zoom:              1.0,
+	ShowCrosshair:     true,
+	ShowFindings:      true,
+	ShowHUD:           true,
+	ShowCurtainWipe:   false,
+	CurtainRatio:      0.50,
+	ShowMagnifier:     false,
+	MagnifierZoom:     3.0,
+	ShowIsoContours:   false,
+	ShowAngiosomeGrid: false,
+	RightViewMode:     "overlay",
+	ActivePalette:     "ironbow",
+	WindowVal:         255,
+	LevelVal:          128,
+	ActiveTool:        ToolReticle,
+	Measurements:      make([]*MeasurementItem, 0),
+	PinProbes:         make([]ThermalPinItem, 0),
+	IsothermTemp:      34.0,
+	RotAzimuth:        38.0,
+	RotElevation:      42.0,
+	HeightScale3D:     1.8,
+	Show3DWireframe:   true,
+	Show3DCutPlane:    true,
+	CurrentImageIdx:   0,
+	BatchResults:      make([]*BatchResultItem, 0),
+	PatientID:         "ANON-7F4C82",
+	PatientAge:        "68",
+	PatientSex:        "männlich",
+	PatientRegion:     "Füße (bilateral)",
+	PatientStudy:      "Plantar Pedis Bilateral (Armstrong-Protokoll)",
+	PatientNote:       "V.a. diabetisches Fußsyndrom (DFS) Wagner 0 / IWGDF Risikoklasse 3",
+	DoctorName:        "Prof. Dr. med. J. Noack (Diabetologie / Angiologie)",
+	ParamK:            3.0,
+	ParamR:            0.05,
+	ParamM:            0.005,
+	AuditLogs:         make([]AuditTableItem, 0),
 }
 
 func TempOf(raw byte) float64 {
@@ -140,7 +208,7 @@ func RawOf(temp float64) byte {
 	return byte(v)
 }
 
-// ── Farbpaletten-LUT (Ironbow, Hot Iron, Medical Jet, Rainbow, Turbo, Inferno, Gray) ──
+// ── Farbpaletten-LUT (Ironbow, Turbo, Inferno, Viridis, Arctic, Hot Iron, Medical Jet, Rainbow, Gray) ──
 func PaletteColor(val byte, pal string, inv bool) color.RGBA {
 	v := float64(val) / 255.0
 	if inv {
@@ -150,7 +218,6 @@ func PaletteColor(val byte, pal string, inv bool) color.RGBA {
 
 	switch pal {
 	case "hot_iron":
-		// Schwarz -> Dunkelrot -> Orange -> Gelb -> Weiß
 		var r, g, b float64
 		if v < 0.33 {
 			r = v * 3.0
@@ -165,14 +232,61 @@ func PaletteColor(val byte, pal string, inv bool) color.RGBA {
 		return color.RGBA{R: byte(r * 255), G: byte(g * 255), B: byte(b * 255), A: 255}
 
 	case "medical_jet":
-		// Dunkelblau -> Cyan -> Grün -> Gelb -> Rot
 		r := math.Max(0.0, math.Min(1.0, 1.5-math.Abs(4.0*v-3.0)))
 		g := math.Max(0.0, math.Min(1.0, 1.5-math.Abs(4.0*v-2.0)))
 		b := math.Max(0.0, math.Min(1.0, 1.5-math.Abs(4.0*v-1.0)))
 		return color.RGBA{R: byte(r * 255), G: byte(g * 255), B: byte(b * 255), A: 255}
 
+	case "viridis":
+		// Perzeptuell uniforme wissenschaftliche Palette (Violett -> Blau -> Smaragdgrün -> Sonnengelb)
+		var r, g, b float64
+		if v < 0.33 {
+			t := v / 0.33
+			r = 0.26*(1-t) + 0.19*t
+			g = 0.00*(1-t) + 0.40*t
+			b = 0.33*(1-t) + 0.55*t
+		} else if v < 0.66 {
+			t := (v - 0.33) / 0.33
+			r = 0.19*(1-t) + 0.21*t
+			g = 0.40*(1-t) + 0.72*t
+			b = 0.55*(1-t) + 0.47*t
+		} else {
+			t := (v - 0.66) / 0.34
+			r = 0.21*(1-t) + 0.99*t
+			g = 0.72*(1-t) + 0.91*t
+			b = 0.47*(1-t) + 0.14*t
+		}
+		return color.RGBA{
+			R: byte(math.Max(0, math.Min(255, r*255))),
+			G: byte(math.Max(0, math.Min(255, g*255))),
+			B: byte(math.Max(0, math.Min(255, b*255))),
+			A: 255,
+		}
+
+	case "arctic_medical":
+		// Klinische Divergenz-Palette (Eisblau -> Cyan -> Neutralweiß -> Koralle -> Karmesinrot)
+		var r, g, b float64
+		if v < 0.45 {
+			t := v / 0.45
+			r = 0.05 + 0.85*t
+			g = 0.25 + 0.70*t
+			b = 0.65 + 0.35*t
+		} else if v < 0.55 {
+			r, g, b = 0.95, 0.96, 0.98
+		} else {
+			t := (v - 0.55) / 0.45
+			r = 0.95 + 0.05*t
+			g = 0.90 * (1.0 - t*0.85)
+			b = 0.90 * (1.0 - t*0.90)
+		}
+		return color.RGBA{
+			R: byte(math.Max(0, math.Min(255, r*255))),
+			G: byte(math.Max(0, math.Min(255, g*255))),
+			B: byte(math.Max(0, math.Min(255, b*255))),
+			A: 255,
+		}
+
 	case "turbo":
-		// Turbo High-Dynamic Scientific Palette (Schwarz/Blau -> Cyan -> Grün -> Gelb -> Rot)
 		var r, g, b float64
 		if v < 0.25 {
 			r = 0.15 + v*0.8
@@ -199,7 +313,6 @@ func PaletteColor(val byte, pal string, inv bool) color.RGBA {
 		}
 
 	case "inferno":
-		// Schwarz -> Dunkelpurpur -> Glühendes Orange -> Warmes Gelb
 		var r, g, b float64
 		if v < 0.3 {
 			r = v * 1.5
@@ -222,7 +335,7 @@ func PaletteColor(val byte, pal string, inv bool) color.RGBA {
 		}
 
 	case "rainbow":
-		hue := (1.0 - v) * 240.0 // 240 (blau) bis 0 (rot)
+		hue := (1.0 - v) * 240.0
 		r, g, b := hslToRgb(hue, 1.0, 0.5)
 		return color.RGBA{R: r, G: g, B: b, A: 255}
 
@@ -318,7 +431,7 @@ func GenerateThermalImage(raw []byte, w, h int, pal string, win, lvl int, inv bo
 		pixVal := byte(norm * 255.0)
 		c := PaletteColor(pixVal, pal, inv)
 
-		// Klinische Isothermen-Hervorhebung (> 34.0°C)
+		// Klinische Isothermen-Hervorhebung (>= IsothermTemp)
 		if GState.ShowIsotherm && b >= isoRaw && b > 30 {
 			c = color.RGBA{R: 244, G: 63, B: 94, A: 255}
 		}

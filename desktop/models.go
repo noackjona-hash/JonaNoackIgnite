@@ -245,6 +245,49 @@ func (m *MeasurementModel) SetItems(items []*MeasurementItem) {
 	m.PublishRowsReset()
 }
 
+// ── Serien-Browser & Batch-Screening Table Model ────────────────────────────
+type BatchModel struct {
+	walk.TableModelBase
+	items []*BatchResultItem
+}
+
+func NewBatchModel() *BatchModel {
+	return &BatchModel{items: make([]*BatchResultItem, 0)}
+}
+
+func (m *BatchModel) RowCount() int {
+	return len(m.items)
+}
+
+func (m *BatchModel) Value(row, col int) interface{} {
+	if row < 0 || row >= len(m.items) {
+		return nil
+	}
+	item := m.items[row]
+	switch col {
+	case 0:
+		return item.Index
+	case 1:
+		return item.Filename
+	case 2:
+		return fmt.Sprintf("%.1f °C", item.PeakTempC)
+	case 3:
+		return fmt.Sprintf("%+.2f K", item.MaxDeltaT)
+	case 4:
+		return item.Hotspots
+	case 5:
+		return item.Risk
+	case 6:
+		return fmt.Sprintf("%.1f ms", item.DurationMs)
+	}
+	return nil
+}
+
+func (m *BatchModel) SetItems(items []*BatchResultItem) {
+	m.items = items
+	m.PublishRowsReset()
+}
+
 func formatFloat(v float64, prec int) string {
 	return fmt.Sprintf("%.*f", prec, v)
 }

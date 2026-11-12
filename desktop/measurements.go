@@ -58,6 +58,23 @@ type GoniometerMetrics struct {
 	Risk     string
 }
 
+// PolygonROIMetrics enthält die planimetrische Wundrand- und Flächenanalyse eines Polygons.
+type PolygonROIMetrics struct {
+	Points      []image.Point
+	VertexCount int
+	PerimeterMm float64
+	AreaMm2     float64
+	AreaCm2     float64
+	PixelCount  int
+	MinT        float64
+	MaxT        float64
+	MeanT       float64
+	StdDev      float64
+	ContraMeanT float64
+	DeltaT      float64
+	Risk        string
+}
+
 // CrosshairMetrics enthält Messdaten des orthogonalen Kreuzprofils durch eine Entzündung.
 type CrosshairMetrics struct {
 	Center       image.Point
@@ -534,4 +551,248 @@ func ComputeCrosshairMetrics(raw []byte, w, h int, center image.Point, radiusPx 
 		Risk:         risk,
 	}
 }
+
+// pointInPolygon prüft mittels Ray-Casting (Jordan Curve Theorem), ob (px, py) innerhalb des Polygons liegt.
+func pointInPolygon(px, py int, pts []image.Point) bool {
+	n := len(pts)
+	if n < 3 {
+		return false
+	}
+	inside := false
+	j := n - 1
+	for i := 0; i < n; i++ {
+		xi, yi := pts[i].X, pts[i].Y
+		xj, yj := pts[j].X, pts[j].Y
+		intersect := ((yi > py) != (yj > py)) &&
+			(float64(px) < float64(xj-xi)*float64(py-yi)/float64(yj-yi)+float64(xi))
+		if intersect {
+			inside = !inside
+		}
+		j = i
+	}
+	return inside
+}
+
+// ComputePolygonROI berechnet die Wundplanimetrie (Umfang, Gauß-Trapezfläche, Gewebetemperatur & kontralaterale Spiegelung).
+func ComputePolygonROI(raw []byte, w, h int, pts []image.Point) PolygonROIMetrics {
+	n := len(pts)
+	if n < 3 || len(raw) != w*h {
+		return PolygonROIMetrics{Points: pts, VertexCount: n, Risk: "NORMAL"}
+	}
+
+	// 1. Umfang (Perimeter) & Gaußsche Trapezformel (Shoelace)
+	var perimPx, shoelace float64
+	minX, maxX := pts[0].X, pts[0].X
+	minY, maxY := pts[0].Y, pts[0].Y
+
+	for i := 0; i < n; i++ {
+		j := (i + 1) % n
+		dx := float64(pts[j].X - pts[i].X)
+		dy := float64(pts[j].Y - pts[i].Y)
+		perimPx += math.Sqrt(dx*dx + dy*dy)
+		shoelace += float64(pts[i].X*pts[j].Y - pts[j].X*pts[i].Y)
+
+		if pts[i].X < minX {
+			minX = pts[i].X
+		}
+		if pts[i].X > maxX {
+			maxX = pts[i].X
+		}
+		if pts[i].Y < minY {
+			minY = pts[i].Y
+		}
+		if pts[i].Y > maxY {
+			maxY = pts[i].Y
+		}
+	}
+
+	perimMm := perimPx * 0.60
+	areaPxGeom := math.Abs(shoelace) * 0.5
+
+	if minX < 0 {
+		minX = 0
+	}
+	if maxX >= w {
+		maxX = w - 1
+	}
+	if minY < 0 {
+		minY = 0
+	}
+	if maxY >= h {
+		maxY = h - 1
+	}
+
+	var sum, sumSq, contraSum float64
+	minT, maxT := 100.0, -100.0
+	count, contraCount := 0, 0
+	midline := w / 2
+
+	for y := minY; y <= maxY; y++ {
+		rowOff := y * w
+		for x := minX; x <= maxX; x++ {
+			if pointInPolygon(x, y, pts) {
+				b := raw[rowOff+x]
+				t := TempOf(b)
+				sum += t
+				sumSq += t * t
+				if t < minT {
+					minT = t
+				}
+				if t > maxT {
+					maxT = t
+				}
+				count++
+
+				contraX := midline*2 - x
+				if contraX >= 0 && contraX < w {
+					cb := raw[rowOff+contraX]
+					contraSum += TempOf(cb)
+					contraCount++
+				}
+			}
+		}
+	}
+
+	if count == 0 {
+		return PolygonROIMetrics{Points: pts, VertexCount: n, PerimeterMm: perimMm, Risk: "NORMAL"}
+	}
+
+	mean := sum / float64(count)
+	variance := (sumSq / float64(count)) - (mean * mean)
+	if variance < 0 {
+		variance = 0
+	}
+	stdDev := math.Sqrt(variance)
+
+	contraMean := mean
+	if contraCount > 0 {
+		contraMean = contraSum / float64(contraCount)
+	}
+	deltaT := math.Abs(mean - contraMean)
+
+	effPx := math.Max(float64(count), areaPxGeom)
+	areaMm2 := effPx * (0.60 * 0.60)
+	areaCm2 := areaMm2 / 100.0
+
+	risk := "NORMAL"
+	if deltaT >= 2.2 || maxT >= 34.0 {
+		risk = "CRITICAL"
+	} else if deltaT >= 1.2 || maxT >= 32.0 {
+		risk = "MODERATE"
+	}
+
+	return PolygonROIMetrics{
+		Points:      pts,
+		VertexCount: n,
+		PerimeterMm: perimMm,
+		AreaMm2:     areaMm2,
+		AreaCm2:     areaCm2,
+		PixelCount:  count,
+		MinT:        minT,
+		MaxT:        maxT,
+		MeanT:       mean,
+		StdDev:      stdDev,
+		ContraMeanT: contraMean,
+		DeltaT:      deltaT,
+		Risk:        risk,
+	}
+}
+
+// AddThermalPin setzt eine dauerhafte Multi-Pin Thermosonde (P1, P2, ...) auf das Bild.
+func AddThermalPin(raw []byte, w, h int, pt image.Point) ThermalPinItem {
+	GState.NextPinID++
+	id := GState.NextPinID
+	label := fmt.Sprintf("P%d", id)
+
+	tempC := 20.0
+	contraC := 20.0
+	localSum := 0.0
+	localCnt := 0
+
+	if len(raw) == w*h && pt.X >= 0 && pt.X < w && pt.Y >= 0 && pt.Y < h {
+		tempC = TempOf(raw[pt.Y*w+pt.X])
+		midline := w / 2
+		contraX := midline*2 - pt.X
+		if contraX >= 0 && contraX < w {
+			contraC = TempOf(raw[pt.Y*w+contraX])
+		} else {
+			contraC = tempC
+		}
+
+		for dy := -1; dy <= 1; dy++ {
+			for dx := -1; dx <= 1; dx++ {
+				nx, ny := pt.X+dx, pt.Y+dy
+				if nx >= 0 && nx < w && ny >= 0 && ny < h {
+					localSum += TempOf(raw[ny*w+nx])
+					localCnt++
+				}
+			}
+		}
+	}
+
+	local3 := tempC
+	if localCnt > 0 {
+		local3 = localSum / float64(localCnt)
+	}
+	deltaT := tempC - contraC
+
+	// Anatomische Zone bestimmen
+	side := "Rechts"
+	if pt.X >= w/2 {
+		side = "Links"
+	}
+	relY := float64(pt.Y) / float64(math.Max(1, float64(h)))
+	zone := side + " · Mittelfuß"
+	if relY < 0.28 {
+		zone = side + " · Hallux/Digiti"
+	} else if relY < 0.48 {
+		zone = side + " · Metatarsale"
+	} else if relY > 0.72 {
+		zone = side + " · Calcaneus"
+	}
+
+	risk := "NORMAL"
+	if math.Abs(deltaT) >= 2.2 || tempC >= 34.0 {
+		risk = "CRITICAL"
+	} else if math.Abs(deltaT) >= 1.2 || tempC >= 32.0 {
+		risk = "MODERATE"
+	}
+
+	pin := ThermalPinItem{
+		ID:      id,
+		Label:   label,
+		Pt:      pt,
+		TempC:   tempC,
+		ContraC: contraC,
+		DeltaT:  deltaT,
+		Local3:  local3,
+		Zone:    zone,
+		Risk:    risk,
+	}
+	GState.PinProbes = append(GState.PinProbes, pin)
+
+	AddCompletedMeasurement("Pin-Sonde", fmt.Sprintf("Sonde %s (%s)", label, zone),
+		fmt.Sprintf("%.1f °C", tempC),
+		fmt.Sprintf("ΔT %+.2f K · 3×3 Ø %.1f°C", deltaT, local3),
+		risk, []image.Point{pt})
+
+	return pin
+}
+
+// GetSubpixelMatrix extrahiert ein 5x5 Temperatur-Zahlenraster um den Cursor für die Präzisionslupe.
+func GetSubpixelMatrix(raw []byte, w, h int, cx, cy int) [5][5]float64 {
+	var mat [5][5]float64
+	for dy := -2; dy <= 2; dy++ {
+		for dx := -2; dx <= 2; dx++ {
+			x, y := cx+dx, cy+dy
+			if len(raw) == w*h && x >= 0 && x < w && y >= 0 && y < h {
+				mat[dy+2][dx+2] = TempOf(raw[y*w+x])
+			} else {
+				mat[dy+2][dx+2] = 20.0
+			}
+		}
+	}
+	return mat
+}
+
 

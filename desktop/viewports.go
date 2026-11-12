@@ -12,6 +12,7 @@ var (
 	bgBrush          *walk.SolidColorBrush
 	hudFont          *walk.Font
 	hudBoldFont      *walk.Font
+	hudTinyFont      *walk.Font
 	anatFont         *walk.Font
 	reticlePen       *walk.CosmeticPen
 	reticleRedPen    *walk.CosmeticPen
@@ -19,6 +20,7 @@ var (
 	scalePen         *walk.CosmeticPen
 	badgeBrush       *walk.SolidColorBrush
 	badgeAlarmBr     *walk.SolidColorBrush
+	badgeCyanBr      *walk.SolidColorBrush
 	cardBrush        *walk.SolidColorBrush
 	cardBorderPen    *walk.CosmeticPen
 	framePen         *walk.CosmeticPen
@@ -33,19 +35,26 @@ var (
 	measureAmberPen  *walk.CosmeticPen
 	measureDashPen   *walk.CosmeticPen
 	measureGreenDash *walk.CosmeticPen
+	angiosomePen     *walk.CosmeticPen
+	curtainPen       *walk.CosmeticPen
+	isoPen30         *walk.CosmeticPen
+	isoPen32         *walk.CosmeticPen
+	isoPen34         *walk.CosmeticPen
 )
 
 func initViewportGraphics() {
-	bgBrush, _ = walk.NewSolidColorBrush(walk.RGB(241, 245, 249))       // Helles klinisches Slate-100
-	hudFont, _ = walk.NewFont("Segoe UI", 8, 0)
-	hudBoldFont, _ = walk.NewFont("Segoe UI", 8, walk.FontBold)
-	anatFont, _ = walk.NewFont("Segoe UI", 8, walk.FontBold)
+	bgBrush, _ = walk.NewSolidColorBrush(walk.RGB(241, 245, 249)) // Helles klinisches Slate-100
+	hudFont, _ = walk.NewFont("Segoe UI Variable Text", 8, 0)
+	hudBoldFont, _ = walk.NewFont("Segoe UI Variable Display", 8, walk.FontBold)
+	hudTinyFont, _ = walk.NewFont("Segoe UI Variable Text", 7, 0)
+	anatFont, _ = walk.NewFont("Segoe UI Variable Display", 8, walk.FontBold)
 	reticlePen, _ = walk.NewCosmeticPen(walk.PenSolid, walk.RGB(2, 132, 199))     // Klinisches Saphirblau
-	reticleRedPen, _ = walk.NewCosmeticPen(walk.PenSolid, walk.RGB(220, 38, 38))   // Alarm-Rot
+	reticleRedPen, _ = walk.NewCosmeticPen(walk.PenSolid, walk.RGB(220, 38, 38))  // Alarm-Rot
 	hairlinePen, _ = walk.NewCosmeticPen(walk.PenDash, walk.RGB(148, 163, 184))   // Feines Slate Fadenkreuz
 	scalePen, _ = walk.NewCosmeticPen(walk.PenSolid, walk.RGB(100, 116, 139))     // Skalenstift
-	badgeBrush, _ = walk.NewSolidColorBrush(walk.RGB(255, 255, 255))     // Weiße HUD-Karte
-	badgeAlarmBr, _ = walk.NewSolidColorBrush(walk.RGB(254, 242, 242))   // Helles Alarm-Rot
+	badgeBrush, _ = walk.NewSolidColorBrush(walk.RGB(255, 255, 255))              // Weiße HUD-Karte
+	badgeAlarmBr, _ = walk.NewSolidColorBrush(walk.RGB(254, 242, 242))            // Helles Alarm-Rot
+	badgeCyanBr, _ = walk.NewSolidColorBrush(walk.RGB(224, 242, 254))             // WinUI 3 Cyan Pill
 	cardBrush, _ = walk.NewSolidColorBrush(walk.RGB(255, 255, 255))
 	cardBorderPen, _ = walk.NewCosmeticPen(walk.PenSolid, walk.RGB(203, 213, 225))
 	framePen, _ = walk.NewCosmeticPen(walk.PenSolid, walk.RGB(203, 213, 225))
@@ -56,6 +65,12 @@ func initViewportGraphics() {
 	measureAmberPen, _ = walk.NewCosmeticPen(walk.PenSolid, walk.RGB(217, 119, 6))
 	measureDashPen, _ = walk.NewCosmeticPen(walk.PenDash, walk.RGB(2, 132, 199))
 	measureGreenDash, _ = walk.NewCosmeticPen(walk.PenDash, walk.RGB(16, 185, 129))
+	angiosomePen, _ = walk.NewCosmeticPen(walk.PenDot, walk.RGB(14, 165, 233))
+	curtainPen, _ = walk.NewCosmeticPen(walk.PenSolid, walk.RGB(2, 132, 199))
+
+	isoPen30, _ = walk.NewCosmeticPen(walk.PenSolid, walk.RGB(56, 189, 248))  // 30°C Cyan
+	isoPen32, _ = walk.NewCosmeticPen(walk.PenSolid, walk.RGB(251, 191, 36))  // 32°C Amber
+	isoPen34, _ = walk.NewCosmeticPen(walk.PenSolid, walk.RGB(244, 63, 94))   // 34°C Crimson
 }
 
 func updateColorbarBitmap(barH int) {
@@ -88,8 +103,7 @@ func GetImageDestRect(canvasBounds walk.Rectangle, imgW, imgH int, zoom float64,
 	if imgW <= 0 || imgH <= 0 {
 		return walk.Rectangle{}
 	}
-	// Zentrieren & Zoom
-	scale := math.Min(float64(canvasBounds.Width)/float64(imgW), float64(canvasBounds.Height)/float64(imgH)) * 0.95 * zoom
+	scale := math.Min(float64(canvasBounds.Width)/float64(imgW), float64(canvasBounds.Height)/float64(imgH)) * 0.94 * zoom
 	dw := int(float64(imgW) * scale)
 	dh := int(float64(imgH) * scale)
 	dx := (canvasBounds.Width-dw)/2 + panX
@@ -112,7 +126,7 @@ func PaintLeftViewport(canvas *walk.Canvas, bounds walk.Rectangle) error {
 	canvas.FillRectanglePixels(bgBrush, actualBounds)
 
 	if GState.RawBitmap == nil {
-		text := "Kein Wärmebild geladen.\nKlicken Sie auf „Schnelltest“ oder Datei ▸ „Bild öffnen...“"
+		text := "Kein Wärmebild geladen.\nKlicken Sie auf „⚡ Schnelltest“ oder Datei ▸ „Bild öffnen...“"
 		canvas.DrawTextPixels(text, hudFont, walk.RGB(100, 116, 139), actualBounds, walk.TextCenter|walk.TextVCenter)
 		return nil
 	}
@@ -121,9 +135,17 @@ func PaintLeftViewport(canvas *walk.Canvas, bounds walk.Rectangle) error {
 	canvas.DrawBitmapWithOpacityPixels(GState.RawBitmap, dest, 255)
 
 	// Klinischer Bildrahmen
-	framePen, _ := walk.NewCosmeticPen(walk.PenSolid, walk.RGB(203, 213, 225))
 	canvas.DrawRectanglePixels(framePen, walk.Rectangle{X: dest.X - 1, Y: dest.Y - 1, Width: dest.Width + 2, Height: dest.Height + 2})
-	framePen.Dispose()
+
+	// Optionale Topografie-Höhenlinien (Iso-Contours)
+	if GState.ShowIsoContours {
+		drawIsoContours(canvas, dest)
+	}
+
+	// Optionales Taylor & Palmer Angiosom-Gitter
+	if GState.ShowAngiosomeGrid {
+		drawAngiosomeOverlay(canvas, dest)
+	}
 
 	// DICOM HUD Corner Overlays
 	if GState.ShowHUD {
@@ -133,19 +155,48 @@ func PaintLeftViewport(canvas *walk.Canvas, bounds walk.Rectangle) error {
 	// Anatomische Orientierungs-Marken
 	drawAnatomicalTags(canvas, dest)
 
-	// Messungen & aktive Zeichen-Tools
+	// Messungen, Pins & aktive Zeichen-Tools
 	drawMeasurements(canvas, actualBounds, dest)
+	drawThermalPins(canvas, actualBounds, dest)
 	drawActiveDrawing(canvas, actualBounds, dest)
+
+	// Mini-Navigator bei Zoom
+	if GState.Zoom > 1.08 {
+		drawMiniNavigator(canvas, actualBounds, dest)
+	}
 
 	// Fadenkreuz & Retikel
 	if GState.ShowCrosshair && GState.HasHover && GState.ActiveTool == ToolReticle {
 		drawReticle(canvas, actualBounds, dest)
 	}
 
+	// Radiometrische Präzisions-Lupe
+	if (GState.ShowMagnifier || GState.ActiveTool == ToolMagnifier) && GState.HasHover {
+		drawMagnifierLoupe(canvas, actualBounds, dest)
+	}
+
 	return nil
 }
 
-// ── Right Viewport: Diagnostisches Befund-Overlay ───────────────────────────
+// getRightTargetBitmap wählt das aktive Diagnostik-Bitmap für den rechten Viewport
+func getRightTargetBitmap() *walk.Bitmap {
+	switch GState.RightViewMode {
+	case "deltat":
+		if GState.DeltaTBitmap != nil {
+			return GState.DeltaTBitmap
+		}
+	case "tophat":
+		if GState.TopHatBitmap != nil {
+			return GState.TopHatBitmap
+		}
+	}
+	if GState.ShowFindings && GState.OverlayBitmap != nil {
+		return GState.OverlayBitmap
+	}
+	return GState.RawBitmap
+}
+
+// ── Right Viewport: Diagnostisches Befund-Overlay & Curtain-Wipe ────────────
 func PaintRightViewport(canvas *walk.Canvas, bounds walk.Rectangle) error {
 	if bgBrush == nil {
 		initViewportGraphics()
@@ -166,18 +217,63 @@ func PaintRightViewport(canvas *walk.Canvas, bounds walk.Rectangle) error {
 	}
 
 	dest := GetImageDestRect(actualBounds, GState.Width, GState.Height, GState.Zoom, GState.PanX, GState.PanY)
+	rightBmp := getRightTargetBitmap()
 
-	// Zeichne Befund-Overlay oder Rohbild
-	if GState.ShowFindings && GState.OverlayBitmap != nil {
-		canvas.DrawBitmapWithOpacityPixels(GState.OverlayBitmap, dest, 255)
-	} else if GState.RawBitmap != nil {
-		canvas.DrawBitmapWithOpacityPixels(GState.RawBitmap, dest, 255)
+	// Zeichne entweder Curtain-Wipe (Vorhang-Vergleich) oder Vollbild
+	if GState.ShowCurtainWipe && GState.RawBitmap != nil && rightBmp != nil && dest.Width > 10 && GState.Width > 10 {
+		ratio := math.Max(0.05, math.Min(0.95, GState.CurtainRatio))
+		splitScreenW := int(float64(dest.Width) * ratio)
+		splitImgW := int(float64(GState.Width) * ratio)
+
+		// Links vom Vorhang: Rohbild
+		dstLeft := walk.Rectangle{X: dest.X, Y: dest.Y, Width: splitScreenW, Height: dest.Height}
+		srcLeft := walk.Rectangle{X: 0, Y: 0, Width: splitImgW, Height: GState.Height}
+		canvas.DrawBitmapPartWithOpacityPixels(GState.RawBitmap, dstLeft, srcLeft, 255)
+
+		// Rechts vom Vorhang: Diagnostik-Overlay / ΔT-Heatmap
+		dstRight := walk.Rectangle{X: dest.X + splitScreenW, Y: dest.Y, Width: dest.Width - splitScreenW, Height: dest.Height}
+		srcRight := walk.Rectangle{X: splitImgW, Y: 0, Width: GState.Width - splitImgW, Height: GState.Height}
+		canvas.DrawBitmapPartWithOpacityPixels(rightBmp, dstRight, srcRight, 255)
+
+		// Vorhang-Trennlinie + WinUI 3 Grip Handle
+		curtainX := dest.X + splitScreenW
+		for dx := -1; dx <= 1; dx++ {
+			canvas.DrawLinePixels(curtainPen, walk.Point{X: curtainX + dx, Y: dest.Y}, walk.Point{X: curtainX + dx, Y: dest.Y + dest.Height})
+		}
+
+		// Mittiger Griff-Kreis (◄|►)
+		gripY := dest.Y + dest.Height/2
+		gripRect := walk.Rectangle{X: curtainX - 18, Y: gripY - 14, Width: 36, Height: 28}
+		drawFluentRoundRect(canvas, gripRect, badgeCyanBr, curtainPen, 12)
+		canvas.DrawTextPixels("◄|►", hudBoldFont, walk.RGB(2, 132, 199), gripRect, walk.TextCenter|walk.TextVCenter)
+
+		// Vorhang-Header-Badges
+		lblL := walk.Rectangle{X: curtainX - 96, Y: dest.Y + 30, Width: 90, Height: 20}
+		if lblL.X >= dest.X+4 {
+			drawFluentRoundRect(canvas, lblL, badgeBrush, cardBorderPen, 6)
+			canvas.DrawTextPixels("◀ ROH-LWIR", hudBoldFont, walk.RGB(71, 85, 105), lblL, walk.TextCenter|walk.TextVCenter)
+		}
+		lblR := walk.Rectangle{X: curtainX + 6, Y: dest.Y + 30, Width: 105, Height: 20}
+		if lblR.X+lblR.Width <= dest.X+dest.Width-4 {
+			drawFluentRoundRect(canvas, lblR, badgeCyanBr, curtainPen, 6)
+			canvas.DrawTextPixels("BEFUND-KI ▶", hudBoldFont, walk.RGB(2, 132, 199), lblR, walk.TextCenter|walk.TextVCenter)
+		}
+	} else if rightBmp != nil {
+		canvas.DrawBitmapWithOpacityPixels(rightBmp, dest, 255)
 	}
 
 	// Klinischer Bildrahmen
-	framePen, _ := walk.NewCosmeticPen(walk.PenSolid, walk.RGB(203, 213, 225))
 	canvas.DrawRectanglePixels(framePen, walk.Rectangle{X: dest.X - 1, Y: dest.Y - 1, Width: dest.Width + 2, Height: dest.Height + 2})
-	framePen.Dispose()
+
+	// Optionale Topografie-Höhenlinien (Iso-Contours)
+	if GState.ShowIsoContours {
+		drawIsoContours(canvas, dest)
+	}
+
+	// Optionales Taylor & Palmer Angiosom-Gitter
+	if GState.ShowAngiosomeGrid {
+		drawAngiosomeOverlay(canvas, dest)
+	}
 
 	// DICOM HUD Corner Overlays (Rechts: Befund-Daten)
 	if GState.ShowHUD {
@@ -187,14 +283,25 @@ func PaintRightViewport(canvas *walk.Canvas, bounds walk.Rectangle) error {
 	// Anatomische Orientierungs-Marken
 	drawAnatomicalTags(canvas, dest)
 
-	// Messungen & aktive Zeichen-Tools
+	// Messungen, Pins & aktive Zeichen-Tools
 	drawMeasurements(canvas, actualBounds, dest)
+	drawThermalPins(canvas, actualBounds, dest)
 	drawActiveDrawing(canvas, actualBounds, dest)
 	drawActiveCrosshair(canvas, actualBounds, dest)
+
+	// Mini-Navigator bei Zoom
+	if GState.Zoom > 1.08 {
+		drawMiniNavigator(canvas, actualBounds, dest)
+	}
 
 	// Fadenkreuz & Retikel
 	if GState.ShowCrosshair && GState.HasHover && GState.ActiveTool == ToolReticle {
 		drawReticle(canvas, actualBounds, dest)
+	}
+
+	// Radiometrische Präzisions-Lupe
+	if (GState.ShowMagnifier || GState.ActiveTool == ToolMagnifier) && GState.HasHover {
+		drawMagnifierLoupe(canvas, actualBounds, dest)
 	}
 
 	// Vertikaler radiometrischer Farbbalken am rechten Rand
@@ -203,11 +310,207 @@ func PaintRightViewport(canvas *walk.Canvas, bounds walk.Rectangle) error {
 	return nil
 }
 
+// drawIsoContours zeichnet thermische Topografie-Höhenlinien (30°C, 32°C, 34°C)
+func drawIsoContours(canvas *walk.Canvas, dest walk.Rectangle) {
+	if len(GState.RawGray) == 0 || GState.Width <= 4 || GState.Height <= 4 || dest.Width <= 20 {
+		return
+	}
+	w, h := GState.Width, GState.Height
+	raw30 := RawOf(30.0)
+	raw32 := RawOf(32.0)
+	raw34 := RawOf(34.0)
+
+	step := 3
+	for y := step; y < h-step; y += step {
+		rowOff := y * w
+		for x := step; x < w-step; x += step {
+			v := GState.RawGray[rowOff+x]
+			if v <= 30 {
+				continue
+			}
+			vr := GState.RawGray[rowOff+x+step]
+			vb := GState.RawGray[(y+step)*w+x]
+
+			checkCross := func(thresh byte, pen *walk.CosmeticPen) {
+				if (v >= thresh && vr < thresh) || (v < thresh && vr >= thresh) ||
+					(v >= thresh && vb < thresh) || (v < thresh && vb >= thresh) {
+					s1 := ImgToScreen(image.Pt(x, y), dest, w, h)
+					s2 := ImgToScreen(image.Pt(x+step, y+step), dest, w, h)
+					canvas.DrawLinePixels(pen, s1, s2)
+				}
+			}
+
+			checkCross(raw30, isoPen30)
+			checkCross(raw32, isoPen32)
+			checkCross(raw34, isoPen34)
+		}
+	}
+}
+
+// drawAngiosomeOverlay zeichnet die plantaren Taylor & Palmer Gefäßversorgungsgebiete (Angiosome)
+func drawAngiosomeOverlay(canvas *walk.Canvas, dest walk.Rectangle) {
+	if dest.Width <= 40 || dest.Height <= 40 {
+		return
+	}
+	midX := dest.X + dest.Width/2
+	// Mittellinie L / R
+	canvas.DrawLinePixels(angiosomePen, walk.Point{X: midX, Y: dest.Y + 24}, walk.Point{X: midX, Y: dest.Y + dest.Height - 28})
+
+	// Horizontale anatomische Zonengrenzen (Zehen/Hallux 28%, Metatarsale 48%, Mittelfuß 72%)
+	yFore := dest.Y + int(float64(dest.Height)*0.28)
+	yMeta := dest.Y + int(float64(dest.Height)*0.48)
+	yCalc := dest.Y + int(float64(dest.Height)*0.72)
+
+	canvas.DrawLinePixels(angiosomePen, walk.Point{X: dest.X + 15, Y: yFore}, walk.Point{X: dest.X + dest.Width - 15, Y: yFore})
+	canvas.DrawLinePixels(angiosomePen, walk.Point{X: dest.X + 15, Y: yMeta}, walk.Point{X: dest.X + dest.Width - 15, Y: yMeta})
+	canvas.DrawLinePixels(angiosomePen, walk.Point{X: dest.X + 15, Y: yCalc}, walk.Point{X: dest.X + dest.Width - 15, Y: yCalc})
+
+	// Angiosom-Badges (Taylor & Palmer)
+	drawAngioTag := func(rx, ry int, code, sub string) {
+		r := walk.Rectangle{X: rx - 46, Y: ry - 10, Width: 92, Height: 20}
+		drawFluentRoundRect(canvas, r, badgeCyanBr, angiosomePen, 5)
+		canvas.DrawTextPixels(code+" · "+sub, hudTinyFont, walk.RGB(3, 105, 161), r, walk.TextCenter|walk.TextVCenter)
+	}
+
+	qLeft := dest.X + dest.Width*3/4
+	qRight := dest.X + dest.Width/4
+
+	drawAngioTag(qRight, dest.Y+int(float64(dest.Height)*0.19), "ADP/APM", "Hallux R")
+	drawAngioTag(qLeft, dest.Y+int(float64(dest.Height)*0.19), "ADP/APM", "Hallux L")
+	drawAngioTag(qRight, dest.Y+int(float64(dest.Height)*0.38), "APM", "Plant. med.")
+	drawAngioTag(qLeft, dest.Y+int(float64(dest.Height)*0.38), "APM", "Plant. med.")
+	drawAngioTag(qRight, dest.Y+int(float64(dest.Height)*0.60), "APL", "Plant. lat.")
+	drawAngioTag(qLeft, dest.Y+int(float64(dest.Height)*0.60), "APL", "Plant. lat.")
+	drawAngioTag(qRight, dest.Y+int(float64(dest.Height)*0.81), "RC", "Calcaneus")
+	drawAngioTag(qLeft, dest.Y+int(float64(dest.Height)*0.81), "RC", "Calcaneus")
+}
+
+// drawMagnifierLoupe rendert eine schwebende 4x WinUI 3 Radiometrie-Lupe mit Subpixel-Temperaturmatrix
+func drawMagnifierLoupe(canvas *walk.Canvas, bounds, dest walk.Rectangle) {
+	if dest.Width <= 0 || dest.Height <= 0 || GState.RawBitmap == nil || len(GState.RawGray) == 0 {
+		return
+	}
+	cx, cy := GState.HoverX, GState.HoverY
+	pt := ScreenToImg(cx, cy, dest, GState.Width, GState.Height)
+	if pt.X <= 0 || pt.Y <= 0 || pt.X >= GState.Width-1 || pt.Y >= GState.Height-1 {
+		return
+	}
+
+	loupeW, loupeH := 186, 152
+	lx := cx + 22
+	ly := cy + 22
+	if lx+loupeW > bounds.X+bounds.Width-10 {
+		lx = cx - loupeW - 22
+	}
+	if ly+loupeH > bounds.Y+bounds.Height-10 {
+		ly = cy - loupeH - 22
+	}
+
+	loupeCard := walk.Rectangle{X: lx, Y: ly, Width: loupeW, Height: loupeH}
+	drawFluentRoundRect(canvas, loupeCard, badgeBrush, reticlePen, 8)
+
+	// Header
+	tCenter := TempOf(GState.RawGray[pt.Y*GState.Width+pt.X])
+	canvas.DrawTextPixels(fmt.Sprintf("🔍 4× LUPE @ (%d,%d) · %.1f°C", pt.X, pt.Y, tCenter),
+		hudBoldFont, walk.RGB(2, 132, 199),
+		walk.Rectangle{X: lx + 8, Y: ly + 4, Width: loupeW - 16, Height: 14}, walk.TextLeft)
+
+	// Links in der Lupe: Gezoomter Bildausschnitt (88x88 px)
+	patchRadius := 14
+	srcX := int(math.Max(0, float64(pt.X-patchRadius)))
+	srcY := int(math.Max(0, float64(pt.Y-patchRadius)))
+	srcW := int(math.Min(float64(GState.Width-srcX), float64(patchRadius*2)))
+	srcH := int(math.Min(float64(GState.Height-srcY), float64(patchRadius*2)))
+
+	patchDst := walk.Rectangle{X: lx + 8, Y: ly + 22, Width: 82, Height: 82}
+	if srcW > 2 && srcH > 2 {
+		canvas.DrawBitmapPartWithOpacityPixels(GState.RawBitmap, patchDst, walk.Rectangle{X: srcX, Y: srcY, Width: srcW, Height: srcH}, 255)
+	}
+	canvas.DrawRectanglePixels(reticlePen, patchDst)
+	// Fadenkreuz im Lupenbild
+	pMidX := patchDst.X + patchDst.Width/2
+	pMidY := patchDst.Y + patchDst.Height/2
+	canvas.DrawLinePixels(reticleRedPen, walk.Point{X: pMidX - 8, Y: pMidY}, walk.Point{X: pMidX + 8, Y: pMidY})
+	canvas.DrawLinePixels(reticleRedPen, walk.Point{X: pMidX, Y: pMidY - 8}, walk.Point{X: pMidX, Y: pMidY + 8})
+
+	// Rechts in der Lupe: 3x3 Subpixel-Zahlenraster (°C)
+	mat := GetSubpixelMatrix(GState.RawGray, GState.Width, GState.Height, pt.X, pt.Y)
+	gridX := lx + 96
+	gridY := ly + 22
+	cellW, cellH := 27, 27
+	for ry := 0; ry < 3; ry++ {
+		for rx := 0; rx < 3; rx++ {
+			valT := mat[ry+1][rx+1]
+			cellRect := walk.Rectangle{X: gridX + rx*cellW, Y: gridY + ry*cellH, Width: cellW - 1, Height: cellH - 1}
+			cellBg := badgeBrush
+			tCol := walk.RGB(51, 65, 85)
+			fnt := hudTinyFont
+			if rx == 1 && ry == 1 {
+				cellBg = badgeCyanBr
+				tCol = walk.RGB(220, 38, 38)
+				fnt = hudBoldFont
+			}
+			canvas.FillRectanglePixels(cellBg, cellRect)
+			canvas.DrawRectanglePixels(cardBorderPen, cellRect)
+			canvas.DrawTextPixels(fmt.Sprintf("%.1f", valT), fnt, tCol, cellRect, walk.TextCenter|walk.TextVCenter)
+		}
+	}
+
+	// Footer: Lokale Statistik im 5x5 Fenster
+	min5, max5, sum5 := 100.0, -100.0, 0.0
+	for ry := 0; ry < 5; ry++ {
+		for rx := 0; rx < 5; rx++ {
+			v := mat[ry][rx]
+			sum5 += v
+			if v < min5 {
+				min5 = v
+			}
+			if v > max5 {
+				max5 = v
+			}
+		}
+	}
+	mean5 := sum5 / 25.0
+	canvas.DrawTextPixels(fmt.Sprintf("5×5 Ø: %.1f°C · Spanne: %.1f..%.1f°C", mean5, min5, max5),
+		hudTinyFont, walk.RGB(71, 85, 105),
+		walk.Rectangle{X: lx + 8, Y: ly + 108, Width: loupeW - 16, Height: 14}, walk.TextLeft)
+	canvas.DrawTextPixels(fmt.Sprintf("Lokale Streuung ΔT_lokal: %.2f K", max5-min5),
+		hudBoldFont, walk.RGB(2, 132, 199),
+		walk.Rectangle{X: lx + 8, Y: ly + 124, Width: loupeW - 16, Height: 14}, walk.TextLeft)
+}
+
+// drawMiniNavigator zeichnet eine Picture-in-Picture Übersichtskarte bei aktivem Zoom
+func drawMiniNavigator(canvas *walk.Canvas, bounds, dest walk.Rectangle) {
+	if GState.RawBitmap == nil || GState.Width <= 0 || GState.Height <= 0 {
+		return
+	}
+	navW, navH := 110, 84
+	nx := bounds.X + 12
+	ny := bounds.Height - 54 - navH - 6
+	if ny < bounds.Y+70 {
+		return
+	}
+	navRect := walk.Rectangle{X: nx, Y: ny, Width: navW, Height: navH}
+	drawFluentRoundRect(canvas, navRect, badgeBrush, reticlePen, 6)
+
+	imgBox := walk.Rectangle{X: nx + 4, Y: ny + 16, Width: navW - 8, Height: navH - 20}
+	canvas.DrawBitmapWithOpacityPixels(GState.RawBitmap, imgBox, 235)
+	canvas.DrawTextPixels(fmt.Sprintf("NAVIGATOR (%.0f%%)", GState.Zoom*100), hudTinyFont, walk.RGB(2, 132, 199),
+		walk.Rectangle{X: nx + 6, Y: ny + 2, Width: navW - 12, Height: 12}, walk.TextLeft)
+
+	// Berechne sichtbares Fenster relativ zum Bild
+	visW := int(float64(imgBox.Width) / GState.Zoom)
+	visH := int(float64(imgBox.Height) / GState.Zoom)
+	visX := imgBox.X + (imgBox.Width-visW)/2 - int(float64(GState.PanX)/float64(dest.Width)*float64(imgBox.Width))
+	visY := imgBox.Y + (imgBox.Height-visH)/2 - int(float64(GState.PanY)/float64(dest.Height)*float64(imgBox.Height))
+	canvas.DrawRectanglePixels(reticleRedPen, walk.Rectangle{X: visX, Y: visY, Width: visW, Height: visH})
+}
+
 func drawDicomHUD(canvas *walk.Canvas, b walk.Rectangle, isResult bool) {
 	pad := 10
 
 	// Top-Left Card
-	tlCard := walk.Rectangle{X: b.X + pad, Y: b.Y + pad, Width: 260, Height: 52}
+	tlCard := walk.Rectangle{X: b.X + pad, Y: b.Y + pad, Width: 265, Height: 52}
 	drawFluentRoundRect(canvas, tlCard, cardBrush, cardBorderPen, 6)
 
 	if !isResult {
@@ -215,7 +518,13 @@ func drawDicomHUD(canvas *walk.Canvas, b walk.Rectangle, isResult bool) {
 		canvas.DrawTextPixels("PID: #904218-DFS · STATIONÄR", hudFont, walk.RGB(71, 85, 105), walk.Rectangle{X: tlCard.X + 8, Y: tlCard.Y + 20, Width: tlCard.Width - 16, Height: 14}, walk.TextLeft)
 		canvas.DrawTextPixels("MODALITÄT: LWIR 8–14 µm · 0.60 mm/px", hudFont, walk.RGB(100, 116, 139), walk.Rectangle{X: tlCard.X + 8, Y: tlCard.Y + 34, Width: tlCard.Width - 16, Height: 14}, walk.TextLeft)
 	} else {
-		canvas.DrawTextPixels(fmt.Sprintf("%s · BEFUND-DIAGNOSTIK", GState.PatientID), hudBoldFont, walk.RGB(2, 132, 199), walk.Rectangle{X: tlCard.X + 8, Y: tlCard.Y + 6, Width: tlCard.Width - 16, Height: 14}, walk.TextLeft)
+		modeTitle := "BEFUND-DIAGNOSTIK"
+		if GState.RightViewMode == "deltat" {
+			modeTitle = "KONTRALATERALE ΔT-KARTE"
+		} else if GState.RightViewMode == "tophat" {
+			modeTitle = "WHITE TOP-HAT ISOLATION"
+		}
+		canvas.DrawTextPixels(fmt.Sprintf("%s · %s", GState.PatientID, modeTitle), hudBoldFont, walk.RGB(2, 132, 199), walk.Rectangle{X: tlCard.X + 8, Y: tlCard.Y + 6, Width: tlCard.Width - 16, Height: 14}, walk.TextLeft)
 		status := "ARMSTRONG: ΔT ≥ 2,2 K (ALARM)"
 		col := walk.RGB(220, 38, 38)
 		if GState.LastResult != nil && GState.LastResult.HighestRisk != "CRITICAL" {
@@ -245,7 +554,7 @@ func drawDicomHUD(canvas *walk.Canvas, b walk.Rectangle, isResult bool) {
 	}
 
 	// Bottom-Left Card
-	blCard := walk.Rectangle{X: b.X + pad, Y: b.Height - 50, Width: 230, Height: 40}
+	blCard := walk.Rectangle{X: b.X + pad, Y: b.Height - 50, Width: 235, Height: 40}
 	drawFluentRoundRect(canvas, blCard, cardBrush, cardBorderPen, 6)
 	canvas.DrawTextPixels(fmt.Sprintf("W: %d · L: %d (%.1f °C)", GState.WindowVal, GState.LevelVal, TempOf(byte(GState.LevelVal))), hudFont, walk.RGB(71, 85, 105), walk.Rectangle{X: blCard.X + 8, Y: blCard.Y + 4, Width: blCard.Width - 16, Height: 14}, walk.TextLeft)
 	canvas.DrawTextPixels(fmt.Sprintf("ZOOM: %d%% · %s", int(GState.Zoom*100), GState.ActivePalette), hudFont, walk.RGB(100, 116, 139), walk.Rectangle{X: blCard.X + 8, Y: blCard.Y + 20, Width: blCard.Width - 16, Height: 14}, walk.TextLeft)
@@ -263,17 +572,14 @@ func drawAnatomicalTags(canvas *walk.Canvas, dest walk.Rectangle) {
 	}
 	tagColor := walk.RGB(2, 132, 199)
 
-	// D (Distal) - oben mit dezentem Badge-Hintergrund
 	dBadge := walk.Rectangle{X: dest.X + dest.Width/2 - 45, Y: dest.Y + 6, Width: 90, Height: 18}
 	drawFluentRoundRect(canvas, dBadge, badgeBrush, cardBorderPen, 6)
 	canvas.DrawTextPixels("D (DISTAL)", anatFont, tagColor, dBadge, walk.TextCenter|walk.TextVCenter)
 
-	// P (Proximal) - unten am Fersenrand, ausreichend breit damit kein Abschneiden erfolgt
 	pBadge := walk.Rectangle{X: dest.X + dest.Width/2 - 55, Y: dest.Y + dest.Height - 24, Width: 110, Height: 18}
 	drawFluentRoundRect(canvas, pBadge, badgeBrush, cardBorderPen, 6)
 	canvas.DrawTextPixels("P (PROXIMAL)", anatFont, tagColor, pBadge, walk.TextCenter|walk.TextVCenter)
 
-	// R (Rechts) / L (Links)
 	rBadge := walk.Rectangle{X: dest.X + 8, Y: dest.Y + dest.Height/2 - 10, Width: 22, Height: 20}
 	drawFluentRoundRect(canvas, rBadge, badgeBrush, cardBorderPen, 6)
 	canvas.DrawTextPixels("R", anatFont, tagColor, rBadge, walk.TextCenter|walk.TextVCenter)
@@ -282,7 +588,6 @@ func drawAnatomicalTags(canvas *walk.Canvas, dest walk.Rectangle) {
 	drawFluentRoundRect(canvas, lBadge, badgeBrush, cardBorderPen, 6)
 	canvas.DrawTextPixels("L", anatFont, tagColor, lBadge, walk.TextCenter|walk.TextVCenter)
 
-	// Calibrated Metric Scale (50 mm)
 	scalePx := int(50.0 / 0.6 * (float64(dest.Width) / float64(GState.Width)))
 	if scalePx > 10 && scalePx < dest.Width/2 {
 		sx := dest.X + dest.Width/2 - scalePx/2
@@ -296,22 +601,18 @@ func drawAnatomicalTags(canvas *walk.Canvas, dest walk.Rectangle) {
 }
 
 func drawReticle(canvas *walk.Canvas, bounds, dest walk.Rectangle) {
-	// Screen coords
 	cx := GState.HoverX
 	cy := GState.HoverY
 	if cx < bounds.X || cx >= bounds.X+bounds.Width || cy < bounds.Y || cy >= bounds.Y+bounds.Height {
 		return
 	}
 
-	// 1. Feine Ausrichtungsachsen
 	canvas.DrawLinePixels(hairlinePen, walk.Point{X: bounds.X, Y: cy}, walk.Point{X: bounds.X + bounds.Width, Y: cy})
 	canvas.DrawLinePixels(hairlinePen, walk.Point{X: cx, Y: bounds.Y}, walk.Point{X: cx, Y: bounds.Y + bounds.Height})
 
-	// 2. Zielkreis (15-mm Messretikel)
 	rOuter := 14
 	rInner := 3
 
-	// Prüfe Armstrong-Alarm am Fokuspunkt
 	isArmAlarm := false
 	var tempCur, deltaT float64
 	if dest.Width > 0 && dest.Height > 0 && GState.RawGray != nil {
@@ -329,6 +630,9 @@ func drawReticle(canvas *walk.Canvas, bounds, dest walk.Rectangle) {
 					isArmAlarm = true
 				}
 			}
+			// Zeichne kontralateralen Spiegelpunkt als feinen grünen Kreis
+			scContra := ImgToScreen(image.Pt(contraX, iy), dest, GState.Width, GState.Height)
+			canvas.DrawEllipsePixels(measureGreenDash, walk.Rectangle{X: scContra.X - 7, Y: scContra.Y - 7, Width: 14, Height: 14})
 		}
 	}
 
@@ -340,8 +644,7 @@ func drawReticle(canvas *walk.Canvas, bounds, dest walk.Rectangle) {
 	canvas.DrawEllipsePixels(pen, walk.Rectangle{X: cx - rOuter, Y: cy - rOuter, Width: 2 * rOuter, Height: 2 * rOuter})
 	canvas.DrawEllipsePixels(pen, walk.Rectangle{X: cx - rInner, Y: cy - rInner, Width: 2 * rInner, Height: 2 * rInner})
 
-	// 3. Schwebendes klinisches Mess-HUD am Cursor (Großzügig dimensioniert, damit kein Text abschneidet)
-	badgeW := 185
+	badgeW := 190
 	badgeH := 42
 	bx := cx + rOuter + 8
 	by := cy - rOuter - 6
@@ -365,36 +668,31 @@ func drawReticle(canvas *walk.Canvas, bounds, dest walk.Rectangle) {
 		textColor = walk.RGB(220, 38, 38)
 	}
 	canvas.DrawTextPixels(line1, hudBoldFont, textColor, walk.Rectangle{X: bx + 8, Y: by + 5, Width: badgeW - 16, Height: 15}, walk.TextLeft)
-	canvas.DrawTextPixels("Fokus: Plantar Pedis", hudFont, walk.RGB(100, 116, 139), walk.Rectangle{X: bx + 8, Y: by + 21, Width: badgeW - 16, Height: 15}, walk.TextLeft)
+	canvas.DrawTextPixels("⌖ Kontralaterale Spiegel-Sonde aktiv", hudFont, walk.RGB(100, 116, 139), walk.Rectangle{X: bx + 8, Y: by + 21, Width: badgeW - 16, Height: 15}, walk.TextLeft)
 }
 
 func drawColorbar(canvas *walk.Canvas, b walk.Rectangle) {
 	cbW := 54
-	cbH := int(float64(b.Height) * 0.75)
+	cbH := int(float64(b.Height) * 0.72)
 	cbX := b.Width - cbW - 10
 	cbY := (b.Height - cbH) / 2
 
 	cbBox := walk.Rectangle{X: cbX, Y: cbY, Width: cbW, Height: cbH}
-	canvas.FillRectanglePixels(badgeBrush, cbBox)
-	canvas.DrawRectanglePixels(cardBorderPen, cbBox)
+	drawFluentRoundRect(canvas, cbBox, badgeBrush, cardBorderPen, 6)
 
-	// Header: TEMP [°C]
 	canvas.DrawTextPixels("°C", hudBoldFont, walk.RGB(30, 41, 59), walk.Rectangle{X: cbX, Y: cbY + 4, Width: cbW, Height: 14}, walk.TextCenter)
 
-	// Farbbalken
 	barX := cbX + 24
 	barY := cbY + 22
 	barW := 12
 	barH := cbH - 42
 
-	// Vorkomponierte 1-Pass Bitmap zeichnen (Null GDI Brush Allocation Overhead!)
 	updateColorbarBitmap(barH)
 	if colorbarBitmap != nil {
 		canvas.DrawBitmapWithOpacityPixels(colorbarBitmap, walk.Rectangle{X: barX, Y: barY, Width: barW, Height: barH}, 255)
 	}
 	canvas.DrawRectanglePixels(barBorderPen, walk.Rectangle{X: barX, Y: barY, Width: barW, Height: barH})
 
-	// Ticks (45°, 40°, 35°, 30°, 25°, 20°)
 	ticks := []struct {
 		temp float64
 		text string
@@ -418,7 +716,6 @@ func drawColorbar(canvas *walk.Canvas, b walk.Rectangle) {
 		canvas.DrawTextPixels(t.text, hudFont, tCol, walk.Rectangle{X: cbX + 2, Y: py - 6, Width: 20, Height: 12}, walk.TextRight)
 	}
 
-	// Armstrong Gefahren-Klammer (> 34°C)
 	armY := barY + int((45.0-34.0)/(45.0-20.0)*float64(barH))
 	canvas.DrawLinePixels(reticleRedPen, walk.Point{X: barX + barW + 2, Y: barY}, walk.Point{X: barX + barW + 5, Y: barY})
 	canvas.DrawLinePixels(reticleRedPen, walk.Point{X: barX + barW + 5, Y: barY}, walk.Point{X: barX + barW + 5, Y: armY})
@@ -457,11 +754,41 @@ func ScreenToImg(x, y int, dest walk.Rectangle, imgW, imgH int) image.Point {
 
 func drawMiniBadge(canvas *walk.Canvas, x, y int, text string, col walk.Color) {
 	bW := len(text)*7 + 16
-	bH := 20
+	bH := 22
 	bRect := walk.Rectangle{X: x, Y: y, Width: bW, Height: bH}
-	canvas.FillRectanglePixels(badgeBrush, bRect)
-	canvas.DrawRectanglePixels(cardBorderPen, bRect)
-	canvas.DrawTextPixels(text, hudBoldFont, col, walk.Rectangle{X: x + 6, Y: y + 3, Width: bW - 12, Height: 14}, walk.TextLeft)
+	drawFluentRoundRect(canvas, bRect, badgeBrush, cardBorderPen, 5)
+	canvas.DrawTextPixels(text, hudBoldFont, col, walk.Rectangle{X: x + 6, Y: y + 4, Width: bW - 12, Height: 14}, walk.TextLeft)
+}
+
+func drawThermalPins(canvas *walk.Canvas, bounds, dest walk.Rectangle) {
+	if len(GState.PinProbes) == 0 || dest.Width <= 0 || dest.Height <= 0 {
+		return
+	}
+	w, h := GState.Width, GState.Height
+	for _, p := range GState.PinProbes {
+		sc := ImgToScreen(p.Pt, dest, w, h)
+		pen := measurePen
+		br := badgeCyanBr
+		tCol := walk.RGB(2, 132, 199)
+		if p.Risk == "CRITICAL" {
+			pen = reticleRedPen
+			br = badgeAlarmBr
+			tCol = walk.RGB(220, 38, 38)
+		} else if p.Risk == "MODERATE" {
+			pen = measureAmberPen
+			tCol = walk.RGB(180, 83, 9)
+		}
+
+		// Pin Marker
+		canvas.DrawEllipsePixels(pen, walk.Rectangle{X: sc.X - 6, Y: sc.Y - 6, Width: 12, Height: 12})
+		canvas.DrawEllipsePixels(pen, walk.Rectangle{X: sc.X - 2, Y: sc.Y - 2, Width: 4, Height: 4})
+
+		// Pin Callout Pill
+		pillRect := walk.Rectangle{X: sc.X + 8, Y: sc.Y - 11, Width: 112, Height: 22}
+		drawFluentRoundRect(canvas, pillRect, br, pen, 6)
+		canvas.DrawTextPixels(fmt.Sprintf("📍%s: %.1f° (%+.1fK)", p.Label, p.TempC, p.DeltaT),
+			hudBoldFont, tCol, pillRect, walk.TextCenter|walk.TextVCenter)
+	}
 }
 
 func drawMeasurements(canvas *walk.Canvas, bounds, dest walk.Rectangle) {
@@ -492,7 +819,6 @@ func drawMeasurements(canvas *walk.Canvas, bounds, dest walk.Rectangle) {
 
 				canvas.DrawLinePixels(pen, s1, s2)
 
-				// Caliper End Ticks
 				dx := float64(s2.X - s1.X)
 				dy := float64(s2.Y - s1.Y)
 				lenPx := math.Sqrt(dx*dx + dy*dy)
@@ -503,10 +829,9 @@ func drawMeasurements(canvas *walk.Canvas, bounds, dest walk.Rectangle) {
 					canvas.DrawLinePixels(pen, walk.Point{X: s2.X + int(nx), Y: s2.Y + int(ny)}, walk.Point{X: s2.X - int(nx), Y: s2.Y - int(ny)})
 				}
 
-				// Center Badge
 				midX := (s1.X + s2.X) / 2
 				midY := (s1.Y + s2.Y) / 2
-				badgeW := 160
+				badgeW := 165
 				badgeH := 32
 				bRect := walk.Rectangle{X: midX - badgeW/2, Y: midY - badgeH - 6, Width: badgeW, Height: badgeH}
 				drawFluentRoundRect(canvas, bRect, br, pen, 6)
@@ -527,7 +852,6 @@ func drawMeasurements(canvas *walk.Canvas, bounds, dest walk.Rectangle) {
 				roiBox := walk.Rectangle{X: minX, Y: minY, Width: maxX - minX, Height: maxY - minY}
 				canvas.DrawRectanglePixels(pen, roiBox)
 
-				// Zeichne kontralateral gespiegelte Box (Dashed Green)
 				midlineScreen := dest.X + dest.Width/2
 				contraMinX := midlineScreen*2 - maxX
 				contraMaxX := midlineScreen*2 - minX
@@ -542,6 +866,33 @@ func drawMeasurements(canvas *walk.Canvas, bounds, dest walk.Rectangle) {
 				}
 				drawFluentRoundRect(canvas, bRect, br, pen, 6)
 				canvas.DrawTextPixels(fmt.Sprintf("%s · %s", m.Label, m.ValueStr), hudBoldFont, textCol, walk.Rectangle{X: bRect.X + 6, Y: bRect.Y + 2, Width: badgeW - 12, Height: 15}, walk.TextLeft)
+				canvas.DrawTextPixels(m.DetailsStr, hudFont, walk.RGB(71, 85, 105), walk.Rectangle{X: bRect.X + 6, Y: bRect.Y + 18, Width: badgeW - 12, Height: 15}, walk.TextLeft)
+			}
+
+		case "Polygon-ROI":
+			if len(m.Points) >= 3 {
+				n := len(m.Points)
+				midlineScreen := dest.X + dest.Width/2
+				var sumX, sumY int
+				for i := 0; i < n; i++ {
+					j := (i + 1) % n
+					s1 := ImgToScreen(m.Points[i], dest, w, h)
+					s2 := ImgToScreen(m.Points[j], dest, w, h)
+					canvas.DrawLinePixels(pen, s1, s2)
+					canvas.DrawEllipsePixels(pen, walk.Rectangle{X: s1.X - 3, Y: s1.Y - 3, Width: 6, Height: 6})
+
+					// Kontralateral gespiegeltes Polygon
+					c1 := walk.Point{X: midlineScreen*2 - s1.X, Y: s1.Y}
+					c2 := walk.Point{X: midlineScreen*2 - s2.X, Y: s2.Y}
+					canvas.DrawLinePixels(measureGreenDash, c1, c2)
+					sumX += s1.X
+					sumY += s1.Y
+				}
+				cx, cy := sumX/n, sumY/n
+				badgeW, badgeH := 195, 36
+				bRect := walk.Rectangle{X: cx - badgeW/2, Y: cy - badgeH - 8, Width: badgeW, Height: badgeH}
+				drawFluentRoundRect(canvas, bRect, br, pen, 6)
+				canvas.DrawTextPixels(fmt.Sprintf("⬡ %s · %s", m.Label, m.ValueStr), hudBoldFont, textCol, walk.Rectangle{X: bRect.X + 6, Y: bRect.Y + 2, Width: badgeW - 12, Height: 15}, walk.TextLeft)
 				canvas.DrawTextPixels(m.DetailsStr, hudFont, walk.RGB(71, 85, 105), walk.Rectangle{X: bRect.X + 6, Y: bRect.Y + 18, Width: badgeW - 12, Height: 15}, walk.TextLeft)
 			}
 
@@ -668,6 +1019,24 @@ func drawActiveDrawing(canvas *walk.Canvas, bounds, dest walk.Rectangle) {
 		badgeText := fmt.Sprintf("ROI: %.1f cm² · Mean: %.1f°C · ΔT: %.2f K", m.AreaCm2, m.MeanT, m.DeltaT)
 		drawMiniBadge(canvas, minX, minY-22, badgeText, walk.RGB(2, 132, 199))
 
+	case ToolPolygonROI:
+		n := len(GState.ActivePoints)
+		for i := 0; i < n; i++ {
+			sCur := ImgToScreen(GState.ActivePoints[i], dest, w, h)
+			canvas.DrawEllipsePixels(measurePen, walk.Rectangle{X: sCur.X - 3, Y: sCur.Y - 3, Width: 6, Height: 6})
+			if i > 0 {
+				sPrev := ImgToScreen(GState.ActivePoints[i-1], dest, w, h)
+				canvas.DrawLinePixels(measurePen, sPrev, sCur)
+			}
+		}
+		sLast := ImgToScreen(GState.ActivePoints[n-1], dest, w, h)
+		sFirst := ImgToScreen(GState.ActivePoints[0], dest, w, h)
+		canvas.DrawLinePixels(measureDashPen, sLast, sMouse)
+		if n >= 2 {
+			canvas.DrawLinePixels(hairlinePen, sMouse, sFirst)
+		}
+		drawMiniBadge(canvas, sMouse.X+12, sMouse.Y-12, fmt.Sprintf("⬡ Polygon (%d Pkt.) · Klick=Eckpunkt, Button/Doppelklick=Schließen", n), walk.RGB(2, 132, 199))
+
 	case ToolCircleROI:
 		s1 := ImgToScreen(GState.ActivePoints[0], dest, w, h)
 		dx := sMouse.X - s1.X
@@ -745,25 +1114,20 @@ func drawActiveCrosshair(canvas *walk.Canvas, bounds, dest walk.Rectangle) {
 	crossPenV, _ := walk.NewCosmeticPen(walk.PenSolid, walk.RGB(217, 119, 6))
 	defer crossPenV.Dispose()
 
-	// Horizontale Achse X (West-Ost)
 	canvas.DrawLinePixels(crossPenH, walk.Point{X: sc.X - screenRad, Y: sc.Y}, walk.Point{X: sc.X + screenRad, Y: sc.Y})
-	// Vertikale Achse Y (Nord-Süd)
 	canvas.DrawLinePixels(crossPenV, walk.Point{X: sc.X, Y: sc.Y - screenRad}, walk.Point{X: sc.X, Y: sc.Y + screenRad})
 
-	// ±1σ Konzentrischer Kreis (Emerald Green Dashed)
 	sSigma := int(float64(screenRad) * (cm.SpatialSigma / cm.RadiusMm))
 	if sSigma < 6 {
 		sSigma = screenRad / 2
 	}
 	canvas.DrawEllipsePixels(measureGreenDash, walk.Rectangle{X: sc.X - sSigma, Y: sc.Y - sSigma, Width: 2 * sSigma, Height: 2 * sSigma})
 
-	// Ticks bei ±1σ auf beiden Achsen
 	canvas.DrawLinePixels(measureGreenDash, walk.Point{X: sc.X - sSigma, Y: sc.Y - 4}, walk.Point{X: sc.X - sSigma, Y: sc.Y + 4})
 	canvas.DrawLinePixels(measureGreenDash, walk.Point{X: sc.X + sSigma, Y: sc.Y - 4}, walk.Point{X: sc.X + sSigma, Y: sc.Y + 4})
 	canvas.DrawLinePixels(measureGreenDash, walk.Point{X: sc.X - 4, Y: sc.Y - sSigma}, walk.Point{X: sc.X + 4, Y: sc.Y - sSigma})
 	canvas.DrawLinePixels(measureGreenDash, walk.Point{X: sc.X - 4, Y: sc.Y + sSigma}, walk.Point{X: sc.X + 4, Y: sc.Y + sSigma})
 
-	// Ticks bei ±2σ auf beiden Achsen
 	sTwoSigma := int(float64(sSigma) * 2.0)
 	if sTwoSigma <= screenRad {
 		canvas.DrawLinePixels(reticleRedPen, walk.Point{X: sc.X - sTwoSigma, Y: sc.Y - 3}, walk.Point{X: sc.X - sTwoSigma, Y: sc.Y + 3})
@@ -772,11 +1136,9 @@ func drawActiveCrosshair(canvas *walk.Canvas, bounds, dest walk.Rectangle) {
 		canvas.DrawLinePixels(reticleRedPen, walk.Point{X: sc.X - 3, Y: sc.Y + sTwoSigma}, walk.Point{X: sc.X + 3, Y: sc.Y + sTwoSigma})
 	}
 
-	// Zentrum-Marker (Peak)
 	canvas.DrawEllipsePixels(reticleRedPen, walk.Rectangle{X: sc.X - 3, Y: sc.Y - 3, Width: 6, Height: 6})
 
-	// Schwebendes Info-Badge
-	badgeW := 210
+	badgeW := 215
 	badgeH := 36
 	bx := sc.X + 12
 	by := sc.Y - screenRad - 30

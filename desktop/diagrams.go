@@ -17,6 +17,11 @@ type TissueStats struct {
 	SEM        float64 // Standardfehler des Mittelwerts
 	Median     float64
 	MAD        float64 // Median Absolute Deviation
+	P05        float64
+	P25        float64
+	P75        float64
+	P95        float64
+	Skewness   float64
 	Min        float64
 	Max        float64
 	Span       float64
@@ -97,19 +102,28 @@ func ComputeTissueStats(raw []byte, w, h int) *TissueStats {
 	// 1. Mittelwert μ
 	mean := sum / float64(n)
 
-	// 2. Standardabweichung σ & Varianz
-	var sumSqDiff float64
+	// 2. Standardabweichung σ, Varianz & Schiefe (Skewness)
+	var sumSqDiff, sumCubeDiff float64
 	for _, t := range temps {
 		d := t - mean
 		sumSqDiff += d * d
+		sumCubeDiff += d * d * d
 	}
 	variance := sumSqDiff / float64(n-1)
 	stdDev := math.Sqrt(variance)
 	sem := stdDev / math.Sqrt(float64(n))
+	skew := 0.0
+	if stdDev > 0.01 {
+		skew = (sumCubeDiff / float64(n)) / (stdDev * stdDev * stdDev)
+	}
 
-	// 3. Median & MAD (Median Absolute Deviation)
+	// 3. Median, Perzentile (P05, P25, P75, P95) & MAD (Median Absolute Deviation)
 	sort.Float64s(temps)
 	median := temps[n/2]
+	p05 := temps[int(float64(n-1)*0.05)]
+	p25 := temps[int(float64(n-1)*0.25)]
+	p75 := temps[int(float64(n-1)*0.75)]
+	p95 := temps[int(float64(n-1)*0.95)]
 
 	absDiffs := make([]float64, n)
 	for i, t := range temps {
@@ -130,6 +144,11 @@ func ComputeTissueStats(raw []byte, w, h int) *TissueStats {
 		SEM:        sem,
 		Median:     median,
 		MAD:        mad,
+		P05:        p05,
+		P25:        p25,
+		P75:        p75,
+		P95:        p95,
+		Skewness:   skew,
 		Min:        minT,
 		Max:        maxT,
 		Span:       maxT - minT,
@@ -653,4 +672,368 @@ func PaintInflammationCrossChart(canvas *walk.Canvas, bounds walk.Rectangle) err
 
 	return nil
 }
+
+// ── Diagramm 5: Interaktives 3D-Thermisches Oberflächennetz (Isometric Lambertian Mesh) ──
+func Paint3DThermalSurface(canvas *walk.Canvas, bounds walk.Rectangle) error {
+	if diagBgBrush == nil {
+		initDiagramGraphics()
+	}
+	actualBounds := bounds
+	if diag3DCanvas != nil {
+		cb := diag3DCanvas.ClientBoundsPixels()
+		if cb.Width > 0 && cb.Height > 0 {
+			actualBounds = cb
+		}
+	}
+	canvas.FillRectanglePixels(diagBgBrush, actualBounds)
+
+	w, h := actualBounds.Width, actualBounds.Height
+	if w <= 40 || h <= 40 {
+		return nil
+	}
+
+	outer := walk.Rectangle{X: 1, Y: 1, Width: w - 2, Height: h - 2}
+	drawFluentRoundRect(canvas, outer, diagBgBrush, fluentBorderSlatePen, 6)
+
+	canvas.DrawTextPixels(fmt.Sprintf("3D-THERMISCHES OBERFLÄCHENRELIEF T(x,y,z) · Azimut: %.0f° · Elevation: %.0f° · Z-Skala: %.1fx",
+		GState.RotAzimuth, GState.RotElevation, GState.HeightScale3D),
+		diagBoldFont, walk.RGB(3, 105, 161), walk.Rectangle{X: 12, Y: 6, Width: w - 24, Height: 16}, walk.TextLeft)
+
+	if len(GState.RawGray) == 0 || GState.Width <= 0 || GState.Height <= 0 {
+		canvas.DrawTextPixels("3D-Oberflächennetz: Kein Wärmebild geladen", diagFont, walk.RGB(148, 163, 184), actualBounds, walk.TextCenter|walk.TextVCenter)
+		return nil
+	}
+
+	// Isometrische 3D Projektions-Hilfsfunktion
+	azRad := GState.RotAzimuth * math.Pi / 180.0
+	elRad := GState.RotElevation * math.Pi / 180.0
+	cosAz, sinAz := math.Cos(azRad), math.Sin(azRad)
+	cosEl, sinEl := math.Cos(elRad), math.Sin(elRad)
+
+	cx := w / 2
+	cy := h/2 + 28
+	scaleXY := math.Min(float64(w)*0.36, float64(h)*0.44)
+	scaleZ := float64(h) * 0.22 * GState.HeightScale3D
+
+	project3D := func(nx, ny, nz float64) walk.Point {
+		// nx, ny in [-1, +1], nz in [0, 1]
+		rx := nx*cosAz - ny*sinAz
+		ry := nx*sinAz + ny*cosAz
+		sx := cx + int(rx*scaleXY)
+		sy := cy + int(ry*scaleXY*sinEl-nz*scaleZ*cosEl)
+		return walk.Point{X: sx, Y: sy}
+	}
+
+	// 1. Zeichne 3D Basis-Plattform (Z = 0 / 20°C)
+	b00 := project3D(-1, -1, 0)
+	b10 := project3D(1, -1, 0)
+	b11 := project3D(1, 1, 0)
+	b01 := project3D(-1, 1, 0)
+	canvas.DrawLinePixels(diagGridPen, b00, b10)
+	canvas.DrawLinePixels(diagGridPen, b10, b11)
+	canvas.DrawLinePixels(diagGridPen, b11, b01)
+	canvas.DrawLinePixels(diagGridPen, b01, b00)
+
+	// 2. Optionale 34.0°C Hyperthermie-Schnittebene
+	if GState.Show3DCutPlane {
+		z34 := (34.0 - 20.0) / 25.0
+		p00 := project3D(-1, -1, z34)
+		p10 := project3D(1, -1, z34)
+		p11 := project3D(1, 1, z34)
+		p01 := project3D(-1, 1, z34)
+		canvas.DrawLinePixels(diagTwoSigmaPen, p00, p10)
+		canvas.DrawLinePixels(diagTwoSigmaPen, p10, p11)
+		canvas.DrawLinePixels(diagTwoSigmaPen, p11, p01)
+		canvas.DrawLinePixels(diagTwoSigmaPen, p01, p00)
+		canvas.DrawTextPixels("34,0°C Armstrong-Schnittebene", diagFont, walk.RGB(220, 38, 38),
+			walk.Rectangle{X: p10.X - 165, Y: p10.Y - 14, Width: 165, Height: 14}, walk.TextRight)
+	}
+
+	// 3. Zeichne 3D-Oberflächengitter (36 x 28 Stützstellen)
+	gridX, gridY := 34, 26
+	var pts [27][35]walk.Point
+	var vals [27][35]byte
+
+	peakVal := byte(0)
+	var peakPt walk.Point
+	var peakTemp float64
+
+	for gy := 0; gy <= gridY; gy++ {
+		fy := float64(gy) / float64(gridY)
+		iy := int(fy * float64(GState.Height-1))
+		ny := fy*2.0 - 1.0
+
+		for gx := 0; gx <= gridX; gx++ {
+			fx := float64(gx) / float64(gridX)
+			ix := int(fx * float64(GState.Width-1))
+			nx := fx*2.0 - 1.0
+
+			rawVal := GState.RawGray[iy*GState.Width+ix]
+			vals[gy][gx] = rawVal
+			nz := 0.0
+			if rawVal > 28 {
+				nz = float64(rawVal-20) / 235.0
+			}
+			pt := project3D(nx, ny, nz)
+			pts[gy][gx] = pt
+
+			if rawVal > peakVal {
+				peakVal = rawVal
+				peakPt = pt
+				peakTemp = TempOf(rawVal)
+			}
+		}
+	}
+
+	// Farbabgestufte Stifte (5 Temperaturbänder für schnelles Zero-Alloc Rendering)
+	penCold, _ := walk.NewCosmeticPen(walk.PenSolid, walk.RGB(51, 65, 85))
+	defer penCold.Dispose()
+	penCool, _ := walk.NewCosmeticPen(walk.PenSolid, walk.RGB(2, 132, 199))
+	defer penCool.Dispose()
+	penNorm, _ := walk.NewCosmeticPen(walk.PenSolid, walk.RGB(16, 185, 129))
+	defer penNorm.Dispose()
+	penWarm, _ := walk.NewCosmeticPen(walk.PenSolid, walk.RGB(245, 158, 11))
+	defer penWarm.Dispose()
+	penHot, _ := walk.NewCosmeticPen(walk.PenSolid, walk.RGB(220, 38, 38))
+	defer penHot.Dispose()
+
+	pickPen := func(v byte) *walk.CosmeticPen {
+		t := TempOf(v)
+		if t >= 34.0 {
+			return penHot
+		} else if t >= 32.0 {
+			return penWarm
+		} else if t >= 29.5 {
+			return penNorm
+		} else if t >= 25.0 {
+			return penCool
+		}
+		return penCold
+	}
+
+	for gy := 0; gy < gridY; gy++ {
+		for gx := 0; gx < gridX; gx++ {
+			v := vals[gy][gx]
+			if v <= 26 && vals[gy][gx+1] <= 26 {
+				continue
+			}
+			pen := pickPen(v)
+			canvas.DrawLinePixels(pen, pts[gy][gx], pts[gy][gx+1])
+			if GState.Show3DWireframe {
+				canvas.DrawLinePixels(pen, pts[gy][gx], pts[gy+1][gx])
+			}
+		}
+	}
+
+	// 4. Peak-Säule & 3D Callout Badge
+	if peakVal > 40 {
+		canvas.DrawLinePixels(diagAlertPen, peakPt, walk.Point{X: peakPt.X, Y: peakPt.Y - 22})
+		canvas.DrawEllipsePixels(diagAlertPen, walk.Rectangle{X: peakPt.X - 4, Y: peakPt.Y - 4, Width: 8, Height: 8})
+		badge := walk.Rectangle{X: peakPt.X - 68, Y: peakPt.Y - 42, Width: 136, Height: 20}
+		drawFluentRoundRect(canvas, badge, fluentPillAlertBr, diagAlertPen, 6)
+		canvas.DrawTextPixels(fmt.Sprintf("▲ 3D-Peak: %.1f °C", peakTemp), diagBoldFont, walk.RGB(185, 28, 28), badge, walk.TextCenter|walk.TextVCenter)
+	}
+
+	// Legende unten
+	canvas.DrawTextPixels("Blau: <29°C · Grün: Plantar-Normal (29–32°C) · Gelb: Hyperperfusion (32–34°C) · Rot: Pathologischer Herd (≥34°C)",
+		diagFont, walk.RGB(71, 85, 105), walk.Rectangle{X: 12, Y: h - 18, Width: w - 24, Height: 14}, walk.TextLeft)
+
+	return nil
+}
+
+// ── Diagramm 6: Angiosom-Perfusion & Longitudinaler Gradient dT/dy (Tab 5) ──
+func PaintAngiosomePerfusionChart(canvas *walk.Canvas, bounds walk.Rectangle) error {
+	if diagBgBrush == nil {
+		initDiagramGraphics()
+	}
+	actualBounds := bounds
+	if diagAngioCanvas != nil {
+		cb := diagAngioCanvas.ClientBoundsPixels()
+		if cb.Width > 0 && cb.Height > 0 {
+			actualBounds = cb
+		}
+	}
+	canvas.FillRectanglePixels(diagBgBrush, actualBounds)
+
+	w, h := actualBounds.Width, actualBounds.Height
+	if w <= 40 || h <= 40 {
+		return nil
+	}
+	outer := walk.Rectangle{X: 1, Y: 1, Width: w - 2, Height: h - 2}
+	drawFluentRoundRect(canvas, outer, diagBgBrush, fluentBorderSlatePen, 6)
+
+	canvas.DrawTextPixels("PROXIMAL-DISTALER PERFUSIONSGRADIENT T(y) (CALCANEUS ➔ HALLUX) & ANGIOSOM-PROFIL",
+		diagBoldFont, walk.RGB(3, 105, 161), walk.Rectangle{X: 12, Y: 6, Width: w - 24, Height: 16}, walk.TextLeft)
+
+	padL, padR, padT, padB := 44, 18, 28, 26
+	plotW := w - padL - padR
+	plotH := h - padT - padB
+	if plotW <= 30 || plotH <= 30 {
+		return nil
+	}
+
+	// Gitter & Y-Skala (26°C bis 42°C)
+	minT, maxT := 26.0, 42.0
+	for i := 0; i <= 4; i++ {
+		y := padT + int(float64(plotH)*float64(i)/4.0)
+		canvas.DrawLinePixels(diagGridPen, walk.Point{X: padL, Y: y}, walk.Point{X: padL + plotW, Y: y})
+		tVal := maxT - float64(i)*(maxT-minT)/4.0
+		canvas.DrawTextPixels(fmt.Sprintf("%.0f°C", tVal), diagFont, walk.RGB(71, 85, 105), walk.Rectangle{X: 4, Y: y - 6, Width: 36, Height: 12}, walk.TextRight)
+	}
+
+	// X-Achse: 4 anatomische Stationen entlang der Fußlängsachse (Calcaneus -> Mittelfuß -> Metatarsale -> Hallux)
+	stations := []string{"1. Calcaneus (RC)", "2. Mittelfuß (APL)", "3. Metatarsale (APM)", "4. Hallux (ADP)"}
+	for i, st := range stations {
+		x := padL + int(float64(plotW)*float64(i)/3.0)
+		canvas.DrawLinePixels(diagGridPen, walk.Point{X: x, Y: padT}, walk.Point{X: x, Y: padT + plotH})
+		canvas.DrawTextPixels(st, diagFont, walk.RGB(51, 65, 85), walk.Rectangle{X: x - 55, Y: padT + plotH + 4, Width: 110, Height: 14}, walk.TextCenter)
+	}
+
+	// Berechne longitudinale Kurve (Proximal y=0.85 nach Distal y=0.15) für Links und Rechts
+	numSteps := 30
+	var prevL, prevR walk.Point
+	for i := 0; i < numSteps; i++ {
+		frac := float64(i) / float64(numSteps-1) // 0 = Calcaneus, 1 = Hallux
+		// Standardwerte oder aus RawGray gesampelt
+		tL := 32.2 - 0.5*frac + 6.8*math.Exp(-math.Pow(frac-0.92, 2)*35.0)
+		tR := 32.1 - 1.6*frac
+
+		if len(GState.RawGray) == GState.Width*GState.Height && GState.Width > 10 && GState.Height > 10 {
+			iy := int((0.82 - frac*0.66) * float64(GState.Height-1))
+			ixR := GState.Width / 4
+			ixL := GState.Width * 3 / 4
+			if iy >= 0 && iy < GState.Height {
+				bR := GState.RawGray[iy*GState.Width+ixR]
+				bL := GState.RawGray[iy*GState.Width+ixL]
+				if bR > 30 {
+					tR = TempOf(bR)
+				}
+				if bL > 30 {
+					tL = TempOf(bL)
+				}
+			}
+		}
+
+		x := padL + int(frac*float64(plotW))
+		yL := padT + plotH - int(math.Max(0, math.Min(1, (tL-minT)/(maxT-minT)))*float64(plotH))
+		yR := padT + plotH - int(math.Max(0, math.Min(1, (tR-minT)/(maxT-minT)))*float64(plotH))
+
+		curL := walk.Point{X: x, Y: yL}
+		curR := walk.Point{X: x, Y: yR}
+		if i > 0 {
+			canvas.DrawLinePixels(diagHorizPen, prevL, curL)
+			canvas.DrawLinePixels(diagSigmaPen, prevR, curR)
+		}
+		prevL = curL
+		prevR = curR
+	}
+
+	canvas.DrawTextPixels("Blau: Linker Fuß T_L(y) · Grün: Rechter Fuß T_R(y) · Positiver Anstieg distal = Neuropathische Hyperperfusion",
+		diagFont, walk.RGB(100, 116, 139), walk.Rectangle{X: padL, Y: padT + 4, Width: plotW, Height: 14}, walk.TextLeft)
+
+	return nil
+}
+
+// ── Diagramm 7: Longitudinaler Serien- & Therapieverlauf (Tab 6) ────────────
+func PaintLongitudinalSeriesChart(canvas *walk.Canvas, bounds walk.Rectangle) error {
+	if diagBgBrush == nil {
+		initDiagramGraphics()
+	}
+	actualBounds := bounds
+	if diagSeriesCanvas != nil {
+		cb := diagSeriesCanvas.ClientBoundsPixels()
+		if cb.Width > 0 && cb.Height > 0 {
+			actualBounds = cb
+		}
+	}
+	canvas.FillRectanglePixels(diagBgBrush, actualBounds)
+
+	w, h := actualBounds.Width, actualBounds.Height
+	if w <= 40 || h <= 40 {
+		return nil
+	}
+	outer := walk.Rectangle{X: 1, Y: 1, Width: w - 2, Height: h - 2}
+	drawFluentRoundRect(canvas, outer, diagBgBrush, fluentBorderSlatePen, 6)
+
+	canvas.DrawTextPixels("LONGITUDINALER ΔT-VERLAUFSGRAPH (SERIEN-SCREENING vs. ARMSTRONG-SCHWELLE 2,2 K)",
+		diagBoldFont, walk.RGB(3, 105, 161), walk.Rectangle{X: 12, Y: 6, Width: w - 24, Height: 16}, walk.TextLeft)
+
+	padL, padR, padT, padB := 44, 18, 28, 26
+	plotW := w - padL - padR
+	plotH := h - padT - padB
+	if plotW <= 30 || plotH <= 30 {
+		return nil
+	}
+
+	maxDeltaScale := 6.0
+	for _, b := range GState.BatchResults {
+		if math.Abs(b.MaxDeltaT)+0.8 > maxDeltaScale {
+			maxDeltaScale = math.Abs(b.MaxDeltaT) + 0.8
+		}
+	}
+
+	mapY := func(dT float64) int {
+		frac := math.Max(0, math.Min(1, dT/maxDeltaScale))
+		return padT + plotH - int(frac*float64(plotH))
+	}
+
+	// Gitterlinien
+	for i := 0; i <= 4; i++ {
+		dVal := float64(i) * maxDeltaScale / 4.0
+		y := mapY(dVal)
+		canvas.DrawLinePixels(diagGridPen, walk.Point{X: padL, Y: y}, walk.Point{X: padL + plotW, Y: y})
+		canvas.DrawTextPixels(fmt.Sprintf("%.1f K", dVal), diagFont, walk.RGB(71, 85, 105), walk.Rectangle{X: 2, Y: y - 6, Width: 38, Height: 12}, walk.TextRight)
+	}
+
+	// Armstrong-Warnschwelle (2.2 K)
+	y22 := mapY(2.2)
+	if y22 >= padT && y22 <= padT+plotH {
+		canvas.DrawLinePixels(diagAlertPen, walk.Point{X: padL, Y: y22}, walk.Point{X: padL + plotW, Y: y22})
+		canvas.DrawTextPixels("🚨 Armstrong-Schwelle (ΔT = 2,2 K)", diagBoldFont, walk.RGB(220, 38, 38),
+			walk.Rectangle{X: padL + plotW - 210, Y: y22 - 15, Width: 205, Height: 14}, walk.TextRight)
+	}
+
+	// Moderate Schwelle (1.2 K)
+	y12 := mapY(1.2)
+	if y12 >= padT && y12 <= padT+plotH {
+		canvas.DrawLinePixels(diagGaussPen, walk.Point{X: padL, Y: y12}, walk.Point{X: padL + plotW, Y: y12})
+	}
+
+	// Zeichne Serien-Punkte
+	n := len(GState.BatchResults)
+	if n == 0 {
+		canvas.DrawTextPixels("Klicken Sie auf „⚡ Alle Testbilder analysieren“, um den Serienverlauf zu berechnen.",
+			diagFont, walk.RGB(100, 116, 139), actualBounds, walk.TextCenter|walk.TextVCenter)
+		return nil
+	}
+
+	var prev walk.Point
+	for i, item := range GState.BatchResults {
+		fx := 0.5
+		if n > 1 {
+			fx = float64(i) / float64(n-1)
+		}
+		x := padL + int(fx*float64(plotW))
+		y := mapY(math.Abs(item.MaxDeltaT))
+		cur := walk.Point{X: x, Y: y}
+		if i > 0 {
+			canvas.DrawLinePixels(diagHorizPen, prev, cur)
+		}
+		pen := diagSigmaPen
+		if item.Risk == "CRITICAL" {
+			pen = diagAlertPen
+		} else if item.Risk == "MODERATE" {
+			pen = diagGaussPen
+		}
+		canvas.DrawEllipsePixels(pen, walk.Rectangle{X: x - 4, Y: y - 4, Width: 8, Height: 8})
+		if n <= 12 || i%2 == 0 {
+			canvas.DrawTextPixels(fmt.Sprintf("#%d", item.Index), diagFont, walk.RGB(71, 85, 105),
+				walk.Rectangle{X: x - 16, Y: padT + plotH + 4, Width: 32, Height: 12}, walk.TextCenter)
+		}
+		prev = cur
+	}
+
+	return nil
+}
+
 

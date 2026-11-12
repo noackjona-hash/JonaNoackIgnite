@@ -9,6 +9,8 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/lxn/walk"
@@ -41,11 +43,15 @@ func LoadAndAnalyzeImage(path string) error {
 	GState.Height = gray.Height
 	GState.RawGray = gray.Data
 	GState.LastResult = &res
+	GState.LastRunMs = durMs
 	GState.IsSigned = false
 	GState.SignatureHash = ""
 
 	// Statistische Kenngrößen berechnen (Mittelwert, Standardabweichung σ, SEM, Median, MAD)
 	CurrentStats = ComputeTissueStats(gray.Data, gray.Width, gray.Height)
+
+	// In Serien-Historie aufnehmen (falls noch nicht vorhanden)
+	recordIntoBatchSeries(path, &res, durMs)
 
 	// Bitmaps generieren
 	UpdateBitmaps(gray, &res)
@@ -62,12 +68,7 @@ func LoadAndAnalyzeImage(path string) error {
 	// Status-Bar & Viewports aktualisieren
 	if mw != nil {
 		updateStatusBar(&res)
-		if vpLeft != nil {
-			vpLeft.Invalidate()
-		}
-		if vpRight != nil {
-			vpRight.Invalidate()
-		}
+		invalidateAllCanvases()
 	}
 
 	return nil
@@ -92,7 +93,83 @@ func UpdateBitmaps(gray *imageutil.GrayMatrix, res *pipeline.AnalysisResult) {
 			GState.OverlayBitmap.Dispose()
 		}
 		GState.OverlayBitmap, _ = walk.NewBitmapFromImage(overlayRgba)
+
+		// 3. Kontralaterale ΔT-Asymmetrie-Heatmap Bitmap
+		dtRgba := createDeltaTHeatmap(gray)
+		if GState.DeltaTBitmap != nil {
+			GState.DeltaTBitmap.Dispose()
+		}
+		GState.DeltaTBitmap, _ = walk.NewBitmapFromImage(dtRgba)
+
+		// 4. White Top-Hat Fokus-Bitmap
+		thRgba := createTopHatFocusMap(gray, res.HotspotMask)
+		if GState.TopHatBitmap != nil {
+			GState.TopHatBitmap.Dispose()
+		}
+		GState.TopHatBitmap, _ = walk.NewBitmapFromImage(thRgba)
 	}
+}
+
+func createDeltaTHeatmap(raw *imageutil.GrayMatrix) *image.RGBA {
+	w, h := raw.Width, raw.Height
+	rgba := image.NewRGBA(image.Rect(0, 0, w, h))
+	midline := w / 2
+
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			v := raw.At(x, y)
+			if v <= 28 {
+				rgba.SetRGBA(x, y, color.RGBA{R: 15, G: 23, B: 42, A: 255})
+				continue
+			}
+			contraX := midline*2 - x
+			cv := v
+			if contraX >= 0 && contraX < w {
+				cv = raw.At(contraX, y)
+			}
+			dT := math.Abs(float64(int(v)-int(cv)) * 0.1)
+			var c color.RGBA
+			if dT >= 2.2 {
+				// Armstrong Kritischer Alarm (>= 2.2 K) -> Leuchtendes Karmesinrot/Weiß
+				t := math.Min(1.0, (dT-2.2)/3.0)
+				c = color.RGBA{R: 239, G: byte(40 + t*180), B: byte(40 + t*120), A: 255}
+			} else if dT >= 1.2 {
+				// Moderate Warnzone (1.2 - 2.2 K) -> Bernstein/Orange
+				t := (dT - 1.2) / 1.0
+				c = color.RGBA{R: byte(217 + t*35), G: byte(119 + (1-t)*70), B: 20, A: 255}
+			} else {
+				// Symmetrisches Gewebe (< 1.2 K) -> Kühles Saphir/Cyan
+				t := dT / 1.2
+				c = color.RGBA{R: byte(14 + t*20), G: byte(80 + t*105), B: byte(140 + t*90), A: 255}
+			}
+			rgba.SetRGBA(x, y, c)
+		}
+	}
+	return rgba
+}
+
+func createTopHatFocusMap(raw *imageutil.GrayMatrix, mask *imageutil.GrayMatrix) *image.RGBA {
+	w, h := raw.Width, raw.Height
+	rgba := image.NewRGBA(image.Rect(0, 0, w, h))
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			v := raw.At(x, y)
+			if v <= 28 {
+				rgba.SetRGBA(x, y, color.RGBA{R: 11, G: 15, B: 25, A: 255})
+				continue
+			}
+			// Gedämpfter Graustufen-Gewebehintergrund + leuchtende Top-Hat Peaks
+			g := byte(float64(v) * 0.45)
+			c := color.RGBA{R: g, G: g + 8, B: g + 18, A: 255}
+			if mask != nil && mask.At(x, y) > 0 {
+				c = PaletteColor(v, "inferno", false)
+			} else if v >= RawOf(33.0) {
+				c = color.RGBA{R: 56, G: 189, B: 248, A: 255}
+			}
+			rgba.SetRGBA(x, y, c)
+		}
+	}
+	return rgba
 }
 
 func createDiagnosticOverlay(raw *imageutil.GrayMatrix, mask *imageutil.GrayMatrix, hotspots []pipeline.HotspotSummary) *image.RGBA {
@@ -395,7 +472,8 @@ func UpdateModels(res *pipeline.AnalysisResult) {
 			lblStatMinMax.SetText(fmt.Sprintf("Min / Max / Spanne: %.1f °C ... %.1f °C (Δ %.1f K)", CurrentStats.Min, CurrentStats.Max, CurrentStats.Span))
 		}
 		if lblStatArea != nil {
-			lblStatArea.SetText(fmt.Sprintf("Messfeld: %d Pixel (%.1f cm²)", CurrentStats.Count, CurrentStats.AreaCm2))
+			lblStatArea.SetText(fmt.Sprintf("Messfeld: %d Pixel (%.1f cm²) · P05/P95: %.1f° / %.1f°C · Schiefe: %+.2f",
+				CurrentStats.Count, CurrentStats.AreaCm2, CurrentStats.P05, CurrentStats.P95, CurrentStats.Skewness))
 		}
 	}
 
@@ -409,18 +487,212 @@ func UpdateModels(res *pipeline.AnalysisResult) {
 		GState.CrosshairMetrics = ComputeCrosshairMetrics(GState.RawGray, GState.Width, GState.Height, GState.CrosshairPoint, GState.CrosshairRadius, 61)
 	}
 
-	if diagHistCanvas != nil {
-		diagHistCanvas.Invalidate()
+	invalidateAllCanvases()
+}
+
+func invalidateAllCanvases() {
+	for _, w := range []*walk.CustomWidget{
+		vpLeft, vpRight, fluentHeaderCanvas, fluentInfoBarCanvas, fluentInspectorCanvas,
+		fluentTriageHeroCanvas, diagHistCanvas, diagZoneCanvas, diagProfileCanvas,
+		diagCrossCanvas, diag3DCanvas, diagAngioCanvas, diagSeriesCanvas,
+	} {
+		if w != nil {
+			w.Invalidate()
+		}
 	}
-	if diagZoneCanvas != nil {
-		diagZoneCanvas.Invalidate()
+}
+
+func recordIntoBatchSeries(path string, res *pipeline.AnalysisResult, durMs float64) {
+	if res == nil {
+		return
 	}
-	if diagProfileCanvas != nil {
-		diagProfileCanvas.Invalidate()
+	base := filepath.Base(path)
+	for _, existing := range GState.BatchResults {
+		if existing.Filename == base {
+			return
+		}
 	}
-	if diagCrossCanvas != nil {
-		diagCrossCanvas.Invalidate()
+	peakT := 31.5
+	maxDT := 0.2
+	if len(res.Hotspots) > 0 {
+		peakT = TempOf(res.Hotspots[0].Region.MaxVal)
+		maxDT = float64(res.Hotspots[0].Region.ContraDelta) * 0.1
+	} else if CurrentStats != nil {
+		peakT = CurrentStats.Max
 	}
+	meanT, stdK := 30.5, 0.8
+	if CurrentStats != nil {
+		meanT = CurrentStats.Mean
+		stdK = CurrentStats.StdDev
+	}
+	item := &BatchResultItem{
+		Index:      len(GState.BatchResults) + 1,
+		Filename:   base,
+		FullPath:   path,
+		PeakTempC:  peakT,
+		MaxDeltaT:  maxDT,
+		MeanTempC:  meanT,
+		StdDevK:    stdK,
+		Hotspots:   res.TotalHotspots,
+		Risk:       res.HighestRisk,
+		DurationMs: durMs,
+	}
+	GState.BatchResults = append(GState.BatchResults, item)
+	if batchModel != nil {
+		batchModel.SetItems(GState.BatchResults)
+	}
+}
+
+func DiscoverTestImages() []string {
+	if len(GState.TestImageFiles) > 0 {
+		return GState.TestImageFiles
+	}
+	dirs := []string{"test-data", "../test-data", "../../test-data"}
+	for _, d := range dirs {
+		entries, err := os.ReadDir(d)
+		if err == nil {
+			var files []string
+			for _, e := range entries {
+				if !e.IsDir() {
+					n := strings.ToLower(e.Name())
+					if strings.HasSuffix(n, ".jpeg") || strings.HasSuffix(n, ".jpg") || strings.HasSuffix(n, ".png") {
+						abs, _ := filepath.Abs(filepath.Join(d, e.Name()))
+						files = append(files, abs)
+					}
+				}
+			}
+			sort.Strings(files)
+			if len(files) > 0 {
+				GState.TestImageFiles = files
+				return files
+			}
+		}
+	}
+	return nil
+}
+
+func LoadNextTestImage() {
+	files := DiscoverTestImages()
+	if len(files) == 0 {
+		QuickAnalyzeDemo()
+		return
+	}
+	GState.CurrentImageIdx = (GState.CurrentImageIdx + 1) % len(files)
+	LoadAndAnalyzeImage(files[GState.CurrentImageIdx])
+}
+
+func LoadPrevTestImage() {
+	files := DiscoverTestImages()
+	if len(files) == 0 {
+		QuickAnalyzeDemo()
+		return
+	}
+	GState.CurrentImageIdx--
+	if GState.CurrentImageIdx < 0 {
+		GState.CurrentImageIdx = len(files) - 1
+	}
+	LoadAndAnalyzeImage(files[GState.CurrentImageIdx])
+}
+
+func RunBatchScreeningAll() {
+	files := DiscoverTestImages()
+	if len(files) == 0 {
+		walk.MsgBox(mw, "Serien-Screening", "Kein test-data Verzeichnis mit Thermogrammen gefunden.", walk.MsgBoxIconInformation)
+		return
+	}
+	GState.BatchResults = make([]*BatchResultItem, 0, len(files))
+	cfg := pipeline.DefaultPipelineConfig()
+	cfg.KFactor = GState.ParamK
+	cfg.KernelFactor = GState.ParamR
+	cfg.MarginFactor = float32(GState.ParamM)
+
+	critCount := 0
+	var totalMs float64
+
+	for _, f := range files {
+		t0 := time.Now()
+		gray, err := imageutil.LoadImageAsGray(f)
+		if err != nil {
+			continue
+		}
+		res := pipeline.Run(gray, cfg)
+		dur := float64(time.Since(t0).Microseconds()) / 1000.0
+		totalMs += dur
+		if res.HighestRisk == "CRITICAL" {
+			critCount++
+		}
+		st := ComputeTissueStats(gray.Data, gray.Width, gray.Height)
+		peakT := 31.5
+		maxDT := 0.3
+		if len(res.Hotspots) > 0 {
+			peakT = TempOf(res.Hotspots[0].Region.MaxVal)
+			maxDT = float64(res.Hotspots[0].Region.ContraDelta) * 0.1
+		} else if st != nil {
+			peakT = st.Max
+		}
+		meanT, stdK := 30.5, 0.8
+		if st != nil {
+			meanT = st.Mean
+			stdK = st.StdDev
+		}
+		GState.BatchResults = append(GState.BatchResults, &BatchResultItem{
+			Index:      len(GState.BatchResults) + 1,
+			Filename:   filepath.Base(f),
+			FullPath:   f,
+			PeakTempC:  peakT,
+			MaxDeltaT:  maxDT,
+			MeanTempC:  meanT,
+			StdDevK:    stdK,
+			Hotspots:   res.TotalHotspots,
+			Risk:       res.HighestRisk,
+			DurationMs: dur,
+		})
+	}
+
+	if batchModel != nil {
+		batchModel.SetItems(GState.BatchResults)
+	}
+	if diagSeriesCanvas != nil {
+		diagSeriesCanvas.Invalidate()
+	}
+	RecordAudit("BATCH_SCREENING_ALL", critCount, "CRITICAL", totalMs)
+	if auditModel != nil {
+		auditModel.SetItems(getAuditItems())
+	}
+	walk.MsgBox(mw, "AVX2 Serien-Screening abgeschlossen",
+		fmt.Sprintf("✓ %d klinische LWIR-Thermogramme vollautomatisch ausgewertet!\n\n"+
+			"• Kritische Armstrong-Fälle (ΔT ≥ 2,2 K): %d\n"+
+			"• Gesamtlaufzeit (42-Stufen AVX2): %.1f ms (Ø %.1f ms/Bild)",
+			len(GState.BatchResults), critCount, totalMs, totalMs/math.Max(1, float64(len(GState.BatchResults)))),
+		walk.MsgBoxIconInformation)
+}
+
+func ReRunCurrentPipeline() {
+	if len(GState.RawGray) == 0 || GState.Width <= 0 || GState.Height <= 0 {
+		return
+	}
+	t0 := time.Now()
+	gray := imageutil.NewGrayMatrix(GState.Width, GState.Height)
+	copy(gray.Data, GState.RawGray)
+
+	cfg := pipeline.DefaultPipelineConfig()
+	cfg.KFactor = GState.ParamK
+	cfg.KernelFactor = GState.ParamR
+	cfg.MarginFactor = float32(GState.ParamM)
+
+	res := pipeline.Run(gray, cfg)
+	durMs := float64(time.Since(t0).Microseconds()) / 1000.0
+	GState.LastResult = &res
+	GState.LastRunMs = durMs
+	CurrentStats = ComputeTissueStats(gray.Data, gray.Width, gray.Height)
+	UpdateBitmaps(gray, &res)
+	UpdateModels(&res)
+	RecordAudit("PIPELINE_RECONFIG", res.TotalHotspots, res.HighestRisk, durMs)
+	if auditModel != nil {
+		auditModel.SetItems(getAuditItems())
+	}
+	updateStatusBar(&res)
+	invalidateAllCanvases()
 }
 
 func getAuditItems() []*AuditTableItem {
