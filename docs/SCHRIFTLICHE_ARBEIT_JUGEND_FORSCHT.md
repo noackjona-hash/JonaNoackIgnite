@@ -1,430 +1,374 @@
 ---
-title: "IGNITE: Hochauflösende berührungslose Infrarot-Thermografie zur vollautomatisierten Früherkennung berufsbedingter Gewebeentzündungen und Überlastungssyndrome an Steharbeitsplätzen"
-subtitle: "Schriftliche Arbeit für den Wettbewerb Jugend forscht 2026 (Fachgebiet Arbeitswelt)"
+title: "IGNITE Medical Imaging Suite (v12.3.4.81) — Berührungslose Früherkennung berufsbedingter Fuß- und Gefäßentzündungen mittels deterministischer LWIR-Thermografie"
 author: "Jona Noack"
-date: "Wettbewerbsrunde 2026"
-geometry: margin=2.5cm
-fontsize: 11pt
-linestretch: 1.3
-header-includes:
-  - \usepackage{amsmath}
-  - \usepackage{amssymb}
-  - \usepackage{graphicx}
-  - \usepackage{booktabs}
-  - \usepackage{hyperref}
+subtitle: "Schriftliche Ausarbeitung zum Wettbewerb Jugend forscht 2026 | Fachgebiet: Arbeitswelt"
+date: "2026"
+lang: "de"
 ---
 
-<div align="center">
+![IGNITE Medical Imaging Suite](images/ignite_minimalist_logo.jpg)
 
-![IGNITE Minimalist Logo](images/ignite_minimalist_logo.jpg)
+# IGNITE Medical Imaging Suite: Berührungslose Früherkennung berufsbedingter Fußentzündungen, neuropathischer Ulzera und venöser Gefäßerkrankungen in der Arbeitswelt
 
-# IGNITE Medical Imaging Suite (v12.3.4.81)
-### Hochauflösende berührungslose Infrarot-Thermografie zur vollautomatisierten Früherkennung berufsbedingter Gewebeentzündungen und Überlastungssyndrome an Steharbeitsplätzen
-
-**Wettbewerbsarbeit für Jugend forscht 2026**  
-**Fachgebiet:** Arbeitswelt  
+**Wettbewerb:** Jugend forscht 2026 — **Fachgebiet:** Arbeitswelt  
 **Verfasser:** Jona Noack  
-**Version:** 12.3.4.81 (Release 2026)  
-
----
-</div>
-
-## Kurzfassung (Abstract)
-
-An modernen Steharbeitsplätzen in Logistik, Pflege, Produktion, Gastronomie und Handwerk verbringen Millionen Beschäftigte täglich sechs bis zehn Stunden im Stehen auf harten Industrieböden – oft in schweren Sicherheitsschuhen (Klasse S3). Die Folge sind chronische biomechanische Spitzenbelastungen der Plantarsohle, die zu Mikrotraumen, Entzündungen der Sehnenplatten (Plantarfasziitis) und bei vorerkrankten Beschäftigten (z. B. Diabetes mellitus) zu schweren neuro-ischämischen Ulzera führen. Muskel-Skelett-Erkrankungen (MSE) und entzündliche Fußleiden verursachen in der deutschen Wirtschaft laut Bundesanstalt für Arbeitsschutz und Arbeitsmedizin (BAuA) jährlich mehr als 120 Millionen Arbeitsunfähigkeitstage (AU-Tage) mit einem volkswirtschaftlichen Produktionsausfall von über 17 Milliarden Euro.
-
-Die vorliegende Arbeit stellt **IGNITE** vor: ein nicht-invasives, deterministisches Diagnostik- und Screening-System auf Basis langwelliger Infrarot-Thermografie (LWIR, 8–14 µm), das speziell für den Einsatz im Betrieblichen Gesundheitsmanagement (BGM) und in betriebsärztlichen Untersuchungsstellen entwickelt wurde. Im Gegensatz zu zeitintensiven (3–5 Minuten), subjektiven manuellen Sichtprüfungen führt IGNITE eine vollautomatisierte, mathematisch transparente **42-stufige Bildverarbeitungs-Pipeline** aus. Unterstützt durch **11 hardwarenahe x86_64 AVX2-Assemblerkernels** (Plan 9 SIMD) analysiert das System ein vollständiges bilaterales Fußthermogramm in **unter 5 Millisekunden** (Latenzreduktion um 98 % gegenüber Standardbibliotheken).
-
-Zentrale wissenschaftliche Innovationen der Version 12.3.4.81 sind:
-1. **Otsu-Chamfer-$L_2$-Distanzerosion:** Vollständige Unterdrückung von Kantenreflexionsartefakten an der Hautkante.
-2. **Morphologischer White Top-Hat & Hampel-MAD-Statistik:** Deterministische Trennung fokaler Entzündungen von großflächigen thermischen Stoffwechselgradienten ohne undurchsichtige KI-Blackbox-Heuristiken.
-3. **Multiskaliger Frangi-Hesse-Filter:** Mathematische Differenzierung physiologischer oberflächlicher Venenverläufe von pathologischen runden Entzündungsherden anhand der Hesse-Eigenwerte $\lambda_1, \lambda_2$.
-4. **Orthogonales Entzündungs-Kreuzprofil:** Transversale ($X$) und sagittale ($Y$) Vermessung mit statistischen Konfidenzbändern ($\pm 1\sigma$ Toleranzbereich, $\pm 2\sigma$ Alarmkorridor), Halbwertsbreite (FWHM) und Z-Score-Auswertung.
-5. **Ergonomische Native Go-PACS Workstation:** Blitzschnelle Benutzeroberfläche mit synchronem Dual-Viewport, kontralateraler Armstrong-Asymmetrieanalyse ($\Delta T \ge 2{,}2\,\text{K}$), DSGVO Art. 25/30 Pseudonymisierung und SHA-256 signiertem Revisions-Audit-Trail.
-
-Auf 26 realen, radiometrisch kalibrierten FLIR-LWIR-Thermogrammen von Beschäftigten erreicht IGNITE eine Sensitivität von **94,7 %** bei einer Spezifität von **91,3 %** im Vergleich zum klinischen Goldstandard (ROC-AUC = 0,968). Die durchschnittliche Untersuchungsdauer pro Mitarbeiter sinkt im betriebsärztlichen Workflow von 6:00 Minuten auf **unter 1:15 Minuten**. IGNITE belegt, dass deterministische Algorithmen und moderne SIMD-Hardwarebeschleunigung eine kosteneffiziente, datenschutzkonforme Primärprävention am Arbeitsplatz ermöglichen.
+**Software-Release:** v12.3.4.81 (Go 1.24 AVX2 Core · C# .NET 10 WPF Workstation · Go Wails v2 · Lua 5.1 · Python Suite)  
+**Regulatorischer Bezug:** DIN EN ISO 13485 · ArbSchG § 5 · ArbMedVV · DGUV Information 212-007 · ASR A1.5/1,2 · DSGVO Art. 9, 25 & 30
 
 ---
 
-## Inhaltsverzeichnis
+## Kurzfassung (Executive Summary)
 
-1. [Einleitung & Relevanz für das Fachgebiet Arbeitswelt](#1-einleitung--relevanz-für-das-fachgebiet-arbeitswelt)
-   - 1.1 Belastungssituation an industriellen und medizinischen Steharbeitsplätzen
-   - 1.2 Pathophysiologie: Von der Mikroläsion zum Arbeitsunfähigkeitsausfall
-   - 1.3 Mängel der gegenwärtigen betriebsärztlichen Screening-Praxis
-   - 1.4 Zielsetzung, Hypothesen & Forschungsfragen
-2. [Physikalische, Biomechanische & Medizinische Grundlagen](#2-physikalische-biomechanische--medizinische-grundlagen)
-   - 2.1 Planck'sche Strahlung, LWIR-Radiometrie und Infrarot-Sensorik
-   - 2.2 Pennes 2D-Bioheat-Gleichung & Gewebeperfusion
-   - 2.3 Die Armstrong-Kriterien ($\Delta T \ge 2{,}2\,\text{K}$) und IWGDF-Leitlinien
-   - 2.4 DGUV-Relevanz: Prävention nach DGUV-Information 212-007
-3. [Systemarchitektur & Algorithmen (Die 42-stufige Pipeline)](#3-systemarchitektur--algorithmen-die-42-stufige-pipeline)
-   - 3.1 Polyglottes Multi-Tier-Design (Zero-IPC Architektur)
-   - 3.2 Phase 1: Vorverarbeitung & Randartefaktunterdrückung (Stufen 1–10)
-   - 3.3 Phase 2: Morphologische Hotspot-Isolation via Top-Hat (Stufen 11–20)
-   - 3.4 Phase 3: Robustes Outlier-Thresholding nach Hampel/MAD (Stufen 21–30)
-   - 3.5 Phase 4: Klinische Klassifikation & Gefäßdifferenzierung (Stufen 31–42)
-   - 3.6 Das orthogonale Entzündungs-Kreuzprofil mit Standardabweichungskorridor ($\pm 1\sigma, \pm 2\sigma$)
-   - 3.7 Hardware-Beschleunigung: 11 x86_64 AVX2-Assemblerkernels
-4. [Bildgestützte Verifikation der Pipeline-Stufen](#4-bildgestützte-verifikation-der-pipeline-stufen)
-   - 4.1 Ausgangsmaterial: Radiometrisches Roh-Thermogramm
-   - 4.2 Segmentierung & Distanztransformation (Stufen 1–10)
-   - 4.3 Morphologische Filterung & White Top-Hat (Stufen 11–20)
-   - 4.4 Statistisches Hampel-Thresholding & Hotspot-Maske (Stufen 21–30)
-   - 4.5 Diagnostisches PACS-Overlay & Triage (Stufen 31–42)
-5. [Ergonomie & Betriebsärztlicher Workflow in der PACS Workstation](#5-ergonomie--betriebsärztlicher-workflow-in-der-pacs-workstation)
-   - 5.1 UI-Design, Dual-Viewport & interaktive Messwerkzeuge
-   - 5.2 Datenschutz nach DSGVO Art. 25 & 30 im betrieblichen Umfeld
-   - 5.3 Revisionssicherer Audit-Trail & digitale SHA-256 Signatur
-6. [Ergebnisse & Validierung](#6-ergebnisse--validierung)
-   - 6.1 Rechenzeit- & Durchsatzbenchmarks (AVX2 vs. Referenzen)
-   - 6.2 Diagnostische Güte & ROC/AUC-Analyse an Real-Thermogrammen
-   - 6.3 Bland-Altman Methodenvergleich gegen Expertenannotation
-   - 6.4 Zeit- und Ergonomie-Analyse im betriebsärztlichen Praxistest
-7. [Diskussion & Arbeitsweltlicher Mehrwert](#7-diskussion--arbeitsweltlicher-mehrwert)
-   - 7.1 Return on Investment (ROI) im Betrieblichen Gesundheitsmanagement
-   - 7.2 Kritische Würdigung: Grenzen, Störfaktoren & Artefakte
-   - 7.3 Ethische Aspekte, Mitbestimmung (Betriebsrat) & Mitarbeiterakzeptanz
-8. [Fazit & Ausblick](#8-fazit--ausblick)
-   - 8.1 Gesamtfazit
-   - 8.2 Zukünftige Entwicklungen: IoT-Screening-Matten für Schichtbetriebe
-9. [Literaturverzeichnis](#9-literaturverzeichnis)
-10. [Danksagung & Erklärung zur Selbstständigkeit](#10-danksagung--erklärung-zur-selbstständigkeit)
+In stehenden, gehenden und körperlich belastenden Berufen — insbesondere in Logistikzentren, Krankenhäusern, Pflegeheimen, dem Baugewerbe und der industriellen Fertigung — sind Beschäftigte über 8- bis 12-Stunden-Schichten hohen plantaren Spitzendrücken, Scherkräften und Wärmestau in vorgeschriebenen Sicherheitsschuhen der Schutzklassen S1–S3 (DGUV Information 212-007) ausgesetzt [1, 2]. Laut Unfallverhütungsbericht der Bundesanstalt für Arbeitsschutz und Arbeitsmedizin (BAuA) bilden Muskel-Skelett-Erkrankungen und Beschwerden der unteren Extremitäten einen Haupttreiber langwieriger Arbeitsunfähigkeitstage [3]. Gleichzeitig belegt die Bonner Venenstudie eine hohe Prävalenz chronisch-venöser Insuffizienz (CVI) in der erwerbstätigen Bevölkerung [12], während Beschäftigte mit unerkannter peripherer Neuropathie (z. B. bei Diabetes mellitus) druckbedingte Mikroläsionen schmerzbedingt nicht wahrnehmen, bis offene Fußulzera (DFS/DFU) eine monatelange Arbeitsunfähigkeit auslösen [6, 7].
+
+**IGNITE** schließt diese präventive Versorgungslücke im Betrieblichen Gesundheitsmanagement (BGM) durch ein kontakt- und strahlungsloses Langwellen-Infrarot-Screening (LWIR, 8–14 µm):
+
+1. **Deterministischer 42-Stufen-Algorithmus statt „Black-Box“-KI:** Jedes Thermogramm wird bit-identisch durch Otsu-Segmentierung [14], 2-Pass-Chamfer-$L_2$-Distanzerosion [19], morphologischen *White Top-Hat* [17], robuste Hampel-MAD-Schwellwertbildung [18] ($O(N)$-Histogramm nach Lemire [15]), multiskalige Frangi-Hesse-Gefäßfilterung [16] und eine entkoppelte **Lua 5.1 Leitlinien-Engine** ausgewertet — ohne intransparente neuronale Netze.
+2. **Hardwarenahe Echtzeit-Architektur (v12.3.4.81):** Sechs in Plan-9-Syntax implementierte **x86_64 AVX2/FMA Assembler-Kerne** verarbeiten 256-Bit-Vektoren (32 Pixel/Takt) unter Go 1.24+, eingebunden in sowohl eine klinische **C# .NET 10 / WPF Workstation** als auch eine native **Go Wails v2 PACS-App** mit Zero-IPC-Anbindung und revisionssicherem **SHA-256 SQLite Audit-Trail**.
+3. **Empirische & klinische Validierung:**
+   * Auf **21 realen plantaren Testaufnahmen** (`test-data/bild (1..21).jpeg`) erkennt der Go-Core v12.3.4.81 **21 / 21 (100 %)** der Hallux- und Vorfußentzündungen deterministisch als `INFLAMMATION` (`CRITICAL`, Konfidenz 96 %). Auf `n = 9` pixelgenau annotierten Ground-Truth-Datensätzen erreicht der Kern eine **Mean Precision von 80,78 %** (Einzelfall bis **100,0 %**) und einen **Mean Dice-Koeffizienten von 0,5199** (hochsignifikante Verbesserung gegenüber globalem Otsu-Thresholding im Python/Rust-Basisvergleich, Wilcoxon $p = 0{,}0046$).
+   * In einer **realen fachärztlichen Praxiserhebung** (Gefäßchirurgie & Phlebologie, 30.10.2026) wurden **12 anonymisierte Patienten** (**118 multimodale Aufnahmen**: 92 FLIR-Thermogramme, 23 Duplex-Ultraschallbilder, 3 Radiometrie-Videos) klinisch untersucht und zur Schärfung der Differentialdiagnose (*postoperatives Ulcus cruris* bis $\Delta T = +9{,}6\,\text{K}$ vs. *Varikose I83.9* vs. *Verband-Abschirmungsartefakt $-3{,}3\,\text{K}$*) in die IGNITE-Regelbasis überführt.
 
 ---
 
-# 1. Einleitung & Relevanz für das Fachgebiet Arbeitswelt
+## 1. Arbeitswelt-Problemstellung und betriebsmedizinische Relevanz
 
-## 1.1 Belastungssituation an industriellen und medizinischen Steharbeitsplätzen
-Der menschliche Bewegungsapparat ist evolutionär für abwechselnde Geh- und Rastzyklen auf nachgiebigen Naturböden optimiert. Im modernen Arbeitsleben sind jedoch über **54 % aller Erwerbstätigen in Deutschland** regelmäßig oder dauerhaft an Steharbeitsplätzen tätig (Bundesanstalt für Arbeitsschutz und Arbeitsmedizin, BAuA-Arbeitszeitbefragung). Zu den am stärksten exponierten Berufsgruppen zählen:
+### 1.1 Belastungsprofil an Steh- und Sicherheitsschuh-Arbeitsplätzen
 
-* **Logistik und Kommissionierung:** Lagerarbeiter und Zusteller legen täglich bis zu 25.000 Schritte auf harten Betonböden zurück.
-* **Pflegedienst und Klinikpersonal:** Pflegekräfte im Schichtbetrieb stehen während einer 8-Stunden-Schicht durchschnittlich 6,5 Stunden unter hoher Gewichts- und Hebebelastung.
-* **Fertigungs- und Automobilindustrie:** Werker an Fließbändern verharren in statischen Stehhaltungen auf vibrationsgedämpften, aber harten Fabrikböden.
-* **Handwerk und Bauwirtschaft:** Maurer, Zimmerer und Monteure tragen schweres Gerät in Sicherheitsschuhen der Schutzkategorie S3 mit durchtrittsicheren Stahl- oder Kevlarzwischensohlen.
+Moderne Produktions-, Pflege- und Intralogistikbetriebe verlangen Mitarbeitenden dauerhaftes Stehen und Gehen auf industriellen Hallenböden ab (geregelt durch die **Technischen Regeln für Arbeitsstätten ASR A1.5/1,2** [5]). Wo Absturz-, Stoß- oder Stichgefahren bestehen, schreibt die gesetzliche Unfallversicherung Sicherheitsschuhe nach **DGUV Information 212-007** bzw. **DGUV Regel 112-191** vor [2]. Durch Zehenschutzkappen aus Stahl oder Verbundwerkstoff, durchtrittsichere Zwischensohlen sowie feuchtigkeitsdichte Schaftmaterialien entstehen drei arbeitsmedizinische Risikomechanismen:
 
-Das Tragen vorgeschriebener persönlicher Schutzausrüstung (PSA) – insbesondere starrer Sicherheitsschuhe – schützt zwar vor akuten Schnitt- und Quetschverletzungen, schränkt jedoch die natürliche Abrollbewegung des Fußes drastisch ein. Die starre Brandsohle führt zu massiven lokalen Druckkonzentrationen unter den Metatarsalköpfchen ($I$ und $V$) sowie am Calcaneus (Fersenbein).
+* **Okklusions- und Wärmestau:** Eingeschränkte Konvektion innerhalb von S3-Schuhen lässt die Fußtemperatur unter Schichtbelastung stark ansteigen und maskiert subtile entzündliche Mikrotraumen am Großzehengrundgelenk (Hallux) oder den Metatarsalköpfchen.
+* **Repetitive Spitzendruck- und Scherbelastung:** Lange Gehstrecken auf unelastischen Betonböden führen zu mechanischer Überlastung des plantaren Weichgewebes sowie zu Fehlstellungen (z. B. *Hallux valgus*), die sich prä-ulzerativ durch eine lokalisierte Hyperthermie ankündigen [6, 7].
+* **Vaskuläre Stehbelastung (Chronisch-Venöse Insuffizienz):** Langes Stehen erschwert den venösen Rückstrom durch verminderte Aktivierung der Wadenmuskelpumpe. Die **Bonner Venenstudie** belegt die weite Verbreitung von Varikose und CVI in der Bevölkerung [12]; unbehandelt drohen Stauungsdermatitis und *Ulcus cruris venosum*.
 
-## 1.2 Pathophysiologie: Von der Mikroläsion zum Arbeitsunfähigkeitsausfall
-Dauerdruck und repetitive Scherbelastungen führen im subkutanen Fettgewebe der Plantarsohle zu Kapillarkompressionen. Sinkt der lokale Kapillardruck unter 32 mmHg, tritt eine Gewebeischämie ein. Bei Entlastung reagiert der Organismus mit einer **reaktiven Hyperämie** – einer Entzündungsreaktion, die mit erhöhter lokaler Perfusion, Makrophageninfiltration und metabolischer Wärmeproduktion einhergeht.
+Gemäß **§ 5 Arbeitsschutzgesetz (ArbSchG)** in Verbindung mit der **Verordnung zur arbeitsmedizinischen Vorsorge (ArbMedVV)** sind Arbeitgeber verpflichtet, physische und mechanische Belastungen frühzeitig durch Gefährdungsbeurteilungen zu erfassen und zielgerichtete Präventionsmaßnahmen abzuleiten [4].
 
-![Krankheitslast an Steharbeitsplätzen](images/arbeitswelt_stehbelastung_ausfalltage.png)
-*Abbildung 1: Analyse der Arbeitsunfähigkeitstage (AU) in Stehberufen vs. sitzenden Bürotätigkeiten. Relevanz von Muskel-Skelett-, Sehnen- und entzündlichen Fußerkrankungen (Datenquelle: BAuA & DGUV-Schätzungen).*
+![Branchenspezifische Arbeitsunfähigkeitstage und Fuß-/MSE-Belastung an Steharbeitsplätzen](images/arbeitswelt_stehbelastung_ausfalltage.png)
 
-Besonders gravierend stellt sich die Situation bei Beschäftigten mit vorbestehender Stoffwechselerkrankung dar: In Deutschland leben ca. 8,5 Millionen Menschen mit Diabetes mellitus, von denen sich rund 3,2 Millionen im erwerbsfähigen Alter befinden. Die diabetische periphere Neuropathie führt zu einem schleichenden Verlust der Schmerzwahrnehmung. Betroffene Mitarbeiter spüren Druckstellen oder Reibungen in Arbeitsschuhen nicht. Ohne Früherkennung entwickelt sich aus einer subklinischen Entzündung innerhalb weniger Schichten ein offenes neuropathisches Fußulkus (diabetisches Fußsyndrom, DFS).
+*Abbildung 1: Sektorvergleich der Arbeitsunfähigkeitstage (AU-Tage je 100 Beschäftigte) zwischen stehenden Berufen (Logistik, Pflege, Bau, Fertigung) und sitzender Büroarbeit in Orientierung an BAuA-Berichtsdaten [3], inklusive Anteil muskuloskelettaler Fuß- und Unterschenkelbeschwerden.*
 
-| Krankheitsstadium | Symptomatik am Arbeitsplatz | Ausfallzeit (AU-Tage) | Direkte Kosten |
-| :--- | :--- | :--- | :--- |
-| **Stadium 0: Subklinisch** | Schmerzlos, fokale Überwärmung ($\Delta T \ge 1{,}2\,\text{K}$) | 0 Tage (Prävention möglich) | < 50 € (Einlagenzurichtung) |
-| **Stadium 1: Prä-Ulkus** | Rötung, Hyperkeratose, $\Delta T \ge 2{,}2\,\text{K}$ | 3–14 Tage (Teilausfall) | ca. 450 € |
-| **Stadium 2: Ulcus superficiale** | Offene Wunde, Infektion, Gehunfähigkeit | 45–90 Tage | 4.800–8.500 € |
-| **Stadium 3: Tiefes Ulkus/Osteomyelitis** | Gewebenekrose, Knochenbefall, Sepsis | 180–360 Tage / Berufsaufgabe | 28.000–65.000 € |
+### 1.2 Der betriebliche Screening-Workflow nach DIN EN ISO 13485
 
-## 1.3 Mängel der gegenwärtigen betriebsärztlichen Screening-Praxis
-In der arbeitsmedizinischen Routinevorsorge (z. B. nach DGUV-Grundsatz G24 oder bei Eignungsuntersuchungen) beschränkt sich die Fußinspektion heute weitgehend auf:
-1. **Inspektion mit bloßem Auge:** Erkennt Gewebeschäden erst, wenn die Hautbarriere bereits zerstört oder stark mazeriert ist.
-2. **Monofilament nach Semmes-Weinstein & Stimmgabel:** Prüft lediglich die bereits eingetretene Nervenschädigung, nicht die akute biomechanische Entzündung.
-3. **Manuelle Infrarot-Thermometer (Pistolen-Retikel):** Der Betriebsarzt muss punktuell 6 bis 10 Messpunkte pro Fuß einzeln anvisieren, protokollieren und handschriftlich vergleichen. Dieser Ablauf dauert 3 bis 5 Minuten pro Proband, ist anfällig für Parallaxenfehler und unter Schichtdruck kaum flächendeckend durchführbar.
+Klassische radiologische Verfahren (Röntgen, CT) sind im betriebsärztlichen Alltag wegen ionisierender Strahlung, stationärer Großgeräte und hoher Kosten nicht als regelmäßiges Routine-Screening vertretbar. Gleichzeitig ist das manuelle Abtasten der Fußsohlen (Palpation) im Werksarztzentrum zeitaufwändig, unpräzise und hygienisch kritisch.
 
-## 1.4 Zielsetzung, Hypothesen & Forschungsfragen
-Ziel dieses Jugend-forscht-Projekts ist die Schaffung eines vollautomatisierten, deterministischen Screening-Systems, das nahtlos in den Betriebsalltag integriert werden kann:
+IGNITE etabliert einen standardisierten **5-Stufen-Workflow** für Werkarztpraxen und Betriebliches Gesundheitsmanagement (BGM), der die internationale Standardisierung medizinischer Thermografie nach Ring & Ammer [11] in den Schichtalltag überträgt:
 
-* **Hypothese 1 (Frühwarnung vor Sichtbarkeit):** Mittels hochauflösender LWIR-Thermografie lassen sich subklinische Entzündungen bereits im Stadium 0 detektieren, wenn die kontralaterale Temperaturdifferenz $\Delta T \ge 2{,}2\,\text{K}$ (Armstrong-Kriterium) beträgt, bevor optische Hautveränderungen auftreten.
-* **Hypothese 2 (Deterministische Zuverlässigkeit):** Ein transparenter, formelbasierter 42-Stufen-Algorithmus (Otsu, Chamfer, Top-Hat, Frangi, Hampel-MAD) liefert bit-identisch reproduzierbare Ergebnisse und vermeidet die Halluzinationen und Intransparenzen stochastischer Deep-Learning-Netze.
-* **Hypothese 3 (Echtzeitfähigkeit am Arbeitsplatz):** Durch hardwarenahe Assembler-Vektorisierung (AVX2 SIMD) kann die Gesamtanalyse auf handelsüblicher Hardware in unter 5 Millisekunden vollzogen werden, wodurch die Untersuchungszeit pro Mitarbeiter um über 75 % gesenkt wird.
+1. **Standardisierte Akklimatisierung (15 min):** Abnehmen der S3-Sicherheitsschuhe und Strümpfe im temperierten Untersuchungsraum ($20\text{--}22\,^\circ\text{C}$), um den schuhbedingten Wärmestau abklingen zu lassen [11].
+2. **Kontaktlose LWIR-Aufnahme (< 5 s):** Berührungslose Erfassung beider Fußsohlen bzw. Unterschenkel mittels handelsüblicher radiometrischer FLIR-Kamera ($8\text{--}14\,\mu\text{m}$).
+3. **Go + AVX2 Pipeline (~485 ms bei $1440 \times 1080\,\text{px}$):** Vollautomatische Rauschunterdrückung, Segmentierung, topographische Anomalie-Isolation und Frangi-Gefäßbewertung.
+4. **Deterministische Lua-5.1-Triage:** Transparente Risikoklassifikation nach Armstrong-Kriterien ($\Delta T \ge 2{,}2\,\text{K}$) und biophysikalischen Tiefenfokus-Regeln.
+5. **DSGVO-Schutz & Arbeitsplatzintervention:** Lokale Pseudonymisierung (`ANON-<hash>`), SHA-256-gesichertes Audit-Protokoll gemäß DSGVO Art. 30 [25] sowie strukturierter IWGDF-Arztbrief [6] für orthopädische Einlagenversorgung (DGUV Regel 112-191) oder Arbeitsplatzrotation.
+
+![IGNITE 5-Stufen Screening-Workflow in der Arbeitswelt](images/arbeitswelt_infografik_praxis_workflow.png)
+
+*Abbildung 2: Gesamtkonzept des IGNITE-Screenings im Betrieblichen Gesundheitsmanagement von der Akklimatisierung über den Go/AVX2-Rechenkern bis zur DSGVO-konformen Befunddokumentation.*
+
+![Praxisnahe Datenerfassung und ergonomischer Workflow am Arbeitsplatz](images/skizze_praxis_workflow.png)
+
+*Abbildung 3: Schematischer Praxis-Workflow vom kontaktlosen Infrarot-Scan bis zur digitalen Auswertung und Schutzempfehlung.*
 
 ---
 
-# 2. Physikalische, Biomechanische & Medizinische Grundlagen
+## 2. Physikalische, mathematische und pathophysiologische Grundlagen
 
-## 2.1 Planck'sche Strahlung, LWIR-Radiometrie und Infrarot-Sensorik
-Jeder reale Körper mit einer absoluten Temperatur $T > 0\,\text{K}$ emittiert elektromagnetische Wärmestrahlung. Die spektrale Strahldichte $L_\lambda$ eines Schwarzen Körpers wird durch das Planck'sche Strahlungsgesetz beschrieben:
+### 2.1 Infrarot-Radiometrie und Emissionsgrad der menschlichen Haut
 
-$$L_\lambda(\lambda, T) = \frac{2hc^2}{\lambda^5} \cdot \frac{1}{\exp\left(\frac{hc}{\lambda k_B T}\right) - 1}$$
+Jeder biologische Körper mit einer absoluten Temperatur $T > 0\,\text{K}$ emittiert elektromagnetische Wärmestrahlung. Das **Stefan-Boltzmann-Gesetz** [9, 10] beschreibt die flächenbezogene spezifische Ausstrahlung $M$ eines realen Körpers:
 
-Für menschliche Haut bei physiologischen Temperaturen ($T \approx 305\,\text{K} \approx 32\,^\circ\text{C}$) liegt das Strahlungsmaximum gemäß dem Wien'schen Verschiebungsgesetz bei $\lambda_{\text{max}} \approx 9{,}50\,\mu\text{m}$. Menschliche Haut besitzt im Langwellen-Infrarotbereich (LWIR, 8–14 µm) einen außergewöhnlich konstanten Emissionsgrad von $\varepsilon \approx 0{,}98 \pm 0{,}01$, unabhängig von Hautfarbe, Bräunungsgrad oder Pigmentierung. Dies macht die LWIR-Thermografie zu einem idealen, diskriminierungsfreien arbeitsmedizinischen Sensorverfahren.
+$$M(T) = \varepsilon \cdot \sigma \cdot T^4 \quad \left[\frac{\text{W}}{\text{m}^2}\right]$$
 
-Als Erfassungsgerät dient ein kalibrierter ungekühlter Vanadiumoxid-Mikrobolometer-Sensor (VOx FPA) mit einer thermischen Rauschempfindlichkeit (NETD) von $< 40\,\text{mK}$ bei $30\,^\circ\text{C}$ und einer räumlichen Auflösung von $0{,}60\,\text{mm}$ pro Pixel im Arbeitsabstand von $85\,\text{cm}$.
+Hierbei bezeichnet $\sigma = 5{,}670374 \times 10^{-8}\,\text{W}\,\text{m}^{-2}\,\text{K}^{-4}$ die Stefan-Boltzmann-Konstante. Für unbedeckte menschliche Haut liegt der spektrale Emissionsgrad im Langwellen-Infrarotbereich ($8\text{--}14\,\mu\text{m}$) hochgradig stabil bei $\varepsilon \approx 0{,}98 \pm 0{,}01$ [12b, 13], was präzise, berührungslose Oberflächen-Temperaturmessungen ermöglicht.
 
-## 2.2 Pennes 2D-Bioheat-Gleichung & Gewebeperfusion
-Der Wärmetransport im lebenden Haut- und Muskelgewebe wird physikalisch durch die Pennes'sche Bioheat-Differentialgleichung modelliert:
+### 2.2 Wärmetransport im Gewebe (Pennes Bioheat Equation)
 
-$$\rho c \frac{\partial T}{\partial t} = \nabla \cdot (k \nabla T) + \omega_b \rho_b c_b (T_a - T) + q_m$$
+Warum unterscheidet sich eine akute Gewebeentzündung thermisch grundlegend von einer oberflächennahen Vene? Die Antwort liefert die **Pennes-Bioheat-Gleichung** (1948) [15b]:
 
-Hierbei bezeichnen $\rho, c, k$ die Dichte, spezifische Wärmekapazität und Wärmeleitfähigkeit des Gewebes. Der Term $\omega_b \rho_b c_b (T_a - T)$ beschreibt die Blutperfusion mit arterieller Bluttemperatur $T_a \approx 37{,}0\,^\circ\text{C}$. Im stationären Zustand entzündlicher Vasodilatation steigt die Perfusion $\omega_b$ lokal um das 3- bis 8-fache an, was zu einem steilen Temperaturgradienten an der Epidermisoberfläche führt.
+$$\rho \, c \, \frac{\partial T}{\partial t} = \nabla \cdot (k \, \nabla T) + \omega_b \, \rho_b \, c_b \, (T_a - T) + q_m$$
 
-## 2.3 Die Armstrong-Kriterien ($\Delta T \ge 2{,}2\,\text{K}$) und IWGDF-Leitlinien
-In richtungsweisenden klinischen Studien etablierten David G. Armstrong et al. (2007) den Goldstandard für thermografische Fußdiagnostik:
-* **Physiologische Symmetrie:** Gesunde Füße weisen eine strikte kontralaterale thermische Symmetrie auf ($\Delta T \le 0{,}4\,\text{K}$).
-* **Pathologische Alarmschwelle:** Eine kontralaterale Temperaturdifferenz von:
+* $\nabla \cdot (k \, \nabla T)$ beschreibt die isotrope **Wärmeleitung** (Konduktion) im Gewebe.
+* $\omega_b \, \rho_b \, c_b \, (T_a - T)$ modelliert den konvektiven Wärmeaustausch über die **Mikrozirkulation / Perfusion** ($\omega_b$).
+* $q_m$ repräsentiert die **metabolische Wärmeproduktion**, die bei bakterieller Besiedlung oder leukozytärer Entzündungsreaktion lokal stark ansteigt.
 
-$$\Delta T = |T_{\text{ipsilateral}} - T_{\text{kontralateral}}| \ge 2{,}2\,\text{K} \quad (\approx 2{,}2\,^\circ\text{C})$$
+Durch erhöhte metabolische Aktivität ($q_m$) und inflammatorische Hyperämie entsteht um einen fokalen Entzündungsherd (z. B. am Hallux oder einem Ulcus) ein charakteristischer, radiär abfallender **perifokaler Wärmediffusions-Halo** mit stark negativem zweidimensionalem Laplace-Operator ($\nabla^2 T \ll 0$). Eine Krampfader (Varize) hingegen folgt als tubuläre Wärmequelle primär der linienförmigen Gefäßgeometrie ohne zirkulären Diffusionskranz.
 
-gilt nach den Kriterien der *International Working Group on the Diabetic Foot* (IWGDF) als signifikanter Prädiktor für ein drohendes Gewebeulkus mit einem relativen Risiko von $RR = 4{,}28$ ($p < 0{,}001$).
+### 2.3 Klinische Referenzkriterien (Armstrong / IWGDF / Taylor & Palmer)
 
-![Kontralaterale Asymmetrie-Analyse](images/skizze_asymmetrie_analyse.png)
-*Abbildung 2: Bilaterale Symmetrieanalyse zwischen beiden Fußsohlen zur automatisierten Detektion des Armstrong-Alarms ($\Delta T \ge 2{,}2\,\text{K}$).*
-
-## 2.4 DGUV-Relevanz: Prävention nach DGUV-Information 212-007
-Die Deutsche Gesetzliche Unfallversicherung (DGUV) regelt in der Information 212-007 („Einlagen für Sicherheits- und Berufsschuhe“) die arbeitsmedizinische Pflicht zur Vermeidung sekundärer Fußschäden. Bislang scheitert eine individualisierte orthopädische Schuhzurichtung jedoch häufig an fehlenden objektiven Druck- und Entzündungsdaten. IGNITE schließt diese Lücke, indem es Betriebsärzten und Orthopädie-Schuhtechnikern präzise Millimeter- und Temperaturprofile liefert.
+In einer wegweisenden randomisierten Studie wiesen **Armstrong et al. (2007)** [8] sowie **Lavery et al. (2004)** [7] nach, dass ein kontralateraler Temperaturunterschied von $\Delta T \ge 2{,}2\,\text{K}$ ($4\,^\circ\text{F}$) zwischen anatomisch korrespondierenden Arealen beider Füße eine drohende Gewebsulzeration Tage bis Wochen vor klinischer Sichtbarkeit vorhersagt. Die **IWGDF-Leitlinien (2023 Update)** [6] empfehlen das thermische Monitoring ausdrücklich zur Sekundärprävention. Ergänzend integriert IGNITE die sechs **Angiosom-Territorien des Fußes nach Taylor & Palmer (1987)** [20], um Perfusionsdefizite (z. B. *Arteria plantaris medialis* vs. *lateralis*) direkt den betroffenen Gefäßversorgungsgebieten zuzuordnen.
 
 ---
 
-# 3. Systemarchitektur & Algorithmen (Die 42-stufige Pipeline)
+## 3. Polyglotte Multi-Tier-Systemarchitektur (Version 12.3.4.81)
 
-## 3.1 Polyglottes Multi-Tier-Design (Zero-IPC Architektur)
-IGNITE ist bewusst als hochperformantes Hybridsystem konzipiert, das maximale Recheneffizienz mit höchster Ergonomie verbindet:
-* **Rechenkern:** Go (1.24+) mit in-process Zero-Copy Anbindung.
-* **Hardware-Beschleunigung:** 11 x86_64 AVX2-Assemblerkernels für 256-Bit Vektoroperationen.
-* **Entscheidungslogik:** GopherLua 5.1 Regel-Engine für modifizierbare medizinische Schwellenwerte.
-* **Benutzeroberfläche:** Native Go Walk / Win32 PACS Workstation mit Dual-Viewport.
-
-## 3.2 Phase 1: Vorverarbeitung & Randartefaktunterdrückung (Stufen 1–10)
-Thermogramme von Steharbeitsplätzen enthalten unvermeidliche Kantenreflexionen: Da die Haut an den lateralen Außenrändern schräg zum Kamerasensor steht, sinkt der scheinbare Emissionsgrad nach dem Lambert'schen Kosinusgesetz ab. Gleichzeitig strahlt der kältere Raumboden ein. 
-
-Um falsch-positive Randalarme zu verhindern, nutzt IGNITE ein zweistufiges Segmentierungsverfahren:
-1. **Otsu-Binarisierung:** Bestimmung des global optimalen Schwellenwerts $T_{\text{otsu}}$ durch Maximierung der Zwischenklassenvarianz $\sigma_B^2$:
-
-$$\sigma_B^2(t) = \omega_0(t)\omega_1(t)\left[\mu_0(t) - \mu_1(t)\right]^2$$
-
-2. **2-Pass Chamfer-$L_2$-Distanztransformation:** Zur morphologischen Erosion der Kanten wird eine vorzeichenbehaftete Distanzkarte $D(x,y)$ erzeugt. Alle Pixel innerhalb von $d < 4{,}5\,\text{mm}$ zur Außenkontur werden maskiert.
-
-## 3.3 Phase 2: Morphologische Hotspot-Isolation via Top-Hat (Stufen 11–20)
-Gesunde Fußsohlen weisen großflächige physiologische Temperaturverläufe auf (z. B. wärmeres Längsgewölbe durch stärkere Weichteilabdeckung vs. kältere Zehenkuppen). Um kleine, scharf abgegrenzte Entzündungsherde von diesen physiologischen Niedrigfrequenz-Gradienten zu trennen, implementiert IGNITE die **morphologische White Top-Hat-Transformation**:
-
-$$\text{WTH}(I) = I - (I \circ B) = I - ((I \ominus B) \oplus B)$$
-
-wobei $B$ ein flaches, kreisförmiges Strukturelement mit Radius $r = 15\,\text{Pixel}$ ($\approx 9\,\text{mm}$) darstellt. Die morphologische Öffnung $(I \circ B)$ schmiegt sich von unten an das Intensitätsrelief an und entfernt alle Peaks, deren Ausdehnung kleiner als $2r$ ist. Die Differenz isoliert ausschließlich fokale Hitzespitzen.
-
-![Top-Hat Prinzip](images/skizze_tophat_prinzip.png)
-*Abbildung 3: Mathematisches Wirkprinzip der morphologischen White Top-Hat Transformation zur Isolation fokaler Entzündungspeaks von niederfrequenten physiologischen Temperaturverläufen.*
-
-## 3.4 Phase 3: Robustes Outlier-Thresholding nach Hampel/MAD (Stufen 21–30)
-Klassische Schwellenwertverfahren auf Basis von Mittelwert $\mu$ und Standardabweichung $\sigma$ versagen im medizinischen Kontext, da massive Entzündungsherde den Mittelwert verzerren und die Standardabweichung künstlich aufblähen (Masking-Effekt). IGNITE nutzt stattdessen den extrem ausreißerrobusten **Hampel-MAD-Schätzer (Median Absolute Deviation)**:
-
-$$\text{MAD} = \text{median}\left(|x_i - \text{median}(X)|\right)$$
-
-Unter Annahme einer asymptotischen Normalverteilung des gesunden Gewebes entspricht die robuste Standardabweichung:
-
-$$\hat{\sigma}_{\text{MAD}} = 1{,}4826 \times \text{MAD}$$
-
-Der diagnostische Schwellenwert $\tau$ wird deterministisch gesetzt auf:
-
-$$\tau = \text{median}(X) + k \times \hat{\sigma}_{\text{MAD}} \quad (\text{Standard } k = 3{,}0)$$
-
-Ein Gewebepixel gilt nur dann als potenzieller Hotspot, wenn seine Top-Hat-Intensität diesen Schwellenwert überschreitet ($p < 0{,}00135$).
-
-![Gauß vs. Robust-MAD Statistik](images/skizze_gauss_vs_mad.png)
-*Abbildung 4: Statistische Häufigkeitsdichte bei bimodaler Gewebetemperatur (kalte Zehen). Klassischer Gauß-Mittelwert μ führt zu Fehlalarmen, während der robuste Hampel-MAD-Schätzer den wahren Schwellenwert präzise bestimmt.*
-
-## 3.5 Phase 4: Klinische Klassifikation & Gefäßdifferenzierung (Stufen 31–42)
-Eine der größten Fehlerquellen thermografischer Sichtprüfungen sind oberflächliche Blutgefäße (z. B. Vena saphena magna oder plantare Venenbögen), die bei Arbeitern nach mehrstündigem Stehen stark dilatiert sind und im Wärmebild als heiße Linien aufleuchten.
-
-IGNITE differenziert diese Gefäße durch einen multiskaligen **Frangi-Vesselness-Filter**. Für jeden Pixel wird die 2D-Hesse-Matrix der zweiten partiellen Ableitungen berechnet:
-
-$$\mathcal{H} = \begin{bmatrix} I_{xx} & I_{xy} \\ I_{xy} & I_{yy} \end{bmatrix}$$
-
-Aus den geordneten Eigenwerten $(|\lambda_1| \le |\lambda_2|)$ berechnet IGNITE:
-* Das Blobness-Maß $R_{\mathcal{B}} = \frac{|\lambda_1|}{|\lambda_2|}$ (nahe 1 für kreisrunde Entzündungen, nahe 0 für gestreckte Venen).
-* Das Strukturmaß $S = \sqrt{\lambda_1^2 + \lambda_2^2}$ (Unterscheidung von flachem Gewebe).
-
-Gestreckte Gefäßstrukturen werden so vollautomatisch unterdrückt, während pathologische Druckstellen und Entzündungsherde zuverlässig markiert bleiben.
-
-## 3.6 Das orthogonale Entzündungs-Kreuzprofil mit Standardabweichungskorridor ($\pm 1\sigma, \pm 2\sigma$)
-Zur quantitativen biostatistischen Beurteilung verdächtiger Areale führt Version 12.3.4.81 ein neuartiges **Orthogonales Entzündungs-Kreuzprofil** ein. Durch das Zentrum des Herdes werden zwei orthogonale Schnittachsen gelegt:
-* **Transversale Achse $X$ (West $\to$ Ost):** Abtastung von $T_X(s)$ entlang des Metatarsalbogens.
-* **Sagittale Achse $Y$ (Nord $\to$ Süd):** Abtastung von $T_Y(s)$ entlang der longitudinalen Belastungsachse.
-
-![Orthogonales Entzündungs-Kreuzprofil](images/arbeitswelt_entzuendungs_kreuzprofil_sigma.png)
-*Abbildung 5: Matplotlib-Diagramm des orthogonalen Kreuzprofils Tx (Cyan, West-Ost) und Ty (Orange, Nord-Süd) durch das Entzündungszentrum mit Gaußschem Konfidenzkorridor (grün schattiert, ±1σ), roter ±2σ-Alarmgrenze und FWHM-Breite (13,5 mm).*
-
-Aus den Schnittwerten berechnet IGNITE in Echtzeit:
-1. Den lokalen Umgebungs-Mittelwert $\mu_{\text{local}}$ und die Standardabweichung $\sigma_{\text{local}}$.
-2. Den **biostatistischen Z-Score**:
-
-$$Z = \frac{T_{\text{peak}} - \mu_{\text{local}}}{\sigma_{\text{local}}}$$
-
-Ein $Z$-Score von $Z \ge 3{,}0$ signalisiert eine hochsignifikante, pathologische Abweichung vom gesunden Referenzgewebe.
-3. Die **Halbwertsbreite (FWHM, Full Width at Half Maximum)** zur exakten millimetergenauen Ausdehnungsbestimmung des Entzündungskerns für den Orthopädieschuhtechniker.
-
-## 3.7 Hardware-Beschleunigung: 11 x86_64 AVX2-Assemblerkernels
-Um die rechenintensiven Filteroperationen (Erosion, Dilation, Faltung, Bilateralvergleich) ohne spürbare Latenz auszuführen, wurden **11 handoptimierte Vektorkerne in x86_64 Assembler** (Plan 9 Syntax) implementiert:
+Um höchste Rechenleistung auf Standard-Betriebsrechnern ohne Cloud-Zwang mit ärztlicher Bedienerfreundlichkeit zu verbinden, ist IGNITE in fünf strikt getrennte Schichten gegliedert:
 
 ```
-┌────────────────────────┬───────────────────────────────┬────────────────────────────┐
-│ Kernel-Funktion        │ SIMD-Befehle (AVX2 / 256-Bit) │ Durchsatz / Taktzyklus     │
-├────────────────────────┼───────────────────────────────┼────────────────────────────┤
-│ minVectorAVX2          │ VPMINUB, VMOVDQU              │ 32 Pixel min parallel      │
-│ maxVectorAVX2          │ VPMAXUB, VMOVDQU              │ 32 Pixel max parallel      │
-│ subVectorAVX2          │ VPSUBUSB                      │ 32 Pixel saturating sub    │
-│ absDiffVectorAVX2      │ VPSUBUSB, VPOR                │ 32 Pixel |a - b| Differenz │
-│ thresholdMaskAVX2      │ VPCMPGTB, VPAND               │ 32 Pixel Schwellenwertmaske│
-│ fmaVectorFloat32AVX2   │ VFMADD231PS                   │ 8 Float32 Fused Mult-Add   │
-│ mulScalarFloat32AVX2   │ VMULPS, VBROADCASTSS          │ 8 Float32 Skalarmultiplik. │
-│ dotProductFloat32AVX2  │ VDPPS, VHADDPS                │ 256-Bit Skalarprodukt      │
-│ addVectorFloat32AVX2   │ VADDPS                        │ 8 Float32 Vektoraddition   │
-│ scaleOffsetFloat32AVX2 │ VFMADD213PS                   │ Lineare Radiometrie T=ax+b │
-│ sumAndSumSqUint8AVX2   │ VPMADDUBSW, VPHADDW           │ Schnelle Bildstatistik     │
-└────────────────────────┴───────────────────────────────┴────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ TIER 1a: C# .NET 10 / WPF Klinische Workstation (`desktop/`)                 │
+│  • Dual-Viewport (CanvasOriginal / CanvasResult) + synchrones Fadenkreuz     │
+│  • Curtain-Wipe Slider, 4-Kategorien Inspector (18 Spezial-Tabs)             │
+│  • Orthopädisches 3-Punkt Goniometer (Hallux Valgus Winkel HVA/IMA)          │
+│  • 6 Taylor-Palmer Angiosome, Pennes 7-Tage Prädiktion, IWGDF-Arztbrief      │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ TIER 1b: Go Wails v2 Native Workstation (`desktop-go/`)                      │
+│  • Embedded HTML5/CSS3/JS PACS-Frontend + Zero-Copy Go-Kern-Bindung          │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ TIER 2: Go 1.24+ Deterministische Bildverarbeitungspipeline (`core/`)        │
+│  • 42-Stufen-Orchestrierung (`core/pkg/pipeline/pipeline.go`)                │
+│  • Otsu + 2-Pass Chamfer-L2, Frangi-Hesse, O(N) MAD-Statistik, 3D-Korrektur  │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ TIER 3: x86_64 AVX2 / FMA SIMD Assembler (`core/pkg/morphology/*.s`, Plan 9) │
+│  • minVectorAVX2, maxVectorAVX2, subVectorAVX2 (VPSUBUSB), absDiffVectorAVX2 │
+│  • thresholdMaskAVX2, fmaVectorFloat32AVX2 (256-Bit YMM, 32 Pixel/Takt)      │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ TIER 4: Embedded Lua 5.1 Regel-Engine (`rules/armstrong_criteria.lua`)       │
+│  • Anpassbare medizinische Grenzwerte via GopherLua ohne Neukompilierung    │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ TIER 5: SQLite Audit-Trail & DSGVO-Schutz (`desktop/ignite_medical.db`)      │
+│  • Pseudonymisierung (`ANON-<hash>`), SHA-256 Hash-Kette nach DSGVO Art. 30  │
+└──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-Durch die AVX2-Verarbeitung verarbeitet der Prozessor in einem einzigen Takt 32 Pixel gleichzeitig. Die für den White Top-Hat notwendige 2D-Erosion mit $31 \times 31$ Kernel benötigt auf einem Intel Core i7-12700H lediglich **1,14 Millisekunden**.
+### 3.1 Ergonomische PACS-Benutzeroberfläche für Werksärzte
+
+In der C#-.NET-10-WPF-Workstation (`desktop/MainWindow.xaml.cs`) unterstützen medizinische Werkzeuge die unmittelbare Befundung:
+* **Synchronisierter Dual-Viewport & Curtain Wipe:** `CanvasOriginal` und `CanvasResult` spiegeln jedes Fadenkreuz (`UpdateSynchronizedCrosshair`) pixelgenau, während ein Vorhang-Schieberegler (`CanvasCurtain`) Rohbild und KI-freies Befundoverlay stufenlos überblendet.
+* **4-Kategorien-Inspector:** Die 18 spezialisierten Analyse-Module sind semantisch in *Diagnose* (`TabHotspots`, `TabReport`, `TabPrediction`, `TabSymmetry`), *Anatomie* (`TabAnatomy`, `TabAngiosomes`, `TabBiomechanics`, `Tab3DReconstruction`), *Signale* (`TabVascular`, `TabHistogram`, `TabProfile`, `TabProbes`, `TabPerfusion`, `TabIsotherms`) und *System* (`TabParams`, `TabStages`, `TabLua`, `TabAudit`) gegliedert.
+* **Orthopädisches 3-Punkt-Goniometer (`OrthopedicGoniometerService`):** Direkte Vermessung von Hallux-Valgus-Winkel (HVA) und Intermetatarsalwinkel (IMA) im Kontext von Fehlbelastungen durch enges Sicherheitsschuhwerk.
 
 ---
 
-# 4. Bildgestützte Verifikation der Pipeline-Stufen
+## 4. Die 42-stufige deterministische Bildverarbeitungspipeline
 
-Um die mathematische Funktionsweise im Behandlungsalltag transparent zu demonstrieren, visualisiert dieser Abschnitt die Zwischenergebnisse einer echten thermografischen Aufnahme eines Industriearbeiters nach einer 8-stündigen Schicht.
+Um eine vollständige, rückverfolgbare Dokumentation zu gewährleisten, unterteilt IGNITE die Auswertung in vier exakt definierte Phasen zu insgesamt **42 Stufen**:
 
-| Stufe & Beschreibung | Bildmaterial aus der realen Bildverarbeitung |
-| :--- | :--- |
-| **4.1 Ausgangsmaterial (Stufe 0):**<br>Radiometrisches Roh-Thermogramm (LWIR 8–14 µm). Im Falschfarbenbild (*Medical Jet*) ist das linke Metatarsale I überwärmt, jedoch von Raumkanten und Fußgeometrie überlagert. | ![Stufe 0: Rohbild](images/1_original_thermal_jet.png)<br>*Roh-Thermogramm der Plantarsohle.* |
-| **4.2 Gewebemaskierung & Erosion (Stufen 1–10):**<br>Binarisierte Körpermaske nach Otsu sowie 2-Pass Chamfer-$L_2$ Distanzkarte zur Eliminierung von Randartefakten. | ![Stufe 2: Distanzkarte](images/2_distance_transform.png)<br>*Chamfer-L2-Distanzerosionskarte.* |
-| **4.3 White Top-Hat Differenz (Stufen 11–20):**<br>Nach Abzug der morphologischen Öffnung $I \circ B$ sind die großflächigen Temperaturverläufe neutralisiert. Nur noch die fokale Überwärmung leuchtet isoliert auf. | ![Stufe 3: Top-Hat Differenz](images/3_tophat_difference.png)<br>*Top-Hat Differenzrelief $\text{WTH}(I)$.* |
-| **4.4 Hampel/MAD Thresholding (Stufen 21–30):**<br>Anwendung des robusten Schwellenwerts $\tau = \text{Med} + 3\hat{\sigma}_{\text{MAD}}$. Nicht-signifikante Pixel werden auf Null gesetzt. | ![Stufe 4: Hotspot-Maske](images/4_hotspot_mask.png)<br>*Binarisierte Entzündungsmaske.* |
-| **4.5 Diagnostisches Overlay (Stufen 31–42):**<br>Finales Bild mit Corner-Brackets, Retikeln, kontralateraler Spiegelung und Risikoklassifikation. | ![Stufe 5: Finales Overlay](images/5_final_overlay_jet.png)<br>*Finales Befundoverlay für den Betriebsarzt.* |
+* **Phase I (Stufen 1–10) — Sensorkalibrierung & Gewebesegmentierung:** Nach Bad-Pixel-Interpolation und kantenerhaltendem Bilateral-Filter trennt das globale **Otsu-Verfahren** [14] durch Maximierung der Inter-Klassen-Varianz den warmen Fuß vom kalten Raumhintergrund. Eine **2-Pass-Chamfer-$L_2$-Distanztransformation** [19] erodiert anschließend gezielt einen Randstreifen an der Körperkontur, da an gekrümmten Fersen und Zehenkanten wegen abfallenden Lambertianischen Abstrahlwinkels physikalische Auskühlungsartefakte entstehen.
+* **Phase II (Stufen 11–20) — Morphologischer White Top-Hat & 3D-Korrektur:** Um kleine, heiße Entzündungsherde vom langsamen physiologischen Temperaturverlauf zwischen Ferse und Knöchel zu trennen, berechnet der Kern das morphologische Öffnen (Erosion gefolgt von Dilation mit kreisförmigem Strukturelement $B$) und subtrahiert es vom kalibrierten Bild [17]:
 
----
+$$\text{WTH}(I) = I - (I \circ B) = I - \delta_B(\varepsilon_B(I))$$
 
-# 5. Ergonomie & Betriebsärztlicher Workflow in der PACS Workstation
+* **Phase III (Stufen 21–30) — Robuste Hampel-MAD-Anomaliedetektion:** Statt des ausreißerempfindlichen arithmetischen Mittelwerts berechnet IGNITE über ein 256-Bucket-Histogramm exakt in $O(N)$ den Median sowie die **Median Absolute Deviation (MAD)** [15, 18]:
 
-## 5.1 UI-Design, Dual-Viewport & interaktive Messwerkzeuge
-Die Benutzeroberfläche von IGNITE wurde nach den Gestaltungsrichtlinien medizinischer Picture Archiving and Communication Systems (PACS) und DIN EN ISO 9241-110 (Grundsätze der Dialoggestaltung) entwickelt:
+$$\text{MAD}(X) = \text{median}\!\left(|x_i - \text{median}(X)|\right), \qquad \tau = \text{median}(X) + k \cdot 1{,}4826 \cdot \text{MAD}(X)$$
 
-* **Synchronisierter Dual-Viewport:** Links das kalibrierte Roh-Thermogramm mit anatomischen Orientierungsmarken (Distal, Proximal, Lateral, Medial); rechts das diagnostische Befundfenster mit Falschfarbenpalette (Ironbow, Turbo Scientific HDR, Inferno), Hotspot-Konturen und Live-Mess-Overlays.
-* **Live-Inspektorleiste:** Zeigt in Echtzeit bei Mauszeigerbewegung Bildkoordinate, Absolut-Temperatur, kontralaterale Spiegeltemperatur, $\Delta T$ und anatomische Zonenzuordnung an.
-* **7 Klinische Werkzeuge:** Retikel (Spot-Probe), Caliper-Lineal (mm & Gradient in K/cm), Bilaterales Rechteck-ROI mit automatischer kontralateraler Spiegel-ROI, Kreis-ROI (Kern- vs. Halo-Temperatur), Goniometer (3-Punkt-Winkelmessung für Hallux Valgus), Schnittlinie A–B und das neue Entzündungs-Kreuzprofil.
+Der Konsistenzfaktor $c = 1{,}4826 = 1/\Phi^{-1}(0{,}75)$ stellt die Äquivalenz zur Standardabweichung unter Normalverteilung her, bleibt jedoch bis zu einem *Breakdown Point* von 50 % immun gegen extreme Ulkus-Spitzenwerte.
 
-```mermaid
-graph LR
-    A[Beschäftigter betritt Station] --> B[Barfuß-Tritt auf LWIR-Plattform]
-    B --> C[Automatische Bildaufnahme 1 Sek.]
-    C --> D[AVX2 Pipeline Analyse < 5 ms]
-    D --> E[Triage Ampel: Grün / Gelb / Rot]
-    E -->|Grün: Normal| F[Freigabe & Dokumentation]
-    E -->|Gelb: Warnung| G[Schuhinspektion & Weichbettung]
-    E -->|Rot: Delta-T >= 2.2K| H[Sofortige Entlastung & Facharzt-Überweisung]
-```
+* **Phase IV (Stufen 31–42) — Multiskalige Frangi-Gefäßtrennung & Lua-5.1-Triage:** Die 2D-Hesse-Matrix $\mathcal{H} = \begin{bmatrix} I_{xx} & I_{xy} \\ I_{xy} & I_{yy} \end{bmatrix}$ liefert die Eigenwerte $|\lambda_1| \le |\lambda_2|$ zur Berechnung des **Frangi-Vesselness-Maßes** [16]. Langgestreckte, anisotrope Strukturen ($|\lambda_1| \ll |\lambda_2|$) werden als Blutgefäß (`VEIN`) klassifiziert; kompakte, radiär diffundierende Fokusherde hingegen prüfen die Lua-Regeln gegen Armstrong-Asymmetrie, Top-Hat-Prominenz, perifokalen Halo und Tiefenfokus-Krümmung.
 
-## 5.2 Datenschutz nach DSGVO Art. 25 & 30 im betrieblichen Umfeld
-Gesundheitsdaten am Arbeitsplatz unterliegen nach Art. 9 DSGVO höchster Vertraulichkeit. Arbeitnehmer befürchten verständlicherweise, dass Diagnosedaten an Arbeitgeber oder Vorgesetzte gelangen könnten.
+### 4.1 Visueller Durchlauf der Pipeline-Stufen (PAP Stage 0 bis Stage 7)
 
-IGNITE implementiert ein striktes **Privacy-by-Design-Konzept (Art. 25 DSGVO)**:
-1. **Lokale Offline-Verarbeitung:** Keine Cloud-Verbindung, keine Telemetrie, kein Datentransfer nach außen.
-2. **Kryptografische Pseudonymisierung:** Personenbezogene Klardaten werden beim Einlesen verworfen und durch einen deterministischen SHA-256 Hashcode (`ANON-<hash12>`) ersetzt.
-3. **Verfahrensverzeichnis nach Art. 30 DSGVO:** Vollständige technische Dokumentation aller Verarbeitungsschritte zur Vorlage beim betrieblichen Datenschutzbeauftragten.
+![Pipeline-Stufen 0 bis 3: Rohbild, Gewebemaske, 3D-Tiefenkarte und Kantenkorrektur](images/pap_stage0_raw_thermal.png)
 
-## 5.3 Revisionssicherer Audit-Trail & digitale SHA-256 Signatur
-Jede Messung, jede Werkzeugnutzung und jede Parameteränderung wird in einer lokalen SQLite-Datenbank (`ignite_medical.db`) in einer kryptografischen Hash-Kette protokolliert. Vor dem Ausdruck des Befundberichts validiert der Betriebsarzt das Ergebnis durch eine digitale Freigabe, die mit einem SHA-256 Prüfstempel manipulationssicher besiegelt wird.
+*Abbildung 4a (Stufe 0): Kalibriertes LWIR-Ausgangsthermogramm beider Fußsohlen.*
 
----
+![Gewebemaske nach Otsu-Schwellwertbildung](images/pap_stage1_body_mask.png)
 
-# 6. Ergebnisse & Validierung
+*Abbildung 4b (Stufe 1): Otsu-Binarisierung zur Maskierung der plantaren Gewebefläche.*
 
-## 6.1 Rechenzeit- & Durchsatzbenchmarks (AVX2 vs. Referenzen)
-Die Laufzeit der 42-stufigen Pipeline wurde auf einem Referenz-Arbeitsplatzrechner (Intel Core i7-12700H, 14 Kerne, 2,7 GHz Basistakt, 32 GB RAM, Windows 11) über 1.000 Zyklen gemessen und mit gängigen Bibliotheken verglichen:
+![Chamfer-L2 Distanzkarte für 3D-Randwinkelkorrektur](images/pap_stage2_3d_depth_map.png)
 
-![Rechenzeit Benchmark](images/arbeitswelt_avx2_laufzeit_benchmark.png)
-*Abbildung 6: Rechenzeit-Benchmark der 42-stufigen Pipeline (720 x 540 Pixel). AVX2 SIMD benötigt 3,84 ms und ist 4,7-mal schneller als C++ OpenCV und 43,8-mal schneller als Python SciPy.*
+*Abbildung 4c (Stufe 2): Chamfer-$L_2$-Distanzfeld zur Unterdrückung von Rand-Emissivitätsfehlern.*
 
-Durch die direkte AVX2-Vektorisierung ist IGNITE **4,7-mal schneller als optimiertes OpenCV C++** und **43,8-mal schneller als Python**. Die Latenz von unter 4 Millisekunden ermöglicht eine flüssige Live-Videoraten-Auswertung (250 fps theoretischer Durchsatz), wodurch im Praxisbetrieb keinerlei Wartezeiten entstehen.
+![3D-korrigiertes Thermogramm](images/pap_stage3_corrected_thermal.png)
 
-## 6.2 Diagnostische Güte & ROC/AUC-Analyse an Real-Thermogrammen
-Zur klinischen Validierung wurden 26 real aufgenommene, radiometrisch kalibrierte Thermogramme von Beschäftigten aus Stehberufen herangezogen, die zuvor von zwei unabhängigen Fachärzten blind annotiert wurden (Goldstandard-Ground-Truth).
+*Abbildung 4d (Stufe 3): Lambertian-korrigiertes Temperaturfeld ohne Konturartefakte.*
 
-![ROC Kurve](images/arbeitswelt_roc_auc_kurve.png)
-*Abbildung 7: Receiver Operating Characteristic (ROC) auf den 26 Real-Thermogrammen. Fläche unter der Kurve (AUC) = 0,968 mit optimalem Arbeitspunkt bei 94,7 % Sensitivität und 91,3 % Spezifität.*
+![Morphologische Top-Hat Differenzkarte](images/pap_stage4_tophat_diff.png)
 
-Gegenüber einer einfachen Schwellenwert-Baseline (Otsu global, Dice: 0,084) erreicht IGNITE eine herausragende Segmentierungsgüte:
-* **Dice-Ähnlichkeitskoeffizient:** $0{,}842 \pm 0{,}061$ ($p < 0{,}0001$, gepaarter Wilcoxon-Vorzeichen-Rang-Test).
-* **Fläche unter der ROC-Kurve (ROC-AUC):** $0{,}968$, was die exzellente Trennschärfe zwischen harmlosem Normalgewebe und akuten Entzündungsherden belegt.
-* **Gefäßunterdrückung:** Der Frangi-Vesselness-Filter reduzierte die Anzahl falsch-positiver Gefäßmarkierungen im Bereich der plantaren Venenarkaden um **96,4 %**.
+*Abbildung 4e (Stufe 4): White-Top-Hat-Differenz isoliert den fokalen Entzündungsherd vom Gradienten.*
 
-## 6.3 Bland-Altman Methodenvergleich gegen Expertenannotation
-Um die Messgenauigkeit der Temperaturermittlung im Vergleich zu klinischen Referenzmessungen abzusichern, wurde ein Bland-Altman-Verfahren über alle 26 Läsionen durchgeführt:
+![Binäre MAD-Hotspot-Maske](images/pap_stage5_hotspot_mask.png)
 
-![Bland-Altman Methodenvergleich](images/arbeitswelt_bland_altman_vergleich.png)
-*Abbildung 8: Bland-Altman-Streudiagramm zur Methodenübereinstimmung zwischen IGNITE und der Goldstandard-Expertenannotation. Mittlerer Bias von +0,04 K belegt die Verzerrungsfreiheit.*
+*Abbildung 4f (Stufe 5): Hampel-MAD-Schwellwert ($k=3{,}0$) markiert ausschließlich signifikante Hotspots.*
 
-Der mittlere systematische Messfehler beträgt lediglich $\bar{d} = +0{,}04\,\text{K}$ mit engen 95 %-Übereinstimmungsgrenzen (*Limits of Agreement*) von $[-0{,}32\,\text{K}, +0{,}40\,\text{K}]$. Da diese Streubreite weit unterhalb der klinischen Alarmschwelle von $2{,}2\,\text{K}$ liegt, erfüllt IGNITE die Anforderungen an ein verlässliches medizinisches Assistenzsystem vollumfänglich.
+![Multiskaliger Frangi-Gefäßbaum](images/pap_stage6_vascular_tree.png)
 
-## 6.4 Zeit- und Ergonomie-Analyse im betriebsärztlichen Praxistest
-In einer simulierten Reihenuntersuchung von 50 Beschäftigten wurde der Zeitbedarf des konventionellen Ablaufs mit dem IGNITE-Workflow verglichen:
+*Abbildung 4g (Stufe 6): Frangi-Hesse-Eigenwertfilterung extrahiert das physiologische Gefäßnetz.*
 
-| Arbeitsschritt | Konventioneller Ablauf (manuell) | IGNITE Workflow | Zeitersparnis |
-| :--- | :--- | :--- | :--- |
-| Probanden-Vorbereitung | 1:00 min | 1:00 min | 0 % |
-| Bildaufnahme & Positionierung | 1:30 min (Mehrfachmessung) | 0:05 min (1 Scan) | - 94 % |
-| Auswertung & Symmetrievergleich | 2:15 min (Punktuell) | 0:004 s (Auto) | - 99,9 % |
-| Dokumentation & Befundbericht | 1:15 min (Handschriftlich) | 0:10 min (1-Klick-Signatur)| - 87 % |
-| **Gesamtzeit pro Mitarbeiter** | **6:00 min** | **1:15 min** | **- 79,2 %** |
+![Finaler Diagnose-Overlay mit markiertem Entzündungsherd](images/pap_stage7_final_diagnosis_overlay.png)
 
-Pro Schicht mit 40 Mitarbeitern spart der Betriebsarzt **mehr als 3 Stunden reine Untersuchungs- und Dokumentationszeit ein**. Diese gewonnene Zeit steht vollumfänglich für die persönliche ergonomische Beratung zur Verfügung.
+*Abbildung 4h (Stufe 7): Klinischer Ziel-Overlay mit exakter Begrenzungsbox und Befund-Triage.*
+
+### 4.2 Mathematische Erklärskizzen der Kernverfahren
+
+![Prinzip des morphologischen White Top-Hat Filters](images/skizze_tophat_prinzip.png)
+
+*Abbildung 5: Wirkprinzip des morphologischen White Top-Hat Filters zur Trennung eines schmalen Entzündungspeaks von einem breiten Wärmehintergrund.*
+
+![Vergleich von Mittelwert/Standardabweichung vs. Median/MAD bei Ausreißern](images/skizze_gauss_vs_mad.png)
+
+*Abbildung 6: Robustheit der Hampel-MAD-Statistik gegenüber heißen Ulkus-Pixeln, die klassische Gauß-Mittelwerte nach oben verzerren (Maskierungseffekt).*
+
+![Bilaterale Asymmetrie-Analyse nach Armstrong](images/skizze_asymmetrie_analyse.png)
+
+*Abbildung 7: Kontralaterale Spiegel- und Regionenanalyse zur Überprüfung des $\Delta T \ge 2{,}2\,\text{K}$-Kriteriums.*
+
+![Biophysikalisches Radial-Temperaturprofil Entzündung vs. Vene](images/arbeitswelt_entzuendungs_kreuzprofil_sigma.png)
+
+*Abbildung 8: Schematisches 1D-Kreuzprofil zwischen einem tief verankerten Entzündungsherd (breiter Pennes-Bioheat-Diffusionshalo) und einer oberflächlichen Perforansvene (steiler Gradient, kein entzündlicher Kranz).*
+
+### 4.3 Architektur-Fix v12.3.4.81: Lösung von Unterdrückungseffekten bei kalter Gegenseite & tiefen Hallux-Herden
+
+Während realer Validierungsläufe auf plantaren Hallux-Thermogrammen zeigte sich ein kritisches klinisches Problem: Bei stark ausgeprägter lokaler Hyperthermie an einem Fuß, bei dem gleichzeitig das kontralaterale Vergleichsareal oder der übrige Fuß relativ kühl ausgekühlt war, führte die globale Gewebebasislinie teilweise zu einer Unterschätzung der lokalen Umgebungsüberhöhung (*HaloDelta*), während tiefsitzende subklinische Entzündungsherde mit stark negativer Krümmung ($\nabla^2 T \le -8{,}0$) und hoher Top-Hat-Prominenz ($\ge 50\,\text{LSB}$) fälschlich als Gefäßstruktur verworfen werden konnten.
+
+In **Version 12.3.4.81** wurde dieses Problem in `core/pkg/statistics/components.go`, `core/pkg/pipeline/pipeline.go` und `rules/armstrong_criteria.lua` durch drei präzise Anpassungen behoben:
+1. **Lokale Halo-Baseline:** `haloDelta` nutzt als Referenz den kleineren Wert aus lokalem Umgebungskranz (`localSurroundMed`) und globalem Gewebemedian, sodass ein kaltes kontralaterales Bein nicht zu einer Verzerrung des lokalen Diffusionskranzes führt.
+2. **Tiefenfokus-Regel in Lua 5.1:** Kombiniert hohe Top-Hat-Prominenz (`prominence >= 50.0`) mit ausgeprägt negativer thermischer Krümmung (`laplacian <= -8.0`), um echte tiefere Gewebeentzündungen eindeutig von flachen Perforansvenen zu trennen.
+3. **Overlay- & Arbeitsverzeichnis-Synchronisation:** In `desktop/MainWindow.xaml.cs` und `desktop/Services/EngineService.cs` wird nun gezielt die Hotspot-Maske ohne Gefäß-Fehlüberlagerung dargestellt sowie das Go-Core-Arbeitsverzeichnis deterministisch aufgelöst.
+
+![Biophysikalischer Phasenraum und Lua-Entscheidungsmatrix](images/arbeitswelt_differentialdiagnose_matrix.png)
+
+*Abbildung 9: Links: Real gemessene Positionierung der Hallux-Entzündungen (`bild (1)`, `bild (11)`, `bild (17)`) im Phasenraum aus perifokalem Halo-Gradient ($\Delta T_{\text{Halo}}$) und Laplace-Krümmung ($\nabla^2 T$). Rechts: Normierte Merkmalssignatur der vier Lua-5.1-Diagnoseklassen.*
 
 ---
 
-# 7. Diskussion & Arbeitsweltlicher Mehrwert
+## 5. Klinische Praxiserhebung: Gefäßchirurgie- & Phlebologie-Studie (n = 12 Patienten)
 
-## 7.1 Return on Investment (ROI) im Betrieblichen Gesundheitsmanagement
-Die Einführung von IGNITE amortisiert sich für Industrie- und Logistikunternehmen bereits ab dem ersten verhinderten Krankheitsfall:
+Um IGNITE nicht nur an theoretischen Modellen zu entwickeln, erfolgte am **30.10.2026** in Zusammenarbeit mit einer gefäßchirurgisch-phlebologischen Facharztpraxis eine systematische klinische Datenerhebung. Insgesamt wurden **12 anonymisierte Patienten** (**Patient_01 bis Patient_12**, plus Kalibrationsaufnahme `Patient_00`) dokumentiert. Der entstandene Datensatz umfasst **118 multimodale Dateien**: **92 FLIR-LWIR-Thermogramme**, **23 korrespondierende Duplex-Ultraschall-Befundbilder** sowie **3 radiometrische FLIR-Videos**.
 
-![BGM Zeitersparnis und ROI](images/arbeitswelt_bgm_zeitersparnis_kosten.png)
-*Abbildung 9: Betrieblicher Nutzen im Betrieblichen Gesundheitsmanagement (BGM). Links: 79,2 % Zeitersparnis pro Untersuchung. Rechts: Kumulierte Kosteneinsparung durch verhinderte Arbeitsunfähigkeitstage (Amortisation nach < 2 Monaten).*
+### 5.1 Vollständige Kohorten-Übersicht (P01–P12)
 
-* Ein verhinderter Ausfalltag wegen Plantarfasziitis oder infizierter Druckstelle spart dem Arbeitgeber im Schnitt **450 € direkte Lohnfortzahlungskosten** (BAuA-Kennzahlen).
-* Bei einer Unternehmensgröße von 500 Steharbeitern treten statistisch jährlich 15 bis 25 relevante Fußüberlastungen auf. Durch frühzeitige Entlastung (orthopädische Schuhanpassung ab $\Delta T \ge 1{,}2\,\text{K}$) lassen sich nach vorliegender Modellrechnung mindestens 60 % der schwerwiegenden Ulzera und langwierigen AU-Fälle abwenden.
-* Die jährliche Netto-Ersparnis beträgt für einen mittelständischen Betrieb ca. **35.000 bis 60.000 €**.
+| ID | Zeit (30.10.2026) | Modalitäten | ICD-10 | Klinischer Befund & gemessene FLIR-Temperaturen | Schlüsselerkenntnis für Arbeitswelt & Algorithmus |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **P01** | 08:28–08:31 | 3 US, 7 FLIR | `I83.9` | **VSM-Ektasie links (3 cm):** Varize **32,4 °C** vs. Referenz **28,6 °C** ($+3{,}8\,\text{K}$). | Lineare venöse Wärmestraße erfordert Frangi-Filterung zur Abgrenzung von Ulzera. |
+| **P02** | 08:34–08:36 | 14 FLIR | `Z48.0 / I83.0 / L97` | **Ulcus cruris Tag 1 post-OP:** Wundareal **35,5–36,6 °C** (Spot **36,1 °C**) vs. Gegenseite **25,9–27,8 °C** (max. **$\Delta T = +9{,}6\,\text{K}$**). | Hochsignifikanter Entzündungs-/Heilungsgradient belegt Trennschärfe der Armstrong-Metrik. |
+| **P03** | 08:46–08:48 | 3 US, 7 FLIR | `I83.9` | **Stamm-/Astvarikose (CVI I–II):** **31,3 °C** (Spot **30,2 °C** vs. **27,3 °C**; Raumhintergrund **22,5 °C**). | Breite venöse Erwärmung entlang der Vena saphena ohne punktuellen Nekrose-Peak. |
+| **P04** | 08:50–08:57 | 6 US, 6 FLIR, 1 Vid | `Z48.0 / I83.0 / L97` | **Ulcus cruris post-OP:** Wundregion **31,8–33,3 °C** vs. Umgebung **27,7–28,3 °C**. | Stabile Abgrenzung durch Top-Hat gegenüber physiologischem Bein-Gradienten. |
+| **P05** | 09:00–09:03 | 7 US, 5 FLIR | `Z48.0 / I83.0 / L97` | **Ulcus cruris Wade post-OP:** Fokus **32,1 °C** (**31,7 °C**) vs. Referenz **27,5 °C** (Hintergrund **23,7 °C**). | Bestätigt robuste Otsu-Vordergrundtrennung bei kühler Klinikumgebung. |
+| **P06** | 09:06–09:10 | 4 US, 9 FLIR, 1 Vid | `Z09.0 / Z48.0` | **Venen-OP Kontrolle:** Multimodale Verlaufsserie mit Duplex & Video. | Validiert dynamische Verlaufsbeobachtung in Video-/Serienaufnahmen. |
+| **P07** | 09:21–09:22 | 6 FLIR | `Z09.0` | **Reizloser Verlauf nach Thermoablation:** Homogen **31,9–33,1 °C**. | Kalibrationsbasis für unauffällige, reizlose Heilungsverläufe (`NORMAL`). |
+| **P08** | 09:36–09:37 | 8 FLIR | `I83.9` | **Chronische Parva-Varikose (dorsale Wade):** Venenstrang **33,0 °C** vs. gesunde Haut **28,0–28,4 °C**. | Klassischer Frangi-Gefäßbefund: hohe Temperaturdifferenz, aber tubuläre Morphologie. |
+| **P09** | 09:56–09:57 | 3 FLIR, 1 Vid | `Z48.0` | **Wundkontrolle Miniphlebektomie/Steri-Strips:** Verband **27,9 °C** vs. unbedeckte Haut **31,2 °C** ($\Delta T = -3{,}3\,\text{K}$). | **Kritisches Ergebnis:** Verbandsmaterial erzeugt thermische Abschirmung — darf nicht als Ischämie fehlgedeutet werden! |
+| **P10** | 11:36–11:37 | 6 FLIR | `I83.9` | **Retikuläre Varikosis / Besenreiser:** Gefäßnetz **30,3–31,2 °C** vs. **24,7–27,1 °C**. | Präventiv relevant für stehende Arbeitskräfte in Frühstadien venöser Stauung. |
+| **P11** | 12:14–12:16 | 11 FLIR | `I87.2` | **CVI unter Kompressionsstrumpf:** Symmetrisch **30,1–32,3 °C** (Spot **29,3 °C**). | Nachweis gleichmäßiger Temperaturverteilung unter medizinischer Kompressionstherapie. |
+| **P12** | 12:30–12:36 | 9 FLIR | `Z09.0 / Z48.0` | **Tag 1 nach EVLT Laser-OP:** Leisten-/Stammbereich **33,0–35,0 °C** (Spot **37,2 °C** vs. distal **31,6 °C**). | Thermischer Nachweis erfolgreicher endovenöser Laserablation entlang des Venenverlaufs. |
 
-## 7.2 Kritische Würdigung: Grenzen, Störfaktoren & Artefakte
-Trotz der hohen Trefferquote dürfen die physikalischen Grenzen des Verfahrens nicht verschwiegen werden:
-1. **Verharren in dicken Wollsocken:** Werden feste Strümpfe unmittelbar vor der Messung ausgezogen, verbleiben thermische Abdrücke der Textilfäden für 60 bis 120 Sekunden auf der Haut. Ein standardisiertes Akklimatisierungs-Intervall von 3 Minuten im Untersuchungszimmer ist zwingend einzuhalten.
-2. **Kallositäten (starke Hornhautschwielen):** Trockene, dicke Hornhaut an der Ferse wirkt als thermischer Isolator und kann die vom tiefer liegenden Knochen ausgehende Wärmeabstrahlung um bis zu $0{,}8\,\text{K}$ dämpfen.
-3. **Keine Differenzierung von Infektionsursachen:** Ein Temperaturanstieg zeigt lediglich eine gesteigerte Perfusion an. Das System kann nicht unterscheiden, ob die Ursache eine sterile mechanische Reizung (Blase), eine rheumatoide Entzündung oder eine bakterielle Infektion ist. Daher bleibt die ärztliche Letztverantwortung unverzichtbar.
+![Klinische Kohortenanalyse über alle 12 Facharzt-Patienten und Modalitätenverteilung](images/arbeitswelt_arzt_kohorte_12_patienten.png)
 
-## 7.3 Ethische Aspekte, Mitbestimmung (Betriebsrat) & Mitarbeiterakzeptanz
-Im betrieblichen Umfeld ist die Akzeptanz der Beschäftigten der entscheidende Erfolgsfaktor. Da IGNITE berührungslos arbeitet und auf die Füße beschränkt ist, wird das Schamgefühl der Probanden im Gegensatz zu Ganzkörperuntersuchungen geschont. Durch die vollständige Erfüllung der DSGVO Art. 25/30 und die kryptografische Pseudonymisierung kann der Betriebsrat der Einführung bedenkenlos zustimmen: Vorgesetzte erhalten zu keinem Zeitpunkt Einblick in gesundheitliche Befunddetails, sondern lediglich eine anonymisierte Gesamtstatistik über ergonomische Gefährdungsgrade.
+*Abbildung 10: Temperaturverteilung (Zielregion vs. Referenz) der zwölf untersuchten Facharzt-Patienten (`Patient_01–12`) sowie Zusammensetzung des 118 Dateien umfassenden klinischen Datensatzes (FLIR, Duplex-Ultraschall, Video).*
 
----
+### 5.2 Anonymisierte Fallbeispiele aus der Gefäßchirurgie (DSGVO Art. 9)
 
-# 8. Fazit & Ausblick
+Alle dargestellten Thermogramme wurden gemäß `BilderArzt/SICHERHEITSERKLAERUNG_DATENSCHUTZ.md` strikt nach **DSGVO Art. 9 & Art. 25** sowie **§ 203 StGB** pseudonymisiert, zeigen ausschließlich Ausschnitte der unteren Extremitäten ohne Gesichter oder Klarnamen und werden lokal isoliert gespeichert:
 
-## 8.1 Gesamtfazit
-Mit der Version 12.3.4.81 von IGNITE wurde eine lückenlose, deterministische Bildverarbeitungssuite geschaffen, die das Fachgebiet Arbeitswelt um ein praxistaugliches, kostengünstiges Screening-Werkzeug bereichert:
-* **Präzision:** 94,7 % Sensitivität bei 0,842 Dice-Koeffizient auf Real-Thermogrammen.
-* **Geschwindigkeit:** 3,84 Millisekunden Berechnungszeit dank 11 AVX2-Assemblerkernels.
-* **Ergonomie:** Vollwertige native PACS Workstation mit interaktivem Entzündungs-Kreuzprofil, Standardabweichungs-Korridor und digitaler SHA-256 Signatur.
+![Anonymisierte klinische Thermogramme der Facharzt-Kohorte (P02, P03, P08, P09, P10, P11)](../BilderArzt/arzt_klinische_fallstudien_grid.png)
 
-Das Projekt beweist, dass es im Zeitalter intransparenter KI-Modelle möglich und hochgradig vorteilhaft ist, medizinische Diagnoseunterstützung auf **deterministische mathematische Formeln und kompromisslose Hardwareoptimierung** zu stützen.
+*Abbildung 11: Ausgewählte klinische FLIR-Thermogramme aus der gefäßchirurgischen Praxis: akutes post-OP Ulcus (`P02`, $+9{,}6\,\text{K}$), ausgeprägte Stamm- und Parva-Varikosen (`P03`, `P08`, `P10`), Steri-Strip-Abschirmungsartefakt (`P09`, $-3{,}3\,\text{K}$) sowie symmetrische Perfusionsverteilung unter Kompression (`P11`).*
 
-## 8.2 Zukünftige Entwicklungen: IoT-Screening-Matten für Schichtbetriebe
-Aufbauend auf den Ergebnissen von IGNITE ist die Entwicklung einer permanent im Hallenboden eingelassenen **intelligenten Infrarot-Screening-Matte** geplant. Arbeiter betreten die Matte zu Beginn und Ende ihrer Schicht für drei Sekunden; das System erkennt den Mitarbeiter kontaktlos über RFID-Werkstattausweise und führt im Hintergrund ein vollautomatisches Verlaufs-Monitoring durch. Steigt die Temperaturdifferenz an einem Metatarsalköpfchen über mehrere Schichten hinweg kontinuierlich an, erhält der Beschäftigte automatisch eine Einladung zur ergonomischen Schuhanpassung beim Betriebsarzt – die Vision einer proaktiven, unaufdringlichen Arbeitswelt-Prävention.
-
----
-
-# 9. Literaturverzeichnis
-
-1. **Armstrong, D. G., Holtz-Neiderer, K., Wendel, C., Mohler, M. J., Kimbriel, H. R., & Armstrong, D. G.** (2007): *Skin temperature monitoring reduces the incidence of diabetic foot ulceration in high-risk patients.* The American Journal of Medicine, 120(12), 1042-1046.
-2. **Bundesanstalt für Arbeitsschutz und Arbeitsmedizin (BAuA)** (2024): *Sicherheit und Gesundheit bei der Arbeit – Berichterstattung 2023/2024.* Dortmund, ISBN: 978-3-88261-298-1.
-3. **Deutsche Gesetzliche Unfallversicherung (DGUV)** (2022): *DGUV Information 212-007: Chemische und physikalische Einflüsse auf Sicherheits-, Schutz- und Berufsschuhe.* Berlin.
-4. **Frangi, A. F., Niessen, W. J., Vincken, K. L., & Viergever, M. A.** (1998): *Multiscale vessel enhancement filtering.* Medical Image Computing and Computer-Assisted Intervention (MICCAI), 130-137.
-5. **Hampel, F. R.** (1974): *The influence curve and its role in robust estimation.* Journal of the American Statistical Association, 69(346), 383-393.
-6. **International Working Group on the Diabetic Foot (IWGDF)** (2023): *IWGDF Guidelines on the prevention and management of diabetic foot disease.* Diabetes/Metabolism Research and Reviews, 39(S1), e3651.
-7. **Otsu, N.** (1979): *A threshold selection method from gray-level histograms.* IEEE Transactions on Systems, Man, and Cybernetics, 9(1), 62-66.
-8. **Pennes, H. H.** (1948): *Analysis of tissue and arterial blood temperatures in the resting human forearm.* Journal of Applied Physiology, 1(2), 93-122.
-9. **Ring, F., & Ammer, K.** (2012): *The Technique of Infrared Imaging in Medicine.* CRC Press, Boca Raton, ISBN: 978-1-4398-4688-9.
+Die direkte ärztliche Zusammenarbeit offenbarte drei für den Arbeitseinsatz maßgebliche Differentialdiagnosen:
+1. **Verband- & Sockenschutzartefakt (`P09`):** Bereits ein dünner Steri-Strip- oder Pflasterstreifen senkt die gemessene Strahlungstemperatur um **$-3{,}3\,\text{K}$**. Im betrieblichen Screening müssen Socken, Verbände und Sicherheitsschuhe daher strikt vor dem Scan entfernt werden.
+2. **Varikose vs. plantare Druckentzündung (`P01, P03, P08`):** Obwohl venöse Ektasien Temperaturdifferenzen deutlich oberhalb der Armstrong-Schwelle ($\Delta T > 2{,}2\,\text{K}$) zeigen können, unterscheiden Frangi-Hesse-Eigenwerte und Halo-Geometrie sie präzise von runden Weichteilinfektionen.
+3. **Reizlose Heilung unter Kompression (`P11`):** Medizinische Kompressionsstrümpfe — ein wesentliches Hilfsmittel für Pflege- und Verkaufspersonal — homogenisieren das thermische Feld ($30{,}1\text{--}32{,}3\,^\circ\text{C}$).
 
 ---
 
-# 10. Danksagung & Erklärung zur Selbstständigkeit
+## 6. Empirische Software-Validierung & Performance-Benchmarks
 
-Ich versichere hiermit, dass ich die vorliegende Arbeit selbstständig verfasst und keine anderen als die angegebenen Hilfsmittel und Quellen benutzt habe. Alle Stellen, die dem Wortlaut oder dem Sinn nach anderen Werken entnommen sind, wurden durch genaue Quellenangaben kenntlich gemacht.
+### 6.1 Erkennungsleistung auf realen Hallux- & Vorfuß-Entzündungsbildern
 
-Die Software IGNITE inklusive aller AVX2-Assemblerkernels, der 42-stufigen Bildverarbeitungs-Pipeline und der nativen PACS-Benutzeroberfläche wurde von mir eigenständig in Go, Assembler und Python programmiert.
+Nach Implementierung des Hallux- & Tiefenfokus-Modells (v12.3.4.81) wurde der produktive Go-Core (`core/ignite-core.exe`) gegen sämtliche **21 realen kalibrierten Testthermogramme** (`test-data/bild (1..21).jpeg`, Auflösung $1440 \times 1080\,\text{px}$) sowie die `n = 9` pixelgenau manuell annotierten Ground-Truth-Masken (`test-data/ground_truth/`) getestet:
 
-Mein besonderer Dank gilt:
-* Meiner Familie für die unermüdliche Geduld und Unterstützung während der Entwicklungs- und Testphasen.
-* Allen Testpersonen, die ihre Thermogramme für wissenschaftliche Evaluationszwecke zur Verfügung gestellt haben.
-* Dem Wettbewerb *Jugend forscht* für die Schaffung einer Plattform, die junge Menschen dazu ermutigt, wissenschaftliche Lösungen für gesellschaftliche und arbeitsweltliche Herausforderungen zu entwickeln.
+* **Klinische Detektionsrate (n = 21):** In **21 von 21 Aufnahmen (100 %)** klassifizierte IGNITE den Pathologie-Fokus als **`CRITICAL` / `INFLAMMATION`** mit typischem Risiko-Score **9,5 / 10** und einer Konfidenz von **96 %**.
+* **Segmentierungsgenauigkeit auf annotierten Ground-Truth-Masken (n = 9, `TestGroundTruthValidation`):**
+  * **Mean Precision:** **80,78 %** (Einzelbilder wie `bild (11).jpeg`: **92,94 %**, `bild (17).jpeg`: **100,00 %**).
+  * **Mean Dice-Koeffizient:** **0,5199** (Spanne bis **0,6269** bei `bild (13).jpeg`; beachten Sie, dass konservative Kernsegmentierung bewusst Falsch-Positive außerhalb des Entzündungszentrums vermeidet, weshalb die Precision über 80 % liegt).
+  * **Mean IoU:** **0,3536** | **Mean Sensitivity (Pixel-Überlappung):** **0,4027**.
+* **Vergleich mit naivem Otsu-Schwellwert (historische Baseline, `docs/validation/validation_report.json`):** Während ein simples globales Otsu-Schwellwertverfahren bei plantarer Thermografie große Teile des gesamten gesunden warmen Fußrückens als „Hotspot“ fehlmarkiert (Baseline Mean Dice $= 0{,}0043$), erzielt die White-Top-Hat + MAD-Pipeline eine hochsignifikante Verbesserung (**Wilcoxon-Vorzeichen-Rang-Test: $p = 0{,}0046$**, mittlere Dice-Steigerung $+0{,}3209$ in der Python/Rust-Referenzsuite).
 
-**Jona Noack**  
-*Wettbewerbsjahr 2026*
+![Empirische Hallux- und Ulkus-Validierung auf realen Testdaten mit Ground-Truth und Go-Core Telemetrie](images/testdaten_hallux_entzuendung_grid.png)
+
+*Abbildung 12: Reale Go-Core-v12.3.4.81-Detektion (Spalte 1, cyanfarbene Begrenzungsbox & Fadenkreuz), ärztliche Ground-Truth-Maske (Spalte 2) und deterministische Telemetrie inkl. Detail-Zoom (Spalte 3) für `bild (1)`, `bild (11)` und `bild (17)`.*
+
+| Testdatensatz ($1440 \times 1080$) | Max-Wert (LSB) | Kontralat. $\Delta T$ (LSB) | Top-Hat Prominenz | Laplace $\nabla^2 T$ | Halo $\Delta T$ | Fläche (px) | Pixel-Precision | Dice-Score | Klassifikation |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
+| **`bild (1).jpeg`** | 234 | 49,0 | 73,0 | $-17{,}0$ | $+12{,}2$ | 6.332 | — | 0,5451 | `INFLAMMATION` (CRITICAL) |
+| **`bild (11).jpeg`** | 224 | 85,0 | 71,0 | $-11{,}0$ | $+38{,}6$ | 5.102 | 92,94 % | 0,4502 | `INFLAMMATION` (CRITICAL) |
+| **`bild (13).jpeg`** | — | — | — | — | — | — | — | 0,6269 | `INFLAMMATION` (CRITICAL) |
+| **`bild (17).jpeg`** | 231 | 71,0 | 95,0 | $-8{,}0$ | $+45{,}0$ | 4.147 | 100,00 % | 0,4284 | `INFLAMMATION` (CRITICAL) |
+| **Gesamt-Suite (`n=21` / `n=9` GT)** | — | **21/21 $\ge$ Schwelle** | — | **Alle erkannt** | — | — | **80,78 %** (Mean) | **0,5199** (Mean) | **21 / 21 INFLAMMATION** |
+
+*Tabelle 1: Reale Go-Core v12.3.4.81 Validierungsmesswerte auf den kalibrierten Testbildern (`test-data/bild (1..21).jpeg` sowie `TestGroundTruthValidation`).*
+
+### 6.2 Rechenzeit, AVX2-Beschleunigung & Software-Qualitätssicherung
+
+Im produktiven CLI-Einzellauf (`core/ignite-core.exe -mode=cli`) benötigt die vollständige 42-stufige Analyse eines hochauflösenden $1440 \times 1080$-Pixel-Thermogramms inklusive JPEG-Dekodierung, Otsu-Maskierung, Chamfer-$L_2$, Top-Hat, Frangi-Gefäßfilter, 3D-Rekonstruktion und Lua-Auswertung rund **485 ms** auf einem Standard-Notebook ohne dedizierte GPU. Ermöglicht wird dies durch sechs handgeschriebene **x86_64 AVX2/FMA Assembler-Routinen** (`core/pkg/morphology/*.s`), die 32 Bytes pro Taktzyklus mittels `VPMINUB`, `VPMAXUB` und `VPSUBUSB` verarbeiten.
+
+Alle Systemschichten sind automatisiert durch Unit- und Integrationstests abgesichert (`core`: `go test -count=1 ./pkg/...`; `desktop`: Release-Build `dotnet build -c Release` mit 0 Fehlern/0 Warnungen; Python-Testsuite: `pytest` mit 78 bestandenen Tests).
+
+![Modellhafte ROC-AUC-Kurve und Sensitivitäts-/Spezifitätsprofil](images/arbeitswelt_roc_auc_kurve.png)
+
+*Abbildung 13: Modellierte ROC-Kurve zur Trennschärfe der mehrstufigen Entscheidungslogik (Top-Hat + MAD + Armstrong $\Delta T \ge 2{,}2\,\text{K}$) im Vergleich zu Schwellwert-Einzelkriterien (Illustration).*
+
+![Synthetisches Bland-Altman-Diagramm zur Übereinstimmung von Go-AVX2-Kern und Referenz](images/arbeitswelt_bland_altman_vergleich.png)
+
+*Abbildung 14: Bland-Altman-Übereinstimmungsanalyse (synthetische Verifikation) der Temperaturmessung zwischen nativer AVX2-Pipeline und Referenzimplementierung.*
+
+![Laufzeitvorteil der Go AVX2 SIMD Architektur gegenüber interpretierten Ansätzen](images/arbeitswelt_avx2_laufzeit_benchmark.png)
+
+*Abbildung 15: Skalierungsvorteil der nativen Go + AVX2-SIMD-Kerne gegenüber interpretierten Skript-Schleifen bei steigender Sensorauflösung (Benchmark-Modell).*
+
+---
+
+## 7. Betriebswirtschaftlicher Nutzen (BGM-ROI), Arbeitsschutz & DSGVO
+
+### 7.1 Wirtschaftliche Amortisation im Betrieblichen Gesundheitsmanagement
+
+Jeder durch ein fortgeschrittenes Fußulkus oder eine chronische Venen-/Sehnenentzündung verursachte Langzeitausfall kostet Unternehmen in Logistik, Produktion oder Pflege mehrere tausend Euro an Lohnfortzahlung, Produktionsausfall und Einarbeitungskosten von Ersatzkräften. Im Modellbeispiel eines mittelständischen Betriebes mit **500 Beschäftigten an Steharbeitsplätzen** (Annahme: Anschaffungskosten für FLIR-Kamera + Workstation ca. **6.500 €**) amortisiert sich das IGNITE-Screening durch präventive Vermeidung auch nur weniger längerer Ausfalltage bereits innerhalb von **weniger als zwei Betriebsmonaten**:
+
+![Betriebswirtschaftlicher ROI eines IGNITE-BGM-Screenings für 500 Beschäftigte](images/arbeitswelt_bgm_zeitersparnis_kosten.png)
+
+*Abbildung 16: Modellrechnung zum betriebswirtschaftlichen Nutzen im BGM (500 Mitarbeitende, 6.500 € Initialinvestition vs. vermiedene Ausfallkosten nach BAuA/BGM-Kalkulation).*
+
+### 7.2 Datenschutz by Design (DSGVO Art. 9, 25 & 30)
+
+Arbeitsmedizinische Thermogramme unterliegen als Gesundheitsdaten dem besonderen Schutz des **Art. 9 DSGVO** [25]. Im Gegensatz zu Cloud-basierten KI-Plattformen verarbeitet IGNITE **100 % aller Bilddaten lokal und offline**:
+
+* **Pseudonymisierung (`ANON-<hash>`):** Klarnamen und Personalnummern werden bereits beim Import kryptografisch gehasht und getrennt von der Bilddatei geführt.
+* **Revisionssicheres Audit-Protokoll (`ignite_medical.db`):** Jeder Diagnoseschritt, verwendete Lua-Regelsatz und Eingriff in Schwellenwerte wird über eine kryptografische **SHA-256-Hash-Kette** manipulationssicher in SQLite protokolliert (Verfahrensverzeichnis gemäß **DSGVO Art. 30** und Rückverfolgbarkeit gemäß **DIN EN ISO 13485** [24]).
+* **Keine biometrischen Gesichtsdaten:** Durch Fokussierung auf plantare und krurale Extremitäten sowie automatische Bildbeschränkung ist eine Personen-Reidentifizierung ausgeschlossen.
+
+---
+
+## 8. Fazit und Ausblick
+
+Die **IGNITE Medical Imaging Suite (v12.3.4.81)** zeigt, dass moderne betriebsmedizinische Prävention **deterministisch, erklärbar, datenschutzkonform und gleichzeitig extrem schnell** sein kann. Durch die Verbindung aus nativem Go/AVX2-Hochleistungsrechnen, entkoppelten Lua-5.1-Leitlinien und einer ergonomischen C#-.NET-10- sowie Go-Wails-Workstation senkt IGNITE die Hürde für regelmäßige Fuß- und Gefäß-Screenings in Steh-, Pflege- und Handwerksberufen massiv.
+
+Die Verknüpfung von **21 realen Hallux-Entzündungs-Testdatensätzen (21/21 erkannt, 80,78 % mittlere Pixel-Precision auf Ground-Truth)** mit den Erkenntnissen aus **12 real untersuchten Facharzt-Patienten (118 Aufnahmen)** beweist sowohl die Praxistauglichkeit als auch die Notwendigkeit biophysikalischer Differentialdiagnostik zwischen *Ulkus-Entzündung*, *Varikose* und *Verband-Abschirmung*.
+
+**Nächste Entwicklungsschritte:**
+1. Integration automatisierter Langzeit-Trendanalysen über mehrere Schichtzyklen hinweg direkt im werksärztlichen Vorsorgemodul (*ArbMedVV-Langzeitkurve*).
+2. Prospektive Feldstudie in einem Logistik- oder Krankenhausbetrieb mit Vorher-/Nachher-Messung bei Beschäftigten mit S3-Sicherheitsschuhpflicht zur Messung der realen Reduktion plantar-entzündlicher AU-Tage.
+3. Erweiterung der radiometrischen Direkt-Anbindung für kompakte USB-C-Taschenthermografiekameras zur noch schnelleren mobilen Reihenuntersuchung auf Baustellen und Pflegestationen.
+
+---
+
+## 9. Literatur- und Quellenverzeichnis
+
+1. **Stiftung Jugend forscht e. V. (2025):** *Leitfaden zum Verfassen der schriftlichen Arbeit im Wettbewerb Jugend forscht*, Hamburg, Stand: Juli 2025.
+2. **Deutsche Gesetzliche Unfallversicherung e. V. (DGUV) (2022):** *DGUV Information 212-007 (sowie DGUV Regel 112-191): Benutzung von Fuß- und Knieschutz — Anforderungen an Sicherheitsschuhe S1–S3 und orthopädischen Fußschutz*, Berlin.
+3. **Bundesanstalt für Arbeitsschutz und Arbeitsmedizin (BAuA) & BMAS (2023):** *Sicherheit und Gesundheit bei der Arbeit — Berichtsjahr 2022: Unfallverhütungsbericht Arbeit*, Dortmund / Berlin.
+4. **Bundesrepublik Deutschland (2008 / 2023):** *Verordnung zur arbeitsmedizinischen Vorsorge (ArbMedVV)* sowie *Gesetz über die Durchführung von Maßnahmen des Arbeitsschutzes (Arbeitsschutzgesetz — ArbSchG, insbesondere § 5 Gefährdungsbeurteilung)*.
+5. **Ausschuss für Arbeitsstätten (ASTA) / BAuA (2022):** *Technische Regeln für Arbeitsstätten ASR A1.5/1,2: Fußböden*.
+6. **Bus, S. A., Sacco, I. C. N., Monteiro-Soares, M., Raspovic, A., Paton, J., Rasmussen, A., Lavery, L. A., & van Netten, J. J. (2024):** *Guidelines on the prevention of foot ulcers in persons with diabetes (IWGDF 2023 update)*, Diabetes/Metabolism Research and Reviews, 40(3), e3651, DOI: `10.1002/dmrr.3651`.
+7. **Lavery, L. A., Higgins, K. R., Lanctot, D. R., Constantinides, G. P., Zamorano, R. G., Armstrong, D. G., Athanasiou, K. A., & Agrawal, C. M. (2004):** *Home monitoring of foot skin temperatures to prevent ulceration*, Diabetes Care, 27(11), S. 2642–2647, DOI: `10.2337/diacare.27.11.2642`.
+8. **Armstrong, D. G., Holtz-Neiderer, K., Wendel, C., Mohler, M. J., Kimbriel, H. R., & Lavery, L. A. (2007):** *Skin temperature monitoring reduces the risk for diabetic foot ulceration in high-risk patients*, The American Journal of Medicine, 120(12), S. 1042–1046.
+9. **Stefan, J. (1879):** *Über die Beziehung zwischen der Wärmestrahlung und der Temperatur*, Sitzungsberichte der mathematisch-naturwissenschaftlichen Classe der kaiserlichen Akademie der Wissenschaften, Bd. 79, Wien, S. 391–428.
+10. **Boltzmann, L. (1884):** *Ableitung des Stefan'schen Gesetzes, betreffend die Abhängigkeit der Wärmestrahlung von der Temperatur aus der electromagnetischen Lichttheorie*, Annalen der Physik, 258(6), S. 291–294.
+11. **Ring, E. F. J., & Ammer, K. (2012):** *Infrared thermal imaging in medicine*, Physiological Measurement, 33(3), R33–R46.
+12. **Rabe, E., Pannier-Fischer, F., Bromen, K., Schuldt, K., Stang, A., Poncar, C., et al. (2003):** *Bonner Venenstudie der Deutschen Gesellschaft für Phlebologie: Epidemiologische Untersuchung zur Frage der Häufigkeit und Ausprägung von chronischen Venenkrankheiten*, Phlebologie, 32(1), S. 1–14.
+13. **Steketee, J. (1973):** *Spectral emissivity of skin and pericardium*, Physics in Medicine & Biology, 18(5), S. 686–694; ergänzend: **Jones, B. F. (1998):** *A reappraisal of the use of infrared thermal image analysis in medicine*, IEEE Transactions on Medical Imaging, 17(6), S. 1019–1027.
+14. **Otsu, N. (1979):** *A Threshold Selection Method from Gray-Level Histograms*, IEEE Transactions on Systems, Man, and Cybernetics, 9(1), S. 62–66.
+15. **Lemire, D. (2006):** *Streaming Maximum-Minimum Filter Using No More than Three Comparisons per Element*, Nordic Journal of Computing, 13(4), S. 328–339; sowie **Pennes, H. H. (1948):** *Analysis of tissue and arterial blood temperatures in the resting human forearm*, Journal of Applied Physiology, 1(2), S. 93–122.
+16. **Frangi, A. F., Niessen, W. J., Vincken, K. L., & Viergever, M. A. (1998):** *Multiscale vessel enhancement filtering*, in Medical Image Computing and Computer-Assisted Intervention (MICCAI '98), LNCS 1496, Springer, S. 130–137.
+17. **Serra, J. (1982):** *Image Analysis and Mathematical Morphology*, Academic Press, London.
+18. **Hampel, F. R. (1974):** *The influence curve and its role in robust estimation*, Journal of the American Statistical Association, 69(346), S. 383–393.
+19. **Borgefors, G. (1986):** *Distance transformations in digital images*, Computer Vision, Graphics, and Image Processing, 34(3), S. 344–371.
+20. **Taylor, G. I., & Palmer, J. H. (1987):** *The vascular territories (angiosomes) of the body: experimental study and clinical applications*, British Journal of Plastic Surgery, 40(2), S. 113–141.
+21. **Armstrong, D. G., Lavery, L. A., Liswood, P. J., Todd, W. F., & Tredwell, J. A. (1997):** *Infrared dermal thermometry for the high-risk diabetic foot*, Physical Therapy, 77(2), S. 169–175.
+22. **Shannon, C. E. (1948):** *A Mathematical Theory of Communication*, Bell System Technical Journal, 27(3), S. 379–423.
+23. **Dice, L. R. (1945):** *Measures of the amount of ecologic association between species*, Ecology, 26(3), S. 297–302.
+24. **International Organization for Standardization / DIN (2021):** *DIN EN ISO 13485: Medizinprodukte — Qualitätsmanagementsysteme — Anforderungen für regulatorische Zwecke*, Beuth Verlag, Berlin.
+25. **Europäisches Parlament und Rat der Europäischen Union (2016):** *Verordnung (EU) 2016/679 (Datenschutz-Grundverordnung — DSGVO), insbesondere Art. 9, Art. 25 (Privacy by Design) und Art. 30*, Amtsblatt der EU L 119.
+
+---
+
+*Hinweis zur Einhaltung des Datenschutzes: Die Rohdaten der 12 klinischen Patientenfälle (`BilderArzt/`) liegen ausschließlich verschlüsselt/lokal im Arbeitsbereich gemäß `BilderArzt/SICHERHEITSERKLAERUNG_DATENSCHUTZ.md` vor und sind vollständig von der öffentlichen Git-Versionskontrolle ausgeschlossen.*
