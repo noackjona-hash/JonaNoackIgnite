@@ -76,6 +76,7 @@ def _init_gpu() -> bool:
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")
                     _dummy = torch.zeros(1, device="cuda")
+                    _ = torch.from_numpy(np.zeros((2, 2), dtype=np.uint8)).to("cuda")
                 _GPU_AVAILABLE = True
                 logging.info(f"GPU-Beschleunigung verfügbar: {torch.cuda.get_device_name(0)} (CC {major}.{minor})")
             except Exception as inner_e:

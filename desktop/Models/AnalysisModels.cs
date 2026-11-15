@@ -99,11 +99,11 @@ namespace Ignite.Desktop.Models
                 if (string.IsNullOrWhiteSpace(dt)) dt = Region?.DiagnosisType ?? string.Empty;
                 return dt switch
                 {
-                    "PRESSURE_POINT" => "🦶 Druckstelle",
-                    "INFLAMED_PRESSURE_POINT" => "⚠️ Entz. Druckstelle",
-                    "INFLAMMATION" => "🔥 Entzündung",
-                    "BENIGN" => "🌱 Physiologisch",
-                    _ => (Assessment?.RiskLevel == "CRITICAL" ? "🔥 Entzündung" : "🦶 Befund")
+                    "PRESSURE_POINT" => "Druckstelle",
+                    "INFLAMED_PRESSURE_POINT" => "Entz. Druckstelle",
+                    "INFLAMMATION" => "Entzündung",
+                    "BENIGN" => "Physiologisch",
+                    _ => (Assessment?.RiskLevel == "CRITICAL" ? "Entzündung" : "Befund")
                 };
             }
         }
@@ -117,10 +117,10 @@ namespace Ignite.Desktop.Models
                 if (string.IsNullOrWhiteSpace(dt)) dt = Region?.DiagnosisType ?? string.Empty;
                 return dt switch
                 {
-                    "PRESSURE_POINT" => "#FFB300",
-                    "INFLAMED_PRESSURE_POINT" => "#FF2A55",
-                    "INFLAMMATION" => "#FF5252",
-                    _ => "#00E5FF"
+                    "PRESSURE_POINT" => "#D97706",
+                    "INFLAMED_PRESSURE_POINT" => "#DC2626",
+                    "INFLAMMATION" => "#DC2626",
+                    _ => "#0284C7"
                 };
             }
         }

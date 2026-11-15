@@ -220,21 +220,9 @@ func ExtractHotspots(binaryMask *imageutil.GrayMatrix, original *imageutil.GrayM
 				edgeGradient = math.Round((boundaryGradSum/float64(boundaryGradCount))*10) / 10
 			}
 
-			// 2. Halo-Effekt: Mittlere Temperatur des perifokalen Geweberings
 			origMed := opts.OrigMedian
 			if origMed <= 0 {
 				origMed = float64(maxVal) - 20.0
-			}
-			var haloSum float64
-			var haloCount int
-			for hp := range haloPixelsMap {
-				haloSum += float64(original.Data[hp])
-				haloCount++
-			}
-			haloDelta := float64(0)
-			if haloCount > 0 {
-				haloMean := haloSum / float64(haloCount)
-				haloDelta = math.Round((haloMean-origMed)*10) / 10
 			}
 
 			// 2.5 Lokale fokale Prominenz: Saubere äußere Annular-Umgebung (ohne Eigenkontamination der Läsion)
@@ -312,6 +300,23 @@ func ExtractHotspots(binaryMask *imageutil.GrayMatrix, original *imageutil.GrayM
 				localProminence = math.Max(0.0, float64(maxVal)-localSurroundMed)
 			}
 
+			// 2. Halo-Effekt: Mittlere Temperatur des perifokalen Geweberings relativ zur akralen Umgebung
+			var haloSum float64
+			var haloCount int
+			for hp := range haloPixelsMap {
+				haloSum += float64(original.Data[hp])
+				haloCount++
+			}
+			haloDelta := float64(0)
+			if haloCount > 0 {
+				haloMean := haloSum / float64(haloCount)
+				haloBase := origMed
+				if localSurroundMed > 0 && localSurroundMed < origMed {
+					haloBase = localSurroundMed
+				}
+				haloDelta = math.Round((haloMean-haloBase)*10) / 10
+			}
+
 			// 3. 2D Laplace-Operator nabla^2 T am Kern des Herdes (Metabolische Wärmequelle vs. flaches Druckplateau)
 			var peakIdx int
 			for _, p := range compPixels {
@@ -342,14 +347,15 @@ func ExtractHotspots(binaryMask *imageutil.GrayMatrix, original *imageutil.GrayM
 			// 5. Differentialdiagnose-Klassifikation
 			diagnosisType := "BENIGN"
 			confidence := 80.0
-			deltaT := float64(maxVal) - origMed
+			deltaT := math.Max(float64(maxVal)-origMed, localProminence)
 
 			isSharpEdge := edgeGradient >= 3.0
 			hasInflamHalo := haloDelta >= 5.0
 			isMetabolicPeak := thermalLaplacian <= -3.5 || peakToMean >= 1.25
+			isDeepInflamFocus := thermalLaplacian <= -8.0 && localProminence >= 50.0
 
 			if deltaT >= 22.0 { // Armstrong kritische Schwelle (>= 2.2 K)
-				if isSharpEdge && !hasInflamHalo {
+				if isSharpEdge && !hasInflamHalo && !isDeepInflamFocus {
 					diagnosisType = "INFLAMED_PRESSURE_POINT"
 					confidence = 94.0
 				} else {

@@ -802,5 +802,542 @@ namespace Ignite.Desktop.Services
             return res;
         }
         #endregion
+
+        #region FEATURE 4: BILATERAL MIRROR DIFFERENCE, ISCHEMIA/CHARCOT, SHANNON ENTROPY & COHORT SCANNER
+        public class BilateralMirrorStats
+        {
+            public double MaxAsymmetryK { get; set; }
+            public double MeanAsymmetryK { get; set; }
+            public int ArmstrongCriticalPixels { get; set; }
+            public double ArmstrongAreaPct { get; set; }
+            public Point PeakAsymmetryPoint { get; set; }
+            public int SplitAxisX { get; set; }
+        }
+
+        /// <summary>
+        /// Berechnet eine pixelgenaue kontralaterale Spiegel-Differenzkarte |T_L(x,y) - T_R(2*x_mid - x, y)|
+        /// zur schnellen Erkennung von Armstrong-Asymmetrien (&gt;= 2.2 K) über beide Plantarflächen.
+        /// </summary>
+        public static (WriteableBitmap Bitmap, BilateralMirrorStats Stats) GenerateBilateralMirrorDiffMap(
+            byte[] rawGray, int width, int height, double tMin = 20.0, double tMax = 42.0)
+        {
+            var stats = new BilateralMirrorStats();
+            if (rawGray == null || rawGray.Length < width * height || width <= 0 || height <= 0)
+            {
+                var empty = new WriteableBitmap(Math.Max(1, width), Math.Max(1, height), 96, 96, PixelFormats.Bgra32, null);
+                return (empty, stats);
+            }
+
+            int minTissueX = width - 1;
+            int maxTissueX = 0;
+            bool foundTissue = false;
+            for (int y = 0; y < height; y++)
+            {
+                int rowOff = y * width;
+                for (int x = 0; x < width; x++)
+                {
+                    if (rawGray[rowOff + x] > 20)
+                    {
+                        if (x < minTissueX) minTissueX = x;
+                        if (x > maxTissueX) maxTissueX = x;
+                        foundTissue = true;
+                    }
+                }
+            }
+
+            int splitX = foundTissue && maxTissueX > minTissueX ? (minTissueX + maxTissueX) / 2 : width / 2;
+            stats.SplitAxisX = splitX;
+
+            double[] deltaField = new double[width * height];
+            double maxDelta = 0.0;
+            double sumDelta = 0.0;
+            int validTissueCount = 0;
+            int armstrongPixels = 0;
+            Point peakPt = new Point(splitX, height / 2.0);
+
+            for (int y = 0; y < height; y++)
+            {
+                int rowOff = y * width;
+                for (int x = 0; x < width; x++)
+                {
+                    byte v = rawGray[rowOff + x];
+                    if (v <= 20) continue;
+
+                    int mirrorX = Math.Clamp(2 * splitX - x, 0, width - 1);
+                    byte vMirror = rawGray[rowOff + mirrorX];
+                    if (vMirror <= 20) continue;
+
+                    double t1 = ThermalAnalysisHelper.RawToTemperature(v, tMin, tMax);
+                    double t2 = ThermalAnalysisHelper.RawToTemperature(vMirror, tMin, tMax);
+                    double dK = Math.Abs(t1 - t2);
+
+                    deltaField[rowOff + x] = dK;
+                    sumDelta += dK;
+                    validTissueCount++;
+
+                    if (dK > maxDelta)
+                    {
+                        maxDelta = dK;
+                        peakPt = new Point(x, y);
+                    }
+                    if (dK >= 2.2)
+                    {
+                        armstrongPixels++;
+                    }
+                }
+            }
+
+            uint[] pixels = new uint[width * height];
+            for (int y = 0; y < height; y++)
+            {
+                int rowOff = y * width;
+                for (int x = 0; x < width; x++)
+                {
+                    if (x == splitX && (y % 8) < 4)
+                    {
+                        pixels[rowOff + x] = 0xFF38BDF8; // Dashed clinical midline axis
+                        continue;
+                    }
+
+                    byte v = rawGray[rowOff + x];
+                    if (v <= 20)
+                    {
+                        pixels[rowOff + x] = 0xFF0B0F19;
+                        continue;
+                    }
+
+                    int mirrorX = Math.Clamp(2 * splitX - x, 0, width - 1);
+                    if (rawGray[rowOff + mirrorX] <= 20)
+                    {
+                        // Tissue without valid contralateral partner rendered in muted dark slate
+                        byte g = (byte)(v * 0.25);
+                        pixels[rowOff + x] = (uint)((255 << 24) | (g << 16) | ((g + 6) << 8) | (g + 14));
+                        continue;
+                    }
+
+                    double dK = deltaField[rowOff + x];
+                    bool isBoundary22 = false;
+                    if (x > 0 && x < width - 1 && y > 0 && y < height - 1)
+                    {
+                        bool above = dK >= 2.2;
+                        if ((deltaField[rowOff + x - 1] >= 2.2) != above ||
+                            (deltaField[rowOff + x + 1] >= 2.2) != above ||
+                            (deltaField[(y - 1) * width + x] >= 2.2) != above ||
+                            (deltaField[(y + 1) * width + x] >= 2.2) != above)
+                        {
+                            isBoundary22 = true;
+                        }
+                    }
+
+                    if (isBoundary22)
+                    {
+                        pixels[rowOff + x] = 0xFFFFFFFF; // Crisp 2.2 K Armstrong isoline
+                    }
+                    else if (dK < 1.0)
+                    {
+                        double norm = dK / 1.0;
+                        byte r = (byte)(16 + norm * 14);
+                        byte g = (byte)(42 + norm * 88);
+                        byte b = (byte)(64 + norm * 30);
+                        pixels[rowOff + x] = (uint)((255 << 24) | (r << 16) | (g << 8) | b);
+                    }
+                    else if (dK < 2.2)
+                    {
+                        double norm = (dK - 1.0) / 1.2;
+                        byte r = (byte)(180 + norm * 65);
+                        byte g = (byte)(135 + norm * 25);
+                        byte b = (byte)(15);
+                        pixels[rowOff + x] = (uint)((255 << 24) | (r << 16) | (g << 8) | b);
+                    }
+                    else
+                    {
+                        double norm = Math.Min(1.0, (dK - 2.2) / 2.8);
+                        byte r = (byte)(239 + norm * 16);
+                        byte g = (byte)(68 - norm * 26);
+                        byte b = (byte)(68 + norm * 65); // Crimson -> Magenta alert
+                        pixels[rowOff + x] = (uint)((255 << 24) | (r << 16) | (g << 8) | b);
+                    }
+                }
+            }
+
+            stats.MaxAsymmetryK = Math.Round(maxDelta, 2);
+            stats.MeanAsymmetryK = validTissueCount > 0 ? Math.Round(sumDelta / validTissueCount, 2) : 0.0;
+            stats.ArmstrongCriticalPixels = armstrongPixels;
+            stats.ArmstrongAreaPct = validTissueCount > 0 ? Math.Round((double)armstrongPixels / validTissueCount * 100.0, 2) : 0.0;
+            stats.PeakAsymmetryPoint = peakPt;
+
+            var bmp = new WriteableBitmap(width, height, 96, 96, PixelFormats.Bgra32, null);
+            bmp.WritePixels(new Int32Rect(0, 0, width, height), pixels, width * 4, 0);
+            bmp.Freeze();
+            return (bmp, stats);
+        }
+
+        public class IschemiaCharcotEntropyResult
+        {
+            public double ProximalMeanTempC { get; set; }
+            public double DistalMeanTempC { get; set; }
+            public double DistalProximalDropK { get; set; }
+            public double AbiThermalProxy { get; set; }
+            public double ColdestAcralTempC { get; set; }
+            public Point ColdestAcralPoint { get; set; }
+            public int ColdSpotPixelCount { get; set; }
+            public double ColdSpotAreaPct { get; set; }
+            public string IschemiaStage { get; set; } = "Kein pAVK-Anhalt";
+            public bool IsIschemiaCritical { get; set; }
+            public double MidfootPeakTempC { get; set; }
+            public double CharcotHyperthermiaDeltaK { get; set; }
+            public string CharcotEichenholtzStage { get; set; } = "Stadium 0 (Unauffällig)";
+            public string CharcotClinicalNote { get; set; } = "";
+            public bool IsCharcotActive { get; set; }
+            public double ShannonEntropyBits { get; set; }
+            public double SpatialRoughnessKPerPx { get; set; }
+            public string TextureClassification { get; set; } = "Homogenes Gewebe";
+        }
+
+        /// <summary>
+        /// Deterministische Mehrfach-Auswertung für pAVK-Akralischämie, akuten Charcot-Fuß (Lisfranc/Chopart)
+        /// sowie thermische Gewebe-Entropie nach Shannon H = -sum(p_i * log2(p_i)).
+        /// </summary>
+        public static IschemiaCharcotEntropyResult EvaluateIschemiaCharcotAndEntropy(
+            byte[] rawGray, int width, int height, double tMin = 20.0, double tMax = 42.0)
+        {
+            var res = new IschemiaCharcotEntropyResult();
+            if (rawGray == null || rawGray.Length < width * height || width <= 1 || height <= 1)
+                return res;
+
+            int minY = height - 1;
+            int maxY = 0;
+            int tissueCount = 0;
+            double sumTemp = 0.0;
+            int[] hist = new int[256];
+
+            for (int y = 0; y < height; y++)
+            {
+                int rowOff = y * width;
+                for (int x = 0; x < width; x++)
+                {
+                    byte v = rawGray[rowOff + x];
+                    if (v <= 20) continue;
+
+                    if (y < minY) minY = y;
+                    if (y > maxY) maxY = y;
+                    hist[v]++;
+                    sumTemp += ThermalAnalysisHelper.RawToTemperature(v, tMin, tMax);
+                    tissueCount++;
+                }
+            }
+
+            if (tissueCount == 0 || maxY <= minY)
+                return res;
+
+            double meanTemp = sumTemp / tissueCount;
+            double coldThreshold = meanTemp - 1.8;
+
+            double distalEndY = minY + 0.32 * (maxY - minY);
+            double midfootStartY = minY + 0.35 * (maxY - minY);
+            double midfootEndY = minY + 0.65 * (maxY - minY);
+            double proximalStartY = minY + 0.68 * (maxY - minY);
+
+            double distalSum = 0.0; int distalCount = 0;
+            double proxSum = 0.0; int proxCount = 0;
+            double coldestT = 99.0;
+            Point coldestPt = new Point(width / 2.0, minY);
+            int coldPixels = 0;
+            var midfootTemps = new List<double>();
+            double gradSqSum = 0.0;
+            int gradCount = 0;
+            double kScale = (tMax - tMin) / 255.0;
+
+            for (int y = minY; y <= maxY; y++)
+            {
+                int rowOff = y * width;
+                for (int x = 0; x < width; x++)
+                {
+                    byte v = rawGray[rowOff + x];
+                    if (v <= 20) continue;
+
+                    double t = ThermalAnalysisHelper.RawToTemperature(v, tMin, tMax);
+
+                    if (y <= distalEndY)
+                    {
+                        distalSum += t;
+                        distalCount++;
+                    }
+                    if (y >= proximalStartY)
+                    {
+                        proxSum += t;
+                        proxCount++;
+                    }
+                    if (y >= midfootStartY && y <= midfootEndY)
+                    {
+                        midfootTemps.Add(t);
+                    }
+
+                    if (t < coldThreshold)
+                    {
+                        coldPixels++;
+                    }
+                    if (t < coldestT)
+                    {
+                        coldestT = t;
+                        coldestPt = new Point(x, y);
+                    }
+
+                    if (x < width - 1 && y < height - 1)
+                    {
+                        byte vr = rawGray[rowOff + x + 1];
+                        byte vd = rawGray[(y + 1) * width + x];
+                        if (vr > 20 && vd > 20)
+                        {
+                            double gx = (vr - v) * kScale;
+                            double gy = (vd - v) * kScale;
+                            gradSqSum += gx * gx + gy * gy;
+                            gradCount++;
+                        }
+                    }
+                }
+            }
+
+            double distalMean = distalCount > 0 ? distalSum / distalCount : meanTemp;
+            double proxMean = proxCount > 0 ? proxSum / proxCount : meanTemp;
+            double dropK = distalMean - proxMean;
+            double abiProxy = Math.Clamp(1.05 + dropK * 0.11, 0.42, 1.20);
+            double coldPct = (double)coldPixels / tissueCount * 100.0;
+
+            res.DistalMeanTempC = Math.Round(distalMean, 2);
+            res.ProximalMeanTempC = Math.Round(proxMean, 2);
+            res.DistalProximalDropK = Math.Round(dropK, 2);
+            res.AbiThermalProxy = Math.Round(abiProxy, 2);
+            res.ColdestAcralTempC = Math.Round(coldestT == 99.0 ? meanTemp : coldestT, 1);
+            res.ColdestAcralPoint = coldestPt;
+            res.ColdSpotPixelCount = coldPixels;
+            res.ColdSpotAreaPct = Math.Round(coldPct, 1);
+
+            if (dropK <= -2.2 || coldPct >= 14.0)
+            {
+                res.IschemiaStage = "Kritische Akral-Ischämie (V.a. pAVK III/IV)";
+                res.IsIschemiaCritical = true;
+            }
+            else if (dropK <= -1.2 || coldPct >= 7.0)
+            {
+                res.IschemiaStage = "Mäßige distale Minderperfusion (pAVK II)";
+                res.IsIschemiaCritical = false;
+            }
+            else
+            {
+                res.IschemiaStage = "Normale akrale Perfusion";
+                res.IsIschemiaCritical = false;
+            }
+
+            // Acute Charcot Neuro-Osteoarthropathy Midfoot Index (Lisfranc / Chopart)
+            double midfootP90 = meanTemp;
+            if (midfootTemps.Count > 0)
+            {
+                midfootTemps.Sort();
+                int p90Idx = Math.Clamp((int)Math.Floor((midfootTemps.Count - 1) * 0.90), 0, midfootTemps.Count - 1);
+                midfootP90 = midfootTemps[p90Idx];
+            }
+            double baselineExtremes = 0.5 * (distalMean + proxMean);
+            double charcotDelta = Math.Max(0.0, midfootP90 - baselineExtremes);
+            res.MidfootPeakTempC = Math.Round(midfootP90, 1);
+            res.CharcotHyperthermiaDeltaK = Math.Round(charcotDelta, 2);
+
+            if (charcotDelta >= 2.2)
+            {
+                res.CharcotEichenholtzStage = "Akuter Charcot-Verdacht (Eichenholtz I · Lisfranc/Chopart)";
+                res.CharcotClinicalNote = "Fokale Mittelfuß-Hyperthermie (>= 2.2 K über Vorfuß/Rückfuß-Basis). Radiologische Abklärung & sofortige Total-Contact-Cast-Ruhigstellung prüfen.";
+                res.IsCharcotActive = true;
+            }
+            else if (charcotDelta >= 1.2)
+            {
+                res.CharcotEichenholtzStage = "Prodromale Mittelfuß-Erwärmung (Eichenholtz 0)";
+                res.CharcotClinicalNote = "Mäßige Wärmekonzentration über dem Fußgewölbe. Engmaschiges Verlaufsthermogramm in 48–72 h empfohlen.";
+                res.IsCharcotActive = false;
+            }
+            else
+            {
+                res.CharcotEichenholtzStage = "Kein Charcot-Anhalt (Lisfranc unauffällig)";
+                res.CharcotClinicalNote = "Keine isolierte Mittelfuß-Überwärmung gegenüber distalem und proximalem Referenzgewebe.";
+                res.IsCharcotActive = false;
+            }
+
+            // Shannon Entropy & Spatial Thermal Roughness
+            double entropy = 0.0;
+            for (int b = 21; b < 256; b++)
+            {
+                if (hist[b] <= 0) continue;
+                double p = (double)hist[b] / tissueCount;
+                entropy -= p * Math.Log2(p);
+            }
+            double roughness = gradCount > 0 ? Math.Sqrt(gradSqSum / gradCount) : 0.0;
+
+            res.ShannonEntropyBits = Math.Round(entropy, 2);
+            res.SpatialRoughnessKPerPx = Math.Round(roughness, 3);
+
+            if (entropy >= 5.8 && roughness >= 0.18)
+                res.TextureClassification = "Inhomogen-diffus (Phlegmone / Entzündung)";
+            else if (roughness >= 0.24)
+                res.TextureClassification = "Fokal-scharf begrenzt (Kallus / Druckherd)";
+            else
+                res.TextureClassification = "Physiologisch homogenes Temperaturfeld";
+
+            return res;
+        }
+
+        /// <summary>
+        /// Rendert eine hochkontrastige Kältekarte zur Visualisierung von pAVK-Hypothermie (&lt; T_mean - 1.5 K).
+        /// </summary>
+        public static WriteableBitmap GenerateIschemiaColdSpotMap(
+            byte[] rawGray, int width, int height, double tMin = 20.0, double tMax = 42.0)
+        {
+            if (rawGray == null || rawGray.Length < width * height || width <= 0 || height <= 0)
+            {
+                var empty = new WriteableBitmap(Math.Max(1, width), Math.Max(1, height), 96, 96, PixelFormats.Bgra32, null);
+                return empty;
+            }
+
+            double sum = 0.0;
+            int cnt = 0;
+            for (int i = 0; i < rawGray.Length; i++)
+            {
+                if (rawGray[i] > 20)
+                {
+                    sum += ThermalAnalysisHelper.RawToTemperature(rawGray[i], tMin, tMax);
+                    cnt++;
+                }
+            }
+            double meanT = cnt > 0 ? sum / cnt : 30.0;
+            double thresh15 = meanT - 1.5;
+            double thresh25 = meanT - 2.5;
+
+            double[] tempMap = new double[width * height];
+            for (int i = 0; i < rawGray.Length; i++)
+                tempMap[i] = ThermalAnalysisHelper.RawToTemperature(rawGray[i], tMin, tMax);
+
+            uint[] pixels = new uint[width * height];
+            for (int y = 0; y < height; y++)
+            {
+                int rowOff = y * width;
+                for (int x = 0; x < width; x++)
+                {
+                    byte v = rawGray[rowOff + x];
+                    if (v <= 20)
+                    {
+                        pixels[rowOff + x] = 0xFF0B0F19;
+                        continue;
+                    }
+
+                    double t = tempMap[rowOff + x];
+                    bool isColdContour = false;
+                    if (x > 0 && x < width - 1 && y > 0 && y < height - 1)
+                    {
+                        bool in15 = t < thresh15;
+                        bool in25 = t < thresh25;
+                        if ((tempMap[rowOff + x + 1] < thresh15) != in15 ||
+                            (tempMap[(y + 1) * width + x] < thresh15) != in15 ||
+                            (tempMap[rowOff + x + 1] < thresh25) != in25 ||
+                            (tempMap[(y + 1) * width + x] < thresh25) != in25)
+                        {
+                            isColdContour = true;
+                        }
+                    }
+
+                    if (isColdContour)
+                    {
+                        pixels[rowOff + x] = 0xFFE0F2FE; // Bright ice isoline
+                    }
+                    else if (t < thresh15)
+                    {
+                        double depth = Math.Clamp((thresh15 - t) / 3.5, 0.0, 1.0);
+                        byte r = (byte)(14 - depth * 14);
+                        byte g = (byte)(165 + depth * 75);
+                        byte b = 255; // Luminous ice-cyan/cobalt
+                        pixels[rowOff + x] = (uint)((255 << 24) | (r << 16) | (g << 8) | b);
+                    }
+                    else
+                    {
+                        byte g = (byte)(38 + v * 0.42);
+                        pixels[rowOff + x] = (uint)((255 << 24) | (g << 16) | (g << 8) | (byte)(g + 10));
+                    }
+                }
+            }
+
+            var bmp = new WriteableBitmap(width, height, 96, 96, PixelFormats.Bgra32, null);
+            bmp.WritePixels(new Int32Rect(0, 0, width, height), pixels, width * 4, 0);
+            bmp.Freeze();
+            return bmp;
+        }
+
+        public class CohortCaseSummary
+        {
+            public int CaseNumber { get; set; }
+            public string FileName { get; set; } = "";
+            public string FilePath { get; set; } = "";
+            public double MeanTempC { get; set; }
+            public double MaxTempC { get; set; }
+            public double MaxAsymmetryK { get; set; }
+            public double PeakPressureKpa { get; set; }
+            public double ShannonEntropyBits { get; set; }
+            public double DistalDropK { get; set; }
+            public int IwgdfGrade { get; set; }
+            public string TriageStatus { get; set; } = "NORMAL";
+        }
+
+        /// <summary>
+        /// Deterministischer Schnell-Evaluator für den Kohorten-Batch-Scanner über alle Patientenfälle.
+        /// </summary>
+        public static CohortCaseSummary EvaluateCaseFast(
+            int caseNumber, string filePath, double tMin = 20.0, double tMax = 42.0)
+        {
+            var (_, rawGray, w, h) = PaletteService.LoadCalibratedImage(filePath, ColorPalette.Ironbow);
+            double sum = 0.0;
+            double maxT = 0.0;
+            int cnt = 0;
+
+            for (int i = 0; i < rawGray.Length; i++)
+            {
+                byte v = rawGray[i];
+                if (v <= 20) continue;
+                double t = ThermalAnalysisHelper.RawToTemperature(v, tMin, tMax);
+                sum += t;
+                if (t > maxT) maxT = t;
+                cnt++;
+            }
+
+            double meanT = cnt > 0 ? sum / cnt : 0.0;
+            var (_, mirrorStats) = GenerateBilateralMirrorDiffMap(rawGray, w, h, tMin, tMax);
+            var (_, pressureStats) = GeneratePressureProxyMap(rawGray, w, h, tMin, tMax);
+            var (_, bioStats) = GenerateBioheatPerfusionMap(rawGray, w, h, tMin, tMax);
+            var iceCharcot = EvaluateIschemiaCharcotAndEntropy(rawGray, w, h, tMin, tMax);
+
+            bool hasCritical = mirrorStats.MaxAsymmetryK >= 2.2 || pressureStats.PeakPressureKpa >= 450.0;
+            var iwgdf = EvaluateIwgdfRisk(
+                mirrorStats.MaxAsymmetryK,
+                pressureStats.PeakPressureKpa,
+                bioStats.MeanPerfusion,
+                0.0,
+                hasCritical);
+
+            string triage = iwgdf.RiskGrade >= 3 ? "KRITISCH"
+                : iwgdf.RiskGrade == 2 ? "HOCH"
+                : iwgdf.RiskGrade == 1 ? "MÄSSIG"
+                : "NORMAL";
+
+            return new CohortCaseSummary
+            {
+                CaseNumber = caseNumber,
+                FileName = Path.GetFileName(filePath),
+                FilePath = filePath,
+                MeanTempC = Math.Round(meanT, 1),
+                MaxTempC = Math.Round(maxT, 1),
+                MaxAsymmetryK = Math.Round(mirrorStats.MaxAsymmetryK, 2),
+                PeakPressureKpa = Math.Round(pressureStats.PeakPressureKpa, 0),
+                ShannonEntropyBits = iceCharcot.ShannonEntropyBits,
+                DistalDropK = iceCharcot.DistalProximalDropK,
+                IwgdfGrade = iwgdf.RiskGrade,
+                TriageStatus = triage
+            };
+        }
+        #endregion
     }
 }

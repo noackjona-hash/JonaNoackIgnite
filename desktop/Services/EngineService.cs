@@ -67,6 +67,9 @@ namespace Ignite.Desktop.Services
             var psi = new ProcessStartInfo
             {
                 FileName = _coreExecutablePath,
+                WorkingDirectory = !string.IsNullOrEmpty(Path.GetDirectoryName(_coreExecutablePath))
+                    ? Path.GetDirectoryName(_coreExecutablePath)
+                    : AppDomain.CurrentDomain.BaseDirectory,
                 Arguments = args,
                 UseShellExecute = false,
                 CreateNoWindow = true,
@@ -115,6 +118,9 @@ namespace Ignite.Desktop.Services
             var psi = new ProcessStartInfo
             {
                 FileName = _coreExecutablePath,
+                WorkingDirectory = !string.IsNullOrEmpty(Path.GetDirectoryName(_coreExecutablePath))
+                    ? Path.GetDirectoryName(_coreExecutablePath)
+                    : AppDomain.CurrentDomain.BaseDirectory,
                 Arguments = args,
                 UseShellExecute = false,
                 CreateNoWindow = true,

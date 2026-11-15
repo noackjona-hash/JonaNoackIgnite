@@ -879,9 +879,11 @@ func Run(src *imageutil.GrayMatrix, cfg PipelineConfig) AnalysisResult {
 			end
 			local prominence = hotspot.local_prominence or contra_delta
 			local area = hotspot.area_pixels or 0
+			local laplacian = hotspot.thermal_laplacian or 0.0
 			local is_sharp = (hotspot.edge_gradient or 0.0) >= 3.0
 			local has_halo = (hotspot.halo_delta or 0.0) >= 5.0
-			local is_metabolic = (hotspot.thermal_laplacian or 0.0) <= -3.5 or (hotspot.peak_to_mean or 1.0) >= 1.25
+			local is_metabolic = laplacian <= -3.5 or (hotspot.peak_to_mean or 1.0) >= 1.25
+			local is_deep_focus = (laplacian <= -8.0 and prominence >= 50.0)
 
 			-- Grundvoraussetzung für pathologische Hyperthermie:
 			-- Der Befund MUSS wärmer sein als die kontralaterale Referenz (Delta T >= 1.2 K).
@@ -897,7 +899,7 @@ func Run(src *imageutil.GrayMatrix, cfg PipelineConfig) AnalysisResult {
 
 			-- Armstrong Klinischer Goldstandard (Delta T >= 2.2 K):
 			if contra_delta >= 22.0 or (contra_delta >= 18.0 and prominence >= 30.0) then
-				if is_sharp and not has_halo then
+				if is_sharp and not has_halo and not is_deep_focus then
 					return {
 						risk_level = "CRITICAL",
 						diagnosis_type = "INFLAMED_PRESSURE_POINT",

@@ -4,12 +4,12 @@
              xmlns:local="clr-namespace:Ignite.Desktop">
     <Application.Resources>
         <!-- ============================================================ -->
-        <!-- IGNITE CLINICAL MEDICAL WORKSTATION LIGHT THEME              -->
-        <!-- Crisp Clinical White Canvas, Medical Blue (#0284C7), Slate   -->
-        <!-- Clean Pills, Radiance Accents, Floating Dock, High Ergonomics -->
+        <!-- IGNITE HYBRID CLINICAL PRO DESIGN SYSTEM                     -->
+        <!-- IEC 62366-1 / DIN EN ISO 13485 · Crisp Slate Shell + Dark    -->
+        <!-- Matte PACS Radiologic Viewports (#0B0F19) for IR Contrast    -->
         <!-- ============================================================ -->
 
-        <!-- Base Medical Light Theme Colors (Matching Screenshot) -->
+        <!-- Base Clinical Shell Colors (Light Precision Slate) -->
         <Color x:Key="ColorAppBg">#F1F5F9</Color>
         <Color x:Key="ColorSidebar">#FFFFFF</Color>
         <Color x:Key="ColorSurface">#FFFFFF</Color>
@@ -19,8 +19,15 @@
         <Color x:Key="ColorBorder">#E2E8F0</Color>
         <Color x:Key="ColorBorderBright">#CBD5E1</Color>
 
+        <!-- Radiological Dark Viewport & HUD Tokens -->
+        <Color x:Key="ColorSurfaceDark">#0F172A</Color>
+        <Color x:Key="ColorViewportDark">#0B0F19</Color>
+        <Color x:Key="ColorViewportBorder">#1E293B</Color>
+        <Color x:Key="ColorHudGlass">#D90F172A</Color>
+        <Color x:Key="ColorHudBorder">#334155</Color>
+
         <!-- Clinical Medical Precision Accents -->
-        <Color x:Key="ColorCyan">#0284C7</Color>          <!-- Primary Medical Blue (from screenshot) -->
+        <Color x:Key="ColorCyan">#0284C7</Color>          <!-- Primary Medical Blue -->
         <Color x:Key="ColorCyanHover">#0369A1</Color>
         <Color x:Key="ColorProLime">#0284C7</Color>        <!-- Primary Action Blue CTA -->
         <Color x:Key="ColorMedicalTeal">#0D9488</Color>
@@ -28,7 +35,7 @@
         <Color x:Key="ColorPurple">#7C3AED</Color>
         <Color x:Key="ColorCritical">#DC2626</Color>      <!-- Alert / Triage Red -->
         <Color x:Key="ColorCriticalBg">#FEE2E2</Color>    <!-- Alert / Triage Red Badge Bg -->
-        <Color x:Key="ColorWarning">#D97706</Color>       <!-- Warning Amber -->
+        <Color x:Key="ColorWarning">#D97706</Color>       <!-- Warning Amber (High Contrast) -->
         <Color x:Key="ColorWarningBg">#FEF3C7</Color>     <!-- Warning Amber Badge Bg -->
         <Color x:Key="ColorSuccess">#16A34A</Color>       <!-- Health Green -->
         <Color x:Key="ColorSuccessBg">#DCFCE7</Color>     <!-- Health Green Badge Bg -->
@@ -42,6 +49,11 @@
         <SolidColorBrush x:Key="InputBgBrush" Color="{StaticResource ColorInputBg}"/>
         <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource ColorBorder}"/>
         <SolidColorBrush x:Key="BorderBrightBrush" Color="{StaticResource ColorBorderBright}"/>
+        <SolidColorBrush x:Key="SurfaceDarkBrush" Color="{StaticResource ColorSurfaceDark}"/>
+        <SolidColorBrush x:Key="ViewportDarkBrush" Color="{StaticResource ColorViewportDark}"/>
+        <SolidColorBrush x:Key="ViewportBorderBrush" Color="{StaticResource ColorViewportBorder}"/>
+        <SolidColorBrush x:Key="HudGlassBrush" Color="{StaticResource ColorHudGlass}"/>
+        <SolidColorBrush x:Key="HudBorderBrush" Color="{StaticResource ColorHudBorder}"/>
         <SolidColorBrush x:Key="CyanBrush" Color="{StaticResource ColorCyan}"/>
         <SolidColorBrush x:Key="CyanHoverBrush" Color="{StaticResource ColorCyanHover}"/>
         <SolidColorBrush x:Key="ProLimeBrush" Color="{StaticResource ColorProLime}"/>
@@ -55,17 +67,17 @@
         <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource ColorSuccess}"/>
         <SolidColorBrush x:Key="SuccessBgBrush" Color="{StaticResource ColorSuccessBg}"/>
 
-        <!-- Modern Typography Brushes -->
+        <!-- Modern Typography Brushes (WCAG AA Contrast) -->
         <SolidColorBrush x:Key="TextPrimaryBrush" Color="#0F172A"/>
         <SolidColorBrush x:Key="TextSecondaryBrush" Color="#475569"/>
-        <SolidColorBrush x:Key="TextMutedBrush" Color="#94A3B8"/>
+        <SolidColorBrush x:Key="TextMutedBrush" Color="#64748B"/>
 
         <!-- ============================================================ -->
         <!-- MEDICAL SHADOW & ELEVATION SYSTEM                            -->
         <!-- ============================================================ -->
-        <DropShadowEffect x:Key="ShadowCard" BlurRadius="10" Direction="270" ShadowDepth="2" Opacity="0.06" Color="#0F172A"/>
-        <DropShadowEffect x:Key="ShadowFloating" BlurRadius="20" Direction="270" ShadowDepth="4" Opacity="0.10" Color="#0F172A"/>
-        <DropShadowEffect x:Key="ShadowGlowCyan" BlurRadius="12" Direction="270" ShadowDepth="0" Opacity="0.45" Color="#0284C7"/>
+        <DropShadowEffect x:Key="ShadowCard" BlurRadius="8" Direction="270" ShadowDepth="1" Opacity="0.04" Color="#0F172A"/>
+        <DropShadowEffect x:Key="ShadowFloating" BlurRadius="16" Direction="270" ShadowDepth="3" Opacity="0.12" Color="#0F172A"/>
+        <DropShadowEffect x:Key="ShadowGlowCyan" BlurRadius="10" Direction="270" ShadowDepth="0" Opacity="0.28" Color="#0284C7"/>
 
         <!-- ============================================================ -->
         <!-- RESEARCH-GRADE CLINICAL VECTOR STREAM GEOMETRIES (SVG PATHS) -->
@@ -213,6 +225,15 @@
         <!-- Warning Triangle -->
         <StreamGeometry x:Key="IconWarning">M1 21H23L12 2L1 21ZM13 18H11V16H13V18ZM13 14H11V10H13V14Z</StreamGeometry>
 
+        <!-- Image / Snapshot Export -->
+        <StreamGeometry x:Key="IconImage">M21 19V5C21 3.9 20.1 3 19 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19ZM8.5 13.5L11 16.51L14.5 12L19 18H5L8.5 13.5Z</StreamGeometry>
+
+        <!-- Sparkles / Jury Demo Mode -->
+        <StreamGeometry x:Key="IconSparkles">M19 9L20.25 6.25L23 5L20.25 3.75L19 1L17.75 3.75L15 5L17.75 6.25L19 9ZM11.5 9.5L9 4L6.5 9.5L1 12L6.5 14.5L9 20L11.5 14.5L17 12L11.5 9.5ZM19 15L17.75 17.75L15 19L17.75 20.25L19 23L20.25 20.25L23 19L20.25 17.75L19 15Z</StreamGeometry>
+
+        <!-- Magnifier Loupe (4x Thermal Zoom) -->
+        <StreamGeometry x:Key="IconMagnifier">M15.5 14H14.71L14.43 13.73C15.41 12.59 16 11.11 16 9.5C16 5.91 13.09 3 9.5 3C5.91 3 3 5.91 3 9.5C3 13.09 5.91 16 9.5 16C11.11 16 12.59 15.41 13.73 14.43L14 14.71V15.5L19 20.49L20.49 19L15.5 14ZM9.5 14C7.01 14 5 11.99 5 9.5C5 7.01 7.01 5 9.5 5C11.99 5 14 7.01 14 9.5C14 11.99 11.99 14 9.5 14ZM12 10H10V12H9V10H7V9H9V7H10V9H12V10Z</StreamGeometry>
+
         <!-- ============================================================ -->
         <!-- CLEAN MINIMAL SCROLLBAR SYSTEM                               -->
         <!-- ============================================================ -->
@@ -288,7 +309,7 @@
             <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
             <Setter Property="BorderBrush" Value="{StaticResource BorderBrightBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="12,5"/>
+            <Setter Property="Padding" Value="10,5"/>
             <Setter Property="Margin" Value="2,2"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="FontSize" Value="11"/>
@@ -300,7 +321,7 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="8"
+                                CornerRadius="6"
                                 Padding="{TemplateBinding Padding}"
                                 SnapsToDevicePixels="True">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True"/>
@@ -324,14 +345,14 @@
             </Setter>
         </Style>
 
-        <!-- Primary Clinical Blue Pill Button (Solid #0284C7, white text) -->
+        <!-- Primary Clinical Blue Action Button (Solid #0284C7, white text) -->
         <Style x:Key="VoicemodPrimaryButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="{StaticResource CyanBrush}"/>
             <Setter Property="Foreground" Value="#FFFFFF"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="16,7"/>
-            <Setter Property="Margin" Value="3,2"/>
-            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Padding" Value="14,6"/>
+            <Setter Property="Margin" Value="2,2"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="FontSize" Value="11.5"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
@@ -339,7 +360,7 @@
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="bd"
                                 Background="{TemplateBinding Background}"
-                                CornerRadius="16"
+                                CornerRadius="7"
                                 Padding="{TemplateBinding Padding}"
                                 SnapsToDevicePixels="True">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -349,7 +370,10 @@
                                 <Setter TargetName="bd" Property="Background" Value="{StaticResource CyanHoverBrush}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="bd" Property="Opacity" Value="0.85"/>
+                                <Setter TargetName="bd" Property="Opacity" Value="0.88"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="bd" Property="Opacity" Value="0.45"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -360,16 +384,15 @@
         <Style x:Key="VoicemodLimeHeroButtonStyle" TargetType="Button" BasedOn="{StaticResource VoicemodPrimaryButtonStyle}"/>
 
         <!-- ============================================================ -->
-        <!-- CATEGORY FILTER PILL (RADIOBUTTON)                           -->
-        <!-- Inactive: White, border #CBD5E1. Active: Solid #0284C7 blue  -->
+        <!-- VIEW MODE SEGMENTED CONTROL RADIOBUTTON                      -->
         <!-- ============================================================ -->
         <Style x:Key="VoicemodPillStyle" TargetType="RadioButton">
-            <Setter Property="Background" Value="#FFFFFF"/>
+            <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource BorderBrightBrush}"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="14,5"/>
-            <Setter Property="Margin" Value="3,0"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="Margin" Value="2,0"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -380,22 +403,21 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="14"
+                                CornerRadius="6"
                                 Padding="{TemplateBinding Padding}"
                                 SnapsToDevicePixels="True">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="pillBorder" Property="Background" Value="{StaticResource SurfaceHoverBrush}"/>
-                                <Setter TargetName="pillBorder" Property="BorderBrush" Value="{StaticResource CyanBrush}"/>
+                                <Setter TargetName="pillBorder" Property="Background" Value="#F1F5F9"/>
                                 <Setter Property="Foreground" Value="{StaticResource CyanBrush}"/>
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter TargetName="pillBorder" Property="Background" Value="{StaticResource CyanBrush}"/>
                                 <Setter TargetName="pillBorder" Property="BorderBrush" Value="{StaticResource CyanBrush}"/>
                                 <Setter Property="Foreground" Value="#FFFFFF"/>
-                                <Setter Property="FontWeight" Value="Bold"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -406,14 +428,14 @@
         <!-- Alias for legacy MedicalToolRadioStyle -->
         <Style x:Key="MedicalToolRadioStyle" TargetType="RadioButton" BasedOn="{StaticResource VoicemodPillStyle}"/>
 
-        <!-- Button version of pill style -->
+        <!-- Crisp Utility Action Button -->
         <Style x:Key="VoicemodButtonPillStyle" TargetType="Button">
             <Setter Property="Background" Value="#FFFFFF"/>
             <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
             <Setter Property="BorderBrush" Value="{StaticResource BorderBrightBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="14,5"/>
-            <Setter Property="Margin" Value="3,0"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="Margin" Value="2,0"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -424,14 +446,14 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="14"
+                                CornerRadius="6"
                                 Padding="{TemplateBinding Padding}"
                                 SnapsToDevicePixels="True">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="pillBorder" Property="Background" Value="{StaticResource SurfaceHoverBrush}"/>
+                                <Setter TargetName="pillBorder" Property="Background" Value="#F1F5F9"/>
                                 <Setter TargetName="pillBorder" Property="BorderBrush" Value="{StaticResource CyanBrush}"/>
                                 <Setter Property="Foreground" Value="{StaticResource CyanBrush}"/>
                             </Trigger>
@@ -439,6 +461,9 @@
                                 <Setter TargetName="pillBorder" Property="Background" Value="#E0F2FE"/>
                                 <Setter TargetName="pillBorder" Property="BorderBrush" Value="{StaticResource CyanBrush}"/>
                                 <Setter Property="Foreground" Value="{StaticResource CyanBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="pillBorder" Property="Opacity" Value="0.45"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -453,9 +478,9 @@
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="#64748B"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Width" Value="42"/>
-            <Setter Property="Height" Value="42"/>
-            <Setter Property="Margin" Value="0,4"/>
+            <Setter Property="Width" Value="40"/>
+            <Setter Property="Height" Value="40"/>
+            <Setter Property="Margin" Value="0,3"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -464,13 +489,13 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="Transparent"
                                 BorderThickness="1"
-                                CornerRadius="12"
+                                CornerRadius="10"
                                 SnapsToDevicePixels="True">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="railBd" Property="Background" Value="{StaticResource SurfaceHoverBrush}"/>
+                                <Setter TargetName="railBd" Property="Background" Value="#F1F5F9"/>
                                 <Setter Property="Foreground" Value="{StaticResource CyanBrush}"/>
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
@@ -489,22 +514,22 @@
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="#64748B"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Width" Value="42"/>
-            <Setter Property="Height" Value="42"/>
-            <Setter Property="Margin" Value="0,4"/>
+            <Setter Property="Width" Value="40"/>
+            <Setter Property="Height" Value="40"/>
+            <Setter Property="Margin" Value="0,3"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="railBd"
                                 Background="{TemplateBinding Background}"
-                                CornerRadius="12"
+                                CornerRadius="10"
                                 SnapsToDevicePixels="True">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="railBd" Property="Background" Value="{StaticResource SurfaceHoverBrush}"/>
+                                <Setter TargetName="railBd" Property="Background" Value="#F1F5F9"/>
                                 <Setter Property="Foreground" Value="{StaticResource CyanBrush}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
@@ -522,10 +547,10 @@
         <!-- ============================================================ -->
         <Style x:Key="VoicemodDockRadioStyle" TargetType="RadioButton">
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#475569"/>
+            <Setter Property="Foreground" Value="#334155"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="BorderBrush" Value="Transparent"/>
-            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="Padding" Value="10,5"/>
             <Setter Property="Margin" Value="2,0"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="FontSize" Value="10.5"/>
@@ -537,8 +562,9 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="14"
-                                Padding="{TemplateBinding Padding}">
+                                CornerRadius="7"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -547,10 +573,10 @@
                                 <Setter Property="Foreground" Value="{StaticResource CyanBrush}"/>
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="dockBd" Property="Background" Value="#E0F2FE"/>
-                                <Setter TargetName="dockBd" Property="BorderBrush" Value="#BAE6FD"/>
-                                <Setter Property="Foreground" Value="{StaticResource CyanBrush}"/>
-                                <Setter Property="FontWeight" Value="Bold"/>
+                                <Setter TargetName="dockBd" Property="Background" Value="{StaticResource CyanBrush}"/>
+                                <Setter TargetName="dockBd" Property="BorderBrush" Value="{StaticResource CyanBrush}"/>
+                                <Setter Property="Foreground" Value="#FFFFFF"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -560,13 +586,13 @@
 
         <!-- ============================================================ -->
         <!-- INSPECTOR CATEGORY SEGMENTED RADIO BUTTON                    -->
-        <!-- 4 Thematic Groups: Diagnostik, Anatomie, Signale, System     -->
+        <!-- 4 Thematic Groups: Diagnose, Anatomie, Signale, System       -->
         <!-- ============================================================ -->
         <Style x:Key="InspectorCategoryRadioStyle" TargetType="RadioButton">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="Padding" Value="8,5"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -578,18 +604,19 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="Transparent"
                                 BorderThickness="1"
-                                CornerRadius="8"
-                                Padding="{TemplateBinding Padding}">
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="catBorder" Property="Background" Value="#E2E8F0"/>
+                                <Setter TargetName="catBorder" Property="Background" Value="#CBD5E1"/>
                                 <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter TargetName="catBorder" Property="Background" Value="#FFFFFF"/>
-                                <Setter TargetName="catBorder" Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+                                <Setter TargetName="catBorder" Property="BorderBrush" Value="{StaticResource BorderBrightBrush}"/>
                                 <Setter TargetName="catBorder" Property="Effect">
                                     <Setter.Value>
                                         <DropShadowEffect BlurRadius="4" Direction="270" ShadowDepth="1" Opacity="0.08" Color="#0F172A"/>
@@ -605,7 +632,7 @@
         </Style>
 
         <!-- ============================================================ -->
-        <!-- SLIDER WITH BLUE TRACK & LIGHT ROUNDED THUMB                 -->
+        <!-- SLIDER WITH PRECISION THUMB                                  -->
         <!-- ============================================================ -->
         <Style x:Key="VoicemodSliderThumb" TargetType="{x:Type Thumb}">
             <Setter Property="SnapsToDevicePixels" Value="True"/>
@@ -613,10 +640,10 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type Thumb}">
-                        <Grid Width="16" Height="16">
+                        <Grid Width="15" Height="15">
                             <Ellipse Fill="#FFFFFF" Stroke="{StaticResource CyanBrush}" StrokeThickness="2.5">
                                 <Ellipse.Effect>
-                                    <DropShadowEffect BlurRadius="4" ShadowDepth="1" Opacity="0.25" Color="#000000"/>
+                                    <DropShadowEffect BlurRadius="4" ShadowDepth="1" Opacity="0.22" Color="#0F172A"/>
                                 </Ellipse.Effect>
                             </Ellipse>
                         </Grid>
@@ -637,7 +664,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Slider">
                         <Grid VerticalAlignment="Center">
-                            <Border Height="6" Background="#E2E8F0" CornerRadius="3" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0.5"/>
+                            <Border Height="5" Background="#E2E8F0" CornerRadius="2.5" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0.5"/>
                             <Track x:Name="PART_Track">
                                 <Track.Thumb>
                                     <Thumb Style="{StaticResource VoicemodSliderThumb}"/>
@@ -650,8 +677,7 @@
         </Style>
 
         <!-- ============================================================ -->
-        <!-- TABCONTROL & PILL TABITEMS (Matching Screenshot)             -->
-        <!-- Active: Blue pill. Inactive: Light pill.                     -->
+        <!-- TABCONTROL & SUB-NAVIGATION TABITEMS                         -->
         <!-- ============================================================ -->
         <Style TargetType="TabControl">
             <Setter Property="Background" Value="Transparent"/>
@@ -662,8 +688,8 @@
             <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
             <Setter Property="FontSize" Value="10.5"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Padding" Value="10,5"/>
-            <Setter Property="Margin" Value="2,2"/>
+            <Setter Property="Padding" Value="9,4"/>
+            <Setter Property="Margin" Value="0,0,4,4"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -672,8 +698,9 @@
                                 Background="#F1F5F9"
                                 BorderBrush="{StaticResource BorderBrush}"
                                 BorderThickness="1"
-                                CornerRadius="8"
-                                Padding="{TemplateBinding Padding}">
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
                             <ContentPresenter ContentSource="Header" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -685,7 +712,7 @@
                                 <Setter TargetName="tabBorder" Property="BorderBrush" Value="{StaticResource CyanBrush}"/>
                                 <Setter TargetName="tabBorder" Property="Background" Value="{StaticResource CyanBrush}"/>
                                 <Setter Property="Foreground" Value="#FFFFFF"/>
-                                <Setter Property="FontWeight" Value="Bold"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -694,8 +721,36 @@
         </Style>
 
         <!-- ============================================================ -->
-        <!-- LIGHT CLINICAL COMBOBOX                                      -->
+        <!-- CLINICAL COMBOBOX & DROPDOWN ITEMS                           -->
         <!-- ============================================================ -->
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="Padding" Value="8,5"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+            <Setter Property="Background" Value="#FFFFFF"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border x:Name="itemBd" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="itemBd" Property="Background" Value="#F1F5F9"/>
+                                <Setter Property="Foreground" Value="{StaticResource CyanBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="itemBd" Property="Background" Value="#E0F2FE"/>
+                                <Setter Property="Foreground" Value="{StaticResource CyanBrush}"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style TargetType="ComboBox">
             <Setter Property="Background" Value="#FFFFFF"/>
             <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
@@ -704,20 +759,131 @@
             <Setter Property="Padding" Value="8,4"/>
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="Height" Value="28"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton x:Name="ToggleButton"
+                                          Focusable="False"
+                                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                          ClickMode="Press">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border x:Name="cbBd"
+                                                Background="#FFFFFF"
+                                                BorderBrush="{StaticResource BorderBrightBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="6"
+                                                SnapsToDevicePixels="True">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="22"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Path Grid.Column="1" Data="M 0 0 L 4 4 L 8 0 Z" Fill="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="cbBd" Property="BorderBrush" Value="{StaticResource CyanBrush}"/>
+                                                <Setter TargetName="cbBd" Property="Background" Value="#F8FAFC"/>
+                                            </Trigger>
+                                            <Trigger Property="IsChecked" Value="True">
+                                                <Setter TargetName="cbBd" Property="BorderBrush" Value="{StaticResource CyanBrush}"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
+                            <ContentPresenter x:Name="ContentSite"
+                                              IsHitTestVisible="False"
+                                              Content="{TemplateBinding SelectionBoxItem}"
+                                              ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                              ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                              Margin="9,3,24,3"
+                                              VerticalAlignment="Center"
+                                              HorizontalAlignment="Left"/>
+                            <Popup x:Name="Popup"
+                                   Placement="Bottom"
+                                   IsOpen="{TemplateBinding IsDropDownOpen}"
+                                   AllowsTransparency="True"
+                                   Focusable="False"
+                                   PopupAnimation="Fade">
+                                <Border x:Name="DropDownBorder"
+                                        MinWidth="{TemplateBinding ActualWidth}"
+                                        MaxHeight="{TemplateBinding MaxDropDownHeight}"
+                                        Margin="0,2,0,0"
+                                        Background="#FFFFFF"
+                                        BorderBrush="{StaticResource BorderBrightBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="6"
+                                        Effect="{StaticResource ShadowFloating}">
+                                    <ScrollViewer Margin="2" SnapsToDevicePixels="True">
+                                        <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained"/>
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <!-- ============================================================ -->
-        <!-- LIGHT CHECKBOX                                               -->
+        <!-- CLINICAL CHECKBOX                                            -->
         <!-- ============================================================ -->
         <Style TargetType="CheckBox">
             <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <StackPanel Orientation="Horizontal" Background="Transparent" VerticalAlignment="Center">
+                            <Border x:Name="chkBox"
+                                    Width="14" Height="14"
+                                    CornerRadius="3.5"
+                                    Background="#FFFFFF"
+                                    BorderBrush="{StaticResource BorderBrightBrush}"
+                                    BorderThickness="1.2"
+                                    Margin="0,0,6,0"
+                                    VerticalAlignment="Center"
+                                    SnapsToDevicePixels="True">
+                                <Path x:Name="chkMark"
+                                      Data="M 2 7 L 5.5 10.5 L 11.5 3.5"
+                                      Stroke="#FFFFFF"
+                                      StrokeThickness="1.8"
+                                      StrokeStartLineCap="Round"
+                                      StrokeEndLineCap="Round"
+                                      StrokeLineJoin="Round"
+                                      Visibility="Collapsed"
+                                      Stretch="None"/>
+                            </Border>
+                            <ContentPresenter VerticalAlignment="Center" RecognizesAccessKey="True"/>
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="chkBox" Property="BorderBrush" Value="{StaticResource CyanBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="chkBox" Property="Background" Value="{StaticResource CyanBrush}"/>
+                                <Setter TargetName="chkBox" Property="BorderBrush" Value="{StaticResource CyanBrush}"/>
+                                <Setter TargetName="chkMark" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <!-- ============================================================ -->
-        <!-- LIGHT TABLE / DATAGRID (Matching Screenshot)                 -->
+        <!-- CLINICAL DATA TABLE / DATAGRID                               -->
         <!-- ============================================================ -->
         <Style TargetType="DataGrid">
             <Setter Property="Background" Value="#FFFFFF"/>
@@ -731,16 +897,53 @@
             <Setter Property="HeadersVisibility" Value="Column"/>
             <Setter Property="AutoGenerateColumns" Value="False"/>
             <Setter Property="CanUserAddRows" Value="False"/>
-            <Setter Property="RowHeight" Value="26"/>
+            <Setter Property="RowHeight" Value="28"/>
             <Setter Property="FontSize" Value="11"/>
+            <Setter Property="SelectionMode" Value="Single"/>
+            <Setter Property="SelectionUnit" Value="FullRow"/>
+        </Style>
+
+        <Style TargetType="DataGridRow">
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#F1F5F9"/>
+                </Trigger>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#E0F2FE"/>
+                    <Setter Property="Foreground" Value="#0F172A"/>
+                    <Setter Property="BorderBrush" Value="#7DD3FC"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="DataGridCell">
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="DataGridCell">
+                        <Border Padding="{TemplateBinding Padding}" Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#E0F2FE"/>
+                    <Setter Property="Foreground" Value="#0F172A"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
         <Style TargetType="DataGridColumnHeader">
-            <Setter Property="Background" Value="#F1F5F9"/>
+            <Setter Property="Background" Value="#F8FAFC"/>
             <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="FontSize" Value="10"/>
-            <Setter Property="Padding" Value="8,5"/>
+            <Setter Property="Padding" Value="8,6"/>
             <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="0,0,1,1"/>
         </Style>
@@ -767,6 +970,28 @@
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="8,4"/>
             <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border x:Name="tbBd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6"
+                                SnapsToDevicePixels="True">
+                            <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="tbBd" Property="BorderBrush" Value="{StaticResource CyanBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="tbBd" Property="BorderBrush" Value="{StaticResource CyanBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
     </Application.Resources>

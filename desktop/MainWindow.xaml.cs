@@ -29,7 +29,9 @@ namespace Ignite.Desktop
         PressureProxy,
         LaplacianHeatFlux,
         Anatomical3DCompensated,
-        BioheatPerfusion
+        BioheatPerfusion,
+        BilateralMirrorDiff,
+        IschemiaColdMap
     }
 
     public enum ActiveCanvasTool
@@ -39,7 +41,8 @@ namespace Ignite.Desktop
         ThermalProfile,
         PointProbe,
         WindowLevelDrag,
-        Goniometer
+        Goniometer,
+        MagnifierLoupe
     }
 
     public partial class MainWindow : Window
@@ -65,6 +68,7 @@ namespace Ignite.Desktop
 
         // Vascular & Window/Level State
         private byte[]? _cachedVeinPixels = null;
+        private byte[]? _cachedHotspotMaskPixels = null;
         private double _windowWidth = 255.0;
         private double _windowCenter = 127.5;
         private double _veinOpacity = 0.85;
@@ -136,6 +140,19 @@ namespace Ignite.Desktop
         private WriteableBitmap? _cachedBioheatBitmap = null;
         private AdvancedDiagnosticService.BioheatPerfusionStats? _cachedBioheatStats = null;
 
+        // Feature-Pakete 1-4 (LUT Invertierung, 4x Lupe, Mirror ΔT, Ischämie/Charcot/Entropie, Kohorte & Jury-Demo)
+        private bool _invertLut = false;
+        private bool _loupePinned = false;
+        private int _lastMousePixelX = -1;
+        private int _lastMousePixelY = -1;
+        private WriteableBitmap? _cachedMirrorDiffBitmap = null;
+        private AdvancedDiagnosticService.BilateralMirrorStats? _cachedMirrorStats = null;
+        private WriteableBitmap? _cachedIschemiaBitmap = null;
+        private AdvancedDiagnosticService.IschemiaCharcotEntropyResult? _cachedIschemiaCharcot = null;
+        private List<AdvancedDiagnosticService.CohortCaseSummary> _cohortSummaries = new();
+        private System.Windows.Threading.DispatcherTimer? _juryDemoTimer = null;
+        private int _juryDemoStep = 0;
+
         // Filmstrip Gallery
         private readonly List<string> _filmstripFiles = new();
         private int _activeFilmstripIndex = -1;
@@ -202,12 +219,12 @@ namespace Ignite.Desktop
                             Background = (Brush)FindResource("SurfaceCardBrush"),
                             BorderBrush = (Brush)FindResource("BorderBrush"),
                             BorderThickness = new Thickness(1),
-                            CornerRadius = new CornerRadius(5),
-                            Margin = new Thickness(3, 2, 3, 2),
+                            CornerRadius = new CornerRadius(6),
+                            Margin = new Thickness(3, 1, 3, 1),
                             Padding = new Thickness(4),
                             Cursor = Cursors.Hand,
                             Tag = caseIndex,
-                            Width = 92
+                            Width = 96
                         };
 
                         var stack = new StackPanel { Orientation = Orientation.Vertical, HorizontalAlignment = HorizontalAlignment.Center };
@@ -216,30 +233,43 @@ namespace Ignite.Desktop
                         var bmp = new BitmapImage();
                         bmp.BeginInit();
                         bmp.UriSource = new Uri(filePath);
-                        bmp.DecodePixelWidth = 84;
+                        bmp.DecodePixelWidth = 86;
                         bmp.CacheOption = BitmapCacheOption.OnLoad;
                         bmp.EndInit();
                         bmp.Freeze();
 
+                        var thumbFrame = new Border
+                        {
+                            Background = new SolidColorBrush(Color.FromRgb(11, 15, 25)),
+                            BorderBrush = new SolidColorBrush(Color.FromRgb(30, 41, 59)),
+                            BorderThickness = new Thickness(1),
+                            CornerRadius = new CornerRadius(4),
+                            ClipToBounds = true,
+                            Width = 86,
+                            Height = 56
+                        };
+
                         var img = new Image
                         {
                             Source = bmp,
-                            Width = 84,
-                            Height = 58,
+                            Width = 86,
+                            Height = 56,
                             Stretch = Stretch.UniformToFill
                         };
+                        thumbFrame.Child = img;
 
                         var lbl = new TextBlock
                         {
                             Text = $"Fall #{caseIndex + 1:D2}",
+                            FontFamily = new FontFamily("Consolas, Segoe UI Variable, Segoe UI"),
                             FontSize = 9.5,
-                            FontWeight = FontWeights.Bold,
+                            FontWeight = FontWeights.SemiBold,
                             Foreground = (Brush)FindResource("TextPrimaryBrush"),
                             HorizontalAlignment = HorizontalAlignment.Center,
-                            Margin = new Thickness(0, 3, 0, 0)
+                            Margin = new Thickness(0, 4, 0, 0)
                         };
 
-                        stack.Children.Add(img);
+                        stack.Children.Add(thumbFrame);
                         stack.Children.Add(lbl);
                         card.Child = stack;
 
@@ -291,7 +321,7 @@ namespace Ignite.Desktop
                     {
                         card.BorderBrush = (Brush)FindResource("CyanBrush");
                         card.BorderThickness = new Thickness(2);
-                        card.Background = new SolidColorBrush(Color.FromRgb(0xE0, 0xF2, 0xFE));
+                        card.Background = new SolidColorBrush(Color.FromRgb(0xF0, 0xF9, 0xFF));
                     }
                     else
                     {
@@ -388,11 +418,17 @@ end";
                 _currentImagePath = path;
                 _currentROI = null;
                 _cachedVeinPixels = null;
+                _cachedHotspotMaskPixels = null;
                 _activeProfileStats = null;
                 _cachedPressureBitmap = null;
                 _cachedLaplaceBitmap = null;
                 _cachedBioheatBitmap = null;
                 _cachedBioheatStats = null;
+                _cachedMirrorDiffBitmap = null;
+                _cachedMirrorStats = null;
+                _cachedIschemiaBitmap = null;
+                _cachedIschemiaCharcot = null;
+                _loupePinned = false;
                 _pressureStats = null;
                 OverlayOriginalCanvas.Children.Clear();
                 OverlayResultCanvas.Children.Clear();
@@ -406,7 +442,7 @@ end";
                 }
 
                 // Load calibrated color bitmap AND raw gray pixels
-                var cal = PaletteService.LoadCalibratedImage(path, _activePalette, _windowWidth, _windowCenter);
+                var cal = PaletteService.LoadCalibratedImage(path, _activePalette, _windowWidth, _windowCenter, _invertLut);
                 _originalBitmap = cal.coloredBitmap;
                 _rawGrayPixels = cal.rawGray;
                 _rawWidth = cal.width;
@@ -436,6 +472,7 @@ end";
                 UpdateHistogramData();
                 UpdateAnatomicalZonesData();
                 UpdateBiomechanicsUI();
+                UpdateIschemiaCharcotEntropyUI();
 
                 string fileName = System.IO.Path.GetFileName(path);
                 StatusText.Text = $"Thermogramm geladen: {fileName} ({_rawWidth}x{_rawHeight} Radiometrie-Matrix).";
@@ -569,12 +606,13 @@ end";
 
                 // Invalidate cached masks so new ones are loaded
                 _cachedVeinPixels = null;
+                _cachedHotspotMaskPixels = null;
                 _cachedDepth3DPixels = null;
                 _cachedCorrected3DPixels = null;
 
                 // Update Clinical Header Status Chip & Inspector Risk Badge
                 bool isCrit = (result.HighestRisk == "CRITICAL");
-                double maxVal = result.Hotspots.Count > 0 ? (result.Hotspots.Max(h => (h?.Region?.MaxVal ?? 0)) - result.Stats.OrigMedian) * 0.1 : 0;
+                double maxVal = result.Hotspots.Count > 0 ? result.Hotspots.Max(h => ComputeHotspotDeltaT(h?.Region, result.Stats?.OrigMedian ?? 0)) : 0;
                 if (isCrit)
                 {
                     if (BorderTriageBadge != null)
@@ -644,6 +682,9 @@ end";
 
                 // Update 3D Surface Reconstruction & Lambertian Edge Compensation
                 Update3DReconstructionUI();
+
+                // Update pAVK Ischemia, Charcot Midfoot Index & Shannon Thermal Entropy
+                UpdateIschemiaCharcotEntropyUI();
 
                 // Log into SQLite database safely
                 if (_dbService != null && !string.IsNullOrEmpty(_activePatientId) && !string.IsNullOrEmpty(_currentImagePath))
@@ -721,7 +762,50 @@ end";
                 return;
             }
 
+            // Handle Pennes 2D Bioheat Perfusion mode
+            if (_activeViewMode == ActiveViewMode.BioheatPerfusion && _rawGrayPixels != null)
+            {
+                if (_cachedBioheatBitmap == null || _cachedBioheatStats == null)
+                {
+                    var (bBmp, bStats) = AdvancedDiagnosticService.GenerateBioheatPerfusionMap(_rawGrayPixels, w, h);
+                    _cachedBioheatBitmap = bBmp;
+                    _cachedBioheatStats = bStats;
+                }
+                ImgResult.Source = _cachedBioheatBitmap;
+                RedrawInteractiveOverlays();
+                return;
+            }
+
+            // Handle Bilateral Mirror Difference |T_L - T_R| mode
+            if (_activeViewMode == ActiveViewMode.BilateralMirrorDiff && _rawGrayPixels != null)
+            {
+                if (_cachedMirrorDiffBitmap == null || _cachedMirrorStats == null)
+                {
+                    var (mBmp, mStats) = AdvancedDiagnosticService.GenerateBilateralMirrorDiffMap(_rawGrayPixels, w, h);
+                    _cachedMirrorDiffBitmap = mBmp;
+                    _cachedMirrorStats = mStats;
+                }
+                ImgResult.Source = _cachedMirrorDiffBitmap;
+                RedrawInteractiveOverlays();
+                return;
+            }
+
+            // Handle pAVK Acral Ischemia Cold-Spot map
+            if (_activeViewMode == ActiveViewMode.IschemiaColdMap && _rawGrayPixels != null)
+            {
+                if (_cachedIschemiaBitmap == null)
+                {
+                    _cachedIschemiaBitmap = AdvancedDiagnosticService.GenerateIschemiaColdSpotMap(_rawGrayPixels, w, h);
+                }
+                ImgResult.Source = _cachedIschemiaBitmap;
+                RedrawInteractiveOverlays();
+                return;
+            }
+
             byte[]? activeDisplayPixels = (_showCorrected2D && _cachedCorrected3DPixels != null) ? _cachedCorrected3DPixels : _rawGrayPixels;
+
+            // Load confirmed vascular & hotspot segmentation masks BEFORE branching into DualView / CurtainWipe
+            EnsureAnalysisMasksLoaded(w, h, showVeins && _enableVeinOverlay, loadHotspotMask: true);
 
             BitmapSource baseBmp;
             if ((_activeViewMode == ActiveViewMode.CurtainWipe || _activeViewMode == ActiveViewMode.DualView) && activeDisplayPixels != null)
@@ -732,35 +816,18 @@ end";
                     thresh = (byte)Math.Clamp(result.Stats.OrigMedian + 10, 100, 230);
                 }
                 baseBmp = PaletteService.CreateIsolatedFindingBitmap(
-                    activeDisplayPixels, w, h, _activePalette, thresh, _cachedVeinPixels, showVeins && _enableVeinOverlay, _windowWidth, _windowCenter);
+                    activeDisplayPixels, w, h, _activePalette, thresh, _cachedVeinPixels, showVeins && _enableVeinOverlay, _windowWidth, _windowCenter, _invertLut, _cachedHotspotMaskPixels);
             }
             else
             {
                 baseBmp = activeDisplayPixels != null
-                    ? PaletteService.ApplyPalette(activeDisplayPixels, w, h, _activePalette, _windowWidth, _windowCenter)
-                    : PaletteService.ApplyPalette(_originalBitmap, _activePalette, _windowWidth, _windowCenter);
+                    ? PaletteService.ApplyPalette(activeDisplayPixels, w, h, _activePalette, _windowWidth, _windowCenter, _invertLut)
+                    : PaletteService.ApplyPalette(_originalBitmap, _activePalette, _windowWidth, _windowCenter, _invertLut);
 
                 // Blend vein mask if active
-                if (showVeins && _enableVeinOverlay)
+                if (showVeins && _enableVeinOverlay && _cachedVeinPixels != null)
                 {
-                    try
-                    {
-                        if (_cachedVeinPixels == null)
-                        {
-                            string veinMaskPath = System.IO.Path.Combine(_engineService.CacheDirectory, "vascular_mask.png");
-                            if (File.Exists(veinMaskPath))
-                            {
-                                _cachedVeinPixels = PaletteService.LoadVeinMaskBytes(veinMaskPath, w, h);
-                                UpdateVeinMetricsUI();
-                            }
-                        }
-
-                        if (_cachedVeinPixels != null)
-                        {
-                            baseBmp = PaletteService.BlendVeinOverlay(baseBmp, _cachedVeinPixels, _veinOpacity, _veinThreshold, _veinRenderMode);
-                        }
-                    }
-                    catch { }
+                    baseBmp = PaletteService.BlendVeinOverlay(baseBmp, _cachedVeinPixels, _veinOpacity, _veinThreshold, _veinRenderMode);
                 }
             }
 
@@ -768,6 +835,46 @@ end";
 
             // Redraw vector annotations
             RedrawInteractiveOverlays();
+        }
+
+        private void EnsureAnalysisMasksLoaded(int w, int h, bool loadVeinMask, bool loadHotspotMask)
+        {
+            if (loadVeinMask && _cachedVeinPixels == null)
+            {
+                try
+                {
+                    string veinMaskPath = System.IO.Path.Combine(_engineService.CacheDirectory, "vascular_mask.png");
+                    if (File.Exists(veinMaskPath))
+                    {
+                        _cachedVeinPixels = PaletteService.LoadVeinMaskBytes(veinMaskPath, w, h);
+                        UpdateVeinMetricsUI();
+                    }
+                }
+                catch { }
+            }
+
+            if (loadHotspotMask && _cachedHotspotMaskPixels == null)
+            {
+                try
+                {
+                    string hotspotMaskPath = System.IO.Path.Combine(_engineService.CacheDirectory, "hotspot_mask.png");
+                    if (File.Exists(hotspotMaskPath))
+                    {
+                        _cachedHotspotMaskPixels = PaletteService.LoadVeinMaskBytes(hotspotMaskPath, w, h);
+                    }
+                }
+                catch { }
+            }
+        }
+
+        private static double ComputeHotspotDeltaT(HotspotRegion? reg, double origMed)
+        {
+            if (reg == null) return 0.0;
+            if (reg.ContraDelta > 0)
+            {
+                return Math.Round(reg.ContraDelta * 0.1, 1);
+            }
+            return Math.Round(Math.Max(reg.LocalProminence, reg.MaxVal - origMed) * 0.1, 1);
         }
 
         private void RefreshResultImageOnly()
@@ -848,7 +955,35 @@ end";
                 return;
             }
 
+            if (_activeViewMode == ActiveViewMode.BilateralMirrorDiff && _rawGrayPixels != null)
+            {
+                if (_cachedMirrorDiffBitmap == null || _cachedMirrorStats == null)
+                {
+                    var (mBmp, mStats) = AdvancedDiagnosticService.GenerateBilateralMirrorDiffMap(_rawGrayPixels, w, h);
+                    _cachedMirrorDiffBitmap = mBmp;
+                    _cachedMirrorStats = mStats;
+                }
+                ImgResult.Source = _cachedMirrorDiffBitmap;
+                OverlayResultCanvas.Children.Clear();
+                RedrawInteractiveOverlays();
+                return;
+            }
+
+            if (_activeViewMode == ActiveViewMode.IschemiaColdMap && _rawGrayPixels != null)
+            {
+                if (_cachedIschemiaBitmap == null)
+                {
+                    _cachedIschemiaBitmap = AdvancedDiagnosticService.GenerateIschemiaColdSpotMap(_rawGrayPixels, w, h);
+                }
+                ImgResult.Source = _cachedIschemiaBitmap;
+                OverlayResultCanvas.Children.Clear();
+                RedrawInteractiveOverlays();
+                return;
+            }
+
             byte[]? activeDisplayPixels = (_showCorrected2D && _cachedCorrected3DPixels != null) ? _cachedCorrected3DPixels : _rawGrayPixels;
+
+            EnsureAnalysisMasksLoaded(w, h, _enableVeinOverlay, loadHotspotMask: _latestResult != null);
 
             BitmapSource baseBmp;
             if ((_activeViewMode == ActiveViewMode.CurtainWipe || _activeViewMode == ActiveViewMode.DualView) && activeDisplayPixels != null)
@@ -859,13 +994,13 @@ end";
                     thresh = (byte)Math.Clamp(_latestResult.Stats.OrigMedian + 10, 100, 230);
                 }
                 baseBmp = PaletteService.CreateIsolatedFindingBitmap(
-                    activeDisplayPixels, w, h, _activePalette, thresh, _cachedVeinPixels, _enableVeinOverlay, _windowWidth, _windowCenter);
+                    activeDisplayPixels, w, h, _activePalette, thresh, _cachedVeinPixels, _enableVeinOverlay, _windowWidth, _windowCenter, _invertLut, _cachedHotspotMaskPixels);
             }
             else
             {
                 baseBmp = activeDisplayPixels != null
-                    ? PaletteService.ApplyPalette(activeDisplayPixels, w, h, _activePalette, _windowWidth, _windowCenter)
-                    : PaletteService.ApplyPalette(_originalBitmap, _activePalette, _windowWidth, _windowCenter);
+                    ? PaletteService.ApplyPalette(activeDisplayPixels, w, h, _activePalette, _windowWidth, _windowCenter, _invertLut)
+                    : PaletteService.ApplyPalette(_originalBitmap, _activePalette, _windowWidth, _windowCenter, _invertLut);
 
                 if (_enableVeinOverlay && _cachedVeinPixels != null)
                 {
@@ -980,6 +1115,30 @@ end";
                 SelectInspectorTab(TabBiomechanics);
                 TxtVp2Title.Text = "PENNES 2D BIOHEAT MIKROVASKULÄRE PERFUSIONSMAP (ω_b in ml / 100g / min)";
             }
+            else if (RbViewMirrorDiff != null && RbViewMirrorDiff.IsChecked == true)
+            {
+                _activeViewMode = ActiveViewMode.BilateralMirrorDiff;
+                ColViewport1.Width = new GridLength(1, GridUnitType.Star);
+                ColDivider.Width = new GridLength(1);
+                ColViewport2.Width = new GridLength(1, GridUnitType.Star);
+                ImgCurtainRaw.Visibility = Visibility.Collapsed;
+                CanvasCurtain.Visibility = Visibility.Collapsed;
+                SelectInspectorTab(TabIschemiaCharcot);
+                UpdateIschemiaCharcotEntropyUI();
+                TxtVp2Title.Text = "BILATERALE SPIEGELSYMMETRIE-DIFFERENZKARTE |T_L − T_R| (ARMSTRONG ≥ 2,2 K)";
+            }
+            else if (RbViewIschemia != null && RbViewIschemia.IsChecked == true)
+            {
+                _activeViewMode = ActiveViewMode.IschemiaColdMap;
+                ColViewport1.Width = new GridLength(1, GridUnitType.Star);
+                ColDivider.Width = new GridLength(1);
+                ColViewport2.Width = new GridLength(1, GridUnitType.Star);
+                ImgCurtainRaw.Visibility = Visibility.Collapsed;
+                CanvasCurtain.Visibility = Visibility.Collapsed;
+                SelectInspectorTab(TabIschemiaCharcot);
+                UpdateIschemiaCharcotEntropyUI();
+                TxtVp2Title.Text = "pAVK AKRALE ISCHÄMIE COLD-SPOT PERFUSIONSKARTE (HYPOTHERMIE < 28,5 °C)";
+            }
 
             RefreshResultImageOnly();
         }
@@ -1033,8 +1192,21 @@ end";
         {
             if (_rawWidth <= 0 || _rawHeight <= 0) return;
 
+            if (!_loupePinned)
+            {
+                _lastMousePixelX = x;
+                _lastMousePixelY = y;
+            }
+
             DrawCrosshairOnCanvas(CrosshairOriginalCanvas, x, y);
             DrawCrosshairOnCanvas(CrosshairResultCanvas, x, y);
+
+            if (_activeTool == ActiveCanvasTool.MagnifierLoupe)
+            {
+                int lx = _loupePinned && _lastMousePixelX >= 0 ? _lastMousePixelX : x;
+                int ly = _loupePinned && _lastMousePixelY >= 0 ? _lastMousePixelY : y;
+                DrawMagnifierLoupeOnCanvas(CrosshairResultCanvas, lx, ly);
+            }
         }
 
         private void DrawCrosshairOnCanvas(Canvas canvas, int x, int y)
@@ -1096,6 +1268,134 @@ end";
             CrosshairResultCanvas?.Children.Clear();
         }
 
+        private void DrawMagnifierLoupeOnCanvas(Canvas? canvas, int cx, int cy)
+        {
+            if (canvas == null || _rawGrayPixels == null || _rawWidth <= 0 || _rawHeight <= 0)
+                return;
+
+            double cell = Math.Clamp(Math.Min(_rawWidth, _rawHeight) / 30.0, 8.0, 22.0);
+            double gridSize = cell * 9.0;
+            double pad = Math.Max(5.0, cell * 0.55);
+            double fontScale = Math.Clamp(cell / 10.0, 0.85, 1.9);
+            double footerH = Math.Round(30.0 * fontScale);
+            double totalW = gridSize + pad * 2;
+            double totalH = gridSize + pad * 2 + footerH;
+
+            double offset = Math.Max(14.0, cell * 1.4);
+            double boxX = cx + offset;
+            double boxY = cy + offset;
+            if (boxX + totalW + 4 > _rawWidth) boxX = cx - totalW - offset;
+            if (boxY + totalH + 4 > _rawHeight) boxY = cy - totalH - offset;
+            boxX = Math.Clamp(boxX, 4, Math.Max(4, _rawWidth - totalW - 4));
+            boxY = Math.Clamp(boxY, 4, Math.Max(4, _rawHeight - totalH - 4));
+
+            var gridCanvas = new Canvas { Width = gridSize, Height = gridSize, ClipToBounds = true };
+            double minT = double.MaxValue, maxT = double.MinValue, sumT = 0.0, centerT = 0.0;
+            int count = 0;
+
+            for (int dy = -4; dy <= 4; dy++)
+            {
+                for (int dx = -4; dx <= 4; dx++)
+                {
+                    int px = Math.Clamp(cx + dx, 0, _rawWidth - 1);
+                    int py = Math.Clamp(cy + dy, 0, _rawHeight - 1);
+                    byte raw = _rawGrayPixels[py * _rawWidth + px];
+                    double t = ThermalAnalysisHelper.RawToTemperature(raw);
+
+                    if (t < minT) minT = t;
+                    if (t > maxT) maxT = t;
+                    sumT += t;
+                    count++;
+                    if (dx == 0 && dy == 0) centerT = t;
+
+                    uint bgra = PaletteService.GetBgraColorForValue(raw, _activePalette, _windowWidth, _windowCenter, _invertLut);
+                    byte b = (byte)(bgra & 0xFF);
+                    byte g = (byte)((bgra >> 8) & 0xFF);
+                    byte r = (byte)((bgra >> 16) & 0xFF);
+
+                    var rect = new System.Windows.Shapes.Rectangle
+                    {
+                        Width = cell + 0.5,
+                        Height = cell + 0.5,
+                        Fill = new SolidColorBrush(Color.FromRgb(r, g, b)),
+                        Stroke = (dx == 0 && dy == 0) ? Brushes.White : new SolidColorBrush(Color.FromArgb(40, 255, 255, 255)),
+                        StrokeThickness = (dx == 0 && dy == 0) ? 1.5 : 0.4
+                    };
+                    Canvas.SetLeft(rect, (dx + 4) * cell);
+                    Canvas.SetTop(rect, (dy + 4) * cell);
+                    gridCanvas.Children.Add(rect);
+                }
+            }
+
+            double meanT = count > 0 ? sumT / count : centerT;
+            Color accentColor = _loupePinned ? Color.FromRgb(245, 158, 11) : Color.FromRgb(56, 189, 248);
+            var accentBrush = new SolidColorBrush(accentColor);
+
+            var hudStack = new StackPanel();
+            hudStack.Children.Add(gridCanvas);
+            hudStack.Children.Add(new TextBlock
+            {
+                Text = $"{(_loupePinned ? "PIN " : "")}({cx},{cy})  T={centerT:F2}°C",
+                FontFamily = new FontFamily("Consolas"),
+                FontSize = 9.0 * fontScale,
+                FontWeight = FontWeights.Bold,
+                Foreground = accentBrush,
+                Margin = new Thickness(0, 4, 0, 1)
+            });
+            hudStack.Children.Add(new TextBlock
+            {
+                Text = $"9×9: {minT:F1}..{maxT:F1}°C (Ø{meanT:F1})",
+                FontFamily = new FontFamily("Consolas"),
+                FontSize = 8.0 * fontScale,
+                Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225))
+            });
+
+            var hudBorder = new Border
+            {
+                Width = totalW,
+                Background = new SolidColorBrush(Color.FromArgb(236, 11, 15, 25)),
+                BorderBrush = accentBrush,
+                BorderThickness = new Thickness(1.4),
+                CornerRadius = new CornerRadius(6),
+                Padding = new Thickness(pad),
+                Child = hudStack,
+                IsHitTestVisible = false
+            };
+
+            // Target 9x9 sampling box outline at cursor
+            var srcBox = new System.Windows.Shapes.Rectangle
+            {
+                Width = 9,
+                Height = 9,
+                Stroke = accentBrush,
+                StrokeThickness = 1.2,
+                Fill = Brushes.Transparent,
+                IsHitTestVisible = false
+            };
+            Canvas.SetLeft(srcBox, cx - 4.5);
+            Canvas.SetTop(srcBox, cy - 4.5);
+
+            var leader = new System.Windows.Shapes.Line
+            {
+                X1 = cx,
+                Y1 = cy,
+                X2 = boxX + totalW * 0.5,
+                Y2 = boxY + totalH * 0.5,
+                Stroke = accentBrush,
+                StrokeThickness = 0.9,
+                Opacity = 0.55,
+                StrokeDashArray = new DoubleCollection { 2, 2 },
+                IsHitTestVisible = false
+            };
+
+            Canvas.SetLeft(hudBorder, boxX);
+            Canvas.SetTop(hudBorder, boxY);
+
+            canvas.Children.Add(leader);
+            canvas.Children.Add(srcBox);
+            canvas.Children.Add(hudBorder);
+        }
+
         // --- Interactive Overlays (Hotspots, Min/Max, Probes, Profile, ROI) ---
         private void RedrawInteractiveOverlays()
         {
@@ -1135,29 +1435,29 @@ end";
 
                     if (diagType == "PRESSURE_POINT")
                     {
-                        strokeBrush = new SolidColorBrush(Color.FromRgb(255, 179, 0)); // Amber für Druckstelle
-                        fillBrush = new SolidColorBrush(Color.FromArgb(30, 255, 179, 0));
+                        strokeBrush = new SolidColorBrush(Color.FromRgb(251, 191, 36)); // Amber für Druckstelle
+                        fillBrush = new SolidColorBrush(Color.FromArgb(32, 251, 191, 36));
                         dashArray = new DoubleCollection { 4, 2 }; // Gestrichelter Rand = mechanische Druckbelastung
-                        badgePrefix = "🦶 DRUCKSTELLE";
+                        badgePrefix = "DRUCKSTELLE";
                     }
                     else if (diagType == "INFLAMED_PRESSURE_POINT")
                     {
-                        strokeBrush = new SolidColorBrush(Color.FromRgb(255, 42, 85)); // Armstrong Alarm Red
-                        fillBrush = new SolidColorBrush(Color.FromArgb(50, 255, 42, 85));
-                        badgePrefix = "⚠️ ENTZ. DRUCKSTELLE";
+                        strokeBrush = new SolidColorBrush(Color.FromRgb(248, 113, 113)); // Armstrong Alarm Red
+                        fillBrush = new SolidColorBrush(Color.FromArgb(48, 220, 38, 38));
+                        badgePrefix = "ENTZ. DRUCKSTELLE";
                     }
                     else if (diagType == "BENIGN")
                     {
-                        strokeBrush = new SolidColorBrush(Color.FromRgb(0, 230, 118)); // Green
-                        fillBrush = new SolidColorBrush(Color.FromArgb(25, 0, 230, 118));
-                        badgePrefix = "🌱 NORMAL";
+                        strokeBrush = new SolidColorBrush(Color.FromRgb(74, 222, 128)); // Green
+                        fillBrush = new SolidColorBrush(Color.FromArgb(26, 22, 163, 74));
+                        badgePrefix = "PHYSIOLOGISCH";
                     }
                     else
                     {
                         // Echte Entzündung (INFLAMMATION)
-                        strokeBrush = risk == "CRITICAL" ? new SolidColorBrush(Color.FromRgb(255, 42, 85)) : new SolidColorBrush(Color.FromRgb(255, 82, 82));
-                        fillBrush = new SolidColorBrush(Color.FromArgb(40, 255, 42, 85));
-                        badgePrefix = "🔥 ENTZÜNDUNG";
+                        strokeBrush = risk == "CRITICAL" ? new SolidColorBrush(Color.FromRgb(248, 113, 113)) : new SolidColorBrush(Color.FromRgb(239, 68, 68));
+                        fillBrush = new SolidColorBrush(Color.FromArgb(40, 220, 38, 38));
+                        badgePrefix = "HERD / ENTZÜNDUNG";
                     }
 
                     var rect = new System.Windows.Shapes.Rectangle
@@ -1180,18 +1480,19 @@ end";
                     OverlayResultCanvas.Children.Add(crosshairH);
                     OverlayResultCanvas.Children.Add(crosshairV);
 
-                    double deltaT = Math.Round((reg.MaxVal - origMed) * 0.1, 1);
+                    double deltaT = ComputeHotspotDeltaT(reg, origMed);
                     var labelBorder = new Border
                     {
-                        Background = new SolidColorBrush(Color.FromArgb(235, 10, 14, 22)),
+                        Background = new SolidColorBrush(Color.FromArgb(230, 15, 23, 42)),
                         BorderBrush = rect.Stroke,
                         BorderThickness = new Thickness(1),
-                        CornerRadius = new CornerRadius(3),
-                        Padding = new Thickness(5, 2, 5, 2)
+                        CornerRadius = new CornerRadius(4),
+                        Padding = new Thickness(6, 2, 6, 2)
                     };
                     labelBorder.Child = new TextBlock
                     {
-                        Text = $"{badgePrefix} #{reg.Id} (ΔT = +{deltaT:F1} K)",
+                        Text = $"{badgePrefix} #{reg.Id} · ΔT +{deltaT:F1} K",
+                        FontFamily = new FontFamily("Consolas, Segoe UI Variable, Segoe UI"),
                         FontSize = 9.5,
                         FontWeight = FontWeights.Bold,
                         Foreground = Brushes.White
@@ -1256,7 +1557,7 @@ end";
                     double hx = mainHotspot.Region.CenterX;
                     double hy = mainHotspot.Region.CenterY;
                     double origMed = _latestResult.Stats?.OrigMedian ?? 128.0;
-                    double deltaT = Math.Round((mainHotspot.Region.MaxVal - origMed) * 0.1, 1);
+                    double deltaT = ComputeHotspotDeltaT(mainHotspot.Region, origMed);
                     if (deltaT < 1.0 && mainHotspot.Region.EdgeGradient > 0)
                     {
                         deltaT = Math.Round(mainHotspot.Region.EdgeGradient * 0.1, 1);
@@ -1278,17 +1579,19 @@ end";
 
         private void DrawExtremumPin(Canvas canvas, int x, int y, double temp, bool isMax)
         {
-            var brush = isMax ? new SolidColorBrush(Color.FromRgb(255, 42, 85)) : (Brush)FindResource("CyanBrush");
-            var glyph = isMax ? "🔥" : "❄️";
-            var text = isMax ? $"MAX: {temp:F1}°C" : $"MIN: {temp:F1}°C";
+            var brush = isMax
+                ? new SolidColorBrush(Color.FromRgb(248, 113, 113))
+                : new SolidColorBrush(Color.FromRgb(56, 189, 248));
+            var marker = isMax ? "▲" : "▼";
+            var text = isMax ? $"MAX {temp:F1}°C" : $"MIN {temp:F1}°C";
 
             var ring = new Ellipse
             {
                 Width = 14,
                 Height = 14,
                 Stroke = brush,
-                StrokeThickness = 2.0,
-                Fill = new SolidColorBrush(Color.FromArgb(40, isMax ? (byte)255 : (byte)0, isMax ? (byte)42 : (byte)240, isMax ? (byte)85 : (byte)255))
+                StrokeThickness = 1.8,
+                Fill = new SolidColorBrush(Color.FromArgb(40, isMax ? (byte)248 : (byte)56, isMax ? (byte)113 : (byte)189, isMax ? (byte)113 : (byte)248))
             };
             Canvas.SetLeft(ring, x - 7);
             Canvas.SetTop(ring, y - 7);
@@ -1296,15 +1599,16 @@ end";
 
             var tag = new Border
             {
-                Background = new SolidColorBrush(Color.FromArgb(235, 10, 14, 22)),
+                Background = new SolidColorBrush(Color.FromArgb(230, 15, 23, 42)),
                 BorderBrush = brush,
                 BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(3),
-                Padding = new Thickness(4, 1, 4, 1)
+                CornerRadius = new CornerRadius(4),
+                Padding = new Thickness(5, 1.5, 5, 1.5)
             };
             tag.Child = new TextBlock
             {
-                Text = $"{glyph} {text}",
+                Text = $"{marker} {text}",
+                FontFamily = new FontFamily("Consolas, Segoe UI Variable, Segoe UI"),
                 FontSize = 9.5,
                 FontWeight = FontWeights.Bold,
                 Foreground = brush
@@ -1316,23 +1620,24 @@ end";
 
         private void DrawProfileLineVector(Canvas canvas)
         {
+            var strokeBrush = new SolidColorBrush(Color.FromRgb(56, 189, 248));
             var line = new Line
             {
                 X1 = _profileStartPoint.X,
                 Y1 = _profileStartPoint.Y,
                 X2 = _profileEndPoint.X,
                 Y2 = _profileEndPoint.Y,
-                Stroke = (Brush)FindResource("CyanBrush"),
-                StrokeThickness = 2.5
+                Stroke = strokeBrush,
+                StrokeThickness = 2.2
             };
             canvas.Children.Add(line);
 
-            var r1 = new Ellipse { Width = 8, Height = 8, Fill = Brushes.White, Stroke = (Brush)FindResource("CyanBrush"), StrokeThickness = 1.5 };
+            var r1 = new Ellipse { Width = 8, Height = 8, Fill = Brushes.White, Stroke = strokeBrush, StrokeThickness = 1.5 };
             Canvas.SetLeft(r1, _profileStartPoint.X - 4);
             Canvas.SetTop(r1, _profileStartPoint.Y - 4);
             canvas.Children.Add(r1);
 
-            var r2 = new Ellipse { Width = 8, Height = 8, Fill = Brushes.White, Stroke = (Brush)FindResource("CyanBrush"), StrokeThickness = 1.5 };
+            var r2 = new Ellipse { Width = 8, Height = 8, Fill = Brushes.White, Stroke = strokeBrush, StrokeThickness = 1.5 };
             Canvas.SetLeft(r2, _profileEndPoint.X - 4);
             Canvas.SetTop(r2, _profileEndPoint.Y - 4);
             canvas.Children.Add(r2);
@@ -1342,15 +1647,16 @@ end";
 
             var badge = new Border
             {
-                Background = new SolidColorBrush(Color.FromArgb(235, 10, 14, 22)),
-                BorderBrush = (Brush)FindResource("CyanBrush"),
+                Background = new SolidColorBrush(Color.FromArgb(230, 15, 23, 42)),
+                BorderBrush = strokeBrush,
                 BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(3),
-                Padding = new Thickness(5, 2, 5, 2)
+                CornerRadius = new CornerRadius(4),
+                Padding = new Thickness(6, 2, 6, 2)
             };
             badge.Child = new TextBlock
             {
-                Text = $"📏 T(s): {_activeProfileStats?.MinTemp:F1}°C - {_activeProfileStats?.MaxTemp:F1}°C (L={_activeProfileStats?.TotalLengthPx:F0}px)",
+                Text = $"T(s): {_activeProfileStats?.MinTemp:F1}°C – {_activeProfileStats?.MaxTemp:F1}°C · L={_activeProfileStats?.TotalLengthPx:F0}px",
+                FontFamily = new FontFamily("Consolas, Segoe UI Variable, Segoe UI"),
                 FontSize = 9.5,
                 FontWeight = FontWeights.Bold,
                 Foreground = Brushes.White
@@ -1365,14 +1671,16 @@ end";
             for (int i = 0; i < _probePoints.Count; i++)
             {
                 var pt = _probePoints[i];
-                var brush = i == 0 ? (Brush)FindResource("CyanBrush") : (Brush)FindResource("WarningBrush");
+                var brush = i == 0
+                    ? new SolidColorBrush(Color.FromRgb(56, 189, 248))
+                    : new SolidColorBrush(Color.FromRgb(251, 191, 36));
 
                 var ring = new Ellipse
                 {
                     Width = 16,
                     Height = 16,
                     Stroke = brush,
-                    StrokeThickness = 2.0,
+                    StrokeThickness = 1.8,
                     Fill = new SolidColorBrush(Color.FromArgb(40, 255, 255, 255))
                 };
                 Canvas.SetLeft(ring, pt.Position.X - 8);
@@ -1386,15 +1694,16 @@ end";
 
                 var b = new Border
                 {
-                    Background = new SolidColorBrush(Color.FromArgb(235, 10, 14, 22)),
+                    Background = new SolidColorBrush(Color.FromArgb(230, 15, 23, 42)),
                     BorderBrush = brush,
                     BorderThickness = new Thickness(1),
-                    CornerRadius = new CornerRadius(3),
+                    CornerRadius = new CornerRadius(4),
                     Padding = new Thickness(5, 2, 5, 2)
                 };
                 b.Child = new TextBlock
                 {
                     Text = $"{pt.Label}: {pt.Temperature:F1} °C",
+                    FontFamily = new FontFamily("Consolas, Segoe UI Variable, Segoe UI"),
                     FontSize = 10,
                     FontWeight = FontWeights.Bold,
                     Foreground = Brushes.White
@@ -1418,7 +1727,7 @@ end";
                     Y1 = p1.Y,
                     X2 = p2.X,
                     Y2 = p2.Y,
-                    Stroke = isCrit ? (Brush)FindResource("CriticalBrush") : (Brush)FindResource("SuccessBrush"),
+                    Stroke = isCrit ? new SolidColorBrush(Color.FromRgb(248, 113, 113)) : new SolidColorBrush(Color.FromRgb(74, 222, 128)),
                     StrokeThickness = 1.8,
                     StrokeDashArray = new DoubleCollection { 4, 3 }
                 };
@@ -1429,15 +1738,16 @@ end";
 
                 var badge = new Border
                 {
-                    Background = new SolidColorBrush(Color.FromArgb(240, isCrit ? (byte)150 : (byte)15, isCrit ? (byte)20 : (byte)60, isCrit ? (byte)20 : (byte)25)),
-                    BorderBrush = isCrit ? (Brush)FindResource("CriticalBrush") : (Brush)FindResource("SuccessBrush"),
-                    BorderThickness = new Thickness(1.5),
-                    CornerRadius = new CornerRadius(3),
-                    Padding = new Thickness(6, 3, 6, 3)
+                    Background = new SolidColorBrush(Color.FromArgb(235, isCrit ? (byte)127 : (byte)20, isCrit ? (byte)29 : (byte)83, isCrit ? (byte)29 : (byte)45)),
+                    BorderBrush = isCrit ? new SolidColorBrush(Color.FromRgb(248, 113, 113)) : new SolidColorBrush(Color.FromRgb(74, 222, 128)),
+                    BorderThickness = new Thickness(1.2),
+                    CornerRadius = new CornerRadius(4),
+                    Padding = new Thickness(6, 2.5, 6, 2.5)
                 };
                 badge.Child = new TextBlock
                 {
-                    Text = $"⚖️ ΔT = {deltaT:F1} K {(isCrit ? "[ARMSTRONG ALARM]" : "[NORMAL]")}",
+                    Text = $"ΔT = {deltaT:F1} K {(isCrit ? "[ARMSTRONG ALARM]" : "[NORMAL]")}",
+                    FontFamily = new FontFamily("Consolas, Segoe UI Variable, Segoe UI"),
                     FontSize = 10,
                     FontWeight = FontWeights.Bold,
                     Foreground = Brushes.White
@@ -1459,6 +1769,10 @@ end";
             else if (RbToolProbe.IsChecked == true) _activeTool = ActiveCanvasTool.PointProbe;
             else if (RbToolGoniometer != null && RbToolGoniometer.IsChecked == true) _activeTool = ActiveCanvasTool.Goniometer;
             else if (RbToolWL.IsChecked == true) _activeTool = ActiveCanvasTool.WindowLevelDrag;
+            else if (RbToolLoupe != null && RbToolLoupe.IsChecked == true) _activeTool = ActiveCanvasTool.MagnifierLoupe;
+
+            if (_activeTool != ActiveCanvasTool.MagnifierLoupe)
+                _loupePinned = false;
 
             UpdateToolInstructions();
         }
@@ -1645,6 +1959,12 @@ end";
                     CanvasOriginal.Cursor = Cursors.SizeAll;
                     CanvasResult.Cursor = Cursors.SizeAll;
                     break;
+                case ActiveCanvasTool.MagnifierLoupe:
+                    StatusText.Text = "Werkzeug: 4× Thermale Lupe | Fährt das 9×9 Mikro-Raster über die Matrix; Klick fixiert/löst Position (Taste L).";
+                    if (TxtToolHintVp1 != null) TxtToolHintVp1.Text = " · Hover = 4× Zoom (9×9 px) | Klick = Fixieren";
+                    CanvasOriginal.Cursor = Cursors.Cross;
+                    CanvasResult.Cursor = Cursors.Cross;
+                    break;
             }
         }
 
@@ -1721,6 +2041,21 @@ end";
                         _wlStartWidth = _windowWidth;
                         _wlStartCenter = _windowCenter;
                         canvas.CaptureMouse();
+                        break;
+
+                    case ActiveCanvasTool.MagnifierLoupe:
+                        _loupePinned = !_loupePinned;
+                        int lx = Math.Clamp((int)Math.Round(pos.X), 0, Math.Max(0, _rawWidth - 1));
+                        int ly = Math.Clamp((int)Math.Round(pos.Y), 0, Math.Max(0, _rawHeight - 1));
+                        _lastMousePixelX = lx;
+                        _lastMousePixelY = ly;
+                        UpdateSynchronizedCrosshair(lx, ly);
+                        if (StatusText != null)
+                        {
+                            StatusText.Text = _loupePinned
+                                ? $"4× Thermale Lupe FIXIERT bei ({lx}, {ly}). Erneut klicken zum Lösen."
+                                : $"4× Thermale Lupe wieder frei beweglich.";
+                        }
                         break;
                 }
             }
@@ -2043,13 +2378,31 @@ end";
             double w = CanvasHistogram.ActualWidth > 50 ? CanvasHistogram.ActualWidth : 380;
             double h = CanvasHistogram.ActualHeight > 50 ? CanvasHistogram.ActualHeight : 180;
 
-            double padLeft = 20, padRight = 10, padTop = 15, padBottom = 20;
+            double padLeft = 22, padRight = 10, padTop = 14, padBottom = 22;
             double plotW = w - padLeft - padRight;
             double plotH = h - padTop - padBottom;
 
+            var gridBrush = new SolidColorBrush(Color.FromRgb(30, 41, 59));
+            var axisBrush = new SolidColorBrush(Color.FromRgb(148, 163, 184));
+            var monoFont = new FontFamily("Consolas, Segoe UI Variable, Segoe UI");
+
+            for (int g = 0; g <= 4; g++)
+            {
+                double gy = padTop + (g / 4.0) * plotH;
+                CanvasHistogram.Children.Add(new Line
+                {
+                    X1 = padLeft, Y1 = gy,
+                    X2 = padLeft + plotW, Y2 = gy,
+                    Stroke = gridBrush,
+                    StrokeThickness = g == 4 ? 1.2 : 1.0,
+                    StrokeDashArray = g == 4 ? null : new DoubleCollection { 3, 2 }
+                });
+            }
+
+            var curveBrush = new SolidColorBrush(Color.FromRgb(56, 189, 248));
             var polyline = new Polyline
             {
-                Stroke = (Brush)FindResource("CyanBrush"),
+                Stroke = curveBrush,
                 StrokeThickness = 1.8,
                 StrokeLineJoin = PenLineJoin.Round
             };
@@ -2057,8 +2410,8 @@ end";
             var area = new Polygon
             {
                 Fill = new LinearGradientBrush(
-                    Color.FromArgb(90, 0, 240, 255),
-                    Color.FromArgb(10, 0, 100, 200),
+                    Color.FromArgb(85, 56, 189, 248),
+                    Color.FromArgb(5, 2, 132, 199),
                     new Point(0, 0),
                     new Point(0, 1))
             };
@@ -2082,31 +2435,57 @@ end";
             CanvasHistogram.Children.Add(area);
             CanvasHistogram.Children.Add(polyline);
 
+            // Axis labels
+            var tbLeft = new TextBlock { Text = "20°C", FontFamily = monoFont, FontSize = 8.5, Foreground = axisBrush };
+            Canvas.SetLeft(tbLeft, padLeft);
+            Canvas.SetTop(tbLeft, h - 16);
+            CanvasHistogram.Children.Add(tbLeft);
+
+            var tbMid = new TextBlock { Text = "31°C", FontFamily = monoFont, FontSize = 8.5, Foreground = axisBrush };
+            Canvas.SetLeft(tbMid, padLeft + plotW * 0.5 - 12);
+            Canvas.SetTop(tbMid, h - 16);
+            CanvasHistogram.Children.Add(tbMid);
+
+            var tbRight = new TextBlock { Text = "42°C", FontFamily = monoFont, FontSize = 8.5, Foreground = axisBrush };
+            Canvas.SetLeft(tbRight, padLeft + plotW - 24);
+            Canvas.SetTop(tbRight, h - 16);
+            CanvasHistogram.Children.Add(tbRight);
+
             // Draw Threshold Line (Red)
             if (data.OutlierThresholdRaw > 15)
             {
                 double threshXNorm = (data.OutlierThresholdRaw - 15) / 240.0;
                 double threshX = padLeft + threshXNorm * plotW;
+                var threshBrush = new SolidColorBrush(Color.FromRgb(248, 113, 113));
 
                 var threshLine = new Line
                 {
                     X1 = threshX, Y1 = padTop,
                     X2 = threshX, Y2 = padTop + plotH,
-                    Stroke = (Brush)FindResource("CriticalBrush"),
-                    StrokeThickness = 2.0,
+                    Stroke = threshBrush,
+                    StrokeThickness = 1.8,
                     StrokeDashArray = new DoubleCollection { 3, 2 }
                 };
                 CanvasHistogram.Children.Add(threshLine);
 
                 var tagThresh = new Border
                 {
-                    Background = new SolidColorBrush(Color.FromArgb(230, 255, 42, 85)),
-                    CornerRadius = new CornerRadius(2),
-                    Padding = new Thickness(3, 1, 3, 1)
+                    Background = new SolidColorBrush(Color.FromArgb(230, 127, 29, 29)),
+                    BorderBrush = threshBrush,
+                    BorderThickness = new Thickness(1),
+                    CornerRadius = new CornerRadius(3),
+                    Padding = new Thickness(4, 1, 4, 1)
                 };
-                tagThresh.Child = new TextBlock { Text = $"k*MAD: {data.OutlierThresholdTemp:F1}°C", FontSize = 8.5, FontWeight = FontWeights.Bold, Foreground = Brushes.White };
-                Canvas.SetLeft(tagThresh, Math.Min(w - 75, threshX + 2));
-                Canvas.SetTop(tagThresh, padTop + 4);
+                tagThresh.Child = new TextBlock
+                {
+                    Text = $"k·MAD {data.OutlierThresholdTemp:F1}°C",
+                    FontFamily = monoFont,
+                    FontSize = 8.5,
+                    FontWeight = FontWeights.Bold,
+                    Foreground = Brushes.White
+                };
+                Canvas.SetLeft(tagThresh, Math.Min(w - 86, threshX + 3));
+                Canvas.SetTop(tagThresh, padTop + 3);
                 CanvasHistogram.Children.Add(tagThresh);
             }
         }
@@ -2142,6 +2521,9 @@ end";
             double plotH = h - padTop - padBottom;
 
             double tMin = 20.0, tMax = 42.0;
+            var gridBrush = new SolidColorBrush(Color.FromRgb(30, 41, 59));
+            var axisBrush = new SolidColorBrush(Color.FromRgb(148, 163, 184));
+            var monoFont = new FontFamily("Consolas, Segoe UI Variable, Segoe UI");
 
             for (double t = 20.0; t <= 40.0; t += 5.0)
             {
@@ -2152,17 +2534,18 @@ end";
                 {
                     X1 = padLeft, Y1 = yScreen,
                     X2 = w - padRight, Y2 = yScreen,
-                    Stroke = new SolidColorBrush(Color.FromRgb(30, 39, 58)),
-                    StrokeThickness = 1.0,
-                    StrokeDashArray = new DoubleCollection { 3, 2 }
+                    Stroke = gridBrush,
+                    StrokeThickness = t == 20.0 ? 1.2 : 1.0,
+                    StrokeDashArray = t == 20.0 ? null : new DoubleCollection { 3, 2 }
                 };
                 CanvasProfileGraph.Children.Add(gridLine);
 
                 var tb = new TextBlock
                 {
                     Text = $"{t:F0}°",
-                    FontSize = 9,
-                    Foreground = (Brush)FindResource("TextMutedBrush"),
+                    FontFamily = monoFont,
+                    FontSize = 8.5,
+                    Foreground = axisBrush,
                     HorizontalAlignment = HorizontalAlignment.Right
                 };
                 Canvas.SetLeft(tb, 6);
@@ -2173,8 +2556,8 @@ end";
             var areaPolygon = new Polygon
             {
                 Fill = new LinearGradientBrush(
-                    Color.FromArgb(90, 0, 240, 255),
-                    Color.FromArgb(10, 0, 100, 200),
+                    Color.FromArgb(85, 56, 189, 248),
+                    Color.FromArgb(5, 2, 132, 199),
                     new Point(0, 0),
                     new Point(0, 1))
             };
@@ -2182,8 +2565,8 @@ end";
 
             var polyline = new Polyline
             {
-                Stroke = (Brush)FindResource("CyanBrush"),
-                StrokeThickness = 2.2,
+                Stroke = new SolidColorBrush(Color.FromRgb(56, 189, 248)),
+                StrokeThickness = 2.0,
                 StrokeLineJoin = PenLineJoin.Round
             };
 
@@ -2206,13 +2589,13 @@ end";
             CanvasProfileGraph.Children.Add(areaPolygon);
             CanvasProfileGraph.Children.Add(polyline);
 
-            var tbStart = new TextBlock { Text = "0 px", FontSize = 9, Foreground = (Brush)FindResource("TextMutedBrush") };
+            var tbStart = new TextBlock { Text = "0 px", FontFamily = monoFont, FontSize = 8.5, Foreground = axisBrush };
             Canvas.SetLeft(tbStart, padLeft);
             Canvas.SetTop(tbStart, h - 18);
             CanvasProfileGraph.Children.Add(tbStart);
 
-            var tbEnd = new TextBlock { Text = $"{stats.TotalLengthPx:F0} px", FontSize = 9, Foreground = (Brush)FindResource("TextMutedBrush") };
-            Canvas.SetLeft(tbEnd, w - padRight - 35);
+            var tbEnd = new TextBlock { Text = $"{stats.TotalLengthPx:F0} px", FontFamily = monoFont, FontSize = 8.5, Foreground = axisBrush };
+            Canvas.SetLeft(tbEnd, w - padRight - 38);
             Canvas.SetTop(tbEnd, h - 18);
             CanvasProfileGraph.Children.Add(tbEnd);
         }
@@ -2482,7 +2865,7 @@ end";
         private void UpdateHudReadouts()
         {
             if (HudVp1BottomLeft != null)
-                HudVp1BottomLeft.Text = $"LUT: {_activePalette.ToString().ToUpper()}\nW/L: {_windowWidth:F0} / {_windowCenter:F0}";
+                HudVp1BottomLeft.Text = $"LUT: {_activePalette.ToString().ToUpper()}{(_invertLut ? " [INV]" : "")}\nW/L: {_windowWidth:F0} / {_windowCenter:F0}";
             if (HudVp1TopRight != null)
                 HudVp1TopRight.Text = $"MATRIX: {_rawWidth}x{_rawHeight}\nZOOM: {(_currentZoom * 100):F0}%";
         }
@@ -2507,10 +2890,11 @@ end";
         private void ApplyWindowLevelToViewports()
         {
             if (_rawGrayPixels == null || _rawWidth == 0 || _rawHeight == 0) return;
-            _originalBitmap = PaletteService.ApplyPalette(_rawGrayPixels, _rawWidth, _rawHeight, _activePalette, _windowWidth, _windowCenter);
+            _originalBitmap = PaletteService.ApplyPalette(_rawGrayPixels, _rawWidth, _rawHeight, _activePalette, _windowWidth, _windowCenter, _invertLut);
             ImgOriginal.Source = _originalBitmap;
             ImgCurtainRaw.Source = _originalBitmap;
             RefreshResultImageOnly();
+            UpdateHudReadouts();
         }
 
         private void BtnWLReset_Click(object sender, RoutedEventArgs e)
@@ -2539,17 +2923,26 @@ end";
                 1 => ColorPalette.Rainbow,
                 2 => ColorPalette.Inferno,
                 3 => ColorPalette.Grayscale,
+                4 => ColorPalette.Viridis,
+                5 => ColorPalette.Turbo,
+                6 => ColorPalette.ArcticIschemia,
                 _ => ColorPalette.Ironbow
             };
 
             if (_rawGrayPixels != null && _rawWidth > 0 && _rawHeight > 0)
             {
-                _originalBitmap = PaletteService.ApplyPalette(_rawGrayPixels, _rawWidth, _rawHeight, _activePalette, _windowWidth, _windowCenter);
+                _originalBitmap = PaletteService.ApplyPalette(_rawGrayPixels, _rawWidth, _rawHeight, _activePalette, _windowWidth, _windowCenter, _invertLut);
                 ImgOriginal.Source = _originalBitmap;
                 ImgCurtainRaw.Source = _originalBitmap;
                 RefreshResultImageOnly();
                 UpdateHudReadouts();
             }
+        }
+
+        private void ChkInvertLut_Click(object sender, RoutedEventArgs e)
+        {
+            _invertLut = ChkInvertLut?.IsChecked == true;
+            ApplyWindowLevelToViewports();
         }
 
         private void SliderK_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) { }
@@ -3004,23 +3397,23 @@ end";
                 Y1 = hy,
                 X2 = calloutX,
                 Y2 = calloutY + 16,
-                Stroke = new SolidColorBrush(Color.FromRgb(30, 41, 59)),
+                Stroke = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
                 StrokeThickness = 1.2
             };
             canvas.Children.Add(pointer);
 
             var card = new Border
             {
-                Background = Brushes.White,
-                BorderBrush = new SolidColorBrush(Color.FromRgb(203, 213, 225)),
+                Background = new SolidColorBrush(Color.FromArgb(235, 15, 23, 42)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(248, 113, 113)),
                 BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(6),
                 Padding = new Thickness(8, 4, 8, 4),
                 Effect = new System.Windows.Media.Effects.DropShadowEffect
                 {
-                    BlurRadius = 8,
+                    BlurRadius = 10,
                     ShadowDepth = 2,
-                    Opacity = 0.18,
+                    Opacity = 0.35,
                     Color = Colors.Black
                 }
             };
@@ -3031,14 +3424,15 @@ end";
                 Text = "Fokaler Hotspot:",
                 FontSize = 9.5,
                 FontWeight = FontWeights.SemiBold,
-                Foreground = new SolidColorBrush(Color.FromRgb(51, 65, 85))
+                Foreground = new SolidColorBrush(Color.FromRgb(248, 250, 252))
             });
             sp.Children.Add(new TextBlock
             {
                 Text = $"ΔT = +{deltaT:F1} K ({riskText})",
+                FontFamily = new FontFamily("Consolas, Segoe UI Variable, Segoe UI"),
                 FontSize = 10,
                 FontWeight = FontWeights.Bold,
-                Foreground = new SolidColorBrush(Color.FromRgb(220, 38, 38))
+                Foreground = new SolidColorBrush(Color.FromRgb(248, 113, 113))
             });
 
             card.Child = sp;
@@ -3213,23 +3607,24 @@ end";
 
                     var callout = new Border
                     {
-                        Background = Brushes.White,
+                        Background = new SolidColorBrush(Color.FromArgb(230, 15, 23, 42)),
                         BorderBrush = badgeBrush,
-                        BorderThickness = new Thickness(1.8),
+                        BorderThickness = new Thickness(1.4),
                         CornerRadius = new CornerRadius(6),
                         Padding = new Thickness(8, 4, 8, 4),
                         Effect = new System.Windows.Media.Effects.DropShadowEffect
                         {
-                            BlurRadius = 8,
+                            BlurRadius = 10,
                             ShadowDepth = 2,
-                            Opacity = 0.2,
+                            Opacity = 0.35,
                             Color = Colors.Black
                         }
                     };
                     var sp = new StackPanel();
                     sp.Children.Add(new TextBlock
                     {
-                        Text = $"📐 HVA: {meas.AngleDegrees:F1}°",
+                        Text = $"HVA: {meas.AngleDegrees:F1}°",
+                        FontFamily = new FontFamily("Consolas, Segoe UI Variable, Segoe UI"),
                         FontSize = 11,
                         FontWeight = FontWeights.Bold,
                         Foreground = badgeBrush
@@ -3239,7 +3634,7 @@ end";
                         Text = meas.SeverityGrade,
                         FontSize = 9.5,
                         FontWeight = FontWeights.SemiBold,
-                        Foreground = new SolidColorBrush(Color.FromRgb(30, 41, 59))
+                        Foreground = new SolidColorBrush(Color.FromRgb(248, 250, 252))
                     });
                     callout.Child = sp;
 
@@ -3334,15 +3729,15 @@ end";
                 {
                     if (_pressureStats.PeakPressureKpa >= 450.0)
                     {
-                        TxtBiomechDirectives.Text = "🚨 ALARM: Kritischer Spitzendruck (≥ 450 kPa). Sofortige Druckentlastung (Vorfußentlastungsschuh/Cast) zwingend erforderlich zur Ulkusprävention.";
+                        TxtBiomechDirectives.Text = "ALARM: Kritischer Spitzendruck (≥ 450 kPa). Sofortige Druckentlastung (Vorfußentlastungsschuh/Cast) zwingend erforderlich zur Ulkusprävention.";
                     }
                     else if (_pressureStats.PeakPressureKpa >= 320.0)
                     {
-                        TxtBiomechDirectives.Text = "⚠️ WARNUNG: Erhöhter Scherspannungsdruck. Verordnung von diabetesadaptierten Weichbettungseinlagen empfohlen.";
+                        TxtBiomechDirectives.Text = "WARNUNG: Erhöhter Scherspannungsdruck. Verordnung von diabetesadaptierten Weichbettungseinlagen empfohlen.";
                     }
                     else
                     {
-                        TxtBiomechDirectives.Text = "✅ NORMAL: Keine pathologische Scherspannungskonzentration nachweisbar.";
+                        TxtBiomechDirectives.Text = "NORMAL: Keine pathologische Scherspannungskonzentration nachweisbar.";
                     }
                 }
 
@@ -3558,7 +3953,7 @@ end";
 
                 if (StatusText != null)
                 {
-                    StatusText.Text = "📋 Strukturierter Arztbrief-Befundtext in die Zwischenablage kopiert!";
+                    StatusText.Text = "Strukturierter Arztbrief-Befundtext in die Zwischenablage kopiert.";
                 }
 
                 MessageBox.Show("Der strukturierte Befundtext wurde in die Zwischenablage kopiert und kann direkt in Ihre Praxissoftware (z. B. Turbomed, Medistar, EPA) eingefügt werden.", "Befund kopiert", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -3601,7 +3996,7 @@ end";
 
                     if (StatusText != null)
                     {
-                        StatusText.Text = $"📊 Radiometrische Matrix exportiert nach {System.IO.Path.GetFileName(dlg.FileName)}";
+                        StatusText.Text = $"Radiometrische Matrix exportiert nach {System.IO.Path.GetFileName(dlg.FileName)}";
                     }
 
                     MessageBox.Show($"Wissenschaftliche Temperaturmatrix erfolgreich exportiert:\n{dlg.FileName}", "CSV Export", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -3880,6 +4275,8 @@ end";
         {
             bool isCtrl = (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control;
             bool isShift = (Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift;
+            bool isTextInputFocused = Keyboard.FocusedElement is System.Windows.Controls.TextBox ||
+                                      Keyboard.FocusedElement is System.Windows.Controls.Primitives.TextBoxBase;
 
             if (isCtrl && e.Key == Key.Z)
             {
@@ -3899,11 +4296,44 @@ end";
                 e.Handled = true;
                 BtnResetAll_Click(sender, e);
             }
+            else if (isCtrl && isShift && e.Key == Key.S)
+            {
+                e.Handled = true;
+                ExportAnnotatedPacsSnapshot_Click(sender, e);
+            }
+            else if (e.Key == Key.F1 && RbViewDual != null) { e.Handled = true; RbViewDual.IsChecked = true; }
+            else if (e.Key == Key.F2 && RbViewCurtain != null) { e.Handled = true; RbViewCurtain.IsChecked = true; }
+            else if (e.Key == Key.F3 && RbView3DRelief != null) { e.Handled = true; RbView3DRelief.IsChecked = true; }
+            else if (e.Key == Key.F4 && RbViewDSA != null) { e.Handled = true; RbViewDSA.IsChecked = true; }
+            else if (e.Key == Key.F5) { e.Handled = true; BtnRunAnalysis_Click(sender, new RoutedEventArgs()); }
+            else if (e.Key == Key.F6 && RbViewPressureProxy != null) { e.Handled = true; RbViewPressureProxy.IsChecked = true; }
+            else if (e.Key == Key.F7 && RbViewBioheat != null) { e.Handled = true; RbViewBioheat.IsChecked = true; }
+            else if (e.Key == Key.F8 && RbViewMirrorDiff != null) { e.Handled = true; RbViewMirrorDiff.IsChecked = true; }
+            else if (e.Key == Key.F9 && RbViewIschemia != null) { e.Handled = true; RbViewIschemia.IsChecked = true; }
+            else if (e.Key == Key.F11) { e.Handled = true; MenuCohortScan_Click(sender, e); }
+            else if (e.Key == Key.F12) { e.Handled = true; BtnJuryDemoMode_Click(sender, e); }
+            else if (!isTextInputFocused && Keyboard.Modifiers == ModifierKeys.None && e.Key == Key.L && RbToolLoupe != null && RbToolPan != null)
+            {
+                e.Handled = true;
+                if (RbToolLoupe.IsChecked == true) RbToolPan.IsChecked = true;
+                else RbToolLoupe.IsChecked = true;
+            }
+            else if (!isTextInputFocused && Keyboard.Modifiers == ModifierKeys.None && e.Key == Key.I && ChkInvertLut != null)
+            {
+                e.Handled = true;
+                ChkInvertLut.IsChecked = !(ChkInvertLut.IsChecked == true);
+                ChkInvertLut_Click(sender, e);
+            }
         }
 
         private void BtnResetAll_Click(object sender, RoutedEventArgs e)
         {
             PushUndoSnapshot("Alles Zurücksetzen");
+            StopJuryDemoMode();
+            _loupePinned = false;
+            _invertLut = false;
+            if (ChkInvertLut != null) ChkInvertLut.IsChecked = false;
+            if (RbToolPan != null) RbToolPan.IsChecked = true;
 
             // Reset zoom & pan
             _currentZoom = 1.0;
@@ -4392,6 +4822,406 @@ end";
             {
                 MessageBox.Show($"Fehler beim 3D-Tiefenkarten-Export: {ex.Message}", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        // =========================================================================
+        // FEATURE-PAKETE 1-4: ISCHÄMIE/CHARCOT/ENTROPIE, KOHORTE, SNAPSHOT & JURY-DEMO
+        // =========================================================================
+
+        private void UpdateIschemiaCharcotEntropyUI()
+        {
+            if (_rawGrayPixels == null || _rawWidth <= 0 || _rawHeight <= 0) return;
+
+            _cachedIschemiaCharcot ??= AdvancedDiagnosticService.EvaluateIschemiaCharcotAndEntropy(_rawGrayPixels, _rawWidth, _rawHeight);
+            if (_cachedMirrorStats == null)
+            {
+                var (mBmp, mStats) = AdvancedDiagnosticService.GenerateBilateralMirrorDiffMap(_rawGrayPixels, _rawWidth, _rawHeight);
+                _cachedMirrorDiffBitmap = mBmp;
+                _cachedMirrorStats = mStats;
+            }
+
+            var res = _cachedIschemiaCharcot;
+            var mir = _cachedMirrorStats;
+
+            if (TxtIschemiaStage != null) TxtIschemiaStage.Text = res.IschemiaStage.ToUpperInvariant();
+            if (BorderIschemiaBadge != null && TxtIschemiaStage != null)
+            {
+                var brush = res.IsIschemiaCritical
+                    ? (Brush)FindResource("CriticalBrush")
+                    : (res.DistalProximalDropK >= 1.5 ? (Brush)FindResource("WarningBrush") : (Brush)FindResource("CyanBrush"));
+                BorderIschemiaBadge.BorderBrush = brush;
+                TxtIschemiaStage.Foreground = brush;
+            }
+            if (TxtAbiThermalProxy != null) TxtAbiThermalProxy.Text = $"{res.AbiThermalProxy:F2}";
+            if (TxtDistalDropK != null) TxtDistalDropK.Text = $"{-res.DistalProximalDropK:+0.00;-0.00;0.00} K";
+            if (TxtColdestAcralTemp != null) TxtColdestAcralTemp.Text = $"{res.ColdestAcralTempC:F1} °C";
+            if (TxtProximalDistalDetail != null) TxtProximalDistalDetail.Text = $"Proximal: {res.ProximalMeanTempC:F1} °C · Distal: {res.DistalMeanTempC:F1} °C";
+            if (TxtColdSpotAreaPct != null) TxtColdSpotAreaPct.Text = $"Hypothermie-Fläche (< 28,5 °C): {res.ColdSpotAreaPct:F1} % ({res.ColdSpotPixelCount:N0} px)";
+
+            if (TxtCharcotStage != null) TxtCharcotStage.Text = res.CharcotEichenholtzStage.ToUpperInvariant();
+            if (BorderCharcotBadge != null && TxtCharcotStage != null)
+            {
+                var cBrush = res.IsCharcotActive ? (Brush)FindResource("CriticalBrush") : (Brush)FindResource("SuccessBrush");
+                BorderCharcotBadge.BorderBrush = cBrush;
+                TxtCharcotStage.Foreground = cBrush;
+            }
+            if (TxtCharcotHyperthermiaK != null) TxtCharcotHyperthermiaK.Text = $"{res.CharcotHyperthermiaDeltaK:+0.00;-0.00;0.00} K";
+            if (TxtMidfootPeakTemp != null) TxtMidfootPeakTemp.Text = $"{res.MidfootPeakTempC:F1} °C";
+            if (TxtCharcotClinicalNote != null) TxtCharcotClinicalNote.Text = res.CharcotClinicalNote;
+
+            if (TxtShannonEntropyBits != null) TxtShannonEntropyBits.Text = $"{res.ShannonEntropyBits:F2} bits";
+            if (TxtSpatialRoughness != null) TxtSpatialRoughness.Text = $"{res.SpatialRoughnessKPerPx:F2} K/px";
+            if (TxtTextureClassification != null) TxtTextureClassification.Text = $"Klassifikation: {res.TextureClassification}";
+
+            if (mir != null)
+            {
+                if (TxtMirrorMaxAsymmetry != null) TxtMirrorMaxAsymmetry.Text = $"{mir.MaxAsymmetryK:F2} K";
+                if (TxtMirrorMeanAsymmetry != null) TxtMirrorMeanAsymmetry.Text = $"{mir.MeanAsymmetryK:F2} K";
+                if (TxtMirrorArmstrongArea != null) TxtMirrorArmstrongArea.Text = $"{mir.ArmstrongAreaPct:F1} %";
+            }
+        }
+
+        private void BtnViewIschemiaMap_Click(object sender, RoutedEventArgs e)
+        {
+            if (RbViewIschemia != null) RbViewIschemia.IsChecked = true;
+        }
+
+        private void BtnViewMirrorDiff_Click(object sender, RoutedEventArgs e)
+        {
+            if (RbViewMirrorDiff != null) RbViewMirrorDiff.IsChecked = true;
+        }
+
+        private void MenuCohortScan_Click(object sender, RoutedEventArgs e)
+        {
+            SelectInspectorTab(TabCohortStudy);
+            if (_cohortSummaries.Count == 0)
+            {
+                BtnRunCohortScan_Click(sender, e);
+            }
+        }
+
+        private async void BtnRunCohortScan_Click(object sender, RoutedEventArgs e)
+        {
+            SelectInspectorTab(TabCohortStudy);
+            var files = _filmstripFiles.Where(File.Exists).ToList();
+            if (files.Count == 0 && !string.IsNullOrEmpty(_currentImagePath) && File.Exists(_currentImagePath))
+            {
+                files.Add(_currentImagePath);
+            }
+
+            if (files.Count == 0)
+            {
+                if (TxtCohortStatus != null) TxtCohortStatus.Text = "Keine Thermogramm-Dateien im Fallarchiv gefunden.";
+                return;
+            }
+
+            if (BtnRunCohortScan != null) BtnRunCohortScan.IsEnabled = false;
+            if (TxtCohortStatus != null) TxtCohortStatus.Text = $"Scanne {files.Count} Patientenfälle deterministisch...";
+
+            try
+            {
+                var scanned = await Task.Run(() =>
+                {
+                    var results = new List<AdvancedDiagnosticService.CohortCaseSummary>(files.Count);
+                    for (int i = 0; i < files.Count; i++)
+                    {
+                        results.Add(AdvancedDiagnosticService.EvaluateCaseFast(i + 1, files[i]));
+                    }
+                    return results;
+                });
+
+                _cohortSummaries = scanned;
+                if (GridCohortResults != null) GridCohortResults.ItemsSource = _cohortSummaries;
+
+                int criticalCount = _cohortSummaries.Count(c => c.MaxAsymmetryK >= 2.2 || c.IwgdfGrade >= 2);
+                double meanTemp = _cohortSummaries.Count > 0 ? _cohortSummaries.Average(c => c.MeanTempC) : 0.0;
+                double meanAsym = _cohortSummaries.Count > 0 ? _cohortSummaries.Average(c => c.MaxAsymmetryK) : 0.0;
+
+                if (TxtCohortTotalCases != null) TxtCohortTotalCases.Text = $"{_cohortSummaries.Count}";
+                if (TxtCohortCriticalCount != null) TxtCohortCriticalCount.Text = $"{criticalCount}";
+                if (TxtCohortMeanTemp != null) TxtCohortMeanTemp.Text = $"{meanTemp:F1} °C";
+                if (TxtCohortMeanAsym != null) TxtCohortMeanAsym.Text = $"{meanAsym:F2} K";
+                if (TxtCohortStatus != null) TxtCohortStatus.Text = $"Abgeschlossen: {_cohortSummaries.Count} Fälle ({criticalCount} auffällig ≥ 2,2 K / IWGDF ≥ 2)";
+
+                RenderLongitudinalGraph();
+                _dbService?.LogAuditAction("COHORT_BATCH_SCAN", $"{_cohortSummaries.Count} Fälle analysiert ({criticalCount} kritisch)");
+            }
+            catch (Exception ex)
+            {
+                if (TxtCohortStatus != null) TxtCohortStatus.Text = $"Kohorten-Fehler: {ex.Message}";
+            }
+            finally
+            {
+                if (BtnRunCohortScan != null) BtnRunCohortScan.IsEnabled = true;
+            }
+        }
+
+        private void CanvasLongitudinalGraph_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            RenderLongitudinalGraph();
+        }
+
+        private void RenderLongitudinalGraph()
+        {
+            if (CanvasLongitudinalGraph == null) return;
+            CanvasLongitudinalGraph.Children.Clear();
+
+            double w = CanvasLongitudinalGraph.ActualWidth;
+            double h = CanvasLongitudinalGraph.ActualHeight;
+            if (w <= 20 || h <= 20 || _cohortSummaries.Count == 0) return;
+
+            double padL = 28, padR = 10, padT = 10, padB = 18;
+            double plotW = Math.Max(10, w - padL - padR);
+            double plotH = Math.Max(10, h - padT - padB);
+
+            // Subtle horizontal oscilloscope grid lines
+            var gridBrush = new SolidColorBrush(Color.FromArgb(40, 148, 163, 184));
+            for (int g = 0; g <= 4; g++)
+            {
+                double gy = padT + (plotH * g / 4.0);
+                CanvasLongitudinalGraph.Children.Add(new System.Windows.Shapes.Line
+                {
+                    X1 = padL, Y1 = gy, X2 = w - padR, Y2 = gy,
+                    Stroke = gridBrush, StrokeThickness = 0.8
+                });
+            }
+
+            // Armstrong 2.2 K critical reference line (mapped against 0..6 K asymmetry scale)
+            double asymMax = 6.0;
+            double armY = padT + plotH * (1.0 - Math.Clamp(2.2 / asymMax, 0, 1));
+            CanvasLongitudinalGraph.Children.Add(new System.Windows.Shapes.Line
+            {
+                X1 = padL, Y1 = armY, X2 = w - padR, Y2 = armY,
+                Stroke = new SolidColorBrush(Color.FromRgb(239, 68, 68)),
+                StrokeThickness = 1.1,
+                StrokeDashArray = new DoubleCollection { 4, 3 }
+            });
+
+            var tempLine = new System.Windows.Shapes.Polyline
+            {
+                Stroke = new SolidColorBrush(Color.FromRgb(56, 189, 248)),
+                StrokeThickness = 1.8
+            };
+            var asymLine = new System.Windows.Shapes.Polyline
+            {
+                Stroke = new SolidColorBrush(Color.FromRgb(245, 158, 11)),
+                StrokeThickness = 1.6
+            };
+
+            double tMinScale = 24.0, tMaxScale = 40.0;
+            int n = _cohortSummaries.Count;
+            for (int i = 0; i < n; i++)
+            {
+                var c = _cohortSummaries[i];
+                double px = n == 1 ? padL + plotW * 0.5 : padL + (plotW * i / (n - 1));
+                double ty = padT + plotH * (1.0 - Math.Clamp((c.MaxTempC - tMinScale) / (tMaxScale - tMinScale), 0, 1));
+                double ay = padT + plotH * (1.0 - Math.Clamp(c.MaxAsymmetryK / asymMax, 0, 1));
+
+                tempLine.Points.Add(new Point(px, ty));
+                asymLine.Points.Add(new Point(px, ay));
+
+                var dot = new System.Windows.Shapes.Ellipse
+                {
+                    Width = 5,
+                    Height = 5,
+                    Fill = c.MaxAsymmetryK >= 2.2
+                        ? new SolidColorBrush(Color.FromRgb(239, 68, 68))
+                        : new SolidColorBrush(Color.FromRgb(56, 189, 248)),
+                    ToolTip = $"#{c.CaseNumber} {c.FileName}\nT_max={c.MaxTempC:F1}°C · ΔT={c.MaxAsymmetryK:F2} K · IWGDF {c.IwgdfGrade}"
+                };
+                Canvas.SetLeft(dot, px - 2.5);
+                Canvas.SetTop(dot, ay - 2.5);
+                CanvasLongitudinalGraph.Children.Add(dot);
+            }
+
+            CanvasLongitudinalGraph.Children.Add(tempLine);
+            CanvasLongitudinalGraph.Children.Add(asymLine);
+
+            // Minimal axis scale annotations
+            var lblTop = new TextBlock { Text = "6K/40°", FontFamily = new FontFamily("Consolas"), FontSize = 8.5, Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)) };
+            Canvas.SetLeft(lblTop, 2);
+            Canvas.SetTop(lblTop, padT - 4);
+            CanvasLongitudinalGraph.Children.Add(lblTop);
+
+            var lblBot = new TextBlock { Text = "0K/24°", FontFamily = new FontFamily("Consolas"), FontSize = 8.5, Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)) };
+            Canvas.SetLeft(lblBot, 2);
+            Canvas.SetTop(lblBot, padT + plotH - 8);
+            CanvasLongitudinalGraph.Children.Add(lblBot);
+        }
+
+        private void GridCohortResults_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (GridCohortResults?.SelectedItem is AdvancedDiagnosticService.CohortCaseSummary item &&
+                !string.IsNullOrEmpty(item.FilePath) &&
+                File.Exists(item.FilePath) &&
+                !string.Equals(item.FilePath, _currentImagePath, StringComparison.OrdinalIgnoreCase))
+            {
+                LoadImage(item.FilePath);
+            }
+        }
+
+        private void BtnExportCohortCsv_Click(object sender, RoutedEventArgs e)
+        {
+            if (_cohortSummaries.Count == 0)
+            {
+                MessageBox.Show("Bitte zuerst einen Kohorten-Scan durchführen.", "Hinweis", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var dlg = new SaveFileDialog
+            {
+                Filter = "CSV Tabelle (*.csv)|*.csv",
+                FileName = $"Ignite_CohortStudy_{DateTime.Now:yyyyMMdd_HHmm}.csv",
+                Title = "Kohorten-Analyse als CSV exportieren"
+            };
+            if (dlg.ShowDialog() == true)
+            {
+                var sb = new StringBuilder();
+                sb.AppendLine("#;Datei;IWGDF;T_mean_C;T_max_C;DeltaT_Asym_K;PeakPressure_kPa;ShannonEntropy_bits;DistalDrop_K;Triage");
+                foreach (var c in _cohortSummaries)
+                {
+                    sb.AppendLine($"{c.CaseNumber};{c.FileName};{c.IwgdfGrade};{c.MeanTempC:F2};{c.MaxTempC:F2};{c.MaxAsymmetryK:F2};{c.PeakPressureKpa:F1};{c.ShannonEntropyBits:F3};{c.DistalDropK:F2};{c.TriageStatus}");
+                }
+                File.WriteAllText(dlg.FileName, sb.ToString(), Encoding.UTF8);
+                _dbService?.LogAuditAction("EXPORT_COHORT_CSV", $"Kohorten-CSV exportiert nach {dlg.FileName}");
+                MessageBox.Show($"Kohorten-Studie ({_cohortSummaries.Count} Fälle) exportiert:\n{dlg.FileName}", "CSV Export", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+
+        private void ExportAnnotatedPacsSnapshot_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (BorderWorkbenchViewport == null || BorderWorkbenchViewport.ActualWidth <= 0 || BorderWorkbenchViewport.ActualHeight <= 0)
+                {
+                    MessageBox.Show("Keine aktive Workbench-Ansicht zum Exportieren.", "Hinweis", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+
+                var dlg = new SaveFileDialog
+                {
+                    Filter = "HiRes PNG Bild (*.png)|*.png",
+                    FileName = $"Ignite_PACS_Snapshot_{_activePatientId}_{DateTime.Now:yyyyMMdd_HHmm}.png",
+                    Title = "Annotierten PACS-Diagnose-Snapshot (192 DPI) speichern"
+                };
+
+                if (dlg.ShowDialog() == true)
+                {
+                    BorderWorkbenchViewport.UpdateLayout();
+                    int pxW = Math.Max(1, (int)Math.Ceiling(BorderWorkbenchViewport.ActualWidth * 2.0));
+                    int pxH = Math.Max(1, (int)Math.Ceiling(BorderWorkbenchViewport.ActualHeight * 2.0));
+                    var rtb = new RenderTargetBitmap(pxW, pxH, 192, 192, PixelFormats.Pbgra32);
+                    rtb.Render(BorderWorkbenchViewport);
+                    SaveBitmapSourceToPng(rtb, dlg.FileName);
+                    _dbService?.LogAuditAction("EXPORT_PACS_SNAPSHOT_PNG", $"192 DPI PACS-Snapshot gespeichert: {dlg.FileName}");
+                    if (StatusText != null) StatusText.Text = $"HiRes PACS-Snapshot gespeichert: {System.IO.Path.GetFileName(dlg.FileName)} ({pxW}×{pxH} px)";
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Snapshot-Fehler: {ex.Message}", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void BtnJuryDemoMode_Click(object sender, RoutedEventArgs e)
+        {
+            if (_juryDemoTimer != null && _juryDemoTimer.IsEnabled)
+            {
+                StopJuryDemoMode();
+                return;
+            }
+
+            _juryDemoStep = 0;
+            ExecuteJuryDemoStep(_juryDemoStep);
+
+            _juryDemoTimer = new System.Windows.Threading.DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(3.5)
+            };
+            _juryDemoTimer.Tick += (s, args) =>
+            {
+                _juryDemoStep++;
+                if (_juryDemoStep >= 6)
+                {
+                    StopJuryDemoMode();
+                    if (StatusText != null) StatusText.Text = "Jury-Präsentationsmodus (6/6 Stufen) erfolgreich abgeschlossen.";
+                    return;
+                }
+                ExecuteJuryDemoStep(_juryDemoStep);
+            };
+            _juryDemoTimer.Start();
+        }
+
+        private void StopJuryDemoMode()
+        {
+            if (_juryDemoTimer != null)
+            {
+                _juryDemoTimer.Stop();
+            }
+            if (TxtJuryDemoLabel != null) TxtJuryDemoLabel.Text = "Jury-Demo";
+        }
+
+        private void ExecuteJuryDemoStep(int step)
+        {
+            if (TxtJuryDemoLabel != null) TxtJuryDemoLabel.Text = $"Stop ({step + 1}/6)";
+
+            switch (step)
+            {
+                case 0:
+                    if (RbViewDual != null) RbViewDual.IsChecked = true;
+                    SelectInspectorTab(TabHotspots);
+                    if (StatusText != null) StatusText.Text = "Jury-Demo 1/6: Dual-Viewport + Morphologischer Top-Hat & MAD-Outlier Hotspot-Detektion.";
+                    break;
+                case 1:
+                    if (RbViewCurtain != null) RbViewCurtain.IsChecked = true;
+                    if (StatusText != null) StatusText.Text = "Jury-Demo 2/6: Synchroner Vorhang-Wipe (Roh-LWIR vs. AVX2-Segmentierung & Frangi-Venenbaum).";
+                    break;
+                case 2:
+                    if (RbViewMirrorDiff != null) RbViewMirrorDiff.IsChecked = true;
+                    SelectInspectorTab(TabIschemiaCharcot);
+                    if (StatusText != null) StatusText.Text = "Jury-Demo 3/6: Bilaterale Spiegelsymmetrie |T_L − T_R| nach Armstrong ≥ 2,2 K & Charcot Midfoot-Index.";
+                    break;
+                case 3:
+                    if (RbViewIschemia != null) RbViewIschemia.IsChecked = true;
+                    SelectInspectorTab(TabIschemiaCharcot);
+                    if (StatusText != null) StatusText.Text = "Jury-Demo 4/6: pAVK Akrale Ischämie Cold-Spot Map, ABI-Proxy & Shannon Gewebeentropie.";
+                    break;
+                case 4:
+                    if (RbView3DAnatomy != null) RbView3DAnatomy.IsChecked = true;
+                    SelectInspectorTab(Tab3DReconstruction);
+                    if (StatusText != null) StatusText.Text = "Jury-Demo 5/6: 3D-Oberflächenrekonstruktion & Lambertian Kanten-Kompensation.";
+                    break;
+                case 5:
+                    if (RbViewDual != null) RbViewDual.IsChecked = true;
+                    MenuCohortScan_Click(this, new RoutedEventArgs());
+                    if (StatusText != null) StatusText.Text = "Jury-Demo 6/6: Deterministischer Batch Kohorten-Scan & Longitudinale Verlaufs-Trajektorie.";
+                    break;
+            }
+        }
+
+        private void MenuHotkeys_Click(object sender, RoutedEventArgs e)
+        {
+            MessageBox.Show(
+                "PACS WORKSTATION TASTENKÜRZEL:\n\n" +
+                "  F1   Dual-Viewport Befund\n" +
+                "  F2   Vorhang-Wipe Compare\n" +
+                "  F3   3D Topographie-Relief\n" +
+                "  F4   Frangi DSA Gefäßbaum\n" +
+                "  F5   42-Stufen AVX2-Analyse starten\n" +
+                "  F6   Plantardruck-Proxy (Bioheat)\n" +
+                "  F7   Mikrovaskuläre Perfusion (ω_b)\n" +
+                "  F8   Bilaterale Spiegelkarte |T_L − T_R|\n" +
+                "  F9   pAVK Akrale Ischämie-Map\n" +
+                "  F11  Batch Kohorten-Studie öffnen\n" +
+                "  F12  Jury-Präsentationsmodus (Start/Stop)\n\n" +
+                "  L             4× Thermale Lupe an/aus\n" +
+                "  I             Farbskala (LUT) invertieren\n" +
+                "  Strg+Umsch+S  192 DPI PACS-Snapshot exportieren\n" +
+                "  Strg+R        Alle Ansichten zurücksetzen\n" +
+                "  Strg+Z / Y    Rückgängig / Wiederholen",
+                "IGNITE PACS Tastenkürzel",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
         }
 
         private void MenuExit_Click(object sender, RoutedEventArgs e)

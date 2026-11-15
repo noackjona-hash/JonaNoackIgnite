@@ -22,6 +22,7 @@ function evaluate_hotspot(hotspot, stats)
     local is_sharp_edge = edge_grad >= 3.0
     local has_halo = halo_delta >= 5.0
     local is_focal_metabolic = laplacian <= -3.5 or peak_to_mean >= 1.25
+    local is_deep_focus = laplacian <= -8.0 and prominence >= 50.0
 
     -- 0. Klinische Grundvoraussetzung nach Armstrong (IWGDF 2023):
     -- Ein pathologisches Gewebeulkus / Entzündungsherd erfordert zwingend eine signifikante
@@ -38,7 +39,7 @@ function evaluate_hotspot(hotspot, stats)
 
     -- 1. Kritisches Kriterium nach Armstrong (Delta T >= 2.2 K, ca. >= 22 Einheiten):
     if contra_delta >= 22.0 or (contra_delta >= 18.0 and prominence >= 30.0) then
-        if is_sharp_edge and not has_halo then
+        if is_sharp_edge and not has_halo and not is_deep_focus then
             -- Steile Hornhautgrenze + Asymmetrie = Entzündete Druckstelle unter isolierender Hyperkeratose
             return {
                 risk_level = "CRITICAL",
