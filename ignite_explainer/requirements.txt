@@ -1,5 +1,5 @@
 numpy>=1.23.0
-opencv-python>=4.7.0
+opencv-python>=5.1.0.95
 scipy>=1.10.0
 matplotlib>=3.7.0
 Pillow>=9.5.0
